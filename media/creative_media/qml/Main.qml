@@ -134,8 +134,12 @@ Window {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: playerBar.visible ? playerBar.top : parent.bottom
-            width: 230
+            // Eingeklappt (Standard): nur Symbole – mehr Platz für YouTube Music usw.
+            readonly property bool open: settings.navOpen
+            width: open ? 230 : 64
             color: Theme.footer
+            clip: true
+            Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
             Column {
                 anchors.fill: parent
@@ -143,8 +147,36 @@ Window {
                 anchors.topMargin: 18
                 spacing: 2
 
+                // Ein-/Ausklappen
+                Rectangle {
+                    width: parent.width
+                    height: 40
+                    radius: Theme.radiusRow
+                    color: foldMouse.containsMouse ? Theme.subtle : "transparent"
+                    SvgIcon { x: 16 - 4; anchors.verticalCenter: parent.verticalCenter; name: "list"; size: 17 }
+                    Text {
+                        x: 45
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: sidebar.open
+                        text: "Einklappen"
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        id: foldMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: settings.navOpen = !settings.navOpen
+                    }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: sidebar.open ? "Seitenleiste einklappen" : "Seitenleiste ausklappen"
+                }
+
                 Row {
-                    leftPadding: 10
+                    leftPadding: sidebar.open ? 10 : 4
+                    topPadding: 6
                     bottomPadding: 18
                     spacing: 10
                     Rectangle {
@@ -156,6 +188,7 @@ Window {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: sidebar.open
                         text: "Creative Player"
                         color: Theme.text
                         font.family: Theme.fontFamily
@@ -191,7 +224,7 @@ Window {
                         }
                         SvgIcon {
                             id: navIcon
-                            x: 16
+                            x: sidebar.open ? 16 : 12
                             anchors.verticalCenter: parent.verticalCenter
                             name: navItem.modelData.icon
                             size: 17
@@ -200,6 +233,7 @@ Window {
                             anchors.left: navIcon.right
                             anchors.leftMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
+                            visible: sidebar.open
                             text: navItem.modelData.label
                             color: Theme.text
                             font.family: Theme.fontFamily
@@ -213,6 +247,9 @@ Window {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: win.section = navItem.modelData.key
                         }
+                        ToolTip.visible: !sidebar.open && navMouse.containsMouse
+                        ToolTip.delay: 400
+                        ToolTip.text: navItem.modelData.label
                         Accessible.role: Accessible.PageTab
                         Accessible.name: modelData.label
                     }

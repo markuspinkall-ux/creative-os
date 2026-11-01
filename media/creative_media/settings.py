@@ -19,13 +19,14 @@ class Settings(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._data = {"iptvSource": DEFAULT_IPTV, "volume": 0.7, "lastChannel": ""}
+        self._data = {"iptvSource": DEFAULT_IPTV, "volume": 0.7, "lastChannel": "", "navOpen": False}
         try:
             with _path().open(encoding="utf-8") as fh:
                 stored = json.load(fh)
             if isinstance(stored, dict):
                 for key in self._data:
-                    if key in stored and type(stored[key]) in (type(self._data[key]), int, float):
+                    if key in stored and (type(stored[key]) is type(self._data[key])
+                                          or (type(self._data[key]) is float and type(stored[key]) is int)):
                         self._data[key] = stored[key]
         except (OSError, ValueError):
             pass
@@ -51,3 +52,4 @@ class Settings(QObject):
     iptvSource = Property(str, lambda self: self._data["iptvSource"], _setter("iptvSource"), notify=changed)
     volume = Property(float, lambda self: float(self._data["volume"]), _setter("volume"), notify=changed)
     lastChannel = Property(str, lambda self: self._data["lastChannel"], _setter("lastChannel"), notify=changed)
+    navOpen = Property(bool, lambda self: bool(self._data["navOpen"]), _setter("navOpen"), notify=changed)

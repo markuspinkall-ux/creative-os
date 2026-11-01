@@ -12,4 +12,10 @@ if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
     fi
 fi
 export NOSPLASH=1
-exec krita "$@"
+# Krita läuft (noch) nur sauber über X11 – die Taskleiste gibt allen Programmen
+# „Wayland“ mit, das wird hier zurückgesetzt (XWayland, gleiche Titelleiste)
+export QT_QPA_PLATFORM=xcb
+unset QT_QUICK_CONTROLS_STYLE
+log="${XDG_CACHE_HOME:-$HOME/.cache}/creative-art.log"
+mkdir -p "$(dirname "$log")"
+exec krita "$@" >"$log" 2>&1

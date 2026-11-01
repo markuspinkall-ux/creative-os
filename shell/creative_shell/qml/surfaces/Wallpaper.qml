@@ -37,6 +37,8 @@ Item {
             if (mouse.button === Qt.RightButton && root.showIcons)
                 bgMenu.openAt(mouse.x, mouse.y)
         }
+        // Doppelklick auf den freien Schreibtisch: alle Fenster minimieren (nochmal: zurückholen)
+        onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) tasks.showDesktop() }
     }
 
     // ---- Leistungsanzeige oben rechts (wie im Taskmanager, ohne Hintergrund) ---------

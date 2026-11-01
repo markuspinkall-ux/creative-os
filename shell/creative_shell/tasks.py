@@ -120,6 +120,11 @@ class TaskModel(QObject):
             del item["windows"]
         return items
 
+    @Slot()
+    def showDesktop(self):
+        """Doppelklick auf den Schreibtisch: alle Fenster weg – nochmal: wieder da (wie Win+D)."""
+        self._kwin.run_script("workspace.showingDesktop = !workspace.showingDesktop;")
+
     @Slot(str, result="QVariantList")
     def taskbarItems(self, screen):
         return self._items(screen)

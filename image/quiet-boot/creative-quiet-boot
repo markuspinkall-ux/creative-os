@@ -21,3 +21,31 @@ case "$(hostnamectl hostname 2>/dev/null || hostname)" in
 esac
 # Startmenü von GRUB nur bei Problemen zeigen (wie bei Windows)
 command -v grub2-editenv >/dev/null 2>&1 && grub2-editenv - set menu_auto_hide=1 || true
+# GRUB-Meldung „Booting `Creative OS …`“ unsichtbar: Schrift schwarz auf schwarz.
+# Fedora/bootupd lädt user.cfg (bzw. console.cfg) aus dem GRUB-Ordner automatisch.
+marker="# creative-os: GRUB-Textmeldungen unsichtbar"
+for dir in /boot/grub2 /boot/efi/EFI/fedora; do
+    [ -f "$dir/grub.cfg" ] || continue
+    if grep -q "user.cfg" "$dir/grub.cfg"; then
+        target="$dir/user.cfg"
+    elif grep -q "console.cfg" "$dir/grub.cfg"; then
+        target="$dir/console.cfg"
+    else
+        continue
+    fi
+    if ! grep -qF "$marker" "$target" 2>/dev/null; then
+        # /boot ist bei Creative OS meist schreibgeschützt eingehängt – kurz freigeben
+        ro=""
+        if ! touch "$dir/.creative-test" 2>/dev/null; then
+            mount -o remount,rw /boot 2>/dev/null && ro=1
+        fi
+        rm -f "$dir/.creative-test"
+        {
+            echo "$marker"
+            echo "set color_normal=black/black"
+            echo "set menu_color_normal=light-gray/black"
+            echo "set menu_color_highlight=white/dark-gray"
+        } >> "$target" || true
+        [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true
+    fi
+done
