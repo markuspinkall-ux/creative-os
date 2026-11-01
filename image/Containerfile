@@ -25,8 +25,13 @@ RUN dnf install -y \
 # 2) Alle Audio-/Videoformate (MP3, H.264, H.265 …) mit Hardware-Beschleunigung
 # ---------------------------------------------------------------------------
 RUN dnf swap -y ffmpeg-free ffmpeg --allowerasing \
- && dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
- && dnf install -y gstreamer1-plugins-bad-freeworld gstreamer1-plugin-libav \
+ && dnf install -y --skip-unavailable gstreamer1-plugins-bad-freeworld gstreamer1-plugin-libav \
+ && dnf clean all
+# Hardware-Videobeschleunigung (AMD/Intel) für H.264/H.265 – in neueren Fedora-Versionen
+# steckt der Treiber in mesa-dri-drivers; der Tausch klappt dann nicht und wird übersprungen.
+RUN (dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
+     || dnf install -y mesa-va-drivers-freeworld \
+     || echo "mesa-va-drivers-freeworld übersprungen") \
  && dnf clean all
 
 # ---------------------------------------------------------------------------
