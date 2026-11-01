@@ -142,3 +142,75 @@ messagedialog, dialog, .dialog-contents { background-color: #232836; }
 /* Bildlaufleisten schmal */
 scrollbar slider { background-color: rgba(255, 255, 255, 0.2); border-radius: 4px; min-width: 6px; min-height: 6px; }
 scrollbar slider:hover { background-color: rgba(255, 255, 255, 0.3); }
+
+/* ---- GTK-3-Programme (z. B. „Laufwerke (Erweitert)“): feste Farben, da Adwaita 3 keine Variablen nutzt ---- */
+window, .background, dialog, messagedialog, assistant {
+  background-color: #1c2029;
+  color: #dce6ff;
+}
+.view, treeview.view, iconview, textview text, list, listview, columnview, .content-view, flowbox {
+  background-color: #161920;
+  color: #dce6ff;
+}
+treeview.view:selected, .view:selected, iconview:selected, list row:selected {
+  background-color: rgba(143, 179, 255, 0.22);
+  color: #dce6ff;
+}
+treeview.view header button {
+  background-color: #1c2029;
+  color: rgba(220, 230, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.sidebar, placessidebar, .navigation-sidebar, stacksidebar, .sidebar-pane, paned > separator {
+  background-color: #171b22;
+  color: #dce6ff;
+}
+paned > separator { min-width: 1px; min-height: 1px; background-image: none; }
+headerbar button, .titlebar button, toolbar button, actionbar button, .toolbar button {
+  background-color: transparent;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: #dce6ff;
+}
+button:not(.flat):not(.titlebutton):not(.suggested-action):not(.destructive-action) {
+  background-color: rgba(255, 255, 255, 0.07);
+  background-image: none;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+  color: #dce6ff;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+}
+button:hover:not(.suggested-action):not(.destructive-action) { background-color: rgba(255, 255, 255, 0.11); }
+button:active, button:checked { background-color: rgba(143, 179, 255, 0.22); }
+button:disabled { color: rgba(220, 230, 255, 0.35); background-color: rgba(255, 255, 255, 0.03); }
+actionbar, .toolbar, toolbar, statusbar, searchbar > revealer > box {
+  background-color: #171a22;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+menu, .menu, .context-menu, menubar > menuitem menu {
+  background-color: #232836;
+  color: #dce6ff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px;
+}
+menuitem { padding: 6px 12px; border-radius: 8px; }
+menuitem:hover { background-color: rgba(255, 255, 255, 0.08); color: #dce6ff; }
+tooltip, tooltip.background {
+  background-color: #232836;
+  color: #dce6ff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+frame > border, .frame { border-color: rgba(255, 255, 255, 0.08); border-radius: 12px; }
+notebook > header { background-color: #171a22; border-color: rgba(255, 255, 255, 0.06); }
+notebook > header tab:checked { color: #dce6ff; box-shadow: inset 0 -3px #8fb3ff; }
+notebook > stack:not(:only-child) { background-color: #1c2029; }
+selection, *:selected, entry selection, textview text selection {
+  background-color: rgba(143, 179, 255, 0.35);
+  color: #ffffff;
+}
+infobar, .app-notification { background-color: #232836; color: #dce6ff; }
+spinner { color: #8fb3ff; }
+link, *:link, label:link { color: #8fb3ff; }

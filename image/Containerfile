@@ -330,6 +330,10 @@ COPY image/quiet-boot/creative-quiet-boot.service /usr/lib/systemd/system/creati
 RUN chmod 755 /usr/libexec/creative-quiet-boot && systemctl enable creative-quiet-boot.service
 COPY image/polkit/50-creative-updates.rules /usr/share/polkit-1/rules.d/50-creative-updates.rules
 COPY image/polkit/50-creative-drives.rules /usr/share/polkit-1/rules.d/50-creative-drives.rules
+COPY image/update/creative-update /usr/bin/creative-update
+COPY image/update/org.creativeos.update.policy /usr/share/polkit-1/actions/org.creativeos.update.policy
+COPY image/update/rpm-ostreed-automatic.conf /usr/lib/systemd/system/rpm-ostreed-automatic.service.d/10-creative.conf
+RUN chmod 755 /usr/bin/creative-update
 RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf \
  && systemctl enable rpm-ostreed-automatic.timer
 

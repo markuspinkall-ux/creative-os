@@ -154,7 +154,7 @@ class SystemModel(QObject):
                     text = "Die Update-Suche hat nicht geklappt." + (f" ({detail})" if detail else
                                                                     " Besteht eine Internetverbindung?")
                 self._set_upd(state="error", text=text)
-        self._run.run(["rpm-ostree", "upgrade", "--check"], done)
+        self._run.run(self._update_cmd("--check"), done)
 
     @Slot()
     def downloadUpdate(self):
@@ -168,7 +168,14 @@ class SystemModel(QObject):
                 detail = (err.strip().splitlines() or [""])[-1][:160]
                 self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
                               + (f" ({detail})" if detail else ""))
-        self._run.run(["rpm-ostree", "upgrade"], done)
+        self._run.run(self._update_cmd(), done)
+
+    @staticmethod
+    def _update_cmd(*extra):
+        """creative-update weicht bei IPv6-Problemen auf IPv4 aus (braucht dafür root → pkexec)."""
+        if Path("/usr/bin/creative-update").exists() and shutil.which("pkexec"):
+            return ["pkexec", "/usr/bin/creative-update", *extra]
+        return ["rpm-ostree", "upgrade", *extra]
 
     @Slot()
     def reboot(self):

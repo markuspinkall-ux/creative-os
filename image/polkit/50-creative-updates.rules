@@ -4,7 +4,8 @@ polkit.addRule(function (action, subject) {
     var allowed = [
         "org.projectatomic.rpmostree1.upgrade",
         "org.projectatomic.rpmostree1.repo-refresh",
-        "org.projectatomic.rpmostree1.reload-daemon"
+        "org.projectatomic.rpmostree1.reload-daemon",
+        "org.creativeos.update"
     ];
     if (allowed.indexOf(action.id) >= 0 && subject.active && subject.local && subject.isInGroup("wheel")) {
         return polkit.Result.YES;

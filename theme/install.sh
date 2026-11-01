@@ -79,3 +79,19 @@ creative-apps-sync
 
 echo
 echo "Fertig. Bitte Creative OS einmal neu starten (abmelden und wieder anmelden)."
+
+# GTK-Voreinstellungen auch für neue Benutzer (GSettings)
+if command -v dconf >/dev/null 2>&1; then
+    mkdir -p /etc/dconf/db/local.d /etc/dconf/profile
+    [ -f /etc/dconf/profile/user ] || printf 'user-db:user\nsystem-db:local\n' > /etc/dconf/profile/user
+    cat > /etc/dconf/db/local.d/00-creative-os <<'DCONF'
+[org/gnome/desktop/interface]
+gtk-theme='Adwaita-dark'
+color-scheme='prefer-dark'
+icon-theme='Creative'
+cursor-theme='breeze_cursors'
+font-name='Arial 10'
+accent-color='blue'
+DCONF
+    dconf update 2>/dev/null || true
+fi

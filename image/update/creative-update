@@ -1,0 +1,47 @@
+#!/bin/bash
+# Creative OS: Update laden – mit Ausweg, wenn IPv6 nicht funktioniert.
+#
+#   sudo creative-update          Update herunterladen (danach neu starten)
+#   sudo creative-update --check  nur nachsehen, ob es ein Update gibt (Ausgang 77 = keins)
+#   creative-update --auto        für die automatischen Updates (Dienst)
+#
+# Klappt der Download nicht, weil die Verbindung über IPv6 abgelehnt wird
+# (kommt in manchen Heimnetzen und VMs vor), wird IPv6 für diesen einen
+# Versuch kurz ausgeschaltet und danach wieder eingeschaltet.
+set -u
+if [ "$(id -u)" -ne 0 ]; then
+    exec pkexec "$0" "$@"
+fi
+
+case "${1:-}" in
+    --check) args=(upgrade --check) ;;
+    --auto)  args=(upgrade --quiet --trigger-automatic-update-policy) ;;
+    *)       args=(upgrade) ;;
+esac
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+
+attempt() {
+    rpm-ostree "${args[@]}" 2>&1 | tee "$log"
+    return "${PIPESTATUS[0]}"
+}
+
+attempt
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 77 ] && \
+   grep -qiE 'dial tcp \[|connection refused|network is unreachable|no route to host|i/o timeout|connection reset' "$log"; then
+    v6=$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>/dev/null || echo 1)
+    if [ "$v6" = "0" ]; then
+        echo "Verbindung über IPv6 klappt nicht – neuer Versuch über IPv4 …" >&2
+        sysctl -qw net.ipv6.conf.all.disable_ipv6=1
+        attempt
+        rc=$?
+        sysctl -qw net.ipv6.conf.all.disable_ipv6=0
+    fi
+fi
+if [ "$rc" -eq 0 ] && [ "${1:-}" != "--check" ] && [ "${1:-}" != "--auto" ]; then
+    echo
+    echo "Fertig. Mit einem Neustart wird das Update aktiv:  systemctl reboot"
+fi
+exit "$rc"

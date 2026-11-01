@@ -20,6 +20,27 @@ if [ -f "$src" ]; then
     done
 fi
 
+# GTK-Einstellungen: von KDE erzeugte (Breeze, hell) durch die Creative-Fassung ersetzen
+for v in gtk-3.0 gtk-4.0; do
+    ini="$conf/$v/settings.ini"
+    sys_ini="/usr/share/creative-os/xdg/$v/settings.ini"
+    [ -f "$sys_ini" ] || continue
+    if [ ! -e "$ini" ] || grep -qiE "gtk-theme-name=Breeze|gtk-application-prefer-dark-theme=(false|0)" "$ini"; then
+        mkdir -p "$conf/$v"
+        cp "$sys_ini" "$ini"
+    fi
+done
+# Unter Wayland lesen GTK-Programme ihre Einstellungen aus GSettings
+if command -v gsettings >/dev/null 2>&1; then
+    gs() { gsettings set org.gnome.desktop.interface "$1" "$2" 2>/dev/null; }
+    gs gtk-theme "Adwaita-dark"
+    gs color-scheme "prefer-dark"
+    gs icon-theme "Creative"
+    gs cursor-theme "breeze_cursors"
+    gs font-name "Arial 10"
+    gs accent-color "blue"
+fi
+
 python3 - "$conf" <<'PY'
 import re, shutil, sys
 from pathlib import Path
