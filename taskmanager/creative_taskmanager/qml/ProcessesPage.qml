@@ -23,8 +23,8 @@ Item {
 
         Row {
             anchors.fill: parent
-            Col { key: "name"; label: "Name"; right: false; total: ""; width: parent.width - root.colStatus - root.colCpu - root.colMem - root.colDisk }
-            Col { key: "status"; label: "Status"; right: false; total: ""; width: root.colStatus; enabled: false }
+            Col { key: "name"; label: "Name"; alignRight: false; total: ""; width: parent.width - root.colStatus - root.colCpu - root.colMem - root.colDisk }
+            Col { key: "status"; label: "Status"; alignRight: false; total: ""; width: root.colStatus; enabled: false }
             Col { key: "cpu"; label: "CPU"; total: tm.summary.cpu || ""; width: root.colCpu }
             Col { key: "mem"; label: "Arbeitsspeicher"; total: tm.summary.mem || ""; width: root.colMem }
             Col { key: "disk"; label: "Datenträger"; total: tm.summary.disk || ""; width: root.colDisk }
@@ -37,19 +37,19 @@ Item {
         property string key
         property string total
         property string label
-        property bool right: true
+        property bool alignRight: true
         height: 58
         readonly property bool sorted: tm.sortColumn === key
         Rectangle { anchors.fill: parent; anchors.margins: 3; radius: 8; color: cm.containsMouse ? Theme.hover : "transparent" }
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            anchors.right: col.right ? parent.right : undefined
-            anchors.left: col.right ? undefined : parent.left
+            anchors.right: col.alignRight ? parent.right : undefined
+            anchors.left: col.alignRight ? undefined : parent.left
             anchors.rightMargin: 12
             anchors.leftMargin: 12
             spacing: 2
             Text {
-                anchors.right: col.right ? parent.right : undefined
+                anchors.right: col.alignRight ? parent.right : undefined
                 text: col.total
                 visible: text.length > 0
                 color: Theme.text
@@ -58,7 +58,7 @@ Item {
                 font.bold: true
             }
             Text {
-                anchors.right: col.right ? parent.right : undefined
+                anchors.right: col.alignRight ? parent.right : undefined
                 text: col.label + (col.sorted ? (tm.sortDesc ? "  ↓" : "  ↑") : "")
                 color: col.sorted ? Theme.accent : Theme.textMuted
                 font.family: Theme.fontFamily
