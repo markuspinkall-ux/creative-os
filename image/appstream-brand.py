@@ -26,6 +26,7 @@ REBRAND = {
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
     "org.kde.krita": ("Creative Art", "creative-art", "Fotos und Grafiken bearbeiten – Ebenen, Auswahlen, Korrekturen, Filter"),
     "org.kde.partitionmanager": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
+    "org.kde.discover": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),
     "org.gnome.Software": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),
     "org.kde.kwrite": ("Creative Notes", "creative-notes", "Texte und Code bearbeiten"),
     "org.kde.kate": ("Creative Notes", "creative-notes", "Texte und Code bearbeiten"),
@@ -77,6 +78,18 @@ def rebrand(comp):
     if cid not in REBRAND:
         return False
     name, icon, summary = REBRAND[cid]
+    # Original merken – das Originalprogramm wird immer genannt (Dank an die Entwickler)
+    orig = next((el.text for el in comp.findall("name") if el.text and not el.attrib), "") or cid
+    dev = ""
+    for el in comp.findall("developer_name"):
+        if el.text and not el.attrib:
+            dev = el.text.strip()
+    d_el = comp.find("developer")
+    if not dev and d_el is not None and d_el.find("name") is not None:
+        dev = (d_el.find("name").text or "").strip()
+    if not dev:
+        dev = "KDE" if cid.startswith("org.kde.") else ("GNOME" if cid.startswith("org.gnome.") else "")
+    based = f"{orig}" + (f" von {dev}" if dev else "")
     _set_single(comp, "name", name)
     _set_single(comp, "summary", summary)
     for el in comp.findall("icon"):
@@ -87,11 +100,13 @@ def rebrand(comp):
         comp.remove(el)
     d = ET.SubElement(comp, "description")
     ET.SubElement(d, "p").text = summary + "."
+    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Creative OS passt Namen, Aussehen und Bedienung an – "
+                                  f"vielen Dank an die Entwicklerinnen und Entwickler von {orig}!")
     for tag in ("developer_name", "developer"):
         for el in comp.findall(tag):
             comp.remove(el)
-    dev = ET.SubElement(comp, "developer", {"id": "creativeos"})
-    ET.SubElement(dev, "name").text = f"{BASE} (Grundlage: Open-Source-Projekt)"
+    dev_el = ET.SubElement(comp, "developer", {"id": "creativeos"})
+    ET.SubElement(dev_el, "name").text = f"{BASE} · Grundlage: {based}"
     return True
 
 

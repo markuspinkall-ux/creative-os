@@ -68,4 +68,35 @@ SettingsPage {
         SettingRow { label: "System"; Text { text: system.info.os; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true } }
         SettingRow { label: "Kernel"; last: true; Text { text: system.info.kernel; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 } }
     }
+
+    // ---- Danke: worauf Creative OS aufbaut --------------------------------------------------
+    Card {
+        title: "Über Creative OS"
+        subtitle: "Creative OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
+        Repeater {
+            model: [
+                { app: "Unterbau", base: "Fedora Kinoite (Fedora-Projekt)" },
+                { app: "Fenster, Anmeldung, Sitzung", base: "KDE Plasma: KWin, SDDM, KDE Frameworks" },
+                { app: "Oberflächen der Creative-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
+                { app: "Creative Art", base: "Krita (Krita-Stiftung, GPL v3)" },
+                { app: "Software", base: "Discover (KDE) und Flathub" },
+                { app: "Terminal", base: "Konsole (KDE)" },
+                { app: "Entpacken", base: "Ark (KDE)" },
+                { app: "Laufwerke (Erweitert)", base: "KDE-Partitionsmanager (KDE)" },
+                { app: "Bildschirmfoto-Dienst für Creative Shots", base: "Spectacle (KDE)" },
+                { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
+                { app: "YouTube Music im Creative Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
+                { app: "Sprachassistent", base: "Vosk, faster-whisper, Piper; Wetter von Open-Meteo" },
+                { app: "Mein Server", base: "Caddy und PHP" },
+                { app: "Browser, Spiele, Chat", base: "Brave, Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
+            ]
+            delegate: SettingRow {
+                required property var modelData
+                required property int index
+                label: modelData.app
+                hint: modelData.base
+                last: index === 13
+            }
+        }
+    }
 }

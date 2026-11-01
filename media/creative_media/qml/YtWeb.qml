@@ -60,7 +60,29 @@ WebEngineView {
         }
     }
 
+    // Graphit-Look für die offizielle Seite (nur Farben/Schrift – Inhalte und Werbung bleiben unangetastet)
+    readonly property string themeJs: "(function(){if(document.getElementById('creative-theme'))return;" +
+        "var s=document.createElement('style');s.id='creative-theme';s.textContent=`" +
+        "html,body,ytmusic-app{--ytmusic-general-background-A:#12151b!important;--ytmusic-general-background-B:#161920!important;" +
+        "--ytmusic-general-background-C:#1c2029!important;--ytmusic-general-background-D:#232836!important;" +
+        "--ytmusic-brand-background-solid:#171a22!important;--ytmusic-brand-background-translucent:rgba(23,26,34,.92)!important;" +
+        "--ytmusic-nav-bar:#171a22!important;--ytmusic-player-bar-background:#171a22!important;" +
+        "--ytmusic-text-primary:#dce6ff!important;--ytmusic-text-secondary:rgba(220,230,255,.6)!important;" +
+        "--yt-spec-general-background-a:#12151b!important;--yt-spec-general-background-b:#161920!important;" +
+        "--yt-spec-general-background-c:#1c2029!important;--yt-spec-brand-background-solid:#171a22!important;" +
+        "--yt-spec-text-primary:#dce6ff!important;--yt-spec-text-secondary:rgba(220,230,255,.6)!important;" +
+        "--yt-spec-10-percent-layer:rgba(255,255,255,.08)!important;--yt-spec-call-to-action:#8fb3ff!important;" +
+        "--paper-slider-active-color:#8fb3ff!important;--paper-slider-knob-color:#8fb3ff!important;}" +
+        "body,ytmusic-app-layout,#layout{background:#12151b!important;}" +
+        "ytmusic-nav-bar,#nav-bar-background,ytmusic-player-bar,#player-bar-background{background:#171a22!important;}" +
+        "ytmusic-guide-renderer,#guide-wrapper,tp-yt-app-drawer #contentContainer{background:#171a22!important;}" +
+        "ytmusic-player-bar #progress-bar #primaryProgress,ytmusic-player-bar #sliderKnobInner{background:#8fb3ff!important;}" +
+        "::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:5px}" +
+        "::-webkit-scrollbar-track{background:transparent}`;document.documentElement.appendChild(s);})()"
+
     onLoadingChanged: (info) => {
+        if (info.status === WebEngineView.LoadSucceededStatus)
+            web.runJavaScript(web.themeJs)
         if (info.status === WebEngineView.LoadSucceededStatus && ytmusic.takeAutoplay()) {
             web.autoTries = 0
             autoTimer.start()

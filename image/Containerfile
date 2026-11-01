@@ -90,10 +90,12 @@ COPY browser/startpage /usr/share/creative-os/startpage
 COPY browser/brave-policies.json /etc/brave/policies/managed/creative-os.json
 
 # ---------------------------------------------------------------------------
-# 6) App-Shop: GNOME Software statt Discover, Flathub ab Werk
+# 6) App-Shop „Software“: KDE Discover (Qt → gleiche Titelleiste wie alle Fenster),
+#    mit Updates für Creative OS (rpm-ostree) und Flathub ab Werk
 # ---------------------------------------------------------------------------
-RUN dnf install -y gnome-software gnome-software-rpm-ostree \
- && rpm -qa --qf '%{NAME}\n' 'plasma-discover*' | xargs -r dnf remove -y \
+RUN dnf install -y --skip-unavailable plasma-discover plasma-discover-flatpak plasma-discover-rpm-ostree \
+        plasma-discover-notifier \
+ && (rpm -q gnome-software >/dev/null 2>&1 && dnf remove -y gnome-software gnome-software-rpm-ostree >/dev/null 2>&1 || true) \
  && mkdir -p /etc/flatpak/remotes.d \
  && curl -fsSLo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo \
  && dnf clean all
@@ -381,6 +383,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/SoundPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/LookPage.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/SystemPage.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \

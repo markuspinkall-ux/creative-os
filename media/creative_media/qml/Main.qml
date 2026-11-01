@@ -370,4 +370,19 @@ Window {
         if (startFiles.length > 0)
             playStartFile(startFiles[0])
     }
+
+    // Taskleiste: „Gerade läuft“ (Interpret – Titel)
+    Timer {
+        interval: 1500
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: {
+            if (ytmusic.playing && ytmusic.nowTitle.length)
+                nowplaying.update(ytmusic.nowTitle, ytmusic.nowArtist, true)
+            else
+                nowplaying.update(win.nowTitle, win.queueModel === iptv ? "Fernsehen" : win.nowSubtitle,
+                                  win.playing)
+        }
+    }
 }

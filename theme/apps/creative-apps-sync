@@ -38,6 +38,7 @@ VISIBLE = {
     "creative-twitch.desktop": (None, None),
     "steam.desktop": ("Steam", "creative-games"),
     "discord.desktop": ("Discord", "creative-chat"),
+    "org.kde.discover.desktop": ("Software", "creative-store"),
     "org.gnome.Software.desktop": ("Software", "creative-store"),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
     "creative-notes.desktop": ("Creative Notes", "creative-notes"),
@@ -129,9 +130,17 @@ def main():
             if label is None:
                 shown.append(name)
                 continue          # eigene Creative-App, schon passend
+            orig = re.search(r"^Name=(.*)$", text, re.M)
+            orig = orig.group(1).strip() if orig else ""
             text = drop_translations(text, "Name")
             text = drop_translations(text, "GenericName")
             text = set_key(text, "Name", label)
+            # Das Originalprogramm wird genannt (Dank an die Entwickler)
+            if orig and orig.casefold() != label.casefold():
+                text = drop_translations(text, "Comment")
+                comment = re.search(r"^Comment=(.*)$", text, re.M)
+                base = (comment.group(1).strip() + " – ") if comment else ""
+                text = set_key(text, "Comment", f"{base}Grundlage: {orig}")
             if icon:
                 text = set_key(text, "Icon", icon)
             shown.append(name)

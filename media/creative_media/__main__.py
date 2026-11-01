@@ -19,6 +19,7 @@ from .iptv import IptvModel
 from .library import LibraryModel
 from .settings import Settings
 from .ytmusic import YtMusicModel
+from .nowplaying import NowPlayingWriter
 
 HERE = Path(__file__).resolve().parent
 
@@ -98,6 +99,8 @@ def main():
     videos = LibraryModel("video")
     iptv = IptvModel(settings)
     ytmusic = YtMusicModel()
+    nowplaying = NowPlayingWriter()
+    app.aboutToQuit.connect(nowplaying.clear)
 
     files = [QUrl.fromLocalFile(str(Path(a).resolve())).toString()
              for a in sys.argv[1:] if not a.startswith("-") and Path(a).exists()]
@@ -108,6 +111,7 @@ def main():
     ctx.setContextProperty("videos", videos)
     ctx.setContextProperty("iptv", iptv)
     ctx.setContextProperty("ytmusic", ytmusic)
+    ctx.setContextProperty("nowplaying", nowplaying)
     ctx.setContextProperty("startFiles", files)
     ctx.setContextProperty("webEngineAvailable", web_ok)
 

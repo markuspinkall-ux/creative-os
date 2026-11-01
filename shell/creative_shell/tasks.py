@@ -30,6 +30,7 @@ WINDOW_ALIASES = {
     "discord": "discord",
     "org.kde.kwrite": "org.kde.kwrite",
     "krita": "creative-art",
+    "plasma-discover": "org.kde.discover",
     "org.kde.krita": "creative-art",
 }
 

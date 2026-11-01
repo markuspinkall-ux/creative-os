@@ -183,8 +183,8 @@ class SystemModel(QObject):
 
     @Slot()
     def openSoftware(self):
-        if not spawn_detached(["gnome-software", "--mode=updates"]):
-            spawn_detached(["plasma-discover", "--mode", "update"])
+        if not spawn_detached(["plasma-discover", "--mode", "update"]):
+            spawn_detached(["gnome-software", "--mode=updates"])
 
     def _set_message(self, text):
         self._message = text

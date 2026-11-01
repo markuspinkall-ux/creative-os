@@ -66,6 +66,7 @@ Item {
         }
 
         Row {
+            id: appsRow
             anchors.left: parent.left
             anchors.leftMargin: 8
             anchors.verticalCenter: parent.verticalCenter
@@ -108,6 +109,51 @@ Item {
                     onMiddleClicked: tasks.launchNew(modelData.desktopId)
                 }
             }
+        }
+
+        // Gerade läuft: Interpret – Titel, mittig im freien Platz der Taskleiste
+        Item {
+            id: nowPlaying
+            readonly property real freeL: appsRow.x + appsRow.width + 18
+            readonly property real freeR: tray.x - 18
+            width: Math.max(0, Math.min(npRow.implicitWidth + 24, freeR - freeL, 460))
+            x: Math.max(freeL, Math.min(bar.width / 2 - width / 2, freeR - width))
+            height: 40
+            anchors.verticalCenter: parent.verticalCenter
+            opacity: nowplaying.active && width > 90 ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: 250 } }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 20
+                color: npMouse.containsMouse ? Theme.hover : "transparent"
+            }
+            Row {
+                id: npRow
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, nowPlaying.width - 24)
+                spacing: 9
+                SvgIcon { id: npIcon; anchors.verticalCenter: parent.verticalCenter; name: "music"; size: 15 }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, Math.max(0, nowPlaying.width - 24 - npIcon.width - 9))
+                    elide: Text.ElideRight
+                    text: nowplaying.artist.length ? nowplaying.artist + "  –  " + nowplaying.title : nowplaying.title
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+            }
+            MouseArea {
+                id: npMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: nowplaying.raiseSource()
+            }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Gerade läuft: " + nowplaying.artist + " – " + nowplaying.title
         }
 
         Rectangle {
