@@ -514,6 +514,6 @@ Window {
     // Eine Auswahl-Ebene je Monitor
     Instantiator {
         model: shots.overlay ? Qt.application.screens : []
-        delegate: Overlay { info: modelData }
+        delegate: SnipOverlay { info: modelData }
     }
 }

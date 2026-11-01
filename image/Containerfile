@@ -351,7 +351,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
-        /usr/lib/creative-shots/creative_shots/qml/Overlay.qml \
+        /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
  && rm -f /tmp/qml-check.py
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
