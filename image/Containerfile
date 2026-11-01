@@ -438,15 +438,8 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBEN
 # Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
-# Creative Art: startet Krita mit unseren Menüs, Tasten und der Erweiterung? (Probelauf 45 s ohne Bildschirm)
-RUN mkdir -p /tmp/art-home/.local/share/krita \
- && echo "Creative Art: Menüdateien von Krita: $(rpm -ql krita | grep -i 'xmlgui$' | tr '\n' ' ')" \
- && cd /tmp && HOME=/tmp/art-home XDG_RUNTIME_DIR=/tmp XDG_CONFIG_DIRS=/usr/share/creative-os/xdg:/etc/xdg \
-    QT_QPA_PLATFORM=offscreen NOSPLASH=1 timeout 45 krita --nosplash > /tmp/art.log 2>&1; rc=$?; \
-    if [ $rc -eq 124 ]; then echo "Creative Art: Probelauf ok (Krita lief 45 s stabil)"; \
-    else echo "CREATIVE-ART-PROBELAUF FEHLGESCHLAGEN (Code $rc)"; fi; \
-    grep -i -a "creative\|error\|fehler\|python\|plugin" /tmp/art.log | head -30; tail -15 /tmp/art.log; \
-    rm -rf /tmp/art-home /tmp/art.log
+# Creative Art wird separat mit echtem (virtuellem) Bildschirm geprüft: .github/workflows/art-test.yml
+# (Krita stürzt ohne Bildschirm – „offscreen“ – grundsätzlich ab, auch im Original)
 # Creative Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home
