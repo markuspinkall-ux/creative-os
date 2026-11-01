@@ -19,6 +19,7 @@ ApplicationWindow {
         { key: "network", name: "Netzwerk", icon: "wifi", file: "NetworkPage.qml", words: "wlan internet lan kabel verbindung passwort" },
         { key: "displays", name: "Bildschirme", icon: "pc", file: "DisplaysPage.qml", words: "monitor auflösung skalierung hz anordnen hauptbildschirm" },
         { key: "sound", name: "Ton", icon: "speaker", file: "SoundPage.qml", words: "lautstärke lautsprecher kopfhörer mikrofon audio sound" },
+        { key: "drives", name: "Laufwerke", icon: "drive", file: "DrivesPage.qml", words: "festplatte ssd m2 nvme formatieren einrichten partition laufwerk zustand smart" },
         { key: "printers", name: "Drucker", icon: "printer", file: "PrintersPage.qml", words: "drucken testseite scanner" },
         { key: "server", name: "Mein Server", icon: "server", file: "ServerPage.qml", words: "webserver webseite homepage php caddy festplatte" },
         { key: "look", name: "Darstellung", icon: "palette", file: "LookPage.qml", words: "hintergrund hintergrundbild wallpaper bild" },

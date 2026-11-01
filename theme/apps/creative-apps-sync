@@ -45,6 +45,7 @@ VISIBLE = {
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-screenshot"),
     "org.kde.plasma-systemmonitor.desktop": ("Aufgaben-Manager", "creative-taskmanager"),
+    "org.gnome.DiskUtility.desktop": ("Laufwerke (Erweitert)", "creative-drive"),
 }
 # Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
 PREFER = {

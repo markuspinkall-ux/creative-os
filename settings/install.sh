@@ -9,13 +9,15 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 dnf install -y --skip-unavailable python3-pyside6 qt6-qtsvg libkscreen pipewire-utils pulseaudio-utils \
-    cups-client pciutils polkit-kde system-config-printer
+    cups-client pciutils polkit-kde system-config-printer gnome-disk-utility exfatprogs udisks2
 
 rm -rf /usr/lib/creative-settings
 mkdir -p /usr/lib/creative-settings
 cp -r creative_settings /usr/lib/creative-settings/
 find /usr/lib/creative-settings -name '__pycache__' -prune -exec rm -rf {} +
 install -Dm755 bin/creative-settings /usr/bin/creative-settings
+install -Dm755 ../drives/creative-drives-helper /usr/libexec/creative-drives-helper
+install -Dm644 ../drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
 install -Dm644 creative-settings.desktop /usr/share/applications/creative-settings.desktop
 install -Dm644 ../shell/creative_shell/qml/Creative/icons/settings.svg /usr/share/icons/hicolor/scalable/apps/creative-settings.svg
 gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true

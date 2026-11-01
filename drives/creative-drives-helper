@@ -1,0 +1,203 @@
+#!/usr/bin/python3
+"""Laufwerke einrichten – Hilfsprogramm mit Administratorrechten (über pkexec).
+
+Befehle:
+  setup <gerät> <name> <ext4|exfat>   Platte komplett neu einrichten (LÖSCHT ALLES darauf)
+  automount <partition> <on|off>       Beim Start verbinden (fstab-Eintrag)
+
+Sicherheitsregeln: Das System-Laufwerk und eingebundene Systempfade werden
+nie angefasst. Eine Platte wird nur eingerichtet, wenn keine ihrer
+Partitionen gerade benutzt wird.
+"""
+
+import json
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SYSTEM_MOUNTS = ("/", "/sysroot", "/boot", "/boot/efi", "/efi", "/var", "/usr", "/etc", "/home", "/var/home")
+FSTAB = Path("/etc/fstab")
+MARK = "# Creative OS – Laufwerke"
+
+
+def run(*args, check=False, inp=None):
+    return subprocess.run(list(args), capture_output=True, text=True, check=check, input=inp)
+
+
+def done(**kw):
+    print(json.dumps({"ok": True, **kw}, ensure_ascii=False))
+    sys.exit(0)
+
+
+def fail(msg):
+    print(json.dumps({"ok": False, "error": msg}, ensure_ascii=False))
+    sys.exit(1)
+
+
+def tree():
+    out = run("lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS,PKNAME").stdout
+    return json.loads(out).get("blockdevices", [])
+
+
+def walk(nodes):
+    for n in nodes or []:
+        yield n
+        yield from walk(n.get("children"))
+
+
+def find(path):
+    return next((n for n in walk(tree()) if n.get("path") == path), None)
+
+
+def mounts(node):
+    return [m for x in walk([node]) for m in (x.get("mountpoints") or []) if m]
+
+
+def is_system(node):
+    return any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") or m.startswith("/boot") for m in mounts(node))
+
+
+def user_ids():
+    uid = int(os.environ.get("PKEXEC_UID", "0") or 0)
+    try:
+        pw = pwd.getpwuid(uid)
+        return uid, pw.pw_gid
+    except KeyError:
+        return uid, uid
+
+
+def safe_name(name):
+    name = re.sub(r"[^A-Za-z0-9ÄÖÜäöüß _-]", "", name).strip()[:24]
+    return name or "Laufwerk"
+
+
+def mount_dir(name):
+    slug = re.sub(r"[^A-Za-z0-9_-]", "_", name.replace(" ", "_"))
+    base = Path("/var/mnt") / slug
+    n = 2
+    while base.exists() and (os.path.ismount(base) or not base.is_dir() or any(base.iterdir())):
+        base = Path("/var/mnt") / f"{slug}_{n}"
+        n += 1
+    return base
+
+
+def fstab_lines():
+    return FSTAB.read_text(encoding="utf-8").splitlines() if FSTAB.exists() else []
+
+
+def fstab_remove(uuid):
+    lines = [l for l in fstab_lines() if not l.startswith(f"UUID={uuid} ")]
+    FSTAB.write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
+
+
+def fstab_add(uuid, target, fstype):
+    uid, gid = user_ids()
+    if fstype in ("exfat", "vfat", "ntfs", "ntfs3"):
+        opts = f"uid={uid},gid={gid},umask=022,nofail,x-systemd.device-timeout=10s,x-gvfs-show"
+    else:
+        opts = "defaults,nofail,x-systemd.device-timeout=10s,x-gvfs-show"
+    fstab_remove(uuid)
+    with FSTAB.open("a", encoding="utf-8") as fh:
+        fh.write(f"{MARK}\nUUID={uuid} {target} {fstype} {opts} 0 0\n")
+    run("systemctl", "daemon-reload")
+
+
+def automount(part, state):
+    n = find(part)
+    if not n or n.get("type") not in ("part", "crypt", "lvm"):
+        fail("Dieses Laufwerk wurde nicht gefunden.")
+    if is_system(n):
+        fail("Das System-Laufwerk wird immer verbunden.")
+    uuid, fstype = n.get("uuid"), (n.get("fstype") or "").lower()
+    if not uuid or not fstype:
+        fail("Dieses Laufwerk ist noch nicht eingerichtet.")
+    if fstype == "ntfs":
+        fstype = "ntfs3"
+    if state == "off":
+        fstab_remove(uuid)
+        run("systemctl", "daemon-reload")
+        done()
+    current = [m for m in mounts(n)]
+    name = safe_name(n.get("label") or "Laufwerk")
+    target = Path(current[0]) if current and current[0].startswith("/var/mnt/") else mount_dir(name)
+    for m in current:
+        if Path(m) != target:
+            run("umount", m)
+    target.mkdir(parents=True, exist_ok=True)
+    fstab_add(uuid, target, fstype)
+    if not os.path.ismount(target):
+        r = run("mount", str(target))
+        if r.returncode != 0:
+            fail("Das Laufwerk konnte nicht verbunden werden: " + (r.stderr.strip() or "unbekannter Fehler"))
+    done(mount=str(target))
+
+
+def setup(disk, name, fstype):
+    n = find(disk)
+    if not n or n.get("type") != "disk":
+        fail("Diese Platte wurde nicht gefunden.")
+    if is_system(n):
+        fail("Das System-Laufwerk kann nicht neu eingerichtet werden.")
+    if fstype not in ("ext4", "exfat"):
+        fail("Unbekanntes Format.")
+    if fstype == "exfat" and not shutil.which("mkfs.exfat"):
+        fail("Das Format exFAT ist nicht installiert.")
+    name = safe_name(name)
+    # Alles von dieser Platte lösen (z. B. automatisch eingebundene USB-Partitionen)
+    for x in walk([n]):
+        for m in x.get("mountpoints") or []:
+            if m:
+                if run("umount", m).returncode != 0:
+                    fail(f"„{m}“ wird gerade benutzt. Bitte offene Dateien schließen und erneut versuchen.")
+        if x.get("uuid"):
+            fstab_remove(x["uuid"])
+    # Neu einrichten: eine Partition über die ganze Platte
+    run("wipefs", "-a", disk)
+    r = run("sfdisk", "--wipe", "always", disk, inp="label: gpt\n,,L\n")
+    if r.returncode != 0:
+        fail("Die Platte konnte nicht aufgeteilt werden: " + r.stderr.strip()[-200:])
+    run("partx", "-u", disk)
+    run("udevadm", "settle")
+    time.sleep(1)
+    parts = [x for x in walk([find(disk)]) if x.get("type") == "part"]
+    if not parts:
+        fail("Die neue Partition wurde nicht gefunden.")
+    part = parts[0]["path"]
+    if fstype == "ext4":
+        r = run("mkfs.ext4", "-F", "-L", name[:16], part)
+    else:
+        r = run("mkfs.exfat", "-L", name[:15], part)
+    if r.returncode != 0:
+        fail("Formatieren fehlgeschlagen: " + r.stderr.strip()[-200:])
+    run("udevadm", "settle")
+    time.sleep(1)
+    p = find(part)
+    uuid = p.get("uuid") if p else None
+    if not uuid:
+        fail("Die Platte ist eingerichtet, aber noch nicht erkannt. Bitte neu starten.")
+    target = mount_dir(name)
+    target.mkdir(parents=True, exist_ok=True)
+    fstab_add(uuid, target, fstype)
+    run("mount", str(target))
+    if fstype == "ext4":
+        uid, gid = user_ids()
+        os.chown(target, uid, gid)
+        os.chmod(target, 0o755)
+    done(mount=str(target), name=name)
+
+
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        fail("Bitte über die Systemsteuerung starten.")
+    a = sys.argv[1:]
+    if len(a) == 4 and a[0] == "setup":
+        setup(a[1], a[2], a[3])
+    elif len(a) == 3 and a[0] == "automount" and a[2] in ("on", "off"):
+        automount(a[1], a[2])
+    else:
+        fail("Unbekannter Befehl.")

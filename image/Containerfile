@@ -160,6 +160,11 @@ RUN chmod 755 /usr/bin/creative-files \
 RUN dnf install -y --skip-unavailable libkscreen pipewire-utils pulseaudio-utils cups-client \
         pciutils polkit-kde system-config-printer \
  && dnf clean all
+# Laufwerke: eigener Helfer (Einrichten, beim Start verbinden) + GNOME Laufwerke für Profis
+RUN dnf install -y --skip-unavailable gnome-disk-utility exfatprogs udisks2 && dnf clean all
+COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
+COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
+RUN chmod 755 /usr/libexec/creative-drives-helper
 COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
 COPY settings/bin/creative-settings /usr/bin/creative-settings
 COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
