@@ -13,5 +13,9 @@ if [ -n "$missing" ] && [ "$staged" = "False" ] && command -v rpm-ostree >/dev/n
     # shellcheck disable=SC2086
     rpm-ostree kargs $missing
 fi
+# Gerätename „fedora“/„localhost“ aus älteren Installationen → „creative-os“
+case "$(hostnamectl hostname 2>/dev/null || hostname)" in
+    fedora|localhost|localhost.localdomain|localhost-live) hostnamectl set-hostname creative-os || true ;;
+esac
 # Startmenü von GRUB nur bei Problemen zeigen (wie bei Windows)
 command -v grub2-editenv >/dev/null 2>&1 && grub2-editenv - set menu_auto_hide=1 || true

@@ -4,6 +4,6 @@
 lang de_DE.UTF-8
 keyboard --vckeymap=de --xlayouts=de
 timezone Europe/Berlin --utc
-network --bootproto=dhcp --activate
+network --bootproto=dhcp --activate --hostname=creative-os
 ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification
 # Festplatte und Benutzer wählt man im Installer selbst aus.

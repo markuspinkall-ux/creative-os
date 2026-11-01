@@ -27,7 +27,7 @@ QtObject {
     readonly property color pressed: Qt.rgba(1, 1, 1, 0.12)
     readonly property color subtle: Qt.rgba(1, 1, 1, 0.04)
 
-    // Schrift (auf Fedora liefert "Liberation Sans" die Arial-Maße)
+    // Schrift (unter Linux liefert "Liberation Sans" die Arial-Maße)
     readonly property string fontFamily: "Arial"
 
     // Rundungen

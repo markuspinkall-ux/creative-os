@@ -82,6 +82,7 @@ jobs:
           lang de_DE.UTF-8
           keyboard de
           timezone Europe/Berlin
+          network --hostname=creative-os
           """
           TOML
           sudo podman run --rm --privileged \
