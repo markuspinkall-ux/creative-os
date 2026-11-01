@@ -310,14 +310,14 @@ RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rp
  && systemctl enable rpm-ostreed-automatic.timer
 
 # Abschlussprüfung des Abbilds
-# Oberflächen prüfen (Tippfehler in QML fallen so schon beim Bauen auf)
+# Oberflächen prüfen – bei einem Fehler wird das Abbild nicht veröffentlicht
 COPY image/qml-check.py /tmp/qml-check.py
 RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-calculator/creative_calculator/qml/Main.qml \
         /usr/lib/creative-media/creative_media/qml/Main.qml \
         /usr/lib/creative-media/creative_media/qml/YtMusicView.qml \
         /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
-    ; rm -f /tmp/qml-check.py
+ && rm -f /tmp/qml-check.py
 # Creative Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home

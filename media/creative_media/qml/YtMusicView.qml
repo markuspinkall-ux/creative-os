@@ -10,14 +10,14 @@ Item {
     property var model          // ytmusic
     signal play(int row)
 
-    readonly property bool top: model.mode === "top"
+    readonly property bool isTop: model.mode === "top"
 
     // ---- Kopf --------------------------------------------------------------------------
     Text {
         id: title
         x: 28
         y: 24
-        text: root.top ? "YouTube Music" : "Suche"
+        text: root.isTop ? "YouTube Music" : "Suche"
         color: Theme.text
         font.family: Theme.fontFamily
         font.pixelSize: 24
@@ -27,8 +27,8 @@ Item {
         anchors.left: title.left
         anchors.top: title.bottom
         anchors.topMargin: 4
-        text: root.model.loading ? (root.top ? "Die Top 10 werden geladen …" : "Wird gesucht …")
-            : (root.top ? "Die Top 10 in Deutschland" : root.model.count + " Treffer für „" + root.model.query + "“")
+        text: root.model.loading ? (root.isTop ? "Die Top 10 werden geladen …" : "Wird gesucht …")
+            : (root.isTop ? "Die Top 10 in Deutschland" : root.model.count + " Treffer für „" + root.model.query + "“")
         color: Theme.textMuted
         font.family: Theme.fontFamily
         font.pixelSize: 13
@@ -62,7 +62,7 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 6
                 anchors.verticalCenter: parent.verticalCenter
-                visible: search.text.length > 0 || !root.top
+                visible: search.text.length > 0 || !root.isTop
                 width: 26; height: 26; radius: 13
                 color: clearMouse.containsMouse ? Theme.hover : "transparent"
                 SvgIcon { anchors.centerIn: parent; name: "close"; size: 12 }
@@ -82,8 +82,8 @@ Item {
             height: 38
             icon: "refresh"
             iconSize: 17
-            label: root.top ? "Top 10 neu laden" : "Neu suchen"
-            onClicked: root.top ? root.model.reloadTop() : root.model.search(root.model.query)
+            label: root.isTop ? "Top 10 neu laden" : "Neu suchen"
+            onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
         }
     }
 
@@ -118,7 +118,7 @@ Item {
             required property string videoId
             required property int rank
             readonly property bool current: videoId === root.model.currentId
-            readonly property bool big: root.top
+            readonly property bool big: root.isTop
 
             width: ListView.view.width
             height: big ? 72 : 60
@@ -269,7 +269,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: !root.model.loading && root.model.status.length > 0
             text: "Nochmal versuchen"
-            onClicked: root.top ? root.model.reloadTop() : root.model.search(root.model.query)
+            onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
         }
     }
 
