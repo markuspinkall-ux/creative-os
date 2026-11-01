@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=creative_art
+X-Python-2-Compatible=false
+X-Krita-Manual=
+Name=Creative Art
+Comment=Aufbau, Namen und Arbeitsweise wie bei Photoshop CS2 (Creative OS)

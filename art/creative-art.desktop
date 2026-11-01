@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Art
+GenericName=Bildbearbeitung
+Comment=Fotos und Grafiken bearbeiten – Ebenen, Auswahlen, Korrekturen, Filter
+Keywords=Bildbearbeitung;Photoshop;Fotos;Ebenen;Grafik;Malen;PSD;Retusche;
+Exec=creative-art %F
+Icon=creative-art
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+MimeType=image/vnd.adobe.photoshop;image/x-psd;application/x-krita;image/openraster;image/x-xcf;
+StartupWMClass=krita
+X-KDE-StartupNotify=true

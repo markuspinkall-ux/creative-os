@@ -1,0 +1,11 @@
+ToolOptionsInDocker=true
+dontUseNativeFileDialog=false
+
+[theme]
+Theme=Creative Graphit
+
+[Shortcut Schemes]
+Current Scheme=creative_art
+
+[python]
+enable_creative_art=true

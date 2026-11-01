@@ -179,6 +179,22 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
     | sed '/^$/d; s/$/=creative-pictures.desktop/' >> /etc/xdg/mimeapps.list
 
 # ---------------------------------------------------------------------------
+# 8a5) Creative Art – Bildbearbeitung (Krita mit Aufbau und Tasten wie Photoshop CS2)
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable krita python3-pyqt5 && dnf clean all
+COPY art/krita/krita5.xmlgui /usr/share/creative-art/krita5.xmlgui
+COPY art/krita/shortcuts/creative_art.shortcuts /usr/share/krita/shortcuts/creative_art.shortcuts
+COPY art/krita/pykrita /usr/share/krita/pykrita
+COPY theme/CreativeGraphit.colors /usr/share/krita/color-schemes/CreativeGraphit.colors
+COPY art/kritarc /usr/share/creative-os/xdg/kritarc
+COPY art/bin/creative-art /usr/bin/creative-art
+COPY art/creative-art.desktop /usr/share/applications/creative-art.desktop
+RUN chmod 755 /usr/bin/creative-art \
+ && python3 -c "import xml.dom.minidom,sys; xml.dom.minidom.parse('/usr/share/creative-art/krita5.xmlgui'); print('Creative Art: Menüdatei ok')" \
+  && python3 -c "import ast; ast.parse(open('/usr/share/krita/pykrita/creative_art/__init__.py').read()); print('Creative Art: Erweiterung ok')" \
+ && (rpm -q krita >/dev/null && echo "Creative Art: Krita $(rpm -q --qf '%{VERSION}' krita)" || echo "CREATIVE-ART: KRITA FEHLT")
+
+# ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator

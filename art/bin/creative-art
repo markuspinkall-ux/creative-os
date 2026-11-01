@@ -1,0 +1,15 @@
+#!/bin/sh
+# Creative Art – startet Krita mit dem Aufbau von Photoshop CS2 (Menüs, Tasten, Paletten).
+# Die Menüdatei liegt im Benutzerordner, weil Krita sie nur dort überschreiben lässt;
+# sie wird bei jedem Start auf den Stand von Creative OS gebracht.
+src=/usr/share/creative-art/krita5.xmlgui
+dst="${XDG_DATA_HOME:-$HOME/.local/share}/krita/krita5.xmlgui"
+if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
+    # Eigene Änderungen (ohne Creative-Kennung) nicht überschreiben
+    if [ ! -e "$dst" ] || grep -q "Creative Art: Menüleiste" "$dst"; then
+        mkdir -p "$(dirname "$dst")"
+        cp "$src" "$dst"
+    fi
+fi
+export NOSPLASH=1
+exec krita "$@"

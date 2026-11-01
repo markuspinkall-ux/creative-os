@@ -29,6 +29,8 @@ WINDOW_ALIASES = {
     "brave-browser-stable": "brave-browser",
     "discord": "discord",
     "org.kde.kwrite": "org.kde.kwrite",
+    "krita": "creative-art",
+    "org.kde.krita": "creative-art",
 }
 
 
