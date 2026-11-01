@@ -25,15 +25,38 @@ jobs:
           withgui() { cp art/krita/krita5.xmlgui /tmp/h/.local/share/krita/; }
           withshort() { cp art/krita/shortcuts/creative_art.shortcuts /usr/share/krita/shortcuts/; }
           withplugin() { cp -r art/krita/pykrita/* /usr/share/krita/pykrita/; printf '[python]\nenable_creative_art=true\n' > /tmp/h/.config/kritarc; }
-          withall() { withgui; withshort; withplugin; withrc; }
-          run 1-original plain
-          (run 2-nur-xmlgui withgui)
-          (run 3-nur-kritarc withrc)
-          (run 4-nur-erweiterung withplugin)
-          (run 5-alles withall)
-          cp -r art/krita/pykrita/* /usr/share/krita/pykrita/
-          rm -rf /tmp/h; mkdir -p /tmp/h/.local/share/krita; cp art/krita/krita5.xmlgui /tmp/h/.local/share/krita/
-          mkdir -p /tmp/xdg && cp art/kritarc /tmp/xdg/kritarc
-          echo "=== Rückverfolgung (alles zusammen)"
+          G=art/krita/krita5.xmlgui
+          mkdir -p /tmp/v
+          # a) Platzhalter für das Werkzeugleisten-Menü
+          sed 's#<Action name="window"/>#<Action name="window"/>\n      <Merge name="StandardToolBarMenuHandler"/>#' $G > /tmp/v/a.xmlgui
+          # b) Haupt-Werkzeugleiste
+          sed 's#</kpartgui>#  <ToolBar name="mainToolBar" index="0">\n    <Text>Datei</Text>\n    <Action name="file_new"/>\n    <Action name="file_open"/>\n    <Action name="file_save"/>\n  </ToolBar>\n</kpartgui>#' $G > /tmp/v/b.xmlgui
+          # c) beides
+          sed 's#<Action name="window"/>#<Action name="window"/>\n      <Merge name="StandardToolBarMenuHandler"/>#' /tmp/v/b.xmlgui > /tmp/v/c.xmlgui
+          for v in a b c; do (run 6-xmlgui-$v cp /tmp/v/$v.xmlgui /tmp/h/.local/share/krita/krita5.xmlgui); done
+          grep -n "StandardToolBar\|mainToolBar" /tmp/v/c.xmlgui
+          # Original-Menüdatei aus Krita selbst holen (steckt im Programm)
+          cat > /tmp/dump.py <<'PY'
+          import ctypes, glob, sys
+          from PyQt6.QtCore import QCoreApplication, QDirIterator, QFile
+          app = QCoreApplication(sys.argv)
+          for lib in sorted(glob.glob("/lib64/libkrita*.so.*")):
+              try: ctypes.CDLL(lib, mode=ctypes.RTLD_GLOBAL)
+              except OSError: pass
+          it = QDirIterator(":/", QDirIterator.IteratorFlag.Subdirectories)
+          found = []
+          while it.hasNext():
+              f = it.next()
+              if f.endswith(".xmlgui") or f.endswith(".rc"): found.append(f)
+          print("XMLGUI-DATEIEN:", found)
+          for f in found:
+              if f.endswith("krita5.xmlgui") or f.endswith("krita.xmlgui"):
+                  q = QFile(f); q.open(QFile.OpenModeFlag.ReadOnly)
+                  open("/tmp/orig.xmlgui", "wb").write(bytes(q.readAll())); print("GESICHERT", f)
+          PY
+          sed -i 's/^          //' /tmp/dump.py
+          QT_QPA_PLATFORM=offscreen python3 /tmp/dump.py 2>&1 | tail -5
+          echo "=== ORIGINAL-ANFANG"; cat /tmp/orig.xmlgui 2>/dev/null; echo "=== ORIGINAL-ENDE"
+          echo "=== Rückverfolgung (Variante c mit allem)"
           HOME=/tmp/h XDG_RUNTIME_DIR=/tmp/rt XDG_CONFIG_DIRS=/tmp/xdg:/etc/xdg NOSPLASH=1 QT_QPA_PLATFORM=xcb KDE_DEBUG=1 \
             timeout 90 xvfb-run -a dbus-launch gdb -q -batch -ex "set debuginfod enabled off" -ex run -ex bt -ex quit --args krita --nosplash 2>&1 | grep -v "Fontconfig\|New Thread\|exited\|Thread debugging\|libthread" | tail -45
