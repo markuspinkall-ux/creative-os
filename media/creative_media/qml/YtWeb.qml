@@ -28,7 +28,15 @@ WebEngineView {
         "if(!id){var a=document.querySelector('ytmusic-player-bar a.yt-simple-endpoint[href*=\"watch?v=\"]');" +
         "if(a){try{id=new URL(a.href).searchParams.get('v')||'';}catch(e){}}}" +
         "var art=(m&&m.artwork&&m.artwork.length)?m.artwork[m.artwork.length-1].src:'';" +
-        "return {title:m?m.title:'',artist:m?m.artist:'',thumb:art,videoId:id,playing:!!(v&&!v.paused&&!v.ended)};})()"
+        "var t=m&&m.title?m.title:'',ar=m&&m.artist?m.artist:'';" +
+        // Ersatz: direkt aus der Abspielleiste der Seite lesen
+        "var bar=document.querySelector('ytmusic-player-bar');" +
+        "if(bar&&!t){var te=bar.querySelector('.title');t=te?(te.getAttribute('title')||te.textContent||'').trim():'';}" +
+        "if(bar&&!ar){var be=bar.querySelector('.byline');ar=be?((be.getAttribute('title')||be.textContent||'').split('•')[0]).trim():'';}" +
+        "if(bar&&!art){var im=bar.querySelector('img');art=im?im.src:'';}" +
+        "var pl=!!(v&&!v.paused&&!v.ended);" +
+        "if(!v){var pb=document.querySelector('#play-pause-button');var lb=pb?(pb.getAttribute('aria-label')||pb.getAttribute('title')||''):'';pl=/pause/i.test(lb);}" +
+        "return {title:t,artist:ar,thumb:art,videoId:id,playing:pl};})()"
 
     function command(c) {
         const js = {
@@ -100,8 +108,29 @@ WebEngineView {
         "if(s.parentNode!==document.documentElement||document.documentElement.lastElementChild!==s)" +
         "document.documentElement.appendChild(s);})"
 
+    // Alles, was die Seite trotzdem schwarz/dunkelgrau malt (Player-Seite, „Als Nächstes“,
+    // Liedtexte, Seitenleiste …), wird in den passenden Graphit-Blauton umgefärbt.
+    // Videos, Bilder und Albumcover bleiben, wie sie sind.
+    readonly property string sweepJs: "(function(){" +
+        "var skip='VIDEO,IMG,CANVAS,SVG,PATH,G,YT-IMG-SHADOW,SCRIPT,STYLE,LINK,META';" +
+        "function tone(r,g,b){var mx=Math.max(r,g,b),mn=Math.min(r,g,b);" +
+        "if(mx>60||mx-mn>10)return null;" +
+        "if(mx<=14)return [20,26,38];if(mx<=26)return [24,32,49];if(mx<=38)return [27,35,52];return [34,43,63];}" +
+        "var els=document.querySelectorAll('ytmusic-app *, body, html');var now=Date.now();" +
+        "for(var i=0;i<els.length;i++){var e=els[i];" +
+        "if(e.dataset&&e.dataset.crTone&&now-e.dataset.crTone<15000)continue;" +
+        "if(skip.indexOf(e.tagName.toUpperCase())>=0){continue;}" +
+        "if(e.closest&&e.closest('#movie_player,#song-image,ytmusic-thumbnail-renderer'))continue;" +
+        "var c=getComputedStyle(e).backgroundColor;var mm=c&&c.match(/rgba?\\(([^)]+)\\)/);" +
+        "if(e.dataset)e.dataset.crTone=now;if(!mm)continue;" +
+        "var p=mm[1].split(',').map(function(x){return parseFloat(x)});" +
+        "var a=p.length>3?p[3]:1;if(a<0.05)continue;var t=tone(p[0],p[1],p[2]);if(!t)continue;" +
+        "e.style.setProperty('background-color','rgba('+t[0]+','+t[1]+','+t[2]+','+a+')','important');}" +
+        "})()"
+
     function applyTheme() {
         web.runJavaScript(themeJs + "(" + JSON.stringify(themeCss) + ")")
+        web.runJavaScript(sweepJs)
     }
 
     Timer {
