@@ -2,7 +2,7 @@
 
 import threading
 
-from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
+from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
 from . import config, sysstats
 
@@ -25,6 +25,10 @@ class DesktopStats(QObject):
         if self._enabled:
             self._timer.start()
             QTimer.singleShot(500, self._tick)
+        config.config_dir().mkdir(parents=True, exist_ok=True)
+        self._cfg_watch = QFileSystemWatcher([str(config.config_dir())], self)
+        self._cfg_watch.directoryChanged.connect(
+            lambda *_: QTimer.singleShot(150, lambda: self._follow(bool(config.load().get("desktopStats", True)))))
 
     def _tick(self):
         if self._busy:
@@ -47,12 +51,19 @@ class DesktopStats(QObject):
         self._tiles = tiles
         self.changed.emit()
 
+    def _follow(self, on):
+        if on != self._enabled:
+            self._switch(on)
+
     @Slot(bool)
     def setEnabled(self, on):
         if on == self._enabled:
             return
-        self._enabled = on
         config.set_value("desktopStats", on)
+        self._switch(on)
+
+    def _switch(self, on):
+        self._enabled = on
         if on:
             self._timer.start()
             self._tick()

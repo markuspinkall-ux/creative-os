@@ -18,6 +18,7 @@ DEFAULTS = {
     "desktopStats": True,
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
+    "visualizerOpacity": 0.7,
     "pinned": [
         {
             "icon": "files",

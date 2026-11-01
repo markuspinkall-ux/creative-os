@@ -134,7 +134,7 @@ RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/cre
 # 8) Creative Player (Musik, Videos, IPTV) – Standardprogramm für Medien
 # ---------------------------------------------------------------------------
 RUN dnf install -y qt6-qtmultimedia python3-mutagen python3-requests python3-pip yt-dlp \
- && dnf install -y --skip-unavailable deno yt-dlp-ejs \
+ && dnf install -y --skip-unavailable deno nodejs yt-dlp-ejs \
  && dnf clean all
 COPY media/creative_media /usr/lib/creative-media/creative_media
 # YouTube Music (Top 10, Suche) – ytmusicapi in einem eigenen Ordner
@@ -358,6 +358,8 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shell/creative_shell/qml/Creative/PerfTile.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Wallpaper.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/SoundPage.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/LookPage.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \

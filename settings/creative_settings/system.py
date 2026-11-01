@@ -261,7 +261,11 @@ class LookModel(QObject):
     def __init__(self, builtin_dir, parent=None):
         super().__init__(parent)
         self._builtin = Path(builtin_dir)
-        self._current = shell_config.load().get("wallpaper") or ""
+        cfg = shell_config.load()
+        self._current = cfg.get("wallpaper") or ""
+        self._viz_on = bool(cfg.get("taskbarVisualizer", True))
+        self._viz_opacity = float(cfg.get("visualizerOpacity", 0.7))
+        self._stats_on = bool(cfg.get("desktopStats", True))
         self._images = []
         self.refresh()
 
@@ -286,6 +290,25 @@ class LookModel(QObject):
         self._images = images
         self.changed.emit()
 
+    # ---- Musik-Visualizer und Leistungsanzeige (Taskleiste übernimmt sofort) ----
+    @Slot(bool)
+    def setVisualizer(self, on):
+        self._viz_on = bool(on)
+        shell_config.set_value("taskbarVisualizer", self._viz_on)
+        self.changed.emit()
+
+    @Slot(float)
+    def setVisualizerOpacity(self, value):
+        self._viz_opacity = max(0.1, min(1.0, round(float(value), 2)))
+        shell_config.set_value("visualizerOpacity", self._viz_opacity)
+        self.changed.emit()
+
+    @Slot(bool)
+    def setDesktopStats(self, on):
+        self._stats_on = bool(on)
+        shell_config.set_value("desktopStats", self._stats_on)
+        self.changed.emit()
+
     @Slot(str)
     def setWallpaper(self, path):
         cfg_path = shell_config.config_dir() / "shell.json"
@@ -304,4 +327,7 @@ class LookModel(QObject):
         self.changed.emit()
 
     images = Property("QVariantList", lambda self: self._images, notify=changed)
+    visualizer = Property(bool, lambda self: self._viz_on, notify=changed)
+    visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
+    desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)

@@ -40,7 +40,7 @@ Item {
             anchors.topMargin: 6
             anchors.bottomMargin: 3
             enabled: false
-            opacity: visualizer.active ? 1 : 0
+            opacity: visualizer.active && visualizer.enabled ? visualizer.strength : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
             readonly property int count: visualizer.bars
@@ -57,8 +57,8 @@ Item {
                     radius: Math.min(3, width / 2)
                     // dunkles Creative-Blau, nach oben heller
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: Qt.rgba(0.40, 0.55, 0.92, 0.42) }
-                        GradientStop { position: 1.0; color: Qt.rgba(0.16, 0.27, 0.55, 0.30) }
+                        GradientStop { position: 0.0; color: Qt.rgba(0.40, 0.55, 0.92, 0.62) }
+                        GradientStop { position: 1.0; color: Qt.rgba(0.16, 0.27, 0.55, 0.45) }
                     }
                     Behavior on height { NumberAnimation { duration: 60 } }
                 }

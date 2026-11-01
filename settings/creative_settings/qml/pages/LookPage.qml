@@ -5,7 +5,7 @@ import ".."
 SettingsPage {
     PageHeader {
         title: "Darstellung"
-        subtitle: "Hintergrundbild für alle Bildschirme"
+        subtitle: "Hintergrundbild, Musik-Visualizer, Leistungsanzeige"
         CButton { text: "Aktualisieren"; onClicked: look.refresh() }
     }
 
@@ -54,6 +54,61 @@ SettingsPage {
                     Accessible.role: Accessible.Button
                     Accessible.name: "Hintergrundbild " + modelData.label
                 }
+            }
+        }
+    }
+
+    Card {
+        title: "Musik-Visualizer"
+        subtitle: "Balken hinter der Taskleiste, wenn Musik läuft"
+        SettingRow {
+            label: "Visualizer anzeigen"
+            hint: "Aus = keine Balken und keine Messung im Hintergrund"
+            CSwitch {
+                checked: look.visualizer
+                label: "Musik-Visualizer anzeigen"
+                onToggled: (v) => look.setVisualizer(v)
+            }
+        }
+        SettingRow {
+            label: "Deckkraft"
+            hint: "Wie kräftig die Balken zu sehen sind"
+            last: true
+            enabled: look.visualizer
+            opacity: enabled ? 1 : 0.45
+            Row {
+                spacing: 12
+                CSlider {
+                    id: vizOpacity
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 220
+                    from: 10; to: 100; stepSize: 5
+                    value: Math.round(look.visualizerOpacity * 100)
+                    onMoved: look.setVisualizerOpacity(value / 100)
+                    Accessible.name: "Deckkraft des Visualizers"
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 44
+                    text: Math.round(vizOpacity.value) + " %"
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+            }
+        }
+    }
+
+    Card {
+        title: "Leistungsanzeige"
+        subtitle: "CPU, Arbeitsspeicher, Datenträger und Netzwerk oben rechts auf dem Schreibtisch"
+        SettingRow {
+            label: "Auf dem Schreibtisch anzeigen"
+            last: true
+            CSwitch {
+                checked: look.desktopStats
+                label: "Leistungsanzeige anzeigen"
+                onToggled: (v) => look.setDesktopStats(v)
             }
         }
     }

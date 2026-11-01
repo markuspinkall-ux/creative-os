@@ -11,7 +11,7 @@ import subprocess
 import threading
 import time
 
-from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
+from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
 from . import config
 
@@ -36,7 +36,14 @@ class Visualizer(QObject):
         super().__init__(parent)
         self._levels = [0.0] * BARS
         self._active = False
-        self._enabled = bool(config.load().get("taskbarVisualizer", True)) and np is not None and bool(shutil.which("parec"))
+        cfg = config.load()
+        self._can = np is not None and bool(shutil.which("parec"))
+        self._enabled = bool(cfg.get("taskbarVisualizer", True)) and self._can
+        self._opacity = float(cfg.get("visualizerOpacity", 0.7))
+        # Änderungen aus der Systemsteuerung sofort übernehmen
+        config.config_dir().mkdir(parents=True, exist_ok=True)
+        self._cfg_watch = QFileSystemWatcher([str(config.config_dir())], self)
+        self._cfg_watch.directoryChanged.connect(lambda *_: QTimer.singleShot(150, self._reload_config))
         self._proc = None
         self._stop = threading.Event()
         self._last_sound = 0.0
@@ -144,13 +151,26 @@ class Visualizer(QObject):
                 self.activeChanged.emit()
         self.levelsChanged.emit()
 
+    def _reload_config(self):
+        cfg = config.load()
+        op = float(cfg.get("visualizerOpacity", 0.7))
+        if abs(op - self._opacity) > 0.001:
+            self._opacity = op
+            self.enabledChanged.emit()
+        on = bool(cfg.get("taskbarVisualizer", True)) and self._can
+        if on != self._enabled:
+            self._apply_enabled(on)
+
     @Slot(bool)
     def setEnabled(self, on):
-        on = bool(on) and np is not None
+        on = bool(on) and self._can
         if on == self._enabled:
             return
-        self._enabled = on
         config.set_value("taskbarVisualizer", on)
+        self._apply_enabled(on)
+
+    def _apply_enabled(self, on):
+        self._enabled = on
         if on:
             self._watch.start()
             self._check_streams()
@@ -162,4 +182,5 @@ class Visualizer(QObject):
     levels = Property("QVariantList", lambda self: self._levels, notify=levelsChanged)
     active = Property(bool, lambda self: self._active, notify=activeChanged)
     enabled = Property(bool, lambda self: self._enabled, notify=enabledChanged)
+    strength = Property(float, lambda self: self._opacity, notify=enabledChanged)
     bars = Property(int, lambda self: BARS, constant=True)

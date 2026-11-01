@@ -20,6 +20,7 @@ from PySide6.QtCore import (
     QModelIndex,
     QObject,
     Qt,
+    QUrl,
     Signal,
     Slot,
 )
@@ -142,13 +143,77 @@ def _ytdlp_search(query, limit):
     return out
 
 
+def _cache_dir():
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    d = Path(base) / "creative-media" / "ytmusic"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+CACHE_LIMIT = 1024 * 1024 * 1024        # 1 GB für zuletzt gehörte Lieder
+_dl_locks = {}
+_dl_guard = threading.Lock()
+
+
+def _trim_cache(keep):
+    files = sorted((f for f in _cache_dir().glob("*.*") if f.suffix != ".part"), key=lambda f: f.stat().st_mtime)
+    total = sum(f.stat().st_size for f in files)
+    for f in files:
+        if total <= CACHE_LIMIT:
+            break
+        if f.stem == keep:
+            continue
+        total -= f.stat().st_size
+        try:
+            f.unlink()
+        except OSError:
+            pass
+
+
+def _ytdlp_base():
+    args = ["yt-dlp", "--no-warnings", "--no-playlist", "--retries", "10", "--fragment-retries", "10",
+            "--socket-timeout", "20"]
+    if shutil.which("node") or shutil.which("deno"):
+        args += ["--js-runtimes", "deno,node"]
+    return args
+
+
+def fetch_audio(video_id):
+    """Lädt den Ton eines Liedes ganz herunter und liefert den Pfad.
+
+    Warum nicht direkt streamen? YouTube drosselt oder kappt lange offene
+    Verbindungen gern mitten im Lied – dann bricht die Wiedergabe ab.
+    Eine fertig geladene Datei spielt dagegen bis zum Ende durch und wird
+    beim nächsten Mal sofort abgespielt (Zwischenspeicher, max. 1 GB).
+    """
+    with _dl_guard:
+        lock = _dl_locks.setdefault(video_id, threading.Lock())
+    with lock:
+        for f in _cache_dir().glob(f"{video_id}.*"):
+            if f.suffix != ".part" and f.stat().st_size > 10000:
+                f.touch()
+                return str(f)
+        out = str(_cache_dir() / f"{video_id}.%(ext)s")
+        cmd = _ytdlp_base() + ["-f", "bestaudio[ext=m4a]/bestaudio/best", "-o", out,
+                               f"https://music.youtube.com/watch?v={video_id}"]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if r.returncode != 0 and "js-runtimes" in (r.stderr or ""):
+            cmd = [c for c in cmd if c not in ("--js-runtimes", "deno,node")]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        for f in _cache_dir().glob(f"{video_id}.*"):
+            if f.suffix != ".part" and f.stat().st_size > 10000:
+                _trim_cache(video_id)
+                return str(f)
+        if r.stderr:
+            print("creative-media: yt-dlp:", r.stderr.strip().splitlines()[-1][:200])
+        return ""
+
+
 def stream_url(video_id):
-    """Direkte Ton-Adresse für den Player (gilt einige Stunden)."""
-    r = subprocess.run(
-        ["yt-dlp", "--no-warnings", "--no-playlist", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
-         f"https://music.youtube.com/watch?v={video_id}"],
-        capture_output=True, text=True, timeout=40,
-    )
+    """Ersatz: direkte Adresse (nur wenn das Herunterladen nicht klappt)."""
+    r = subprocess.run(_ytdlp_base() + ["-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+                                        f"https://music.youtube.com/watch?v={video_id}"],
+                       capture_output=True, text=True, timeout=40)
     lines = [l for l in r.stdout.strip().splitlines() if l.startswith("http")]
     return lines[0] if lines else ""
 
@@ -363,11 +428,19 @@ class YtMusicModel(QAbstractListModel):
 
         def work():
             try:
-                url = stream_url(track["videoId"])
+                path = fetch_audio(track["videoId"])
+                url = QUrl.fromLocalFile(path).toString() if path else stream_url(track["videoId"])
                 self._resolved.emit(token, url, "" if url else "kein Ton gefunden")
             except Exception as exc:
                 self._resolved.emit(token, "", str(exc))
         threading.Thread(target=work, daemon=True).start()
+
+    def _prefetch(self):
+        """Das nächste Lied schon im Hintergrund laden – dann geht es nahtlos weiter."""
+        if not self._queue:
+            return
+        nxt = self._queue[(self._pos + 1) % len(self._queue)]["videoId"]
+        threading.Thread(target=lambda: fetch_audio(nxt), daemon=True).start()
 
     def _on_resolved(self, token, url, error):
         if token != self._token:
@@ -377,6 +450,7 @@ class YtMusicModel(QAbstractListModel):
         track = self._queue[self._pos] if 0 <= self._pos < len(self._queue) else None
         if url and track:
             self.ready.emit(url, track["title"], track["artist"], track["thumb"])
+            self._prefetch()
         else:
             self.failed.emit("Dieser Titel lässt sich gerade nicht abspielen.")
 
