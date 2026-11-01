@@ -14,7 +14,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Die mitgelieferten Standard-Apps (alles andere wird im Startmenü ausgeblendet)
-[ "${SKIP_DNF:-0}" = 1 ] || dnf install -y --skip-unavailable plasma-breeze konsole kwrite gwenview kcalc spectacle ark \
+[ "${SKIP_DNF:-0}" = 1 ] || dnf install -y --skip-unavailable plasma-breeze konsole gwenview spectacle ark \
     plasma-systemmonitor plasma-integration breeze-gtk breeze-icon-theme liberation-sans-fonts
 
 XDG=/usr/share/creative-os/xdg
@@ -57,7 +57,7 @@ install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
 for pair in settings:settings browser:browser games:games chat:chat store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
-            taskmanager:taskmanager files:files player:media-app drive:drive; do
+            taskmanager:taskmanager files:files player:media-app drive:drive notes:notes; do
     name="${pair%%:*}"; file="${pair#*:}"
     install -Dm644 "$ICONS/$file.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$name.svg"
 done

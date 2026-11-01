@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet Creative Notes aus /usr/lib/creative-notes.
+export PYTHONPATH="/usr/lib/creative-notes${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_notes "$@"

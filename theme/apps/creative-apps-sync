@@ -40,7 +40,8 @@ VISIBLE = {
     "discord.desktop": ("Discord", "creative-chat"),
     "org.gnome.Software.desktop": ("Software", "creative-store"),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
-    "org.kde.kwrite.desktop": ("Texteditor", "creative-editor"),
+    "creative-notes.desktop": ("Creative Notes", "creative-notes"),
+    "org.kde.kwrite.desktop": ("Texteditor", "creative-notes"),
     "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-image"),
     "creative-calculator.desktop": ("Creative Calculator", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
@@ -56,6 +57,7 @@ PREFER = {
     "org.mozilla.firefox.desktop": "brave-browser.desktop",
     "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
     "org.kde.kcalc.desktop": "creative-calculator.desktop",
+    "org.kde.kwrite.desktop": "creative-notes.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 

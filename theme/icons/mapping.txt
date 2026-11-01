@@ -1,7 +1,7 @@
 # Creative-Symbol  →  Symbolnamen, die Programme selbst verwenden (Fenster, Titelleiste, Taskleiste)
 calculator   accessories-calculator org.kde.kcalc kcalc
 terminal     utilities-terminal org.kde.konsole konsole org.gnome.Ptyxis terminal
-editor       accessories-text-editor org.kde.kwrite kwrite org.kde.kate kate text-editor
+notes        accessories-text-editor org.kde.kwrite kwrite org.kde.kate kate text-editor creative-notes
 image        gwenview org.kde.gwenview image-viewer
 screenshot   spectacle org.kde.spectacle applets-screenshooter
 taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor

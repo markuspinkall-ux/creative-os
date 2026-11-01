@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Notes
+GenericName=Texteditor
+Comment=Texte und Code bearbeiten – mit Reitern, Syntaxfarben und Suchen/Ersetzen
+Keywords=Text;Editor;Notizen;Notepad;Code;Konfiguration;
+Exec=creative-notes %F
+Icon=creative-notes
+Terminal=false
+Categories=Utility;TextEditor;Development;
+MimeType=text/plain;text/markdown;text/x-python;text/x-python3;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-java;text/x-csharp;text/x-go;text/x-rust;text/x-lua;text/x-php;text/x-sql;text/x-log;text/css;text/csv;text/html;text/xml;text/x-makefile;text/x-cmake;text/x-shellscript;application/x-shellscript;application/json;application/xml;application/x-yaml;application/toml;application/javascript;text/javascript;application/x-desktop;text/x-ini;application/x-php;application/sql;
+StartupWMClass=creative-notes
+Actions=NewWindow;
+
+[Desktop Action NewWindow]
+Name=Neues Fenster
+Exec=creative-notes --new-window

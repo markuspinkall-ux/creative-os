@@ -147,6 +147,16 @@ COPY media/mimeapps.list /etc/xdg/mimeapps.list
 RUN chmod 755 /usr/bin/creative-player
 
 # ---------------------------------------------------------------------------
+# 8a1) Creative Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
+# ---------------------------------------------------------------------------
+COPY notes/creative_notes /usr/lib/creative-notes/creative_notes
+COPY notes/bin/creative-notes /usr/bin/creative-notes
+COPY notes/creative-notes.desktop /usr/share/applications/creative-notes.desktop
+RUN chmod 755 /usr/bin/creative-notes \
+ && sed -n 's/^MimeType=//p' /usr/share/applications/creative-notes.desktop | tr ';' '\n' \
+    | sed '/^$/d; s/$/=creative-notes.desktop/' >> /etc/xdg/mimeapps.list
+
+# ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
@@ -213,16 +223,16 @@ RUN chmod 755 /usr/bin/creative-welcome
 # ---------------------------------------------------------------------------
 # Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
-# Standard-Apps: Terminal, Texteditor, Bildbetrachter, Bildschirmfoto,
+# Standard-Apps: Terminal, Bildbetrachter, Bildschirmfoto,
 # Entpacken (unsichtbar, für ZIP-Dateien), Aufgaben-Manager
-RUN dnf install -y --skip-unavailable konsole kwrite gwenview spectacle ark \
+RUN dnf install -y --skip-unavailable konsole gwenview spectacle ark liberation-mono-fonts qt6-qttranslations \
         plasma-systemmonitor plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,
 # bleibt es installiert und wird nur im Startmenü ausgeblendet.
 RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
              kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
-             kmouth kcharselect kcalc kdebugsettings filelight kgpg akregator dragon elisa-player \
+             kmouth kcharselect kcalc kwrite kdebugsettings filelight kgpg akregator dragon elisa-player \
              juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
              kjournald mediawriter kwrite-doc; do \
         rpm -q "$p" >/dev/null 2>&1 || continue; \
@@ -308,5 +318,8 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-media/creative_media/qml/YtMusicView.qml \
         /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
     ; rm -f /tmp/qml-check.py
+# Creative Notes kurz ohne Bildschirm durchtesten
+RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
+    || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home
 
 RUN bootc container lint
