@@ -52,7 +52,7 @@ Rectangle {
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 70
+            width: parent.width - (favButton.visible ? 120 : 70)
             spacing: 5
             Text {
                 width: parent.width
@@ -71,6 +71,17 @@ Rectangle {
                 font.family: Theme.fontFamily
                 font.pixelSize: 12
             }
+        }
+        // Herz: läuft gerade ein Lied von YouTube Music, kann man es merken
+        IconButton {
+            id: favButton
+            anchors.verticalCenter: parent.verticalCenter
+            width: 36; height: 36
+            visible: bar.host.queueModel === ytmusic && bar.host.nowTitle.length > 0
+            icon: ytmusic.currentFavorite ? "heart-on" : "heart"
+            iconSize: 17
+            label: ytmusic.currentFavorite ? "Aus den Favoriten entfernen" : "Zu den Favoriten"
+            onClicked: ytmusic.toggleCurrentFavorite()
         }
     }
 

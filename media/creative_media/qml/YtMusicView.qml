@@ -11,13 +11,14 @@ Item {
     signal play(int row)
 
     readonly property bool isTop: model.mode === "top"
+    readonly property bool isFav: model.mode === "favorites"
 
     // ---- Kopf --------------------------------------------------------------------------
     Text {
         id: title
         x: 28
         y: 24
-        text: root.isTop ? "YouTube Music" : "Suche"
+        text: root.isTop ? "YouTube Music" : (root.isFav ? "Favoriten" : "Suche")
         color: Theme.text
         font.family: Theme.fontFamily
         font.pixelSize: 24
@@ -28,7 +29,9 @@ Item {
         anchors.top: title.bottom
         anchors.topMargin: 4
         text: root.model.loading ? (root.isTop ? "Die Top 10 werden geladen …" : "Wird gesucht …")
-            : (root.isTop ? "Die Top 10 in Deutschland" : root.model.count + " Treffer für „" + root.model.query + "“")
+            : (root.isTop ? "Die Top 10 in Deutschland"
+               : (root.isFav ? (root.model.count === 1 ? "1 Lied" : root.model.count + " Lieder")
+                             : root.model.count + " Treffer für „" + root.model.query + "“"))
         color: Theme.textMuted
         font.family: Theme.fontFamily
         font.pixelSize: 13
@@ -82,8 +85,65 @@ Item {
             height: 38
             icon: "refresh"
             iconSize: 17
+            visible: !root.isFav
             label: root.isTop ? "Top 10 neu laden" : "Neu suchen"
             onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
+        }
+    }
+
+    // ---- Reiter: Top 10 | Favoriten ------------------------------------------------------
+    Row {
+        id: tabs
+        anchors.left: title.left
+        anchors.top: title.bottom
+        anchors.topMargin: 30
+        spacing: 6
+        Repeater {
+            model: [
+                { key: "top", label: "Top 10", icon: "ytmusic" },
+                { key: "favorites", label: "Favoriten", icon: "heart" }
+            ]
+            delegate: Rectangle {
+                id: tab
+                required property var modelData
+                readonly property bool current: root.model.mode === modelData.key
+                width: tabRow.implicitWidth + 26
+                height: 32
+                radius: 16
+                color: current ? Theme.accent : (tabMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                Row {
+                    id: tabRow
+                    anchors.centerIn: parent
+                    spacing: 7
+                    SvgIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: !tab.current
+                        name: tab.modelData.icon
+                        size: 14
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: tab.modelData.label + (tab.modelData.key === "favorites" && root.model.favoriteCount > 0 ? "  " + root.model.favoriteCount : "")
+                        color: tab.current ? Theme.accentText : Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        font.bold: true
+                    }
+                }
+                MouseArea {
+                    id: tabMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        search.text = ""
+                        if (tab.modelData.key === "favorites") root.model.loadFavorites()
+                        else root.model.loadTop()
+                    }
+                }
+                Accessible.role: Accessible.PageTab
+                Accessible.name: modelData.label
+            }
         }
     }
 
@@ -92,8 +152,8 @@ Item {
         id: list
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: title.bottom
-        anchors.topMargin: 40
+        anchors.top: tabs.bottom
+        anchors.topMargin: 14
         anchors.bottom: parent.bottom
         anchors.leftMargin: 28
         anchors.rightMargin: 28
@@ -117,6 +177,7 @@ Item {
             required property string thumb
             required property string videoId
             required property int rank
+            required property bool favorite
             readonly property bool current: videoId === root.model.currentId
             readonly property bool big: root.isTop
 
@@ -212,8 +273,8 @@ Item {
             }
             Text {
                 id: dur
-                anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.right: heart.left
+                anchors.rightMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.duration
                 color: Theme.textMuted
@@ -227,6 +288,33 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.play(row.index)
+            }
+
+            // Herz: zu den Favoriten / aus den Favoriten
+            Rectangle {
+                id: heart
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 36; height: 36; radius: 18
+                visible: row.favorite || rowMouse.containsMouse || heartMouse.containsMouse
+                color: heartMouse.containsMouse ? Theme.hover : "transparent"
+                SvgIcon {
+                    anchors.centerIn: parent
+                    name: row.favorite ? "heart-on" : "heart"
+                    size: 17
+                    scale: heartMouse.pressed ? 0.85 : 1
+                    Behavior on scale { NumberAnimation { duration: 80 } }
+                }
+                MouseArea {
+                    id: heartMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.model.toggleFavorite(row.index)
+                }
+                Accessible.role: Accessible.Button
+                Accessible.name: row.favorite ? "Aus den Favoriten entfernen" : "Zu den Favoriten"
             }
             Accessible.role: Accessible.ListItem
             Accessible.name: row.title + ", " + row.artist
@@ -267,12 +355,12 @@ Item {
         }
         CButton {
             anchors.horizontalCenter: parent.horizontalCenter
-            visible: !root.model.loading && root.model.status.length > 0
+            visible: !root.model.loading && root.model.status.length > 0 && !root.isFav
             text: "Nochmal versuchen"
             onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
         }
     }
 
     // Beim ersten Öffnen die Top 10 holen
-    onVisibleChanged: if (visible && list.count === 0 && !model.loading) model.loadTop()
+    onVisibleChanged: if (visible && list.count === 0 && !model.loading && !root.isFav) model.loadTop()
 }
