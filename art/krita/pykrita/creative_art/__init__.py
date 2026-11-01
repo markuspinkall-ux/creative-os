@@ -13,24 +13,31 @@ Krita bleiben unter Hilfe › „Über Krita“ erreichbar.
 
 from krita import Extension, Krita
 
+import os
 import sys
+import xml.etree.ElementTree as ET
 
 # Wichtig: genau die Qt-Bindung nehmen, die Krita selbst geladen hat.
 # PyQt5 (Qt 5) in Krita 6 (Qt 6) zu laden, bringt Krita sofort zum Absturz.
 if "PyQt5.QtCore" in sys.modules and "PyQt6.QtCore" not in sys.modules:
     from PyQt5.QtCore import QBuffer, QByteArray, QIODevice, Qt, QTimer
     from PyQt5.QtGui import QImage
-    from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget,
+    from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QMenu, QDialogButtonBox, QDockWidget,
                                  QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QSlider,
                                  QSpinBox, QVBoxLayout, QWidget)
 else:  # Krita 6 (Qt 6)
     from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QTimer
     from PyQt6.QtGui import QImage
-    from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget,
+    from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QMenu, QDialogButtonBox, QDockWidget,
                                  QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QSlider,
                                  QSpinBox, QVBoxLayout, QWidget)
 
 APP = "Creative Art"
+# Menüaufbau wie Photoshop CS2. Krita bekommt die Datei NICHT als eigene Menüdatei
+# (eine ersetzte krita5.xmlgui bringt Krita 6 beim Start zum Absturz) – die Erweiterung
+# baut die Menüleiste nach dem Start aus diesen Krita-Aktionen selbst auf.
+MENU_FILE = "/usr/share/creative-art/creative-menus.xml"
+KXML = "{http://www.kde.org/standards/kxmlgui/1.0}"
 LAYOUT_VERSION = "1"
 
 # Krita-Aktion → Beschriftung wie im deutschen Photoshop CS2
@@ -245,6 +252,9 @@ class SaveForWeb(QDialog):
 class CreativeArt(Extension):
     def __init__(self, parent):
         super().__init__(parent)
+        self._menus = {}          # Fenster → unsere Menü-Aktionen
+        self._menu_timer = None
+        self._menu_tree = None
 
     def setup(self):
         QApplication.setApplicationDisplayName(APP)
@@ -271,7 +281,79 @@ class CreativeArt(Extension):
         for delay in (0, 800, 2500):
             QTimer.singleShot(delay, self.relabel)
         QTimer.singleShot(400, lambda: self.arrange(win))
+        for delay in (300, 1500, 4000):
+            QTimer.singleShot(delay, lambda q=qw: self.build_menus(q))
+        if self._menu_timer is None:
+            self._menu_timer = QTimer()
+            self._menu_timer.setInterval(2500)
+            self._menu_timer.timeout.connect(self._keep_menus)
+            self._menu_timer.start()
         QTimer.singleShot(1500, lambda: self._fix_welcome(qw))
+
+    # ---- Menüleiste wie CS2 ------------------------------------------------------------------
+    def _load_tree(self):
+        if self._menu_tree is None:
+            try:
+                root = ET.parse(MENU_FILE).getroot()
+                self._menu_tree = root.find(KXML + "MenuBar")
+            except (OSError, ET.ParseError):
+                self._menu_tree = False
+        return self._menu_tree
+
+    def _fill(self, menu, node, qw):
+        for child in node:
+            tag = child.tag.replace(KXML, "")
+            if tag == "Action":
+                act = Krita.instance().action(child.get("name", ""))
+                if act is not None:
+                    menu.addAction(act)
+            elif tag == "Separator":
+                if menu.actions() and not menu.actions()[-1].isSeparator():
+                    menu.addSeparator()
+            elif tag == "Menu":
+                t = child.find(KXML + "text")
+                sub = QMenu(t.text if t is not None else child.get("name", ""), menu)
+                self._fill(sub, child, qw)
+                if sub.actions():
+                    menu.addMenu(sub)
+        while menu.actions() and menu.actions()[-1].isSeparator():
+            menu.removeAction(menu.actions()[-1])
+
+    def build_menus(self, qw):
+        tree = self._load_tree()
+        if not tree or qw is None:
+            return
+        try:
+            mb = qw.menuBar()
+        except Exception:
+            return
+        if mb is None:
+            return
+        acts = []
+        for node in tree:
+            if node.tag.replace(KXML, "") != "Menu":
+                continue
+            t = node.find(KXML + "text")
+            m = QMenu(t.text if t is not None else node.get("name", ""), mb)
+            self._fill(m, node, qw)
+            if m.actions():
+                acts.append(m.menuAction())
+        if not acts:
+            return
+        mb.clear()
+        for a in acts:
+            mb.addAction(a)
+        self._menus[id(qw)] = (qw, acts)
+        print("Creative Art: Menüleiste aufgebaut:", " | ".join(a.text().replace("&", "") for a in acts), flush=True)
+
+    def _keep_menus(self):
+        """Krita baut die Menüleiste manchmal neu auf (z. B. neues Fenster) – dann wieder CS2."""
+        for key, (qw, acts) in list(self._menus.items()):
+            try:
+                if qw.menuBar().actions() != acts:
+                    self.build_menus(qw)
+            except RuntimeError:          # Fenster geschlossen
+                self._menus.pop(key, None)
 
     @staticmethod
     def _fix_title(qw, title):

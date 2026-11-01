@@ -1,15 +1,13 @@
 #!/bin/sh
 # Creative Art – startet Krita mit dem Aufbau von Photoshop CS2 (Menüs, Tasten, Paletten).
-# Die Menüdatei liegt im Benutzerordner, weil Krita sie nur dort überschreiben lässt;
-# sie wird bei jedem Start auf den Stand von Creative OS gebracht.
-src=/usr/share/creative-art/krita5.xmlgui
-dst="${XDG_DATA_HOME:-$HOME/.local/share}/krita/krita5.xmlgui"
-if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
-    # Eigene Änderungen (ohne Creative-Kennung) nicht überschreiben
-    if [ ! -e "$dst" ] || grep -q "Creative Art: Menüleiste" "$dst"; then
-        mkdir -p "$(dirname "$dst")"
-        cp "$src" "$dst"
-    fi
+# Die Menüleiste baut die Erweiterung „creative_art“ nach dem Start auf.
+#
+# Ältere Creative-OS-Versionen haben eine eigene krita5.xmlgui in den Benutzerordner
+# gelegt – damit stürzt Krita 6 beim Start ab. Die wird hier entfernt (nur unsere,
+# erkennbar an der Creative-Kennung; eigene Anpassungen bleiben).
+old="${XDG_DATA_HOME:-$HOME/.local/share}/krita/krita5.xmlgui"
+if [ -f "$old" ] && grep -q "Creative Art: Menüleiste" "$old"; then
+    rm -f "$old"
 fi
 export NOSPLASH=1
 # Krita läuft (noch) nur sauber über X11 – die Taskleiste gibt allen Programmen

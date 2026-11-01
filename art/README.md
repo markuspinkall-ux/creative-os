@@ -3,7 +3,7 @@
 Bildbearbeitung für Creative OS – Aufbau und Arbeitsweise wie Photoshop CS2, Grundlage ist Krita.
 
 - **Menüs wie CS2:** Datei, Bearbeiten, Bild (mit Korrekturen), Ebene, Auswahl, Filter (CS2-Gruppen), Ansicht, Fenster, Hilfe –
-  mit den deutschen CS2-Begriffen (`krita/krita5.xmlgui`, Beschriftungen in der Erweiterung `creative_art`)
+  mit den deutschen CS2-Begriffen (`krita/creative-menus.xml`, die Erweiterung `creative_art` baut daraus die Menüleiste und setzt die Beschriftungen)
 - **Tasten wie Photoshop:** Strg+T Frei transformieren, Strg+J Ebene durch Kopie, Strg+L/M/U/B Tonwert/Kurven/Farbton/Farbbalance,
   M/L/W/V/B/E/G/T/Z/H/I für die Werkzeuge, Strg+D/Strg+Umschalt+I/Strg+Alt+D für Auswahlen (`krita/shortcuts/creative_art.shortcuts`)
 - **Paletten wie CS2:** Werkzeuge links einspaltig, rechts Werkzeugoptionen, Navigator/Histogramm, Farbe/Farbfelder,
