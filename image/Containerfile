@@ -183,7 +183,7 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
 # ---------------------------------------------------------------------------
 # 8a5) Creative Art – Bildbearbeitung (Krita mit Aufbau und Tasten wie Photoshop CS2)
 # ---------------------------------------------------------------------------
-RUN dnf install -y --skip-unavailable krita python3-pyqt6 python3-pyqt5 && dnf clean all
+RUN dnf install -y --skip-unavailable krita python3-pyqt6 && dnf clean all
 COPY art/krita/krita5.xmlgui /usr/share/creative-art/krita5.xmlgui
 COPY art/krita/shortcuts/creative_art.shortcuts /usr/share/krita/shortcuts/creative_art.shortcuts
 COPY art/krita/pykrita /usr/share/krita/pykrita

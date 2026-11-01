@@ -13,13 +13,17 @@ Krita bleiben unter Hilfe › „Über Krita“ erreichbar.
 
 from krita import Extension, Krita
 
-try:
+import sys
+
+# Wichtig: genau die Qt-Bindung nehmen, die Krita selbst geladen hat.
+# PyQt5 (Qt 5) in Krita 6 (Qt 6) zu laden, bringt Krita sofort zum Absturz.
+if "PyQt5.QtCore" in sys.modules and "PyQt6.QtCore" not in sys.modules:
     from PyQt5.QtCore import QBuffer, QByteArray, QIODevice, Qt, QTimer
     from PyQt5.QtGui import QImage
     from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget,
                                  QFileDialog, QFormLayout, QHBoxLayout, QLabel, QMessageBox, QSlider,
                                  QSpinBox, QVBoxLayout, QWidget)
-except ImportError:  # Krita mit Qt 6 (ab Krita 6)
+else:  # Krita 6 (Qt 6)
     from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QTimer
     from PyQt6.QtGui import QImage
     from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget,
