@@ -334,6 +334,11 @@ RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rp
  && systemctl enable rpm-ostreed-automatic.timer
 
 # Abschlussprüfung des Abbilds
+# „Software“ zeigt die Creative-Namen und -Logos (auch unter „Installiert“)
+COPY image/appstream-brand.py /tmp/appstream-brand.py
+RUN python3 /tmp/appstream-brand.py && rm -f /tmp/appstream-brand.py \
+ && (command -v appstreamcli >/dev/null && appstreamcli refresh-cache --force >/dev/null 2>&1 || true)
+
 # Oberflächen prüfen – bei einem Fehler wird das Abbild nicht veröffentlicht
 COPY image/qml-check.py /tmp/qml-check.py
 RUN python3 /tmp/qml-check.py \
