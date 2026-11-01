@@ -14,6 +14,8 @@ from pathlib import Path
 DEFAULTS = {
     # Eigenes Hintergrundbild: Pfad zu einer Bild-Datei, leer = Creative-Graphit
     "wallpaper": "",
+    # Leistungsanzeige (CPU, Speicher …) oben rechts auf dem Schreibtisch
+    "desktopStats": True,
     "pinned": [
         {
             "icon": "files",
@@ -93,3 +95,22 @@ def load() -> dict:
     except (OSError, ValueError) as exc:
         print(f"creative-shell: {path} wird ignoriert ({exc})")
     return data
+
+
+def set_value(key, value):
+    """Einen Wert in shell.json ändern, ohne den Rest anzufassen."""
+    path = config_dir() / "shell.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    data[key] = value
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
+    except OSError as exc:
+        print(f"creative-shell: {path} nicht gespeichert ({exc})")

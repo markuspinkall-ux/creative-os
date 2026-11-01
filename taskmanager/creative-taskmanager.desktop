@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Taskmanager
+GenericName=Prozesse und Leistung
+Comment=Programme beenden, Auslastung von CPU, Speicher, Datenträger, Netzwerk und GPU ansehen
+Keywords=Taskmanager;Aufgabenmanager;Prozesse;Beenden;CPU;Speicher;Leistung;Autostart;Systemmonitor;
+Exec=creative-taskmanager
+Icon=creative-taskmanager
+Terminal=false
+Categories=System;Monitor;
+StartupWMClass=creative-taskmanager
+Actions=Performance;Startup;
+
+[Desktop Action Performance]
+Name=Leistung
+Exec=creative-taskmanager --leistung
+
+[Desktop Action Startup]
+Name=Autostart-Apps
+Exec=creative-taskmanager --autostart

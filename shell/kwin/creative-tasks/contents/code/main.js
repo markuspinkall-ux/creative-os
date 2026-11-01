@@ -63,7 +63,7 @@ registerShortcut("Creative Sperren", "Creative OS: Bildschirm sperren", "Meta+L"
                  function () { call("lock"); });
 registerShortcut("Creative Bildschirmfoto", "Creative OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
                  function () { call("screenshot"); });
-registerShortcut("Creative Aufgaben-Manager", "Creative OS: Aufgaben-Manager", "Ctrl+Shift+Escape",
+registerShortcut("Creative Aufgaben-Manager", "Creative OS: Taskmanager", "Ctrl+Shift+Escape",
                  function () { call("taskManager"); });
 registerShortcut("Creative Desktop", "Creative OS: Desktop anzeigen", "Meta+D",
                  function () { workspace.showingDesktop = !workspace.showingDesktop; });

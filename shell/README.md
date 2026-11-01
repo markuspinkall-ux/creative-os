@@ -83,7 +83,7 @@ minimiert), bei mehreren Fenstern wird durchgeschaltet, mittlere Maustaste
 | Win+Pfeiltasten | Fenster einrasten (KWin) |
 | Alt+Tab | Fenster wechseln (KWin) |
 | Win+Umschalt+S | Bildschirmausschnitt aufnehmen |
-| Strg+Umschalt+Esc | Aufgaben-Manager |
+| Strg+Umschalt+Esc | Taskmanager |
 
 Fensterknöpfe sitzen rechts wie bei Windows.
 

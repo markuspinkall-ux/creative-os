@@ -4,7 +4,7 @@ terminal     utilities-terminal org.kde.konsole konsole org.gnome.Ptyxis termina
 notes        accessories-text-editor org.kde.kwrite kwrite org.kde.kate kate text-editor creative-notes
 image        gwenview org.kde.gwenview image-viewer
 screenshot   spectacle org.kde.spectacle applets-screenshooter
-taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor
+taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor creative-taskmanager
 settings     preferences-system systemsettings org.kde.systemsettings creative-settings
 browser      brave-browser com.brave.Browser firefox org.mozilla.firefox web-browser internet-web-browser
 games        steam steamwebhelper steam_icon_steam com.valvesoftware.Steam

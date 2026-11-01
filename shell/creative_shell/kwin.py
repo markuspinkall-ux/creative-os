@@ -22,7 +22,7 @@ function snapshot() {
     const windows = [];
     for (const w of workspace.windowList()) {
         if (!w.normalWindow || w.skipTaskbar) continue;
-        windows.push({ id: w.internalId.toString(), app: w.desktopFileName || "", cls: w.resourceClass || "",
+        windows.push({ id: w.internalId.toString(), app: w.desktopFileName || "", cls: w.resourceClass || "", pid: w.pid || 0,
                        title: w.caption || "", output: w.output ? w.output.name : "",
                        minimized: !!w.minimized, active: w === active });
     }

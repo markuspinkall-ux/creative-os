@@ -45,6 +45,17 @@ class ShellBus(QObject):
     @Slot(str)
     def update(self, payload):
         self._tasks.update_from_json(payload)
+        # Für den Taskmanager: welche Prozesse haben ein Fenster („Apps“)
+        try:
+            import os
+            from pathlib import Path
+            d = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}") / "creative-shell"
+            d.mkdir(mode=0o700, exist_ok=True)
+            tmp = d / "windows.json.tmp"
+            tmp.write_text(payload, encoding="utf-8")
+            tmp.replace(d / "windows.json")
+        except OSError:
+            pass
 
     # ---- Tastenkürzel -------------------------------------------------------------
     @Slot()
@@ -73,5 +84,5 @@ class ShellBus(QObject):
 
     @Slot()
     def taskManager(self):
-        if not spawn_detached(["plasma-systemmonitor"]):
+        if not spawn_detached(["creative-taskmanager"]) and not spawn_detached(["plasma-systemmonitor"]):
             spawn_detached(["gnome-system-monitor"])

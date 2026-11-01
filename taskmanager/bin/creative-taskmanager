@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet den Taskmanager aus /usr/lib/creative-taskmanager.
+export PYTHONPATH="/usr/lib/creative-taskmanager:/usr/lib/creative-shell${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_taskmanager "$@"

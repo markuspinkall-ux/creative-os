@@ -39,6 +39,33 @@ Item {
         }
     }
 
+    // ---- Leistungsanzeige oben rechts (wie im Taskmanager, ohne Hintergrund) ---------
+    // Liegt unter den Symbolen: Ordner und Dateien dürfen darüber liegen.
+    Row {
+        id: stats
+        visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
+        anchors.right: parent.right
+        anchors.rightMargin: 18
+        y: 16
+        spacing: 6
+        opacity: 0.82
+        Repeater {
+            model: desktopStats.tiles
+            delegate: PerfTile {
+                plain: true
+                width: 196
+                height: 58
+                graphWidth: 64
+                title: modelData.title
+                value: modelData.value
+                sub: modelData.sub
+                history: modelData.history
+                color: modelData.color
+                onClicked: desktopStats.openTaskManager()
+            }
+        }
+    }
+
     // ---- Schreibtisch-Symbole ------------------------------------------------------
     GridView {
         id: icons
@@ -132,12 +159,17 @@ Item {
             { label: "Neuer Ordner", icon: "folder-plus", act: "new" },
             { label: "Schreibtisch in Dateien öffnen", icon: "files", act: "folder" },
             { sep: true },
+            { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
+            { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
+            { sep: true },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ]
         onTriggered: (act) => {
             if (act === "new") desktop.newFolder()
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
+            else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
+            else if (act === "taskmanager") desktopStats.openTaskManager()
         }
     }
 

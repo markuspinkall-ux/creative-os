@@ -86,7 +86,7 @@ def physical_disks():
             if re.match(r"(loop|ram|zram|dm-|sr|fd|md)", d):
                 continue
             try:
-                if int(Path(f"/sys/block/{d}/size").read_text()) == 0:
+                if int(Path(f"/sys/block/{d}/size").read_text()) * 512 < 1 << 30:   # < 1 GB: Kartenleser o. Ä.
                     continue
             except (OSError, ValueError):
                 continue
@@ -290,3 +290,43 @@ class Sampler:
         peak = max(h) if h else 0
         peak = max(peak, 128 * 1024)
         return [100.0 * v / peak for v in h]
+
+
+# ---- Kacheln (gleich im Taskmanager und auf dem Schreibtisch) ------------------------------------
+TILE_COLORS = {"cpu": "#8fb3ff", "mem": "#d7a8ff", "disk": "#6fdcc0", "net": "#ffb07a", "gpu": "#f2d58a"}
+
+
+def _pct(v):
+    return f"{v:.0f} %"
+
+
+def tiles(s, sampler, all_disks=False):
+    """Kurzfassung für die Leistungs-Kacheln: Titel, Wert, Zusatz, Verlauf (0–100)."""
+    out = []
+    if not s or "model" not in s:
+        return out
+    freq = s.get("freq") or 0
+    out.append({"key": "cpu", "title": "CPU", "value": _pct(s["cpu"]),
+                "sub": (f"{freq / 1000:.2f} GHz".replace(".", ",") if freq else s.get("model", "")),
+                "history": list(sampler.hist["cpu"]), "color": TILE_COLORS["cpu"]})
+    m = s["mem"]
+    out.append({"key": "mem", "title": "Arbeitsspeicher", "value": _pct(m["percent"]),
+                "sub": f"{fmt_bytes(m['used'])} / {fmt_bytes(m['total'])}",
+                "history": list(sampler.hist["mem"]), "color": TILE_COLORS["mem"]})
+    disks = s["disks"] if all_disks else [d for d in s["disks"] if d["system"]][:1] or s["disks"][:1]
+    for i, d in enumerate(disks):
+        label = "Creative OS" if d["system"] else d["kind"]
+        out.append({"key": "disk:" + d["name"], "title": f"Datenträger {i}" if all_disks else "Datenträger",
+                    "value": _pct(d["busy"]), "sub": f"{label} · {fmt_bytes(d['size'], 0)}",
+                    "history": d["history"], "color": TILE_COLORS["disk"]})
+    n = s.get("net") or {}
+    if n:
+        out.append({"key": "net", "title": n["label"], "value": "↓ " + fmt_bits(n["down"]),
+                    "sub": "↑ " + fmt_bits(n["up"]), "history": sampler.net_history_percent(),
+                    "color": TILE_COLORS["net"]})
+    g = s.get("gpu")
+    if g:
+        out.append({"key": "gpu", "title": "GPU", "value": _pct(g.get("util") or 0),
+                    "sub": g.get("name", "") + (f" · {g['temp']:.0f} °C" if g.get("temp") else ""),
+                    "history": list(sampler.hist["gpu"]), "color": TILE_COLORS["gpu"]})
+    return out

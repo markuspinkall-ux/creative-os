@@ -157,6 +157,15 @@ RUN chmod 755 /usr/bin/creative-notes \
     | sed '/^$/d; s/$/=creative-notes.desktop/' >> /etc/xdg/mimeapps.list
 
 # ---------------------------------------------------------------------------
+# 8a3) Taskmanager – wie bei Windows (ersetzt den KDE-Systemmonitor)
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable python3-psutil pciutils && dnf clean all
+COPY taskmanager/creative_taskmanager /usr/lib/creative-taskmanager/creative_taskmanager
+COPY taskmanager/bin/creative-taskmanager /usr/bin/creative-taskmanager
+COPY taskmanager/creative-taskmanager.desktop /usr/share/applications/creative-taskmanager.desktop
+RUN chmod 755 /usr/bin/creative-taskmanager
+
+# ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
@@ -224,15 +233,15 @@ RUN chmod 755 /usr/bin/creative-welcome
 # Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
 # Standard-Apps: Terminal, Bildbetrachter, Bildschirmfoto,
-# Entpacken (unsichtbar, für ZIP-Dateien), Aufgaben-Manager
+# Entpacken (unsichtbar, für ZIP-Dateien)
 RUN dnf install -y --skip-unavailable konsole gwenview spectacle ark liberation-mono-fonts qt6-qttranslations \
-        plasma-systemmonitor plasma-integration breeze-gtk breeze-icon-theme \
+        plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,
 # bleibt es installiert und wird nur im Startmenü ausgeblendet.
 RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
              kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
-             kmouth kcharselect kcalc kwrite kdebugsettings filelight kgpg akregator dragon elisa-player \
+             kmouth kcharselect kcalc kwrite plasma-systemmonitor kdebugsettings filelight kgpg akregator dragon elisa-player \
              juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
              kjournald mediawriter kwrite-doc; do \
         rpm -q "$p" >/dev/null 2>&1 || continue; \
@@ -317,7 +326,17 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-media/creative_media/qml/Main.qml \
         /usr/lib/creative-media/creative_media/qml/YtMusicView.qml \
         /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
+        /usr/lib/creative-taskmanager/creative_taskmanager/qml/Main.qml \
+        /usr/lib/creative-taskmanager/creative_taskmanager/qml/ProcessesPage.qml \
+        /usr/lib/creative-taskmanager/creative_taskmanager/qml/PerformancePage.qml \
+        /usr/lib/creative-taskmanager/creative_taskmanager/qml/StartupPage.qml \
+        /usr/lib/creative-taskmanager/creative_taskmanager/qml/DetailsPage.qml \
+        /usr/lib/creative-shell/creative_shell/qml/Creative/PerfTile.qml \
+        /usr/lib/creative-shell/creative_shell/qml/surfaces/Wallpaper.qml \
  && rm -f /tmp/qml-check.py
+# Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
+    || echo "TASKMANAGER-SELBSTTEST FEHLGESCHLAGEN"
 # Creative Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home

@@ -46,7 +46,8 @@ VISIBLE = {
     "creative-calculator.desktop": ("Creative Calculator", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-screenshot"),
-    "org.kde.plasma-systemmonitor.desktop": ("Aufgaben-Manager", "creative-taskmanager"),
+    "creative-taskmanager.desktop": ("Taskmanager", "creative-taskmanager"),
+    "org.kde.plasma-systemmonitor.desktop": ("Taskmanager", "creative-taskmanager"),
     "org.gnome.DiskUtility.desktop": ("Laufwerke (Erweitert)", "creative-drive"),
 }
 # Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
@@ -58,6 +59,7 @@ PREFER = {
     "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
     "org.kde.kcalc.desktop": "creative-calculator.desktop",
     "org.kde.kwrite.desktop": "creative-notes.desktop",
+    "org.kde.plasma-systemmonitor.desktop": "creative-taskmanager.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 
