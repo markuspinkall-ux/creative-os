@@ -21,12 +21,15 @@ class AssistantClient(QObject):
     changed = Signal()
     levelChanged = Signal()
     spoke = Signal()          # neue Antwort → Sprechblase zeigen
+    historyChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._s = {}
         self._level = 0.0
         self._buf = b""
+        self._history = [{"who": "assistant", "text": "Hallo! Frag mich nach dem Wetter, stell einen Timer oder "
+                                                       "lass Musik spielen – per Sprache oder hier schreiben."}]
         self._sock = QLocalSocket(self)
         self._sock.readyRead.connect(self._read)
         self._sock.connected.connect(lambda: self._retry.stop())
@@ -60,7 +63,11 @@ class AssistantClient(QObject):
                 msg = json.loads(line.decode("utf-8"))
             except (ValueError, UnicodeDecodeError):
                 continue
-            if msg.get("type") == "level":
+            if msg.get("type") == "chat":
+                self._history.append({"who": msg.get("who", "assistant"), "text": msg.get("text", "")})
+                self._history = self._history[-60:]
+                self.historyChanged.emit()
+            elif msg.get("type") == "level":
                 self._level = float(msg.get("level", 0))
                 self.levelChanged.emit()
             elif msg.get("type") == "state":
@@ -111,6 +118,11 @@ class AssistantClient(QObject):
         self._send(cmd="say", text=text)
 
     @Slot()
+    def clearHistory(self):
+        self._history = self._history[:1]
+        self.historyChanged.emit()
+
+    @Slot()
     def stopMusic(self):
         self._send(cmd="stopMusic")
 
@@ -145,3 +157,4 @@ class AssistantClient(QObject):
     wakeAvailable = Property(bool, lambda self: bool(self._g("wakeAvailable", False)), notify=changed)
     city = Property(str, lambda self: self._g("city", ""), notify=changed)
     level = Property(float, lambda self: self._level, notify=levelChanged)
+    history = Property("QVariantList", lambda self: self._history, notify=historyChanged)

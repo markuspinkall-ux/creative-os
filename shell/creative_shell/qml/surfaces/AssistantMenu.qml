@@ -63,7 +63,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         Text { text: "Sprachassistent"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
                         Text {
-                            text: assistant.wake && assistant.wakeAvailable ? "Sag „Computer“ oder klick aufs Mikrofon" : "Klick aufs Mikrofon zum Sprechen"
+                            text: assistant.wake && assistant.wakeAvailable ? "Sag „Computer“ – oder klick fürs Chat-Fenster" : "Klick aufs Mikrofon: Chat-Fenster"
                             color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                         }
                     }

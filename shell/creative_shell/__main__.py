@@ -40,7 +40,7 @@ PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
-POPUPS = ("start", "panel", "trash", "assistant", "appmenu")
+POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat")
 SURFACES = POPUPS + ("bubble",)
 
 
@@ -204,6 +204,9 @@ class ShellController(QObject):
             elif key == "appmenu":
                 entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
                                           self._popup_height(screen, 460), True, key)
+            elif key == "chat":
+                entry[key] = self._create(screen, "right", "AssistantChat.qml", BUBBLE_WIDTH,
+                                          self._popup_height(screen, 560), True, key)
             elif key == "bubble":
                 entry[key] = self._create(screen, "right", "AssistantBubble.qml", BUBBLE_WIDTH,
                                           170 + POPUP_GAP, False, key)
@@ -263,6 +266,10 @@ class ShellController(QObject):
     def toggleAssistantMenu(self, name):
         self._toggle(name, "assistant")
 
+    @Slot(str)
+    def toggleChat(self, name):
+        self._toggle(name, "chat")
+
     @Slot(str, str)
     def toggleTrayAppMenu(self, name, item_key):
         self._tray_menu_key = item_key
@@ -278,8 +285,8 @@ class ShellController(QObject):
     @Slot()
     def showBubble(self):
         name = self._bubble_screen()
-        if self._open["assistant"]:
-            return                        # Menü ist offen – das zeigt den Text schon
+        if self._open["assistant"] or self._open["chat"]:
+            return                        # Menü/Chat ist offen – das zeigt den Text schon
         win = self._ensure(name, "bubble")
         if win is not None and not _win_visible(win):
             _win_show(win)
@@ -318,6 +325,7 @@ class ShellController(QObject):
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
     assistantMenuOpenOn = Property(str, lambda self: self._open["assistant"], notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
+    chatOpenOn = Property(str, lambda self: self._open["chat"], notify=openChanged)
     # Schreibtisch-Symbole erscheinen nur auf dem Hauptbildschirm
     primaryScreen = Property(str, lambda self: self._app.primaryScreen().name() if self._app.primaryScreen() else "",
                              notify=openChanged)

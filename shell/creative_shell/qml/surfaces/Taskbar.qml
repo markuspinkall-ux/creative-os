@@ -147,7 +147,8 @@ Item {
                     radius: 8
                     color: st === "alarm" ? Qt.rgba(1, 0.69, 0.48, 0.25)
                            : (active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
-                              : ((asMouse.containsMouse || shell.assistantMenuOpenOn === root.screenName) ? Theme.hover : "transparent"))
+                              : ((asMouse.containsMouse || shell.assistantMenuOpenOn === root.screenName
+                                  || shell.chatOpenOn === root.screenName) ? Theme.hover : "transparent"))
 
                     // Ruhezustand: Mikrofon
                     SvgIcon {
@@ -205,8 +206,13 @@ Item {
                                 assistant.refresh()
                                 shell.toggleAssistantMenu(root.screenName)
                             } else {
-                                shell.closePopups()
-                                assistant.activate()
+                                // Klick: Chat-Fenster öffnen und gleich zuhören
+                                const opening = shell.chatOpenOn !== root.screenName
+                                shell.toggleChat(root.screenName)
+                                if (opening && assistant.state === "idle")
+                                    assistant.activate()
+                                else if (opening && assistant.state === "alarm")
+                                    assistant.stopTimer()
                             }
                         }
                     }

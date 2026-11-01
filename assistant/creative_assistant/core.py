@@ -133,7 +133,13 @@ class Assistant:
         self.push()
 
     # ---- Sprechen ------------------------------------------------------------------
+    def chat(self, who, text):
+        """Eintrag für das Chat-Fenster in der Taskleiste (who: user | assistant)."""
+        if text:
+            self.send({"type": "chat", "who": who, "text": text})
+
     def say(self, text):
+        self.chat("assistant", text)
         self.answer = text
         self.set_state("speaking")
         wav = self.speaker.synth(text, self.cfg["voice"])
@@ -187,6 +193,7 @@ class Assistant:
         return data
 
     def no_signal(self):
+        self.chat("assistant", "Ich bekomme kein Signal vom Mikrofon.")
         self.answer = ("Ich bekomme kein Signal vom Mikrofon. Bitte in der Systemsteuerung unter Ton "
                        "das Mikrofon prüfen – oder per Rechtsklick hier ein anderes wählen.")
         self.set_state("idle")
@@ -274,6 +281,7 @@ class Assistant:
                 waited += 1
                 if waited >= 45:                           # 4,5 s nichts gesagt
                     self.answer = "Ich habe nichts gehört."
+                    self.chat("assistant", self.answer)
                     self.push()
                     return None
         self.wake.reset()
@@ -289,6 +297,7 @@ class Assistant:
             text = ""
         text = re.sub(r"^(computer[,.!]?\s*)", "", text.strip(), flags=re.I)
         self.heard = text
+        self.chat("user", text)
         self.push()
         if not text:
             self.say("Entschuldigung, das habe ich nicht verstanden.")
@@ -337,6 +346,7 @@ class Assistant:
             if not title:
                 return f"Dazu habe ich nichts gefunden."
             self.answer = f"♪ {title}"
+            self.chat("assistant", self.answer)
             self.set_state("idle")
             return None                                    # Musik spricht für sich
         if intent == "music_ask":
@@ -359,6 +369,7 @@ class Assistant:
             title = self.music.next()
             if title:
                 self.answer = f"♪ {title}"
+                self.chat("assistant", self.answer)
                 self.push()
             return None if title else "Es läuft gerade keine Musik."
         if intent == "time":
@@ -423,8 +434,13 @@ class Assistant:
             self._cancel.set()
             self.speaker.stop()
             self.stop_alarm()
-        elif cmd == "say":                               # Texteingabe (Testen ohne Mikrofon)
-            threading.Thread(target=self.handle_text, args=(msg.get("text", ""),), daemon=True).start()
+        elif cmd == "say":                               # Texteingabe im Chat-Fenster
+            text = msg.get("text", "").strip()
+            if text:
+                self._cancel.set()
+                self.heard = text
+                self.chat("user", text)
+                threading.Thread(target=self.handle_text, args=(text,), daemon=True).start()
         elif cmd == "setDevice":
             self.cfg["device"] = msg.get("name", "")
             self.save()
