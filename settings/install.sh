@@ -9,7 +9,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 dnf install -y --skip-unavailable python3-pyside6 qt6-qtsvg libkscreen pipewire-utils pulseaudio-utils \
-    cups-client pciutils polkit-kde system-config-printer gnome-disk-utility exfatprogs udisks2
+    cups-client pciutils polkit-kde system-config-printer kde-partitionmanager exfatprogs udisks2
 
 rm -rf /usr/lib/creative-settings
 mkdir -p /usr/lib/creative-settings

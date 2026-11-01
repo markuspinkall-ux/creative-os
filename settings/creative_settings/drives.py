@@ -183,7 +183,8 @@ class DrivesModel(QObject):
 
     @Slot()
     def openExpert(self):
-        spawn_detached(["gnome-disks"])
+        if not spawn_detached(["partitionmanager"]):
+            spawn_detached(["gnome-disks"])
 
     @Slot(str)
     def openFolder(self, path):
@@ -197,4 +198,5 @@ class DrivesModel(QObject):
     disks = Property("QVariantList", lambda self: self._disks, notify=changed)
     busy = Property(bool, lambda self: self._busy, notify=changed)
     message = Property(str, lambda self: self._message, notify=messageChanged)
-    expertAvailable = Property(bool, lambda self: Path("/usr/bin/gnome-disks").exists(), constant=True)
+    expertAvailable = Property(bool, lambda self: Path("/usr/bin/partitionmanager").exists()
+                               or Path("/usr/bin/gnome-disks").exists(), constant=True)

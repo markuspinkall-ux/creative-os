@@ -50,6 +50,7 @@ VISIBLE = {
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-shots"),
     "creative-taskmanager.desktop": ("Taskmanager", "creative-taskmanager"),
     "org.kde.plasma-systemmonitor.desktop": ("Taskmanager", "creative-taskmanager"),
+    "org.kde.partitionmanager.desktop": ("Laufwerke (Erweitert)", "creative-drive"),
     "org.gnome.DiskUtility.desktop": ("Laufwerke (Erweitert)", "creative-drive"),
 }
 # Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
@@ -64,6 +65,7 @@ PREFER = {
     "org.kde.plasma-systemmonitor.desktop": "creative-taskmanager.desktop",
     "org.kde.spectacle.desktop": "creative-shots.desktop",
     "org.kde.gwenview.desktop": "creative-pictures.desktop",
+    "org.gnome.DiskUtility.desktop": "org.kde.partitionmanager.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 

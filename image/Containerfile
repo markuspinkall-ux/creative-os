@@ -208,7 +208,9 @@ RUN dnf install -y --skip-unavailable libkscreen pipewire-utils pulseaudio-utils
         pciutils polkit-kde system-config-printer \
  && dnf clean all
 # Laufwerke: eigener Helfer (Einrichten, beim Start verbinden) + GNOME Laufwerke für Profis
-RUN dnf install -y --skip-unavailable gnome-disk-utility exfatprogs udisks2 && dnf clean all
+# „Laufwerke (Erweitert)“ = KDE-Partitionsmanager (Qt → gleiche Titelleiste und Farben wie alle Fenster)
+RUN dnf install -y --skip-unavailable kde-partitionmanager exfatprogs udisks2 smartmontools && dnf clean all \
+ && (rpm -q gnome-disk-utility >/dev/null 2>&1 && dnf remove -y gnome-disk-utility >/dev/null 2>&1 || true)
 COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
 COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
 COPY drives/creative-automount /usr/bin/creative-automount
@@ -257,7 +259,7 @@ RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-font
 RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
              kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
              kmouth kcharselect kcalc kwrite plasma-systemmonitor gwenview kdebugsettings filelight kgpg akregator dragon elisa-player \
-             juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
+             juk kolourpaint kontact kmail korganizer neochat qrca \
              kjournald mediawriter kwrite-doc; do \
         rpm -q "$p" >/dev/null 2>&1 || continue; \
         dnf remove -y "$p" >/dev/null 2>&1 && echo "entfernt: $p" || echo "bleibt (wird gebraucht): $p"; \
