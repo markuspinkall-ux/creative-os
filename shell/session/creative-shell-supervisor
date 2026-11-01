@@ -26,7 +26,8 @@ done
 
 # Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
 if command -v creative-assistant >/dev/null 2>&1; then
-    ( while true; do creative-assistant >/dev/null 2>&1; sleep 5; done ) &
+    # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant
+    ( while true; do creative-assistant 2>&1 | systemd-cat -t creative-assistant; sleep 5; done ) &
 fi
 
 # Beim allerersten Start: Willkommens-Assistent (zeigt sich nur einmal)

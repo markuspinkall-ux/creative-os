@@ -12,6 +12,7 @@ import math
 import json
 import os
 import re
+import select
 import shutil
 import socket
 import subprocess
@@ -165,6 +166,31 @@ class Assistant:
         except OSError:
             return None
 
+    def _read(self, timeout=1.5):
+        """Liest 0,1 s Audio; gibt None zurück, wenn das Mikrofon nichts liefert."""
+        mic = self._mic
+        if mic is None or mic.stdout is None:
+            return None
+        ready, _, _ = select.select([mic.stdout], [], [], timeout)
+        if not ready:
+            return None
+        data = b""
+        while len(data) < CHUNK:
+            part = os.read(mic.stdout.fileno(), CHUNK - len(data))
+            if not part:
+                return data or b""
+            data += part
+            if len(data) < CHUNK:
+                r, _, _ = select.select([mic.stdout], [], [], timeout)
+                if not r:
+                    break
+        return data
+
+    def no_signal(self):
+        self.answer = ("Ich bekomme kein Signal vom Mikrofon. Bitte in der Systemsteuerung unter Ton "
+                       "das Mikrofon prüfen – oder per Rechtsklick hier ein anderes wählen.")
+        self.set_state("idle")
+
     def mic_loop(self):
         """Läuft immer: liest das Mikrofon, erkennt das Aktivierungswort,
         nimmt nach dem Aktivieren den Befehl auf."""
@@ -183,16 +209,27 @@ class Assistant:
                 self._mic_restart.clear()
                 self._mic = self._open_mic()
                 if self._mic is None:
+                    if self._activate.is_set():
+                        self._activate.clear()
+                        self.no_signal()
                     time.sleep(3)
                     continue
-            chunk = self._mic.stdout.read(CHUNK)
+            chunk = self._read()
+            if chunk is None:                              # Mikrofon liefert nichts
+                if self._activate.is_set():
+                    self._activate.clear()
+                    self.no_signal()
+                continue
             if not chunk:
                 self._mic = None
+                if self._activate.is_set():
+                    self._activate.clear()
+                    self.no_signal()
                 time.sleep(1)
                 continue
-            rms = rms(chunk)
+            level = rms(chunk)
             if self.state in ("idle",):
-                noise = 0.97 * noise + 0.03 * min(rms, 3000)
+                noise = 0.97 * noise + 0.03 * min(level, 3000)
             triggered = self._activate.is_set()
             if not triggered and self.state == "idle" and self.cfg["wake"]:
                 triggered = self.wake.feed(chunk)
@@ -218,13 +255,16 @@ class Assistant:
         while len(frames) < 80:                           # 8 s
             if self._cancel.is_set():
                 return None
-            chunk = self._mic.stdout.read(CHUNK) if self._mic else b""
+            chunk = self._read()
+            if chunk is None:
+                self.no_signal()
+                return None
             if not chunk:
                 break
-            rms = rms(chunk)
-            self.send({"type": "level", "level": min(1.0, rms / 4000)})
+            level = rms(chunk)
+            self.send({"type": "level", "level": min(1.0, level / 4000)})
             frames.append(chunk)
-            if rms > threshold:
+            if level > threshold:
                 started, silent = True, 0
             elif started:
                 silent += 1
