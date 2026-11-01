@@ -31,6 +31,10 @@ Item {
         color: Theme.surface
         border.color: Theme.hairline
         border.width: 1
+        // leicht durchsichtig wie die Taskleiste (als Ganzes, damit Fußleiste und Fläche gleich wirken)
+        layer.enabled: true
+        layer.smooth: true
+        opacity: Theme.bar.a
 
         TextField {
             id: search

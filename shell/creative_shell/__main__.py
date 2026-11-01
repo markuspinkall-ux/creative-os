@@ -34,6 +34,7 @@ from .trash import TrashModel
 from .desktopstats import DesktopStats
 from .visualizer import Visualizer
 from .nowplaying import NowPlaying
+from .broadcasttray import BroadcastTray
 
 QML_DIR = Path(__file__).resolve().parent / "qml"
 BAR_HEIGHT = 74       # 60 px Leiste + 14 px Abstand zum Bildschirmrand
@@ -368,6 +369,7 @@ def main():
         "desktopStats": DesktopStats(),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
+        "broadcast": BroadcastTray(),
     }
     use_layer = not args.dev and app.platformName() == "wayland" and layer_shell_available(engine)
     if not use_layer and not args.dev:

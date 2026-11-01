@@ -216,6 +216,45 @@ Item {
                     }
                 }
 
+                // Creative Broadcast: blau hinterlegt, wenn Mikrofon-Filter oder Kamera-Effekt an sind
+                Rectangle {
+                    id: broadcastBtn
+                    visible: broadcast.available
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30
+                    height: 30
+                    radius: 8
+                    color: broadcast.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, bcMouse.containsMouse ? 0.3 : 0.2)
+                                            : (bcMouse.containsMouse ? Theme.hover : "transparent")
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        name: "broadcast"
+                        size: 17
+                        opacity: broadcast.active ? 1 : 0.8
+                    }
+                    // Punkt: eine App benutzt gerade die Creative Kamera
+                    Rectangle {
+                        visible: broadcast.cameraInUse
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 3
+                        width: 6; height: 6; radius: 3
+                        color: Theme.ok
+                    }
+                    MouseArea {
+                        id: bcMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            shell.closePopups()
+                            broadcast.open()
+                        }
+                    }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: broadcast.tooltip
+                }
+
                 // Sprachassistent: Klick = zuhören, Rechtsklick = Mikrofon und Stimme
                 Rectangle {
                     id: assistantBtn

@@ -60,7 +60,11 @@ fi
 
 # Creative Broadcast (rauschfreies Mikrofon / virtuelle Kamera) – ruht, solange alles aus ist
 if command -v creative-broadcastd >/dev/null 2>&1; then
-    creative-broadcastd >/dev/null 2>&1 &
+    # läuft immer (Symbol im Tray) und startet nach einem Absturz neu
+    ( while true; do
+        pgrep -u "$(id -u)" -f creative_broadcast.daemon >/dev/null 2>&1 || creative-broadcastd >/dev/null 2>&1
+        sleep 5
+      done ) &
     children="$children $!"
 fi
 
