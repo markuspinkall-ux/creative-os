@@ -1,0 +1,12 @@
+// Creative OS: weitere Platten ohne Passwort verbinden (nur wer am PC sitzt).
+// Formatieren, Löschen und Partitionieren brauchen weiterhin das Passwort.
+polkit.addRule(function (action, subject) {
+    var allowed = [
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat"
+    ];
+    if (allowed.indexOf(action.id) >= 0 && subject.active && subject.local) {
+        return polkit.Result.YES;
+    }
+});

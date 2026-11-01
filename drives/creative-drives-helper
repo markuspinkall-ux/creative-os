@@ -98,9 +98,9 @@ def fstab_remove(uuid):
 def fstab_add(uuid, target, fstype):
     uid, gid = user_ids()
     if fstype in ("exfat", "vfat", "ntfs", "ntfs3"):
-        opts = f"uid={uid},gid={gid},umask=022,nofail,x-systemd.device-timeout=10s,x-gvfs-show"
+        opts = f"uid={uid},gid={gid},umask=022,nofail,x-systemd.device-timeout=10s"
     else:
-        opts = "defaults,nofail,x-systemd.device-timeout=10s,x-gvfs-show"
+        opts = "defaults,nofail,x-systemd.device-timeout=10s"
     fstab_remove(uuid)
     with FSTAB.open("a", encoding="utf-8") as fh:
         fh.write(f"{MARK}\nUUID={uuid} {target} {fstype} {opts} 0 0\n")

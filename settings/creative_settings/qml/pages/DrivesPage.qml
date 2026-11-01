@@ -52,7 +52,7 @@ SettingsPage {
             SettingRow {
                 visible: d.empty && !d.system
                 label: "Noch nicht eingerichtet"
-                hint: "Neue Platte? Mit einem Klick einrichten – danach erscheint sie in „Dateien“."
+                hint: "Neue Platte? Mit einem Klick einrichten – danach erscheint sie in „Dateien › Dieser PC“."
                 last: true
                 CButton { text: "Einrichten …"; primary: true; enabled: !drives.busy; onClicked: { root.setupDisk = d; nameField.text = d.kind === "M2" ? "M2" : (d.kind === "SSD" ? "SSD" : "Daten"); confirm.checked = false; windowsBox.checked = false; setupDialog.open() } }
             }
@@ -69,7 +69,7 @@ SettingsPage {
                     }
                     SettingRow {
                         label: "Beim Start verbinden"
-                        hint: "Damit die Platte (z. B. für Spiele) immer da ist"
+                        hint: "Fester Ort schon vor der Anmeldung – gut für Spiele-Bibliotheken"
                         CSwitch {
                             checked: modelData.automount
                             enabled: !drives.busy

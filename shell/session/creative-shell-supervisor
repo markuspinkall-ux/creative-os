@@ -24,6 +24,11 @@ for kded in /usr/bin/kded6 /usr/libexec/kf6/kded6; do
     fi
 done
 
+# Weitere Platten automatisch verbinden (erscheinen nur in „Dieser PC“)
+if command -v creative-automount >/dev/null 2>&1; then
+    creative-automount >/dev/null 2>&1 &
+fi
+
 # Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
 if command -v creative-assistant >/dev/null 2>&1; then
     # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant

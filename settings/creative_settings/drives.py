@@ -96,10 +96,16 @@ def list_disks():
             continue
         parts = []
         system = False
-        for p in walk(d.get("children")):
+        any_mount = False
+        for p in walk([d]):
             mps = [m for m in (p.get("mountpoints") or []) if m]
+            any_mount = any_mount or bool(mps)
             if any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") for m in mps):
                 system = True
+        for p in walk([d]):                     # auch Dateisysteme direkt auf der Platte
+            if p is d and not p.get("fstype"):
+                continue
+            mps = [m for m in (p.get("mountpoints") or []) if m]
             if not p.get("fstype") or p.get("fstype") in ("swap",) or any(m.startswith("/boot") for m in mps):
                 continue
             size = int(p.get("fssize") or 0) or None
@@ -117,7 +123,8 @@ def list_disks():
             "device": d["path"], "kind": "Creative OS" if system else kind(d.get("tran"), d.get("rota"), d["path"]),
             "model": (d.get("model") or "").strip(), "size": fmt_size(int(d.get("size") or 0)),
             "system": system, "removable": removable, "parts": [] if system else parts,
-            "empty": not parts and not system, "health": lvl, "healthText": text,
+            # „leer“ nur, wenn wirklich nichts darauf ist und nichts eingebunden ist
+            "empty": not parts and not system and not d.get("children") and not d.get("fstype") and not any_mount, "health": lvl, "healthText": text,
         })
     disks.sort(key=lambda x: (not x["system"], x["removable"], x["device"]))
     return disks

@@ -164,7 +164,8 @@ RUN dnf install -y --skip-unavailable libkscreen pipewire-utils pulseaudio-utils
 RUN dnf install -y --skip-unavailable gnome-disk-utility exfatprogs udisks2 && dnf clean all
 COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
 COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
-RUN chmod 755 /usr/libexec/creative-drives-helper
+COPY drives/creative-automount /usr/bin/creative-automount
+RUN chmod 755 /usr/libexec/creative-drives-helper /usr/bin/creative-automount
 COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
 COPY settings/bin/creative-settings /usr/bin/creative-settings
 COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
@@ -281,6 +282,7 @@ COPY image/quiet-boot/creative-quiet-boot /usr/libexec/creative-quiet-boot
 COPY image/quiet-boot/creative-quiet-boot.service /usr/lib/systemd/system/creative-quiet-boot.service
 RUN chmod 755 /usr/libexec/creative-quiet-boot && systemctl enable creative-quiet-boot.service
 COPY image/polkit/50-creative-updates.rules /usr/share/polkit-1/rules.d/50-creative-updates.rules
+COPY image/polkit/50-creative-drives.rules /usr/share/polkit-1/rules.d/50-creative-drives.rules
 RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf \
  && systemctl enable rpm-ostreed-automatic.timer
 

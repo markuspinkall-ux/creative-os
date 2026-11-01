@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Creative OS: weitere Platten automatisch verbinden.
+
+Läuft in der Sitzung. Verbindet beim Anmelden – und immer, wenn eine Platte
+angesteckt wird – jede Partition mit einem Dateisystem, die noch nicht
+verbunden ist. Das System selbst, Swap und versteckte Bereiche (EFI, Boot)
+werden nie angefasst. Angezeigt werden die Platten ausschließlich in
+„Dateien › Dieser PC“ unter „Geräte und Laufwerke“ – nicht auf dem Schreibtisch.
+"""
+import json
+import subprocess
+import time
+
+SKIP_FS = {"", "swap", "crypto_LUKS", "LVM2_member", "linux_raid_member", "iso9660", "squashfs"}
+SKIP_LABELS = {"efi", "boot", "esp", "system reserved", "recovery", "sicherheit"}
+SKIP_PARTTYPES = {
+    "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",   # EFI
+    "21686148-6449-6e6f-744e-656564454649",   # BIOS-Boot
+    "e3c9e316-0b5c-4db8-817d-f92df00215ae",   # Microsoft reserviert
+    "de94bba4-06d1-4d40-a16a-bfd50179d6ac",   # Windows-Wiederherstellung
+    "0x27", "0xef",
+}
+SYSTEM_MOUNTS = ("/", "/sysroot", "/boot", "/boot/efi", "/var", "/usr", "/etc")
+
+
+def lsblk():
+    r = subprocess.run(
+        ["lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,LABEL,PARTTYPE,MOUNTPOINTS,RM,HOTPLUG"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return json.loads(r.stdout).get("blockdevices", []) if r.returncode == 0 else []
+
+
+def candidates():
+    out = []
+    for disk in lsblk():
+        nodes = [disk] + list(disk.get("children") or [])
+        mps_all = [m for n in nodes for m in (n.get("mountpoints") or []) if m]
+        for c in disk.get("children") or []:
+            mps_all += [m for g in (c.get("children") or []) for m in (g.get("mountpoints") or []) if m]
+        if any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") for m in mps_all):
+            continue                                    # Systemplatte: Finger weg
+        for n in nodes:
+            if n is disk and disk.get("children"):
+                continue
+            if (n.get("fstype") or "") in SKIP_FS:
+                continue
+            if (n.get("parttype") or "").lower() in SKIP_PARTTYPES:
+                continue
+            if (n.get("label") or "").strip().lower() in SKIP_LABELS:
+                continue
+            if any(m for m in (n.get("mountpoints") or []) if m):
+                continue                                # schon verbunden
+            out.append(n["path"])
+    return out
+
+
+def mount_all():
+    for dev in candidates():
+        # --no-user-interaction: niemals eine Passwortabfrage aufpoppen lassen
+        subprocess.run(["udisksctl", "mount", "--no-user-interaction", "-b", dev],
+                       capture_output=True, text=True, timeout=60)
+
+
+def main():
+    time.sleep(4)
+    mount_all()
+    # Neu angesteckte Platten mitbekommen
+    try:
+        mon = subprocess.Popen(["udisksctl", "monitor"], stdout=subprocess.PIPE, text=True)
+    except OSError:
+        return
+    last = 0.0
+    for line in mon.stdout:
+        if "Added" in line or "InterfacesAdded" in line or "Changed" in line:
+            now = time.monotonic()
+            if now - last > 2:
+                time.sleep(1.5)
+                mount_all()
+                last = time.monotonic()
+
+
+if __name__ == "__main__":
+    main()
