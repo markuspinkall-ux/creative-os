@@ -251,7 +251,7 @@ ApplicationWindow {
                         { icon: "files", title: "Dateien", text: "Windows-Taste + E. Gelöschtes landet im Papierkorb unten rechts und lässt sich zurückholen." },
                         { icon: "settings", title: "Systemsteuerung", text: "Windows-Taste + I: WLAN, Bildschirme, Ton, Drucker, Updates und „Mein Server“." },
                         { icon: "games", title: "Spielen", text: "Steam ist schon dabei – einfach anmelden und loslegen." },
-                        { icon: "lock", title: "Sperren", text: "Windows-Taste + L sperrt den Bildschirm." }
+                        { icon: "mic", title: "Sprachassistent", text: "Sag „Computer“ oder klick aufs Mikrofon unten rechts – für Wetter, Timer und Musik." }
                     ]
                     delegate: Row {
                         spacing: 14

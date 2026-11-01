@@ -29,6 +29,7 @@ class AssistantClient(QObject):
         self._buf = b""
         self._sock = QLocalSocket(self)
         self._sock.readyRead.connect(self._read)
+        self._sock.connected.connect(lambda: self._retry.stop())
         self._sock.disconnected.connect(self._lost)
         self._sock.errorOccurred.connect(lambda _e: self._lost())
         self._retry = QTimer(self)
@@ -42,11 +43,8 @@ class AssistantClient(QObject):
 
     def _connect(self):
         if self._sock.state() == QLocalSocket.LocalSocketState.UnconnectedState:
+            self._retry.start()            # falls es nicht klappt: in 3 s erneut
             self._sock.connectToServer(socket_path())
-            if self._sock.waitForConnected(150):
-                self._retry.stop()
-            else:
-                self._retry.start()
 
     def _lost(self):
         if self._s:
