@@ -5,6 +5,9 @@ Befehle:
   enable <ziel>   Server auf <ziel> einrichten und starten.
                   <ziel> = /dev/… (Partition einer Zusatz-Festplatte) oder „system“
   disable         Server ausschalten (Daten bleiben erhalten)
+  internet <name> Aus dem Internet erreichbar machen (DuckDNS, Token über stdin)
+  internet-off    Nur noch im Heimnetz
+  duckdns-update  Internet-Adresse aktualisieren (läuft alle 5 Minuten)
 
 Sicherheitsregeln: Es wird nie formatiert und nie etwas gelöscht. Das
 System-Laufwerk wird nur über den festen Ordner /var/srv/mein-server benutzt.
@@ -147,20 +150,27 @@ def prepare_folder(root, linux_fs):
     return site
 
 
-def write_config(site, php):
+def write_config(site, php, domain=""):
+    """Caddy-Konfiguration: immer im Heimnetz (:80), optional zusätzlich die
+    Internet-Adresse <domain> mit automatischem HTTPS-Zertifikat."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     (STATE_DIR / "data").mkdir(exist_ok=True)
-    lines = [
-        "{", "\tadmin off", "\tauto_https off", "\tpersist_config off", "}", "",
-        ":80 {", f'\troot * "{site}"', "\tencode gzip",
-    ]
+    body = [f'\troot * "{site}"', "\tencode gzip"]
     if php:
-        lines.append(f"\tphp_fastcgi unix/{PHP_SOCK}")
-    lines += ["\tfile_server", "}", ""]
+        body.append(f"\tphp_fastcgi unix/{PHP_SOCK}")
+    body.append("\tfile_server")
+    lines = ["{", "\tadmin off", "\tpersist_config off"]
+    if not domain:
+        lines.append("\tauto_https off")
+    lines += ["}", ""]
+    if domain:
+        lines += [f"{domain} {{"] + body + ["}", ""]
+    lines += ["http://:80 {" if domain else ":80 {"] + body + ["}", ""]
     CADDYFILE.write_text("\n".join(lines), encoding="utf-8")
     try:
         caddy = pwd.getpwnam("caddy")
-        shutil.chown(STATE_DIR / "data", caddy.pw_uid, caddy.pw_gid)
+        for p in [STATE_DIR / "data"] + list((STATE_DIR / "data").rglob("*")):
+            shutil.chown(p, caddy.pw_uid, caddy.pw_gid)
     except (KeyError, OSError):
         pass
 
@@ -203,7 +213,8 @@ def enable(target):
         allow_caddy_php()
         run("systemctl", "enable", "--now", "php-fpm.service")
         run("systemctl", "restart", "php-fpm.service")
-    write_config(site, php)
+    domain = load_state().get("domain", "") if DUCK.exists() else ""
+    write_config(site, php, domain)
     # Den mitgelieferten Caddy-Dienst nicht parallel laufen lassen (Port 80)
     run("systemctl", "disable", "--now", "caddy.service")
     firewall(True)
@@ -212,15 +223,111 @@ def enable(target):
     run("systemctl", "restart", "creative-server.service")
     if r.returncode != 0:
         fail("Der Server konnte nicht gestartet werden.")
-    STATE.write_text(json.dumps({"target": device, "root": str(root), "site": str(site), "php": php},
+    STATE.write_text(json.dumps({"target": device, "root": str(root), "site": str(site), "php": php,
+                                 **({"domain": domain} if domain else {})},
                                 ensure_ascii=False, indent=2), encoding="utf-8")
     os.chmod(STATE, 0o644)
     print(json.dumps({"ok": True, "site": str(site)}, ensure_ascii=False))
 
 
+DUCK = STATE_DIR / "duckdns.json"
+DUCK_TIMER = """[Unit]
+Description=Creative OS – Mein Server: Internet-Adresse aktuell halten
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+"""
+DUCK_SERVICE = """[Unit]
+Description=Creative OS – Mein Server: Internet-Adresse aktualisieren
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/creative-server-helper duckdns-update
+"""
+
+
+def load_state():
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def duckdns_update():
+    try:
+        cfg = json.loads(DUCK.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    import urllib.parse
+    import urllib.request
+    q = urllib.parse.urlencode({"domains": cfg["name"], "token": cfg["token"], "ip": ""})
+    try:
+        with urllib.request.urlopen(f"https://www.duckdns.org/update?{q}", timeout=15) as r:
+            return r.read().decode().strip() == "OK"
+    except OSError:
+        return False
+
+
+def internet_on(name):
+    name = name.strip().lower().removesuffix(".duckdns.org")
+    if not name or not all(c.isalnum() or c == "-" for c in name):
+        fail("Der DuckDNS-Name darf nur Buchstaben, Ziffern und Bindestriche enthalten.")
+    token = sys.stdin.readline().strip()
+    if len(token) < 20:
+        fail("Der DuckDNS-Token fehlt oder ist zu kurz.")
+    st = load_state()
+    if not st.get("site"):
+        fail("Bitte den Server zuerst einschalten.")
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    DUCK.write_text(json.dumps({"name": name, "token": token}), encoding="utf-8")
+    os.chmod(DUCK, 0o600)
+    if not duckdns_update():
+        DUCK.unlink(missing_ok=True)
+        fail("DuckDNS hat den Namen oder Token nicht angenommen. Bitte beides auf duckdns.org prüfen.")
+    Path("/etc/systemd/system/creative-duckdns.timer").write_text(DUCK_TIMER)
+    Path("/etc/systemd/system/creative-duckdns.service").write_text(DUCK_SERVICE)
+    domain = f"{name}.duckdns.org"
+    write_config(st["site"], st.get("php", False), domain)
+    if shutil.which("firewall-cmd"):
+        run("firewall-cmd", "--permanent", "--add-service=https")
+        run("firewall-cmd", "--reload")
+    run("systemctl", "daemon-reload")
+    run("systemctl", "enable", "--now", "creative-duckdns.timer")
+    run("systemctl", "restart", "creative-server.service")
+    st["domain"] = domain
+    STATE.write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"ok": True, "domain": domain}, ensure_ascii=False))
+
+
+def internet_off():
+    st = load_state()
+    run("systemctl", "disable", "--now", "creative-duckdns.timer")
+    DUCK.unlink(missing_ok=True)
+    if shutil.which("firewall-cmd"):
+        run("firewall-cmd", "--permanent", "--remove-service=https")
+        run("firewall-cmd", "--reload")
+    if st.get("site"):
+        write_config(st["site"], st.get("php", False), "")
+        run("systemctl", "restart", "creative-server.service")
+    st.pop("domain", None)
+    if st:
+        STATE.write_text(json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"ok": True}))
+
+
 def disable():
     run("systemctl", "disable", "--now", "creative-server.service")
+    run("systemctl", "disable", "--now", "creative-duckdns.timer")
     firewall(False)
+    if shutil.which("firewall-cmd"):
+        run("firewall-cmd", "--permanent", "--remove-service=https")
+        run("firewall-cmd", "--reload")
     print(json.dumps({"ok": True}))
 
 
@@ -231,5 +338,11 @@ if __name__ == "__main__":
         enable(sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] == "disable":
         disable()
+    elif len(sys.argv) == 3 and sys.argv[1] == "internet":
+        internet_on(sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] == "internet-off":
+        internet_off()
+    elif len(sys.argv) == 2 and sys.argv[1] == "duckdns-update":
+        sys.exit(0 if duckdns_update() else 1)
     else:
         fail("Unbekannter Befehl.")

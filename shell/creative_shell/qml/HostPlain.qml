@@ -32,14 +32,14 @@ Window {
     Component.onCompleted: loader.setSource(contentSource, { screenName: screenName })
 
     onVisibleChanged: {
-        if (visible && placement !== "bar") {
+        if (visible && placement !== "bar" && popupKey !== "bubble") {
             requestActivate()
             if (loader.item && loader.item.opened)
                 loader.item.opened()
         }
     }
     onActiveChanged: {
-        if (!active && visible && placement !== "bar")
+        if (!active && visible && placement !== "bar" && popupKey !== "bubble")
             shell.popupLostFocus(screenName, popupKey || placement)
     }
 }

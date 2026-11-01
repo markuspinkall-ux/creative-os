@@ -91,6 +91,130 @@ Item {
                 anchors.centerIn: parent
                 spacing: 14
 
+                // Tray-Symbole anderer Programme (Steam, Discord …) im Creative-Look
+                Repeater {
+                    model: trayApps.items
+                    delegate: Rectangle {
+                        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                        width: 30
+                        height: 30
+                        radius: 8
+                        color: am.containsMouse ? Theme.hover : "transparent"
+                        SvgIcon {
+                            anchors.centerIn: parent
+                            visible: modelData.creative !== ""
+                            name: modelData.creative
+                            size: 17
+                        }
+                        Image {
+                            anchors.centerIn: parent
+                            visible: modelData.creative === ""
+                            width: 17; height: 17
+                            sourceSize.width: 34; sourceSize.height: 34
+                            source: modelData.creative === "" && modelData.icon ? "image://icon/" + modelData.icon : ""
+                        }
+                        MouseArea {
+                            id: am
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (mouse) => {
+                                shell.noteScreen(root.screenName)
+                                if (mouse.button === Qt.RightButton && modelData.hasMenu) {
+                                    trayApps.loadMenu(modelData.key)
+                                    shell.toggleTrayAppMenu(root.screenName, modelData.key)
+                                } else {
+                                    shell.closePopups()
+                                    trayApps.activate(modelData.key)
+                                }
+                            }
+                        }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: modelData.title
+                    }
+                }
+
+                // Sprachassistent: Klick = zuhören, Rechtsklick = Mikrofon und Stimme
+                Rectangle {
+                    id: assistantBtn
+                    visible: assistant.available
+                    anchors.verticalCenter: parent.verticalCenter
+                    readonly property string st: assistant.state
+                    readonly property bool active: st === "listening" || st === "thinking" || st === "speaking" || st === "alarm"
+                    width: 30
+                    height: 30
+                    radius: 8
+                    color: st === "alarm" ? Qt.rgba(1, 0.69, 0.48, 0.25)
+                           : (active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
+                              : ((asMouse.containsMouse || shell.assistantMenuOpenOn === root.screenName) ? Theme.hover : "transparent"))
+
+                    // Ruhezustand: Mikrofon
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        visible: !assistantBtn.active
+                        name: "mic"
+                        size: 17
+                        opacity: assistant.music ? 1 : 0.95
+                    }
+                    // Visualizer: fünf Balken folgen der Stimme
+                    Row {
+                        anchors.centerIn: parent
+                        visible: assistantBtn.active
+                        spacing: 2
+                        Repeater {
+                            model: 5
+                            delegate: Rectangle {
+                                readonly property real shape: [0.55, 0.85, 1.0, 0.8, 0.5][index]
+                                property real phase: 0
+                                width: 2.5
+                                radius: 1.25
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: assistantBtn.st === "alarm" ? Theme.flame : Theme.accent
+                                height: assistantBtn.st === "thinking"
+                                        ? 4 + 10 * Math.abs(Math.sin(phase + index * 0.7))
+                                        : 4 + 14 * shape * Math.min(1, assistant.level * 2.2 + 0.08 * Math.abs(Math.sin(phase + index)))
+                                Behavior on height { NumberAnimation { duration: 70 } }
+                                NumberAnimation on phase {
+                                    running: assistantBtn.active
+                                    from: 0; to: Math.PI * 2
+                                    duration: 900
+                                    loops: Animation.Infinite
+                                }
+                            }
+                        }
+                    }
+                    // Kleiner Punkt: Musik oder Timer läuft
+                    Rectangle {
+                        visible: !assistantBtn.active && (assistant.music !== "" || assistant.timer > 0)
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 3
+                        width: 6; height: 6; radius: 3
+                        color: assistant.timer > 0 ? Theme.flame : Theme.ok
+                    }
+                    MouseArea {
+                        id: asMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: (mouse) => {
+                            shell.noteScreen(root.screenName)
+                            if (mouse.button === Qt.RightButton) {
+                                assistant.refresh()
+                                shell.toggleAssistantMenu(root.screenName)
+                            } else {
+                                shell.closePopups()
+                                assistant.activate()
+                            }
+                        }
+                    }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Sprachassistent"
+                    Accessible.onPressAction: assistant.activate()
+                }
+
                 // Papierkorb: Klick öffnet ihn, Rechtsklick zeigt „Leeren“
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter

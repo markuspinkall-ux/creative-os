@@ -164,6 +164,54 @@ class ServerModel(QObject):
 
         self._run.run(args, done)
 
+    @Slot(str, str)
+    def enableInternet(self, name, token):
+        if self._busy:
+            return
+        name, token = name.strip(), token.strip()
+        if not name or not token:
+            self._set_message("Bitte DuckDNS-Name und Token eingeben.")
+            return
+        self._busy = True
+        self._set_message("Internet-Zugang wird eingerichtet – das Zertifikat kann eine Minute dauern …")
+        self.changed.emit()
+
+        def done(code, out, _err):
+            self._busy = False
+            try:
+                result = json.loads(out.strip().splitlines()[-1]) if out.strip() else {}
+            except ValueError:
+                result = {}
+            if code in (126, 127):
+                self._set_message("Abgebrochen – es bleibt beim Heimnetz.")
+            elif result.get("ok"):
+                self._set_message(f"Fertig! Deine Webseite ist unter https://{result.get('domain')} erreichbar "
+                                  "(sobald die Ports im Router freigegeben sind).")
+            else:
+                self._set_message(result.get("error") or "Das hat nicht geklappt.")
+            QTimer.singleShot(600, self.refresh)
+
+        self._run.run(["pkexec", HELPER, "internet", name], done, stdin=token + "\n")
+
+    @Slot()
+    def disableInternet(self):
+        if self._busy:
+            return
+        self._busy = True
+        self.changed.emit()
+
+        def done(code, _out, _err):
+            self._busy = False
+            self._set_message("Der Server ist jetzt nur noch im Heimnetz erreichbar." if code == 0 else
+                              "Abgebrochen.")
+            QTimer.singleShot(600, self.refresh)
+
+        self._run.run(["pkexec", HELPER, "internet-off"], done)
+
+    @Slot()
+    def openDuckDns(self):
+        QDesktopServices.openUrl(QUrl("https://www.duckdns.org/"))
+
     @Slot()
     def openWebsite(self):
         QDesktopServices.openUrl(QUrl("http://localhost"))
@@ -187,3 +235,5 @@ class ServerModel(QObject):
     php = Property(bool, lambda self: bool(self._state.get("php")), notify=changed)
     urls = Property("QVariantList", lambda self: addresses(), notify=changed)
     message = Property(str, lambda self: self._message, notify=messageChanged)
+    domain = Property(str, lambda self: self._state.get("domain", ""), notify=changed)
+    localIp = Property(str, lambda self: next((u[7:] for u in addresses()[1:]), ""), notify=changed)

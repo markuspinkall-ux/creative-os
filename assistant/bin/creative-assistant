@@ -1,0 +1,6 @@
+#!/bin/sh
+# Sprachassistent (Hintergrund-Dienst) – läuft mit eigener Python-Umgebung
+export PYTHONPATH="/usr/lib/creative-assistant${PYTHONPATH:+:$PYTHONPATH}"
+py=/usr/lib/creative-assistant/venv/bin/python3
+[ -x "$py" ] || py=python3
+exec "$py" -m creative_assistant "$@"

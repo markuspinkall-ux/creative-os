@@ -1,0 +1,57 @@
+[Plymouth Theme]
+Name=Creative OS
+Description=Startbildschirm von Creative OS (Graphit)
+ModuleName=two-step
+
+[two-step]
+Font=Liberation Sans 12
+TitleFont=Liberation Sans Bold 14
+ImageDir=/usr/share/plymouth/themes/creative
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.70
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+HorizontalAlignment=.5
+VerticalAlignment=.74
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.45
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x12151b
+BackgroundEndColor=0x12151b
+ProgressBarBackgroundColor=0x232836
+ProgressBarForegroundColor=0x8fb3ff
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[shutdown]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[reboot]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[updates]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Updates werden installiert …
+SubTitle=Bitte den PC nicht ausschalten.
+
+[system-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Creative OS wird aktualisiert …
+SubTitle=Bitte den PC nicht ausschalten.
+
+[firmware-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Firmware wird aktualisiert …
+SubTitle=Bitte den PC nicht ausschalten.

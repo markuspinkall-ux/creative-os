@@ -180,9 +180,148 @@ SettingsPage {
         }
         SettingRow {
             label: "Erreichbar"
-            hint: "Nur im eigenen Heimnetz – von außen ist der Server nicht sichtbar."
+            hint: server.domain ? "Im Heimnetz und im Internet: https://" + server.domain
+                                : "Nur im eigenen Heimnetz – von außen ist der Server nicht sichtbar."
             last: true
             SvgIcon { name: "secure"; size: 18 }
+        }
+    }
+
+    // ---- Internet ---------------------------------------------------------------------
+    Card {
+        title: "Im Internet erreichbar"
+        subtitle: "Mit kostenloser Adresse von DuckDNS und automatischem HTTPS-Zertifikat"
+        visible: server.installed
+
+        SettingRow {
+            visible: server.domain !== ""
+            label: "https://" + server.domain
+            hint: "Deine Webseite ist aus dem Internet erreichbar."
+            CButton { text: "Nur noch Heimnetz"; enabled: !server.busy; onClicked: server.disableInternet() }
+        }
+
+        Column {
+            visible: server.domain === ""
+            width: parent.width
+            spacing: 12
+            bottomPadding: 6
+
+            Repeater {
+                model: [
+                    "Auf duckdns.org kostenlos anmelden und einen Namen anlegen, z. B. „markus“ → markus.duckdns.org.",
+                    "Im Router die Ports 80 und 443 an diesen PC weiterleiten" + (server.localIp ? " (IP-Adresse: " + server.localIp + ")." : "."),
+                    "Hier Namen und Token von duckdns.org eintragen und einschalten."
+                ]
+                delegate: Row {
+                    spacing: 12
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
+                        Text { anchors.centerIn: parent; text: index + 1; color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                    }
+                    Text {
+                        width: col.width - 40
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.WordWrap
+                        text: modelData
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                }
+            }
+            Item { id: col; width: parent.width; height: 1 }
+
+            Row {
+                spacing: 8
+                Rectangle {
+                    width: 280; height: 36; radius: 10
+                    color: Theme.ground
+                    border.color: duckName.activeFocus ? Theme.accent : Theme.hairline
+                    TextInput {
+                        id: duckName
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 118
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                        clip: true
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: ".duckdns.org"
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                    Text {
+                        visible: duckName.text.length === 0
+                        x: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Dein Name"
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                }
+                Rectangle {
+                    width: 300; height: 36; radius: 10
+                    color: Theme.ground
+                    border.color: duckToken.activeFocus ? Theme.accent : Theme.hairline
+                    TextInput {
+                        id: duckToken
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        verticalAlignment: TextInput.AlignVCenter
+                        echoMode: TextInput.Password
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                        clip: true
+                    }
+                    Text {
+                        visible: duckToken.text.length === 0
+                        x: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Token (von duckdns.org)"
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                }
+            }
+            Row {
+                spacing: 8
+                CButton { text: "duckdns.org öffnen"; onClicked: server.openDuckDns() }
+                CButton {
+                    text: "Im Internet freigeben"
+                    primary: true
+                    enabled: server.active && !server.busy && duckName.text.length > 0 && duckToken.text.length > 0
+                    onClicked: server.enableInternet(duckName.text, duckToken.text)
+                }
+            }
+            Rectangle {
+                width: parent.width
+                height: warn.implicitHeight + 20
+                radius: 10
+                color: Qt.rgba(1, 0.69, 0.48, 0.1)
+                Text {
+                    id: warn
+                    x: 12
+                    width: parent.width - 24
+                    anchors.verticalCenter: parent.verticalCenter
+                    wrapMode: Text.WordWrap
+                    text: "Dann kann jeder deine Webseite sehen. Lege nur hinein, was öffentlich sein darf. Mit „Nur noch Heimnetz“ ist der Server sofort wieder privat."
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                }
+            }
         }
     }
 }

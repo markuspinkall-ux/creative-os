@@ -174,6 +174,14 @@ COPY server/org.creativeos.server.policy /usr/share/polkit-1/actions/org.creativ
 COPY server/README.md /usr/share/doc/creative-server/README.md
 RUN chmod 755 /usr/libexec/creative-server-helper
 
+# ---------------------------------------------------------------------------
+# 8b4) Sprachassistent im Tray (Wetter, Timer, Musik) – Modelle laufen lokal
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable mpv yt-dlp espeak-ng sound-theme-freedesktop python3-pip python3-numpy \
+ && dnf clean all
+COPY assistant /tmp/creative-assistant
+RUN SKIP_DNF=1 sh /tmp/creative-assistant/install.sh && rm -rf /tmp/creative-assistant /root/.cache
+
 # Willkommens-Assistent beim ersten Start
 COPY welcome/creative_welcome /usr/lib/creative-welcome/creative_welcome
 COPY welcome/bin/creative-welcome /usr/bin/creative-welcome
@@ -210,6 +218,33 @@ COPY theme /tmp/creative-theme
 RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creative/icons \
         sh /tmp/creative-theme/install.sh \
  && rm -rf /tmp/creative-theme
+
+# ---------------------------------------------------------------------------
+# 8c2) Anmeldebildschirm im Graphit-Look (SDDM statt Plasma Login Manager)
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable sddm sddm-wayland-plasma && dnf clean all
+COPY login/creative /usr/share/sddm/themes/creative
+COPY login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/10-creative.conf
+RUN (systemctl disable plasmalogin.service 2>/dev/null || true) \
+ && systemctl enable --force sddm.service
+
+# ---------------------------------------------------------------------------
+# 8d) Start- und Ausschaltbildschirm mit Creative-Logo statt Fedora
+#     (Plymouth-Thema; die Startdatei initramfs wird dafür neu erzeugt)
+# ---------------------------------------------------------------------------
+COPY image/plymouth /tmp/creative-plymouth
+RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-spinner && dnf clean all \
+ && mkdir -p /usr/share/plymouth/themes/creative \
+ && cp /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/creative/ \
+ && cp /tmp/creative-plymouth/creative.plymouth /tmp/creative-plymouth/watermark.png /usr/share/plymouth/themes/creative/ \
+ && rm -f /usr/share/plymouth/themes/creative/background-tile.png \
+ && rm -rf /tmp/creative-plymouth \
+ && plymouth-set-default-theme creative \
+ && KVER="$(ls /usr/lib/modules | sort -V | tail -n1)" \
+ && dracut --no-hostonly --kver "$KVER" --reproducible --zstd --add ostree -f "/usr/lib/modules/$KVER/initramfs.img" \
+ && chmod 0600 "/usr/lib/modules/$KVER/initramfs.img" \
+ && mkdir -p /usr/lib/bootc/kargs.d \
+ && printf 'kargs = ["rhgb", "quiet", "splash"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
 # ---------------------------------------------------------------------------
 # 9) Systemeinstellungen

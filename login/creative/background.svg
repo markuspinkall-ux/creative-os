@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161a24"/>
+      <stop offset="1" stop-color="#0d1015"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8fb3ff" stop-opacity="0.34"/>
+      <stop offset="0.55" stop-color="#8fb3ff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#8fb3ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="warm" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffb07a" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffb07a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="0.35" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#b9cfff"/>
+      <stop offset="0.6" stop-color="#6f8fd6"/>
+      <stop offset="1" stop-color="#2b3a5c"/>
+    </radialGradient>
+    <linearGradient id="trail" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb07a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#ffb07a" stop-opacity="0.75"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Grund -->
+  <rect width="3840" height="2160" fill="url(#base)"/>
+
+  <!-- große, ruhige Flächen wie im Graphit-Entwurf -->
+  <circle cx="2620" cy="-260" r="1650" fill="#1a1f2b"/>
+  <circle cx="2860" cy="260" r="980" fill="#1e2534"/>
+  <circle cx="420" cy="2260" r="1100" fill="#171c26"/>
+
+  <!-- Leuchten -->
+  <circle cx="2980" cy="640" r="900" fill="url(#glow)"/>
+  <circle cx="620" cy="1900" r="900" fill="url(#warm)"/>
+
+  <!-- Umlaufbahnen -->
+  <g fill="none" stroke="#dce6ff" stroke-opacity="0.07" stroke-width="3">
+    <ellipse cx="2980" cy="640" rx="760" ry="250" transform="rotate(-18 2980 640)"/>
+    <ellipse cx="2980" cy="640" rx="1120" ry="380" transform="rotate(-18 2980 640)"/>
+  </g>
+  <ellipse cx="2980" cy="640" rx="1480" ry="510" transform="rotate(-18 2980 640)"
+           fill="none" stroke="#dce6ff" stroke-opacity="0.035" stroke-width="2" stroke-dasharray="6 22"/>
+
+  <!-- Planet -->
+  <circle cx="2980" cy="640" r="190" fill="url(#planet)"/>
+  <circle cx="2980" cy="640" r="190" fill="none" stroke="#dce6ff" stroke-opacity="0.18" stroke-width="3"/>
+
+  <!-- kleiner Mond auf der Bahn -->
+  <circle cx="2290" cy="960" r="26" fill="#dce6ff" fill-opacity="0.55"/>
+
+  <!-- Raketen-Spur mit kleiner Creative-Rakete -->
+  <path d="M1180 1640 C 1480 1420, 1700 1220, 1960 1080" fill="none" stroke="url(#trail)" stroke-width="6" stroke-linecap="round"/>
+  <g transform="translate(1990 1060) rotate(58) scale(3.2) translate(-12 -12)">
+    <path d="M7.5 12.5L5 15.5v3l2.8-1.6z" fill="#8fb3ff"/>
+    <path d="M16.5 12.5L19 15.5v3l-2.8-1.6z" fill="#8fb3ff"/>
+    <path d="M12 2c3 2.5 4.6 6 4.6 10v4.6H7.4V12C7.4 8 9 4.5 12 2z" fill="#dce6ff"/>
+    <circle cx="12" cy="9.2" r="1.9" fill="#12151b"/>
+    <path d="M10 17.6h4l-2 4.4z" fill="#ffb07a"/>
+  </g>
+
+  <!-- Sterne -->
+  <g fill="#dce6ff">
+    <circle cx="380" cy="260" r="3" fill-opacity="0.5"/>
+    <circle cx="820" cy="520" r="2" fill-opacity="0.35"/>
+    <circle cx="1260" cy="180" r="2.5" fill-opacity="0.45"/>
+    <circle cx="1650" cy="430" r="2" fill-opacity="0.3"/>
+    <circle cx="560" cy="980" r="2.5" fill-opacity="0.35"/>
+    <circle cx="1980" cy="300" r="3" fill-opacity="0.4"/>
+    <circle cx="3560" cy="1460" r="3" fill-opacity="0.4"/>
+    <circle cx="3260" cy="1780" r="2" fill-opacity="0.3"/>
+    <circle cx="3620" cy="240" r="2.5" fill-opacity="0.45"/>
+    <circle cx="2420" cy="1620" r="2" fill-opacity="0.3"/>
+    <circle cx="1480" cy="860" r="2" fill-opacity="0.25"/>
+    <circle cx="240" cy="1460" r="2" fill-opacity="0.3"/>
+  </g>
+</svg>

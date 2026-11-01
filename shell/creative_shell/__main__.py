@@ -27,7 +27,9 @@ from .tasks import TaskModel
 from .icons import IconProvider
 from .network import NetworkModel
 from .printers import PrinterModel
+from .assistant_client import AssistantClient
 from .session import SessionModel
+from .sni import TrayItems
 from .trash import TrashModel
 
 QML_DIR = Path(__file__).resolve().parent / "qml"
@@ -36,7 +38,10 @@ POPUP_GAP = 10        # Abstand zwischen Leiste und Menü
 START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
-POPUPS = ("start", "panel", "trash")
+ASSIST_WIDTH = 320 + 8
+BUBBLE_WIDTH = 380 + 8
+POPUPS = ("start", "panel", "trash", "assistant", "appmenu")
+SURFACES = POPUPS + ("bubble",)
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
@@ -87,6 +92,8 @@ class ShellController(QObject):
         self._surfaces = {}  # Monitorname -> {"screen", "bg", "bar", "start", "panel", "trash"}
         self._open = {key: "" for key in POPUPS}   # welches Menü ist auf welchem Monitor offen
         self._panel_focus = ""                      # "calendar": Schnellzugriff zeigt den Kalender
+        self._tray_menu_key = ""
+        self._last_screen = ""
         self._last_auto_close = ("", 0.0)
         host = "HostLayer.qml" if use_layer_shell else "HostPlain.qml"
         self._component = QQmlComponent(engine, QUrl.fromLocalFile(str(QML_DIR / host)))
@@ -105,7 +112,8 @@ class ShellController(QObject):
         name = screen.name()
         if name in self._surfaces:
             return
-        entry = {"screen": screen, "bg": None, "bar": None, "start": None, "panel": None, "trash": None}
+        entry = {"screen": screen, "bg": None, "bar": None}
+        entry.update({key: None for key in SURFACES})
         self._surfaces[name] = entry
         geo = screen.geometry()
         if self._layer:  # im Testmodus kein Hintergrund, sonst wäre der Desktop verdeckt
@@ -119,7 +127,7 @@ class ShellController(QObject):
         entry = self._surfaces.pop(screen.name(), None)
         if not entry:
             return
-        for key in ("bg", "bar") + POPUPS:
+        for key in ("bg", "bar") + SURFACES:
             win = entry.get(key)
             if win is not None:
                 _win_hide(win)
@@ -132,7 +140,7 @@ class ShellController(QObject):
         entry = self._surfaces.get(name)
         if not entry:
             return
-        for key in POPUPS:  # Menüs bei neuer Auflösung neu bauen
+        for key in SURFACES:  # Menüs bei neuer Auflösung neu bauen
             win = entry.get(key)
             if win is not None:
                 _win_hide(win)
@@ -187,13 +195,23 @@ class ShellController(QObject):
             elif key == "panel":
                 entry[key] = self._create(screen, "right", "QuickPanel.qml", PANEL_WIDTH,
                                           self._popup_height(screen, 940), True, key)
-            else:
+            elif key == "trash":
                 entry[key] = self._create(screen, "right", "TrashMenu.qml", TRASH_WIDTH,
                                           200 + POPUP_GAP, True, key)
+            elif key == "assistant":
+                entry[key] = self._create(screen, "right", "AssistantMenu.qml", ASSIST_WIDTH,
+                                          self._popup_height(screen, 620), True, key)
+            elif key == "appmenu":
+                entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
+                                          self._popup_height(screen, 460), True, key)
+            elif key == "bubble":
+                entry[key] = self._create(screen, "right", "AssistantBubble.qml", BUBBLE_WIDTH,
+                                          170 + POPUP_GAP, False, key)
         return entry[key]
 
     # ---- Für QML --------------------------------------------------------------
     def _toggle(self, name, key):
+        self._last_screen = name
         current = self._open[key]
         # Klick auf den Knopf eines Menüs, das sich gerade durch den Klick selbst
         # geschlossen hat (Fokusverlust), soll es nicht sofort wieder öffnen.
@@ -241,6 +259,41 @@ class ShellController(QObject):
     def toggleTrashMenu(self, name):
         self._toggle(name, "trash")
 
+    @Slot(str)
+    def toggleAssistantMenu(self, name):
+        self._toggle(name, "assistant")
+
+    @Slot(str, str)
+    def toggleTrayAppMenu(self, name, item_key):
+        self._tray_menu_key = item_key
+        self._toggle(name, "appmenu")
+
+    # Sprechblase des Assistenten (nimmt keinen Fokus, verschwindet von selbst)
+    def _bubble_screen(self):
+        if self._last_screen in self._surfaces:
+            return self._last_screen
+        prim = self._app.primaryScreen()
+        return prim.name() if prim and prim.name() in self._surfaces else next(iter(self._surfaces), "")
+
+    @Slot()
+    def showBubble(self):
+        name = self._bubble_screen()
+        if self._open["assistant"]:
+            return                        # Menü ist offen – das zeigt den Text schon
+        win = self._ensure(name, "bubble")
+        if win is not None and not _win_visible(win):
+            _win_show(win)
+
+    @Slot()
+    def hideBubble(self):
+        for entry in self._surfaces.values():
+            if entry.get("bubble") is not None and _win_visible(entry["bubble"]):
+                _win_hide(entry["bubble"])
+
+    @Slot(str)
+    def noteScreen(self, name):
+        self._last_screen = name
+
     @Slot()
     def closePopups(self):
         for entry in self._surfaces.values():
@@ -263,6 +316,8 @@ class ShellController(QObject):
     quickPanelOpenOn = Property(str, lambda self: self._open["panel"], notify=openChanged)
     trashMenuOpenOn = Property(str, lambda self: self._open["trash"], notify=openChanged)
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
+    assistantMenuOpenOn = Property(str, lambda self: self._open["assistant"], notify=openChanged)
+    trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
     # Schreibtisch-Symbole erscheinen nur auf dem Hauptbildschirm
     primaryScreen = Property(str, lambda self: self._app.primaryScreen().name() if self._app.primaryScreen() else "",
                              notify=openChanged)
@@ -297,6 +352,8 @@ def main():
         "session": SessionModel(),
         "trash": TrashModel(),
         "desktop": DesktopModel(),
+        "assistant": AssistantClient(),
+        "trayApps": TrayItems(),
     }
     use_layer = not args.dev and app.platformName() == "wayland" and layer_shell_available(engine)
     if not use_layer and not args.dev:
@@ -320,6 +377,7 @@ def main():
     for name, model in models.items():
         ctx.setContextProperty(name, model)
     shell.start()
+    models["assistant"].spoke.connect(shell.showBubble)
 
     # Fensterliste von KWin und Windows-Tastenkürzel über D-Bus
     bus = ShellBus(shell, tasks, apps, models["session"])

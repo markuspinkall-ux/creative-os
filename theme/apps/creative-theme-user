@@ -59,4 +59,34 @@ for name, (drop_groups, drop_keys) in RULES.items():
             shutil.copy2(path, backup)
         path.write_text("\n".join(out) + "\n", encoding="utf-8")
 PY
+# Steam Play (Proton) für alle Spiele ab Werk – nur vor dem ersten Steam-Start,
+# danach bleibt die Einstellung in Steam selbst änderbar
+steam_cfg="$HOME/.local/share/Steam/config/config.vdf"
+if [ ! -e "$steam_cfg" ]; then
+    mkdir -p "$(dirname "$steam_cfg")"
+    cat > "$steam_cfg" <<'VDF'
+"InstallConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"CompatToolMapping"
+				{
+					"0"
+					{
+						"name"		"proton_experimental"
+						"config"		""
+						"priority"		"75"
+					}
+				}
+			}
+		}
+	}
+}
+VDF
+fi
+
 exit 0

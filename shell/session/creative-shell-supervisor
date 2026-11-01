@@ -16,6 +16,19 @@ for agent in /usr/libexec/kf6/polkit-kde-authentication-agent-1 \
     fi
 done
 
+# Tray-Symbole anderer Programme (Steam, Discord …): Anmeldestelle bereitstellen
+for kded in /usr/bin/kded6 /usr/libexec/kf6/kded6; do
+    if [ -x "$kded" ]; then
+        "$kded" >/dev/null 2>&1 &
+        break
+    fi
+done
+
+# Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
+if command -v creative-assistant >/dev/null 2>&1; then
+    ( while true; do creative-assistant >/dev/null 2>&1; sleep 5; done ) &
+fi
+
 # Beim allerersten Start: Willkommens-Assistent (zeigt sich nur einmal)
 if command -v creative-welcome >/dev/null 2>&1; then
     (sleep 3; creative-welcome) >/dev/null 2>&1 &
