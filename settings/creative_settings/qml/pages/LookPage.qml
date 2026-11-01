@@ -100,6 +100,21 @@ SettingsPage {
     }
 
     Card {
+        title: "Gerade läuft"
+        subtitle: "Interpret und Titel des laufenden Liedes mittig in der Taskleiste"
+        SettingRow {
+            label: "In der Taskleiste anzeigen"
+            hint: "Gilt für den Creative Player, YouTube Music und andere Musikprogramme"
+            last: true
+            CSwitch {
+                checked: look.nowPlaying
+                label: "Interpret und Titel in der Taskleiste anzeigen"
+                onToggled: (v) => look.setNowPlaying(v)
+            }
+        }
+    }
+
+    Card {
         title: "Leistungsanzeige"
         subtitle: "CPU, Arbeitsspeicher, Datenträger und Netzwerk oben rechts auf dem Schreibtisch"
         SettingRow {

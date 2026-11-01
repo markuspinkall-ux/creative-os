@@ -19,6 +19,8 @@ DEFAULTS = {
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
     "visualizerOpacity": 0.7,
+    # Interpret und Titel des laufenden Liedes mittig in der Taskleiste
+    "taskbarNowPlaying": True,
     "pinned": [
         {
             "icon": "files",

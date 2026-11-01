@@ -266,6 +266,7 @@ class LookModel(QObject):
         self._viz_on = bool(cfg.get("taskbarVisualizer", True))
         self._viz_opacity = float(cfg.get("visualizerOpacity", 0.7))
         self._stats_on = bool(cfg.get("desktopStats", True))
+        self._np_on = bool(cfg.get("taskbarNowPlaying", True))
         self._images = []
         self.refresh()
 
@@ -309,6 +310,12 @@ class LookModel(QObject):
         shell_config.set_value("desktopStats", self._stats_on)
         self.changed.emit()
 
+    @Slot(bool)
+    def setNowPlaying(self, on):
+        self._np_on = bool(on)
+        shell_config.set_value("taskbarNowPlaying", self._np_on)
+        self.changed.emit()
+
     @Slot(str)
     def setWallpaper(self, path):
         cfg_path = shell_config.config_dir() / "shell.json"
@@ -330,4 +337,5 @@ class LookModel(QObject):
     visualizer = Property(bool, lambda self: self._viz_on, notify=changed)
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
     desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
+    nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)

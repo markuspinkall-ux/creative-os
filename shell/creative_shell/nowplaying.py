@@ -16,6 +16,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 
+from . import config
+
 
 def _player_file():
     base = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
@@ -98,6 +100,14 @@ class NowPlaying(QObject):
 
     def _tick(self):
         if self._busy:
+            return
+        # In Systemsteuerung › Darstellung abschaltbar (gilt sofort)
+        try:
+            on = bool(config.load().get("taskbarNowPlaying", True))
+        except Exception:
+            on = True
+        if not on:
+            self._apply(None)
             return
         self._busy = True
 
