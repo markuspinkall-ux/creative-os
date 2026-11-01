@@ -18,7 +18,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write        # für die Download-Seite (Releases)
   packages: write
 
 env:
@@ -104,3 +104,47 @@ jobs:
           path: creative-os-*.iso
           retention-days: 7
           compression-level: 0
+
+  # Kleine Installations-ISO (unter 1 GB): startet den Installer, das System
+  # selbst kommt während der Installation schnell aus der GitHub-Registry.
+  # Liegt danach als schneller Download unter „Releases“.
+  netinstall:
+    name: Kleine Installations-ISO
+    needs: image
+    if: github.event_name == 'workflow_dispatch' && inputs.iso
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ISOs bauen
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          date="$(date +%Y%m%d)"
+          mkdir -p out
+          for v in amd nvidia; do
+            sed "s|@IMAGE@|ghcr.io/${owner}/creative-os:${v}|" image/netinstall/creative.ks.in > "out/creative-${v}.ks"
+          done
+          sudo podman run --rm --privileged -v "$PWD/out:/out" registry.fedoraproject.org/fedora:44 bash -euxc '
+            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl >/dev/null
+            base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
+            iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
+            curl -fsSL -o /tmp/netinst.iso "$base/$iso"
+            for v in amd nvidia; do
+              mkksiso --ks "/out/creative-$v.ks" /tmp/netinst.iso "/out/creative-os-$v-netinstall.iso"
+            done
+          '
+          sudo chown -R "$USER" out
+          for v in amd nvidia; do mv "out/creative-os-$v-netinstall.iso" "creative-os-$v-netinstall-$date.iso"; done
+          ls -lh *.iso
+          echo "DATE=$date" >> "$GITHUB_ENV"
+      - name: Als Download veröffentlichen (Releases)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="iso-${DATE}-${{ github.run_number }}"
+          gh release create "$tag" creative-os-*-netinstall-*.iso \
+            --repo "${{ github.repository }}" \
+            --title "Creative OS – Installation ${DATE}" \
+            --notes "Kleine Installations-ISOs. Während der Installation wird Creative OS aus dem Internet geladen – eine Internetverbindung ist nötig.
+          - **creative-os-amd-netinstall** – für AMD- oder Intel-Grafik (und für VirtualBox)
+          - **creative-os-nvidia-netinstall** – für NVIDIA-Grafikkarten"
+

@@ -1,0 +1,9 @@
+# Creative OS – Installation über das Internet
+# Die kleine ISO startet den Installer; das eigentliche System wird während
+# der Installation direkt aus der GitHub-Registry geladen (immer die neueste Version).
+lang de_DE.UTF-8
+keyboard --vckeymap=de --xlayouts=de
+timezone Europe/Berlin --utc
+network --bootproto=dhcp --activate
+ostreecontainer --url=@IMAGE@ --transport=registry --no-signature-verification
+# Festplatte und Benutzer wählt man im Installer selbst aus.
