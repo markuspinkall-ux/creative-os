@@ -1,0 +1,39 @@
+name: Creative Art Probelauf
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/art-test.yml", "art/**"]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - name: Krita installieren
+        run: dnf install -y -q krita python3-pyqt6 xorg-x11-server-Xvfb xorg-x11-xauth gdb mesa-dri-drivers dbus-x11 >/dev/null && rpm -q krita python3-pyqt6 && rpm -qa | grep -i pyqt
+      - name: Varianten
+        run: |
+          set +e
+          run() { name="$1"; shift
+            rm -rf /tmp/h; mkdir -p /tmp/h/.local/share/krita /tmp/h/.config /tmp/rt; chmod 700 /tmp/rt
+            "$@"
+            HOME=/tmp/h XDG_RUNTIME_DIR=/tmp/rt LANG=de_DE.UTF-8 NOSPLASH=1 QT_QPA_PLATFORM=xcb \
+              timeout 40 xvfb-run -a dbus-launch krita --nosplash > /tmp/$name.log 2>&1
+            rc=$?; echo "=== $name: Code $rc"; grep -v Fontconfig /tmp/$name.log | tail -12; }
+          plain() { :; }
+          withrc() { mkdir -p /tmp/xdg && cp art/kritarc /tmp/xdg/kritarc; export XDG_CONFIG_DIRS=/tmp/xdg:/etc/xdg; }
+          withgui() { cp art/krita/krita5.xmlgui /tmp/h/.local/share/krita/; }
+          withshort() { cp art/krita/shortcuts/creative_art.shortcuts /usr/share/krita/shortcuts/; }
+          withplugin() { cp -r art/krita/pykrita/* /usr/share/krita/pykrita/; printf '[python]\nenable_creative_art=true\n' > /tmp/h/.config/kritarc; }
+          withall() { withgui; withshort; withplugin; withrc; }
+          run 1-original plain
+          (run 2-nur-xmlgui withgui)
+          (run 3-nur-kritarc withrc)
+          (run 4-nur-erweiterung withplugin)
+          (run 5-alles withall)
+          cp -r art/krita/pykrita/* /usr/share/krita/pykrita/
+          rm -rf /tmp/h; mkdir -p /tmp/h/.local/share/krita; cp art/krita/krita5.xmlgui /tmp/h/.local/share/krita/
+          mkdir -p /tmp/xdg && cp art/kritarc /tmp/xdg/kritarc
+          echo "=== Rückverfolgung (alles zusammen)"
+          HOME=/tmp/h XDG_RUNTIME_DIR=/tmp/rt XDG_CONFIG_DIRS=/tmp/xdg:/etc/xdg NOSPLASH=1 QT_QPA_PLATFORM=xcb KDE_DEBUG=1 \
+            timeout 90 xvfb-run -a dbus-launch gdb -q -batch -ex "set debuginfod enabled off" -ex run -ex bt -ex quit --args krita --nosplash 2>&1 | grep -v "Fontconfig\|New Thread\|exited\|Thread debugging\|libthread" | tail -45
