@@ -263,13 +263,29 @@ HIDDEN_MOUNTS = {"/boot", "/boot/efi", "/efi"}
 SKIP_FS = {"swap", "LVM2_member", "crypto_LUKS", "linux_raid_member", "squashfs", ""}
 
 
+def drive_kind(tran, rota, name=""):
+    """Bauart: „M2“ (NVMe), „SSD“ oder „Festplatte“ (dreht sich)."""
+    tran = (tran or "").lower()
+    if tran == "nvme" or name.startswith("nvme"):
+        return "M2"
+    if rota in (False, 0, "0"):
+        return "SSD"
+    if rota in (True, 1, "1"):
+        return "Festplatte"
+    return "Laufwerk"
+
+
 def parse_lsblk(data, user=None):
-    """Wandelt `lsblk -J -b -o …` in eine Liste von Laufwerken für „Dieser PC“."""
+    """Wandelt `lsblk -J -b -o …` in eine Liste von Laufwerken für „Dieser PC“.
+    Das System heißt immer „Creative OS“, weitere Laufwerke nach Bauart:
+    „Festplatte“, „SSD“ oder „M2“ (bei mehreren gleicher Art durchnummeriert)."""
     drives = []
 
-    def walk(nodes, removable_parent=False):
+    def walk(nodes, removable_parent=False, tran="", rota=None, disk=""):
         for n in nodes or []:
             removable = bool(n.get("rm")) or bool(n.get("hotplug")) or removable_parent
+            if n.get("type") == "disk":
+                tran, rota, disk = n.get("tran") or "", n.get("rota"), n.get("name", "")
             fstype = n.get("fstype") or ""
             mps = [m for m in (n.get("mountpoints") or [n.get("mountpoint")]) if m]
             if fstype not in SKIP_FS and n.get("type") in ("part", "disk", "crypt", "lvm"):
@@ -283,7 +299,8 @@ def parse_lsblk(data, user=None):
                     elif removable:
                         name, tag = label or "USB-Stick", "Auswerfen" if mps else "Wechseldatenträger"
                     else:
-                        name, tag = label or f"Laufwerk ({format_size(int(size)) if size else '?'})", ""
+                        name = drive_kind(tran, n.get("rota", rota), disk)
+                        tag = label if label and label.lower() not in (name.lower(), "creative os") else ""
                     mount = "/" if system else (mps[0] if mps else "")
                     drives.append({
                         "device": n.get("path") or "/dev/" + n.get("name", ""),
@@ -291,10 +308,18 @@ def parse_lsblk(data, user=None):
                         "mounted": bool(mps), "mountPath": mount,
                         "size": int(size) if size else None, "used": int(used) if used else None,
                     })
-            walk(n.get("children"), removable)
+            walk(n.get("children"), removable, tran, rota, disk)
 
     walk(data.get("blockdevices"))
     drives.sort(key=lambda d: (not d["system"], d["removable"], d["name"].casefold()))
+    # Gleich benannte durchnummerieren: „SSD“, „SSD 2“, …
+    count = {}
+    for d in drives:
+        if d["system"] or d["removable"]:
+            continue
+        count[d["name"]] = count.get(d["name"], 0) + 1
+        if count[d["name"]] > 1:
+            d["name"] = f"{d['name']} {count[d['name']]}"
     return drives
 
 
@@ -302,7 +327,7 @@ def list_drives():
     if not shutil.which("lsblk"):
         return []
     r = subprocess.run(
-        ["lsblk", "-J", "-b", "-o", "NAME,PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSSIZE,FSUSED"],
+        ["lsblk", "-J", "-b", "-o", "NAME,PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSSIZE,FSUSED,ROTA,TRAN"],
         capture_output=True, text=True, timeout=5,
     )
     if r.returncode != 0:

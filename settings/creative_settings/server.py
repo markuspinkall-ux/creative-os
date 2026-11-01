@@ -34,16 +34,27 @@ def fmt_size(b):
 
 def list_disks(selected):
     try:
-        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSUSED,MODEL"],
+        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSUSED,MODEL,ROTA,TRAN"],
                              capture_output=True, text=True, timeout=5).stdout
         data = json.loads(out)
     except (OSError, ValueError, subprocess.SubprocessError):
         return []
     disks = []
 
-    def walk(nodes, model="", removable=False):
+    def kind(tran, rota, path):
+        if (tran or "").lower() == "nvme" or "nvme" in path:
+            return "M2"
+        if rota in (False, 0, "0"):
+            return "SSD"
+        if rota in (True, 1, "1"):
+            return "Festplatte"
+        return "Laufwerk"
+
+    def walk(nodes, model="", removable=False, tran="", rota=None):
         for n in nodes or []:
             model_here = n.get("model") or model
+            if n.get("type") == "disk":
+                tran, rota = n.get("tran") or "", n.get("rota")
             rem = removable or bool(n.get("rm")) or bool(n.get("hotplug"))
             mps = [m for m in (n.get("mountpoints") or []) if m]
             fs = n.get("fstype") or ""
@@ -51,9 +62,7 @@ def list_disks(selected):
                 system = any(m in ("/", "/sysroot", "/var", "/home", "/var/home") for m in mps)
                 size = int(n.get("size") or 0)
                 used = int(n.get("fsused") or 0)
-                name = (n.get("label") or (model_here or "Laufwerk").strip())
-                if system:
-                    name = "System-Laufwerk"
+                name = "Creative OS" if system else kind(tran, n.get("rota", rota), n["path"])
                 disks.append({
                     "device": n["path"], "name": f"{name} · {fmt_size(size)}", "system": system,
                     "removable": rem, "used": used / size if size and used else 0,
@@ -61,7 +70,7 @@ def list_disks(selected):
                              (f"Enthält {fmt_size(used)} Daten – sie bleiben unangetastet" if used else "Leer oder noch nicht eingebunden")),
                     "selected": n["path"] == selected or (system and selected == "system"),
                 })
-            walk(n.get("children"), model_here, rem)
+            walk(n.get("children"), model_here, rem, tran, rota)
 
     walk(data.get("blockdevices"))
     disks = [d for d in disks if not d["removable"]]     # USB-Sticks eignen sich nicht als Server

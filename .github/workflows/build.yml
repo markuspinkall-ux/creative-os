@@ -124,13 +124,14 @@ jobs:
           for v in amd nvidia; do
             sed "s|@IMAGE@|ghcr.io/${owner}/creative-os:${v}|" image/netinstall/creative.ks.in > "out/creative-${v}.ks"
           done
-          sudo podman run --rm --privileged -v "$PWD/out:/out" registry.fedoraproject.org/fedora:44 bash -euxc '
-            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl >/dev/null
+          sudo podman run --rm --privileged -v "$PWD/out:/out" -v "$PWD:/src:ro" registry.fedoraproject.org/fedora:44 bash -euxc '
+            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl cpio gzip mtools >/dev/null
             base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
             iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
             curl -fsSL -o /tmp/netinst.iso "$base/$iso"
             for v in amd nvidia; do
-              mkksiso --ks "/out/creative-$v.ks" /tmp/netinst.iso "/out/creative-os-$v-netinstall.iso"
+              bash /src/image/netinstall/brand-iso.sh /tmp/netinst.iso "/out/creative-$v.ks" "/out/creative-os-$v-netinstall.iso" \
+                || mkksiso --ks "/out/creative-$v.ks" /tmp/netinst.iso "/out/creative-os-$v-netinstall.iso"
             done
           '
           sudo chown -R "$USER" out
