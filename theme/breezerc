@@ -1,0 +1,14 @@
+# Creative OS – Fensterrahmen (Breeze) im Graphit-Look
+[Common]
+OutlineIntensity=OutlineOff
+ShadowSize=ShadowLarge
+ShadowStrength=170
+ShadowColor=0,0,0
+
+[Windeco]
+ButtonSize=ButtonDefault
+TitleAlignment=AlignLeft
+DrawBackgroundGradient=false
+DrawBorderOnMaximizedWindows=false
+DrawTitleBarSeparator=false
+DrawSizeGrip=false

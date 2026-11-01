@@ -1,0 +1,4 @@
+#!/bin/sh
+# Willkommens-Assistent (erscheint einmal; mit --force erneut)
+export PYTHONPATH="/usr/lib/creative-welcome${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_welcome "$@"

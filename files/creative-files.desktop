@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Dateien
+GenericName=Dateimanager
+Comment=Ordner, Laufwerke und USB-Sticks öffnen
+Keywords=Dateien;Ordner;Explorer;Dateimanager;Laufwerk;USB;Papierkorb;
+Exec=creative-files %U
+Icon=creative-files
+Terminal=false
+Categories=System;FileManager;Utility;
+MimeType=inode/directory;
+StartupWMClass=creative-files
+Actions=Trash;
+
+[Desktop Action Trash]
+Name=Papierkorb
+Exec=creative-files trash:

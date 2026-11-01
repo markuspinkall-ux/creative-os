@@ -1,0 +1,10 @@
+{
+    "KPlugin": {
+        "Id": "CreativeGraphit",
+        "Name": "Creative Graphit",
+        "Description": "Fensterrahmen von Creative OS",
+        "Authors": [{ "Name": "Creative OS" }],
+        "License": "GPL",
+        "Version": "1.0"
+    }
+}

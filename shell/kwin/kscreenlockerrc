@@ -1,0 +1,8 @@
+# Bildschirmsperre in der Creative-OS-Sitzung
+# (liegt unter /usr/share/creative-os/xdg und wird von creative-session eingebunden)
+
+[Daemon]
+# Nach 10 Minuten ohne Eingabe sperren, beim Aufwachen aus dem Standby sperren
+Autolock=true
+Timeout=10
+LockOnResume=true

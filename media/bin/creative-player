@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet den Creative Player aus /usr/lib/creative-media.
+export PYTHONPATH="/usr/lib/creative-media${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_media "$@"

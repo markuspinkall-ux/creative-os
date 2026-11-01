@@ -1,0 +1,137 @@
+#!/usr/bin/python3
+"""Räumt das Startmenü von Creative OS auf.
+
+Nur die nötigsten Apps sind sichtbar – mit deutschen, einfachen Namen und
+Symbolen im Creative-Stil. Alles andere wird im Startmenü ausgeblendet
+(bleibt aber installiert, z. B. damit sich ZIP-Dateien weiter öffnen lassen).
+
+Die Änderungen landen als „Schatten-Kopien“ in
+/usr/share/creative-os/data/applications und gelten nur in der
+Creative-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
+Später nachinstallierte Apps (Software, Flathub) erscheinen ganz normal.
+
+Aufruf (als root): creative-apps-sync [Zielordner]
+"""
+
+import os
+import re
+import sys
+from pathlib import Path
+
+TARGET = Path(sys.argv[1] if len(sys.argv) > 1 else "/usr/share/creative-os/data/applications")
+SOURCES = [Path("/usr/local/share/applications"), Path("/usr/share/applications")]
+
+# Sichtbare Apps: Desktop-Datei → (Name, Symbol). Mehrere Kandidaten pro App möglich.
+VISIBLE = {
+    "creative-files.desktop": ("Dateien", "creative-files"),
+    "creative-player.desktop": ("Creative Player", "creative-player"),
+    "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),
+    "systemsettings.desktop": ("Systemsteuerung", "creative-settings"),
+    "brave-browser.desktop": ("Brave", "creative-browser"),
+    "firefox.desktop": ("Firefox", "creative-browser"),
+    "org.mozilla.firefox.desktop": ("Firefox", "creative-browser"),
+    "org.gnome.Ptyxis.desktop": ("Terminal", "creative-terminal"),
+    "creative-claude.desktop": (None, None),
+    "creative-gemini.desktop": (None, None),
+    "creative-chatgpt.desktop": (None, None),
+    "creative-youtube.desktop": (None, None),
+    "creative-twitch.desktop": (None, None),
+    "steam.desktop": ("Steam", "creative-games"),
+    "discord.desktop": ("Discord", "creative-chat"),
+    "org.gnome.Software.desktop": ("Software", "creative-store"),
+    "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
+    "org.kde.kwrite.desktop": ("Texteditor", "creative-editor"),
+    "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-image"),
+    "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
+    "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-screenshot"),
+    "org.kde.plasma-systemmonitor.desktop": ("Aufgaben-Manager", "creative-taskmanager"),
+}
+# Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
+PREFER = {
+    "systemsettings.desktop": "creative-settings.desktop",
+    # Firefox nur, solange Brave fehlt (z. B. beim Testen in einer VM)
+    "firefox.desktop": "brave-browser.desktop",
+    "org.mozilla.firefox.desktop": "brave-browser.desktop",
+    "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
+}
+# Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
+
+
+def read(path):
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def set_key(text, key, value):
+    """Setzt einen Schlüssel im Abschnitt [Desktop Entry] (nicht in Actions)."""
+    head, sep, rest = text.partition("\n[Desktop Action")
+    lines = head.splitlines()
+    pattern = re.compile(rf"^{re.escape(key)}\s*=")
+    out, done = [], False
+    for line in lines:
+        if pattern.match(line):
+            if not done:
+                out.append(f"{key}={value}")
+                done = True
+            continue
+        out.append(line)
+    if not done:
+        idx = next((i for i, l in enumerate(out) if l.strip() == "[Desktop Entry]"), 0)
+        out.insert(idx + 1, f"{key}={value}")
+    return "\n".join(out).rstrip("\n") + "\n" + ("\n" + sep.lstrip("\n") + rest if sep else "")
+
+
+def drop_translations(text, key):
+    head, sep, rest = text.partition("\n[Desktop Action")
+    head = "\n".join(l for l in head.splitlines() if not re.match(rf"^{key}\[[^\]]+\]\s*=", l))
+    return head.rstrip("\n") + "\n" + ("\n" + sep.lstrip("\n") + rest if sep else "")
+
+
+def main():
+    if TARGET.exists():
+        for old in TARGET.glob("*.desktop"):
+            old.unlink()
+    TARGET.mkdir(parents=True, exist_ok=True)
+
+    seen = {}
+    for src in SOURCES:
+        if src.is_dir():
+            for f in sorted(src.glob("*.desktop")):
+                seen.setdefault(f.name, f)
+
+    shown, hidden = [], 0
+    for name, path in seen.items():
+        text = read(path)
+        if text is None or "[Desktop Entry]" not in text:
+            continue
+        if re.search(r"^(NoDisplay|Hidden)\s*=\s*true", text, re.M | re.I):
+            continue  # ist ohnehin unsichtbar
+        visible = name in VISIBLE and not (name in PREFER and PREFER[name] in seen)
+        if visible:
+            label, icon = VISIBLE[name]
+            if label is None:
+                shown.append(name)
+                continue          # eigene Creative-App, schon passend
+            text = drop_translations(text, "Name")
+            text = drop_translations(text, "GenericName")
+            text = set_key(text, "Name", label)
+            if icon:
+                text = set_key(text, "Icon", icon)
+            shown.append(name)
+        else:
+            text = set_key(text, "NoDisplay", "true")
+            hidden += 1
+        (TARGET / name).write_text(text, encoding="utf-8")
+
+    print(f"Startmenü: {len(shown)} Apps sichtbar, {hidden} ausgeblendet.")
+    for n in sorted(shown):
+        print("  ✓", n)
+
+
+if __name__ == "__main__":
+    if os.geteuid() != 0 and len(sys.argv) < 2:
+        print("Bitte mit sudo ausführen.")
+        sys.exit(1)
+    main()

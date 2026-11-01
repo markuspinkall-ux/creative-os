@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neuer Tab</title>
+<link rel="icon" href="rocket.svg">
+<style>
+  :root {
+    --ground: #12151b; --surface: #1c2029; --raised: #232836;
+    --text: #dce6ff; --muted: rgba(220, 230, 255, 0.62);
+    --accent: #8fb3ff; --accent-text: #12151b; --flame: #ffb07a;
+    --line: rgba(255, 255, 255, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    min-height: 100vh;
+    background: var(--ground) url("graphit.svg") center / cover no-repeat fixed;
+    color: var(--text);
+    font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  body::before {           /* abdunkeln, damit Schrift gut lesbar bleibt */
+    content: ""; position: fixed; inset: 0; background: rgba(12, 14, 19, 0.45); pointer-events: none;
+  }
+  main { position: relative; width: min(860px, calc(100% - 32px)); margin-top: 14vh; }
+  .clock { text-align: center; }
+  .time { font-size: 76px; font-weight: 700; letter-spacing: -2px; line-height: 1; }
+  .date { margin-top: 8px; font-size: 16px; color: var(--text); opacity: .85; }
+  .greet { margin-top: 4px; font-size: 14px; color: var(--muted); }
+
+  form.search {
+    margin: 34px auto 0; width: min(640px, 100%); height: 54px;
+    display: flex; align-items: center; gap: 12px; padding: 0 8px 0 20px;
+    background: rgba(28, 32, 41, 0.92); border-radius: 27px;
+    box-shadow: 0 0 0 1px var(--line), 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+  form.search:focus-within { box-shadow: 0 0 0 2px var(--accent), 0 18px 40px rgba(0, 0, 0, 0.35); }
+  form.search svg { flex: none; }
+  form.search input {
+    flex: 1; height: 100%; border: 0; outline: none; background: transparent;
+    color: var(--text); font: inherit; font-size: 16px;
+  }
+  form.search input::placeholder { color: var(--muted); }
+  form.search button {
+    height: 40px; padding: 0 18px; border: 0; border-radius: 20px; cursor: pointer;
+    background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 700;
+  }
+
+  .tiles {
+    margin: 40px auto 0; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+  }
+  .tile {
+    position: relative; width: 112px; height: 112px; border-radius: 18px; text-decoration: none; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(28, 32, 41, 0.78); box-shadow: 0 0 0 1px var(--line);
+    transition: background .12s, transform .12s;
+  }
+  .tile:hover { background: rgba(35, 40, 54, 0.95); transform: translateY(-2px); }
+  .tile .mono {
+    width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; letter-spacing: -.5px; background: rgba(143, 179, 255, 0.16); color: var(--accent);
+  }
+  .tile .name { font-size: 13px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .remove {
+    display: none; position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 12px;
+    background: #c42b1c; color: #fff; cursor: pointer; font-size: 15px; line-height: 24px; padding: 0;
+  }
+  body.editing .tile .remove { display: block; }
+  body.editing .tile { animation: wiggle .25s ease-in-out infinite alternate; }
+  @keyframes wiggle { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
+  .tile.add { border: 2px dashed rgba(255, 255, 255, 0.14); background: transparent; box-shadow: none; cursor: pointer; }
+  .tile.add .mono { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+  body:not(.editing) .tile.add { display: none; }
+
+  .bar { margin-top: 18px; display: flex; justify-content: center; gap: 8px; }
+  .bar button {
+    height: 34px; padding: 0 14px; border: 0; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px;
+    background: rgba(28, 32, 41, 0.78); color: var(--text); box-shadow: 0 0 0 1px var(--line);
+  }
+  .bar button.primary { background: var(--accent); color: var(--accent-text); font-weight: 700; box-shadow: none; }
+
+  dialog {
+    border: 0; border-radius: 18px; padding: 24px; width: min(420px, calc(100% - 32px));
+    background: var(--raised); color: var(--text); box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0, 0, 0, .5);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .5); }
+  dialog h2 { margin: 0 0 16px; font-size: 18px; }
+  dialog label { display: block; font-size: 13px; margin: 12px 0 6px; }
+  dialog input {
+    width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--ground); color: var(--text); font: inherit; outline: none;
+  }
+  dialog input:focus { border-color: var(--accent); }
+  dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  dialog .err { color: var(--flame); font-size: 13px; min-height: 18px; margin-top: 8px; }
+  footer { position: relative; margin: auto 0 18px; padding-top: 40px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="clock">
+    <div class="time" id="time">--:--</div>
+    <div class="date" id="date"></div>
+    <div class="greet" id="greet"></div>
+  </div>
+
+  <form class="search" action="https://search.brave.com/search" method="get" role="search">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dce6ff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input name="q" id="q" placeholder="Im Internet suchen oder Adresse eingeben" autocomplete="off" autofocus aria-label="Suche">
+    <button type="submit">Suchen</button>
+  </form>
+
+  <div class="tiles" id="tiles" aria-label="Schnellzugriff"></div>
+  <div class="bar">
+    <button type="button" id="edit">Kacheln bearbeiten</button>
+    <button type="button" id="reset" hidden>Standard wiederherstellen</button>
+  </div>
+</main>
+<footer>Creative OS</footer>
+
+<dialog id="dlg">
+  <form method="dialog" id="addForm">
+    <h2>Kachel hinzufügen</h2>
+    <label for="addName">Name</label>
+    <input id="addName" maxlength="24" placeholder="z. B. Wetter">
+    <label for="addUrl">Adresse</label>
+    <input id="addUrl" placeholder="z. B. wetter.de">
+    <div class="err" id="addErr"></div>
+    <div class="row">
+      <button type="button" class="cancel" id="addCancel">Abbrechen</button>
+      <button type="submit" class="primary" id="addOk">Hinzufügen</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const DEFAULT_TILES = [
+    { name: "Claude", url: "https://claude.ai/", mono: "C" },
+    { name: "Gemini", url: "https://gemini.google.com/", mono: "G" },
+    { name: "ChatGPT", url: "https://chatgpt.com/", mono: "GPT" },
+    { name: "YouTube", url: "https://www.youtube.com/", mono: "YT" },
+    { name: "Twitch", url: "https://www.twitch.tv/", mono: "TW" },
+    { name: "Wikipedia", url: "https://de.wikipedia.org/" },
+    { name: "Wetter", url: "https://www.dwd.de/" },
+    { name: "Steam", url: "https://store.steampowered.com/" }
+  ];
+  const KEY = "creative-startpage-tiles";
+
+  function load() {
+    try {
+      const t = JSON.parse(localStorage.getItem(KEY));
+      if (Array.isArray(t)) return t;
+    } catch (e) { /* Speicher nicht verfügbar */ }
+    return DEFAULT_TILES.slice();
+  }
+  function save(t) {
+    try { localStorage.setItem(KEY, JSON.stringify(t)); } catch (e) { /* egal */ }
+  }
+  let tiles = load();
+
+  function monogram(t) {
+    if (t.mono) return t.mono;
+    const words = t.name.trim().split(/\s+/);
+    return (words.length > 1 ? words[0][0] + words[1][0] : t.name[0]).toUpperCase();
+  }
+
+  function render() {
+    const box = document.getElementById("tiles");
+    box.textContent = "";
+    tiles.forEach((t, i) => {
+      const a = document.createElement("a");
+      a.className = "tile";
+      a.href = t.url;
+      a.title = t.url;
+      const m = document.createElement("span"); m.className = "mono"; m.textContent = monogram(t);
+      const n = document.createElement("span"); n.className = "name"; n.textContent = t.name;
+      const x = document.createElement("button"); x.className = "remove"; x.type = "button"; x.textContent = "×";
+      x.setAttribute("aria-label", t.name + " entfernen");
+      x.addEventListener("click", (ev) => { ev.preventDefault(); tiles.splice(i, 1); save(tiles); render(); });
+      a.addEventListener("click", (ev) => { if (document.body.classList.contains("editing")) ev.preventDefault(); });
+      a.append(m, n, x);
+      box.append(a);
+    });
+    const add = document.createElement("div");
+    add.className = "tile add"; add.tabIndex = 0; add.setAttribute("role", "button");
+    add.innerHTML = '<span class="mono">+</span><span class="name">Hinzufügen</span>';
+    add.addEventListener("click", openAdd);
+    add.addEventListener("keydown", (e) => { if (e.key === "Enter") openAdd(); });
+    box.append(add);
+  }
+
+  function openAdd() {
+    document.getElementById("addName").value = "";
+    document.getElementById("addUrl").value = "";
+    document.getElementById("addErr").textContent = "";
+    document.getElementById("dlg").showModal();
+    document.getElementById("addName").focus();
+  }
+  document.getElementById("addCancel").addEventListener("click", () => document.getElementById("dlg").close());
+  document.getElementById("addForm").addEventListener("submit", (ev) => {
+    const name = document.getElementById("addName").value.trim();
+    let url = document.getElementById("addUrl").value.trim();
+    const err = document.getElementById("addErr");
+    if (!name || !url) { ev.preventDefault(); err.textContent = "Bitte Name und Adresse eingeben."; return; }
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    try { new URL(url); } catch (e) { ev.preventDefault(); err.textContent = "Diese Adresse sieht nicht richtig aus."; return; }
+    tiles.push({ name, url });
+    save(tiles);
+    render();
+  });
+
+  document.getElementById("edit").addEventListener("click", () => {
+    const on = document.body.classList.toggle("editing");
+    document.getElementById("edit").textContent = on ? "Fertig" : "Kacheln bearbeiten";
+    document.getElementById("edit").classList.toggle("primary", on);
+    document.getElementById("reset").hidden = !on;
+  });
+  document.getElementById("reset").addEventListener("click", () => {
+    tiles = DEFAULT_TILES.slice(); save(tiles); render();
+  });
+
+  // Uhr, Datum, Begrüßung
+  const DAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  function tick() {
+    const d = new Date();
+    document.getElementById("time").textContent =
+      String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    document.getElementById("date").textContent =
+      DAYS[d.getDay()] + ", " + d.getDate() + ". " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+    const h = d.getHours();
+    document.getElementById("greet").textContent =
+      h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : h < 22 ? "Guten Abend" : "Gute Nacht";
+  }
+
+  // Eingabe einer Adresse statt eines Suchbegriffs direkt öffnen
+  document.querySelector("form.search").addEventListener("submit", (ev) => {
+    const q = document.getElementById("q").value.trim();
+    if (/^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(q) && !q.includes(" ")) {
+      ev.preventDefault();
+      location.href = /^https?:\/\//i.test(q) ? q : "https://" + q;
+    }
+  });
+
+  tick();
+  setInterval(tick, 1000);
+  render();
+</script>
+</body>
+</html>

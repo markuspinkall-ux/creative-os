@@ -1,0 +1,62 @@
+#!/bin/sh
+# Wird beim Start der Creative-OS-Sitzung ausgeführt (als Benutzer).
+#  1. Graphit-Aussehen für GTK-Programme in die eigenen Einstellungen legen
+#  2. Alte Plasma-Einstellungen entfernen, die das Creative-Aussehen überdecken
+#     (Farben, Fensterrahmen). Vorher wird einmalig eine Sicherung angelegt.
+conf="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+src=/usr/share/creative-os/gtk/gtk.css
+if [ -f "$src" ]; then
+    marker="/* Creative OS – Graphit"
+    for v in gtk-3.0 gtk-4.0; do
+        dst="$conf/$v/gtk.css"
+        if [ ! -e "$dst" ] || head -n1 "$dst" | grep -qF "$marker"; then
+            mkdir -p "$conf/$v"
+            cmp -s "$src" "$dst" 2>/dev/null || cp "$src" "$dst"
+        fi
+    done
+fi
+
+python3 - "$conf" <<'PY'
+import re, shutil, sys
+from pathlib import Path
+
+conf = Path(sys.argv[1])
+# Datei -> (ganze Abschnitte entfernen, einzelne Schlüssel je Abschnitt entfernen)
+RULES = {
+    "kdeglobals": (
+        re.compile(r"^(Colors:.*|WM|ColorEffects:.*)$"),
+        {"General": {"ColorScheme", "font", "menuFont", "toolBarFont", "smallestReadableFont", "AccentColor"},
+         "KDE": {"widgetStyle", "LookAndFeelPackage"}, "Icons": {"Theme"}},
+    ),
+    "kwinrc": (re.compile(r"^org\.kde\.kdecoration2$"), {}),
+    "breezerc": (re.compile(r".*"), {}),
+}
+
+for name, (drop_groups, drop_keys) in RULES.items():
+    path = conf / name
+    if not path.is_file():
+        continue
+    text = path.read_text(encoding="utf-8", errors="replace")
+    out, group, skip, changed = [], None, False, False
+    for line in text.splitlines():
+        m = re.match(r"^\[(.+?)\]", line)
+        if m:
+            group = m.group(1).split("][")[0]
+            skip = bool(drop_groups.match(group))
+            changed |= skip
+            if skip:
+                continue
+        elif skip:
+            continue
+        elif group in drop_keys and line.split("=", 1)[0].split("[", 1)[0].strip() in drop_keys[group]:
+            changed = True
+            continue
+        out.append(line)
+    if changed:
+        backup = path.with_name(name + ".vor-creative-os")
+        if not backup.exists():
+            shutil.copy2(path, backup)
+        path.write_text("\n".join(out) + "\n", encoding="utf-8")
+PY
+exit 0

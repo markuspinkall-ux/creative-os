@@ -1,0 +1,235 @@
+#!/usr/bin/python3
+"""Mein Server – Hilfsprogramm mit Administratorrechten (über pkexec).
+
+Befehle:
+  enable <ziel>   Server auf <ziel> einrichten und starten.
+                  <ziel> = /dev/… (Partition einer Zusatz-Festplatte) oder „system“
+  disable         Server ausschalten (Daten bleiben erhalten)
+
+Sicherheitsregeln: Es wird nie formatiert und nie etwas gelöscht. Das
+System-Laufwerk wird nur über den festen Ordner /var/srv/mein-server benutzt.
+"""
+
+import json
+import os
+import pwd
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+STATE_DIR = Path("/var/lib/creative-server")
+STATE = STATE_DIR / "state.json"
+CADDYFILE = STATE_DIR / "Caddyfile"
+SYSTEM_ROOT = Path("/var/srv/mein-server")
+FOLDER = "Mein Server"
+PHP_SOCK = "/run/php-fpm/www.sock"
+SYSTEM_MOUNTS = {"/", "/sysroot", "/boot", "/boot/efi", "/efi", "/var", "/usr", "/etc", "/home", "/var/home"}
+FS_OK = {"ext4", "ext3", "btrfs", "xfs", "ntfs", "ntfs3", "exfat", "vfat"}
+
+INDEX = """<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mein Server</title>
+<style>
+ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#12151b;
+      color:#dce6ff;font-family:Arial,Helvetica,sans-serif}
+ .card{max-width:560px;padding:40px;border-radius:20px;background:#1c2029;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+ h1{margin:0 0 10px;font-size:28px} p{line-height:1.6;margin:8px 0} code{background:#12151b;padding:2px 6px;border-radius:6px}
+ .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#6fdcc0;margin-right:8px}
+</style></head><body><div class="card">
+<p><span class="dot"></span>Server läuft</p>
+<h1>Willkommen auf deinem Server</h1>
+<p>Diese Seite kommt aus dem Ordner <code>Webseite</code> in „Mein Server“.</p>
+<p>Ersetze diese Datei (<code>index.html</code>) durch deine eigene Webseite – fertig.
+Auch PHP-Seiten (<code>index.php</code>) funktionieren.</p>
+<p style="opacity:.6;font-size:13px">Creative OS · Mein Server</p>
+</div></body></html>
+"""
+
+
+def run(*args, check=False):
+    return subprocess.run(list(args), capture_output=True, text=True, check=check)
+
+
+def fail(msg):
+    print(json.dumps({"ok": False, "error": msg}, ensure_ascii=False))
+    sys.exit(1)
+
+
+def user_ids():
+    uid = int(os.environ.get("PKEXEC_UID", "0") or 0)
+    try:
+        pw = pwd.getpwuid(uid)
+        return uid, pw.pw_gid
+    except KeyError:
+        return uid, uid
+
+
+def find_device(dev):
+    out = run("lsblk", "-J", "-p", "-o", "PATH,UUID,FSTYPE,MOUNTPOINTS,TYPE,LABEL").stdout
+    def walk(nodes):
+        for n in nodes or []:
+            yield n
+            yield from walk(n.get("children"))
+    for n in walk(json.loads(out).get("blockdevices")):
+        if n.get("path") == dev:
+            return n
+    return None
+
+
+def ensure_mount(dev):
+    n = find_device(dev)
+    if not n or n.get("type") not in ("part", "disk", "crypt", "lvm"):
+        fail("Dieses Laufwerk wurde nicht gefunden.")
+    mps = [m for m in (n.get("mountpoints") or []) if m]
+    if any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") for m in mps):
+        fail("Das System-Laufwerk kann nicht als Server-Festplatte gewählt werden.")
+    fstype = (n.get("fstype") or "").lower()
+    if fstype not in FS_OK:
+        fail("Dieses Laufwerk hat kein lesbares Dateisystem. Creative OS formatiert nichts – bitte ein anderes wählen.")
+    uuid = n.get("uuid")
+    if not uuid:
+        fail("Das Laufwerk hat keine Kennung (UUID).")
+
+    # Schon dauerhaft eingebunden?
+    fstab = Path("/etc/fstab").read_text() if Path("/etc/fstab").exists() else ""
+    for line in fstab.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] == f"UUID={uuid}":
+            target = parts[1]
+            if target not in mps:
+                run("mount", target)
+            return Path(target), fstype
+
+    target = Path(f"/var/mnt/server-{uuid[:8]}")
+    target.mkdir(parents=True, exist_ok=True)
+    uid, gid = user_ids()
+    if fstype in ("ntfs", "ntfs3", "exfat", "vfat"):
+        opts = f"uid={uid},gid={gid},umask=022,context=system_u:object_r:httpd_sys_content_t:s0,nofail"
+    else:
+        opts = "defaults,nofail"
+    # Ist es gerade woanders (z. B. /run/media/…) eingebunden, dort lösen und dauerhaft einbinden
+    for m in mps:
+        run("umount", m)
+    with open("/etc/fstab", "a", encoding="utf-8") as fh:
+        fh.write(f"\n# Creative OS – Mein Server\nUUID={uuid} {target} {fstype} {opts} 0 0\n")
+    run("systemctl", "daemon-reload")
+    r = run("mount", str(target))
+    if r.returncode != 0:
+        fail("Das Laufwerk konnte nicht eingebunden werden: " + (r.stderr.strip() or "unbekannter Fehler"))
+    return target, fstype
+
+
+def prepare_folder(root, linux_fs):
+    site = root / FOLDER / "Webseite"
+    site.mkdir(parents=True, exist_ok=True)
+    if not any(site.iterdir()):
+        (site / "index.html").write_text(INDEX, encoding="utf-8")
+    if linux_fs:
+        uid, gid = user_ids()
+        for p in (root / FOLDER, site):
+            os.chown(p, uid, gid)
+        for p in site.rglob("*"):
+            try:
+                os.lchown(p, uid, gid)
+            except OSError:
+                pass
+        # Der Webserver darf lesen (nicht schreiben)
+        os.chmod(root, os.stat(root).st_mode | 0o005)
+        for p in [root / FOLDER, site] + [x for x in site.rglob("*")]:
+            try:
+                mode = os.lstat(p).st_mode
+                os.chmod(p, mode | (0o005 if p.is_dir() else 0o004))
+            except OSError:
+                pass
+        if shutil.which("chcon"):
+            run("chcon", "-R", "-t", "httpd_sys_content_t", str(root / FOLDER))
+    return site
+
+
+def write_config(site, php):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    (STATE_DIR / "data").mkdir(exist_ok=True)
+    lines = [
+        "{", "\tadmin off", "\tauto_https off", "\tpersist_config off", "}", "",
+        ":80 {", f'\troot * "{site}"', "\tencode gzip",
+    ]
+    if php:
+        lines.append(f"\tphp_fastcgi unix/{PHP_SOCK}")
+    lines += ["\tfile_server", "}", ""]
+    CADDYFILE.write_text("\n".join(lines), encoding="utf-8")
+    try:
+        caddy = pwd.getpwnam("caddy")
+        shutil.chown(STATE_DIR / "data", caddy.pw_uid, caddy.pw_gid)
+    except (KeyError, OSError):
+        pass
+
+
+def allow_caddy_php():
+    """PHP-FPM lässt standardmäßig nur Apache/Nginx an den Socket – Caddy dazunehmen."""
+    conf = Path("/etc/php-fpm.d/www.conf")
+    try:
+        text = conf.read_text(encoding="utf-8")
+    except OSError:
+        return
+    out = []
+    for line in text.splitlines():
+        if line.strip().startswith("listen.acl_users") and "caddy" not in line:
+            line = line.rstrip() + ",caddy"
+        out.append(line)
+    conf.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+def firewall(open_port):
+    if shutil.which("firewall-cmd"):
+        action = "--add-service=http" if open_port else "--remove-service=http"
+        run("firewall-cmd", "--permanent", action)
+        run("firewall-cmd", "--reload")
+
+
+def enable(target):
+    if not shutil.which("caddy"):
+        fail("Der Webserver (Caddy) ist nicht installiert.")
+    if target == "system":
+        SYSTEM_ROOT.mkdir(parents=True, exist_ok=True)
+        root, linux_fs, device = SYSTEM_ROOT, True, "system"
+    else:
+        root, fstype = ensure_mount(target)
+        linux_fs, device = fstype in ("ext4", "ext3", "btrfs", "xfs"), target
+    site = prepare_folder(root, linux_fs)
+
+    php = bool(shutil.which("php-fpm"))
+    if php:
+        allow_caddy_php()
+        run("systemctl", "enable", "--now", "php-fpm.service")
+        run("systemctl", "restart", "php-fpm.service")
+    write_config(site, php)
+    # Den mitgelieferten Caddy-Dienst nicht parallel laufen lassen (Port 80)
+    run("systemctl", "disable", "--now", "caddy.service")
+    firewall(True)
+    run("systemctl", "daemon-reload")
+    r = run("systemctl", "enable", "--now", "creative-server.service")
+    run("systemctl", "restart", "creative-server.service")
+    if r.returncode != 0:
+        fail("Der Server konnte nicht gestartet werden.")
+    STATE.write_text(json.dumps({"target": device, "root": str(root), "site": str(site), "php": php},
+                                ensure_ascii=False, indent=2), encoding="utf-8")
+    os.chmod(STATE, 0o644)
+    print(json.dumps({"ok": True, "site": str(site)}, ensure_ascii=False))
+
+
+def disable():
+    run("systemctl", "disable", "--now", "creative-server.service")
+    firewall(False)
+    print(json.dumps({"ok": True}))
+
+
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        fail("Bitte über die Systemsteuerung starten.")
+    if len(sys.argv) >= 3 and sys.argv[1] == "enable":
+        enable(sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] == "disable":
+        disable()
+    else:
+        fail("Unbekannter Befehl.")

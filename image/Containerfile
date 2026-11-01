@@ -1,0 +1,214 @@
+# Creative OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
+#
+# Das fertige System ist schreibgeschützt und wird nur als Ganzes
+# aktualisiert. Läuft nach einem Update etwas nicht, startet man im
+# Bootmenü einfach den vorherigen Stand.
+#
+# Bauen:   image/build.sh            (siehe image/README.md)
+# Varianten: NVIDIA=1 (mit NVIDIA-Treiber) oder NVIDIA=0 (AMD/Intel)
+
+ARG FEDORA_VERSION=44
+FROM quay.io/fedora-ostree-desktops/kinoite:${FEDORA_VERSION}
+
+ARG FEDORA_VERSION=44
+ARG NVIDIA=1
+
+# ---------------------------------------------------------------------------
+# 1) RPM Fusion: Steam, vollständige Codecs, NVIDIA-Treiber
+# ---------------------------------------------------------------------------
+RUN dnf install -y \
+        "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm" \
+        "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm" \
+ && dnf clean all
+
+# ---------------------------------------------------------------------------
+# 2) Alle Audio-/Videoformate (MP3, H.264, H.265 …) mit Hardware-Beschleunigung
+# ---------------------------------------------------------------------------
+RUN dnf swap -y ffmpeg-free ffmpeg --allowerasing \
+ && dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
+ && dnf install -y gstreamer1-plugins-bad-freeworld gstreamer1-plugin-libav \
+ && dnf clean all
+
+# ---------------------------------------------------------------------------
+# 3) Spiele: Steam fest im System-Abbild (lässt sich nicht entfernen),
+#    Controller-Unterstützung, GameMode, Vulkan
+# ---------------------------------------------------------------------------
+RUN dnf install -y steam steam-devices gamemode mangohud vulkan-tools \
+ && dnf clean all
+
+# Discord fest im System (RPM Fusion). Discord will sich sonst selbst
+# aktualisieren und startet dann nicht – Updates kommen mit dem System.
+RUN dnf install -y discord && dnf clean all
+COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
+
+# ---------------------------------------------------------------------------
+# 4) NVIDIA-Treiber (nur Variante NVIDIA=1)
+#    Das Kernelmodul wird hier beim Bauen erzeugt – auf dem fertigen,
+#    schreibgeschützten System muss nichts mehr kompiliert werden.
+# ---------------------------------------------------------------------------
+RUN if [ "$NVIDIA" = "1" ]; then \
+        KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
+     && dnf install -y "kernel-devel-${KVER}" akmod-nvidia xorg-x11-drv-nvidia \
+                       xorg-x11-drv-nvidia-libs.i686 xorg-x11-drv-nvidia-cuda \
+     && akmods --force --kernels "${KVER}" \
+     && mkdir -p /usr/lib/bootc/kargs.d \
+     && printf 'kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]\n' \
+            > /usr/lib/bootc/kargs.d/00-nvidia.toml \
+     && dnf clean all ; \
+    fi
+
+# ---------------------------------------------------------------------------
+# 5) Brave-Browser (offizielles Paket). Brave installiert nach /opt, das auf
+#    Atomic-Systemen beschreibbar ist – darum wird es nach /usr/lib verschoben
+#    und schreibgeschützt eingebunden.
+# ---------------------------------------------------------------------------
+RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc \
+ && curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
+        https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
+ && mkdir -p /var/opt \
+ && dnf install -y brave-browser \
+ && mv /var/opt/brave.com /usr/lib/brave.com \
+ && printf 'L+ /var/opt/brave.com - - - - /usr/lib/brave.com\n' > /usr/lib/tmpfiles.d/creative-brave.conf \
+ && dnf clean all
+# Startseite und Graphit-Farbe, ohne Werbe-Extras (Rewards, Wallet, VPN …)
+COPY browser/startpage /usr/share/creative-os/startpage
+COPY browser/brave-policies.json /etc/brave/policies/managed/creative-os.json
+
+# ---------------------------------------------------------------------------
+# 6) App-Shop: GNOME Software statt Discover, Flathub ab Werk
+# ---------------------------------------------------------------------------
+RUN dnf install -y gnome-software gnome-software-rpm-ostree \
+ && rpm -qa --qf '%{NAME}\n' 'plasma-discover*' | xargs -r dnf remove -y \
+ && mkdir -p /etc/flatpak/remotes.d \
+ && curl -fsSLo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo \
+ && dnf clean all
+
+# ---------------------------------------------------------------------------
+# 7) Creative Shell (Taskleiste, Startmenü, Schnellzugriff)
+# ---------------------------------------------------------------------------
+RUN dnf install -y python3-pyside6 qt6-qtsvg qt6-qtwayland layer-shell-qt \
+                   brightnessctl ddcutil liberation-sans-fonts \
+ && dnf clean all
+
+COPY shell/creative_shell /usr/lib/creative-shell/creative_shell
+COPY shell/bin/creative-shell /usr/bin/creative-shell
+COPY shell/session/creative-session /usr/bin/creative-session
+COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
+COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
+COPY shell/kwin/kwinrc /usr/share/creative-os/xdg/kwinrc
+COPY shell/kwin/kscreenlockerrc /usr/share/creative-os/xdg/kscreenlockerrc
+COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
+COPY shell/lockscreen /tmp/creative-lockscreen
+RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
+COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
+
+# KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
+COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
+COPY shell/webapps/creative-claude.desktop shell/webapps/creative-gemini.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop /usr/share/applications/
+COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
+COPY shell/creative_shell/qml/Creative/icons/gemini.svg /usr/share/icons/hicolor/scalable/apps/creative-gemini.svg
+COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
+COPY shell/creative_shell/qml/Creative/icons/youtube.svg /usr/share/icons/hicolor/scalable/apps/creative-youtube.svg
+COPY shell/creative_shell/qml/Creative/icons/twitch.svg /usr/share/icons/hicolor/scalable/apps/creative-twitch.svg
+
+# Creative OS ist die einzige Sitzung im Anmeldebildschirm
+RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/bin/creative-webapp \
+ && rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop
+
+# ---------------------------------------------------------------------------
+# 8) Creative Player (Musik, Videos, IPTV) – Standardprogramm für Medien
+# ---------------------------------------------------------------------------
+RUN dnf install -y qt6-qtmultimedia python3-mutagen && dnf clean all
+COPY media/creative_media /usr/lib/creative-media/creative_media
+COPY media/bin/creative-player /usr/bin/creative-player
+COPY media/creative-player.desktop /usr/share/applications/creative-player.desktop
+COPY media/creative-player.svg /usr/share/icons/hicolor/scalable/apps/creative-player.svg
+COPY media/mimeapps.list /etc/xdg/mimeapps.list
+RUN chmod 755 /usr/bin/creative-player
+
+# ---------------------------------------------------------------------------
+# 8b) Dateien – eigener Dateimanager, Standard für Ordner
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable udisks2 xdg-user-dirs && dnf clean all
+COPY files/creative_files /usr/lib/creative-files/creative_files
+COPY files/bin/creative-files /usr/bin/creative-files
+COPY files/creative-files.desktop /usr/share/applications/creative-files.desktop
+COPY files/creative-files.svg /usr/share/icons/hicolor/scalable/apps/creative-files.svg
+RUN chmod 755 /usr/bin/creative-files \
+ && cat /etc/xdg/mimeapps.list > /usr/share/creative-os/xdg/creative-mimeapps.list \
+ && echo "inode/directory=creative-files.desktop" >> /usr/share/creative-os/xdg/creative-mimeapps.list \
+ && echo "inode/directory=creative-files.desktop" >> /etc/xdg/mimeapps.list
+
+# ---------------------------------------------------------------------------
+# 8b2) Systemsteuerung
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable libkscreen pipewire-utils pulseaudio-utils cups-client \
+        pciutils polkit-kde system-config-printer \
+ && dnf clean all
+COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
+COPY settings/bin/creative-settings /usr/bin/creative-settings
+COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
+RUN chmod 755 /usr/bin/creative-settings
+
+# ---------------------------------------------------------------------------
+# 8b3) Mein Server – Webseite im Heimnetz (Caddy + PHP), Schalter in der Systemsteuerung
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable caddy php-fpm php-cli nss-mdns avahi && dnf clean all \
+ && systemctl enable avahi-daemon.service
+COPY server/creative-server-helper /usr/libexec/creative-server-helper
+COPY server/creative-server.service /usr/lib/systemd/system/creative-server.service
+COPY server/org.creativeos.server.policy /usr/share/polkit-1/actions/org.creativeos.server.policy
+COPY server/README.md /usr/share/doc/creative-server/README.md
+RUN chmod 755 /usr/libexec/creative-server-helper
+
+# Willkommens-Assistent beim ersten Start
+COPY welcome/creative_welcome /usr/lib/creative-welcome/creative_welcome
+COPY welcome/bin/creative-welcome /usr/bin/creative-welcome
+RUN chmod 755 /usr/bin/creative-welcome
+
+# ---------------------------------------------------------------------------
+# 8c) Nur das Nötigste – und alles im gleichen Look
+# ---------------------------------------------------------------------------
+# Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
+COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
+# Standard-Apps: Terminal, Texteditor, Bildbetrachter, Rechner, Bildschirmfoto,
+# Entpacken (unsichtbar, für ZIP-Dateien), Aufgaben-Manager
+RUN dnf install -y --skip-unavailable konsole kwrite gwenview kcalc spectacle ark \
+        plasma-systemmonitor plasma-integration breeze-gtk breeze-icon-theme \
+ && dnf clean all
+# Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,
+# bleibt es installiert und wird nur im Startmenü ausgeblendet.
+RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
+             kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
+             kmouth kcharselect kdebugsettings filelight kgpg akregator dragon elisa-player \
+             juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
+             kjournald mediawriter kwrite-doc; do \
+        rpm -q "$p" >/dev/null 2>&1 || continue; \
+        dnf remove -y "$p" >/dev/null 2>&1 && echo "entfernt: $p" || echo "bleibt (wird gebraucht): $p"; \
+    done \
+ && dnf clean all
+# PDFs öffnet der Browser (Okular ist entfernt)
+RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
+        echo "application/pdf=brave-browser.desktop" >> "$f"; \
+    done
+
+# Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Creative-Symbole, Startmenü
+COPY theme /tmp/creative-theme
+RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creative/icons \
+        sh /tmp/creative-theme/install.sh \
+ && rm -rf /tmp/creative-theme
+
+# ---------------------------------------------------------------------------
+# 9) Systemeinstellungen
+# ---------------------------------------------------------------------------
+# Name des Systems (ID bleibt "fedora", damit Updates und Paketquellen passen)
+RUN sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
+           -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Creative OS (Fedora '"${FEDORA_VERSION}"' Atomic)"/' \
+           /usr/lib/os-release
+
+# Updates wie bei Windows: im Hintergrund laden, beim nächsten Neustart aktiv
+RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf \
+ && systemctl enable rpm-ostreed-automatic.timer
+
+# Abschlussprüfung des Abbilds
+RUN bootc container lint

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Claude
+GenericName=KI-Assistent
+Comment=Claude als eigenes Fenster
+Keywords=KI;AI;Assistent;Chat;
+Exec=creative-webapp https://claude.ai/
+Icon=creative-claude
+Terminal=false
+Categories=Network;Office;
+StartupWMClass=brave-claude.ai__-Default

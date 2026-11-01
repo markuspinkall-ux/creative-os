@@ -1,0 +1,11 @@
+{
+  "policies": {
+    "Homepage": {
+      "URL": "file:///usr/share/creative-os/startpage/index.html",
+      "StartPage": "homepage"
+    },
+    "NewTabPage": true,
+    "DontCheckDefaultBrowser": true,
+    "DisableTelemetry": true
+  }
+}

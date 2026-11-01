@@ -1,0 +1,81 @@
+/* Creative OS – Graphit für GTK-Programme (z. B. Software).
+   Diese Datei wird von Creative OS verwaltet. Wer sie selbst ändern will,
+   löscht diese erste Zeile – dann wird sie nicht mehr überschrieben. */
+
+/* libadwaita (GTK 4) */
+:root {
+  --accent-bg-color: #8fb3ff;
+  --accent-fg-color: #12151b;
+  --accent-color: #8fb3ff;
+  --destructive-bg-color: #e5484d;
+  --destructive-color: #ff8a8e;
+  --success-color: #6fdcc0;
+  --warning-color: #ffb07a;
+  --error-color: #ff8a8e;
+  --window-bg-color: #1c2029;
+  --window-fg-color: #dce6ff;
+  --view-bg-color: #161920;
+  --view-fg-color: #dce6ff;
+  --headerbar-bg-color: #1c2029;
+  --headerbar-fg-color: #dce6ff;
+  --headerbar-backdrop-color: #171a22;
+  --headerbar-shade-color: rgba(0, 0, 0, 0.25);
+  --sidebar-bg-color: #171b22;
+  --sidebar-fg-color: #dce6ff;
+  --sidebar-backdrop-color: #171a22;
+  --secondary-sidebar-bg-color: #171b22;
+  --card-bg-color: rgba(255, 255, 255, 0.04);
+  --card-fg-color: #dce6ff;
+  --dialog-bg-color: #232836;
+  --dialog-fg-color: #dce6ff;
+  --popover-bg-color: #232836;
+  --popover-fg-color: #dce6ff;
+  --thumbnail-bg-color: #232836;
+  --window-radius: 10px;
+}
+
+/* ältere libadwaita- und GTK-3-Programme */
+@define-color accent_bg_color #8fb3ff;
+@define-color accent_fg_color #12151b;
+@define-color accent_color #8fb3ff;
+@define-color window_bg_color #1c2029;
+@define-color window_fg_color #dce6ff;
+@define-color view_bg_color #161920;
+@define-color view_fg_color #dce6ff;
+@define-color headerbar_bg_color #1c2029;
+@define-color headerbar_fg_color #dce6ff;
+@define-color headerbar_backdrop_color #171a22;
+@define-color sidebar_bg_color #171b22;
+@define-color card_bg_color rgba(255, 255, 255, 0.04);
+@define-color dialog_bg_color #232836;
+@define-color popover_bg_color #232836;
+@define-color theme_bg_color #1c2029;
+@define-color theme_fg_color #dce6ff;
+@define-color theme_base_color #161920;
+@define-color theme_text_color #dce6ff;
+@define-color theme_selected_bg_color #8fb3ff;
+@define-color theme_selected_fg_color #12151b;
+
+window, .background, label, entry, button {
+  font-family: Arial, "Liberation Sans", sans-serif;
+}
+
+/* Fensterknöpfe wie überall in Creative OS (flach, Schließen rot) */
+windowcontrols button, .titlebar button.titlebutton {
+  min-width: 34px;
+  min-height: 28px;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+}
+windowcontrols button:hover, .titlebar button.titlebutton:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+windowcontrols button.close:hover, .titlebar button.titlebutton.close:hover {
+  background-color: #c42b1c;
+  color: #ffffff;
+}
+windowcontrols button > image, .titlebar button.titlebutton > image {
+  background: none;
+  box-shadow: none;
+}

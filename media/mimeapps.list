@@ -1,0 +1,23 @@
+[Default Applications]
+audio/mpeg=creative-player.desktop
+audio/mp3=creative-player.desktop
+audio/flac=creative-player.desktop
+audio/ogg=creative-player.desktop
+audio/x-vorbis+ogg=creative-player.desktop
+audio/opus=creative-player.desktop
+audio/mp4=creative-player.desktop
+audio/x-m4a=creative-player.desktop
+audio/aac=creative-player.desktop
+audio/wav=creative-player.desktop
+audio/x-wav=creative-player.desktop
+audio/x-ms-wma=creative-player.desktop
+audio/x-mpegurl=creative-player.desktop
+video/mp4=creative-player.desktop
+video/x-matroska=creative-player.desktop
+video/webm=creative-player.desktop
+video/x-msvideo=creative-player.desktop
+video/quicktime=creative-player.desktop
+video/x-m4v=creative-player.desktop
+video/x-ms-wmv=creative-player.desktop
+video/mp2t=creative-player.desktop
+video/mpeg=creative-player.desktop

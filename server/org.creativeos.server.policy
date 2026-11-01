@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Creative OS</vendor>
+  <action id="org.creativeos.server.manage">
+    <description>Mein Server einrichten</description>
+    <message>Zum Ein- oder Ausschalten von „Mein Server“ wird dein Passwort benötigt.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/creative-server-helper</annotate>
+  </action>
+</policyconfig>

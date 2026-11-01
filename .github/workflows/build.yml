@@ -1,0 +1,103 @@
+# Baut Creative OS automatisch auf GitHub (kostenlos für öffentliche Projekte):
+#  - bei jeder Änderung und jede Nacht → neues System-Abbild in der GitHub-Registry
+#    (installierte PCs holen sich daraus ihre Updates)
+#  - auf Knopfdruck (Actions › „Creative OS bauen“ › Run workflow) zusätzlich die
+#    Installations-ISO zum Herunterladen
+name: Creative OS bauen
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 2 * * *"          # jede Nacht: neue Fedora-Updates einbauen
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: "Installations-ISO erzeugen"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  image:
+    name: Abbild (${{ matrix.variant }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: nvidia
+            nvidia: "1"
+          - variant: amd
+            nvidia: "0"
+    steps:
+      - name: Platz schaffen (der Runner ist sonst zu voll)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/lib/jvm
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Namen festlegen
+        id: names
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/creative-os" >> "$GITHUB_OUTPUT"
+          echo "date=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Abbild bauen
+        run: |
+          sudo podman build \
+            --build-arg NVIDIA=${{ matrix.nvidia }} \
+            --label org.opencontainers.image.version=${{ steps.names.outputs.date }} \
+            -f image/Containerfile \
+            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }} \
+            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }} \
+            .
+
+      - name: In die GitHub-Registry hochladen
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+          sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }}
+
+      - name: Installations-ISO erzeugen
+        if: github.event_name == 'workflow_dispatch' && inputs.iso
+        run: |
+          mkdir -p output
+          cat > output/config.toml <<'TOML'
+          [customizations.installer.kickstart]
+          contents = """
+          lang de_DE.UTF-8
+          keyboard de
+          timezone Europe/Berlin
+          """
+          TOML
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            -v ./output/config.toml:/config.toml:ro \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso --rootfs btrfs \
+            --target-arch amd64 \
+            ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+          sudo mv output/bootiso/install.iso "creative-os-${{ matrix.variant }}-${{ steps.names.outputs.date }}.iso"
+          ls -lh *.iso
+
+      - name: ISO zum Herunterladen bereitstellen
+        if: github.event_name == 'workflow_dispatch' && inputs.iso
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-os-${{ matrix.variant }}-iso
+          path: creative-os-*.iso
+          retention-days: 7
+          compression-level: 0

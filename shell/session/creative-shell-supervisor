@@ -1,0 +1,45 @@
+#!/bin/sh
+# Die Shell selbst ist ein Wayland-Programm (KWin selbst darf das nicht gesetzt bekommen)
+export QT_QPA_PLATFORM=wayland
+# Hält die Taskleiste am Leben: Stürzt die Shell ab, wird sie sofort neu
+# gestartet. Die Sitzung (und alle offenen Programme) bleiben dabei erhalten.
+# Nach 5 Abstürzen innerhalb einer Minute wird aufgegeben, damit kein
+# Endlos-Kreislauf entsteht.
+
+# Passwort-Abfrage für Systemänderungen (z. B. Gerätename, Drucker, Updates)
+for agent in /usr/libexec/kf6/polkit-kde-authentication-agent-1 \
+             /usr/libexec/polkit-kde-authentication-agent-1 \
+             /usr/lib/polkit-kde-authentication-agent-1; do
+    if [ -x "$agent" ]; then
+        "$agent" >/dev/null 2>&1 &
+        break
+    fi
+done
+
+# Beim allerersten Start: Willkommens-Assistent (zeigt sich nur einmal)
+if command -v creative-welcome >/dev/null 2>&1; then
+    (sleep 3; creative-welcome) >/dev/null 2>&1 &
+fi
+
+crashes=0
+window_start=$(date +%s)
+
+while true; do
+    /usr/bin/creative-shell
+    code=$?
+    [ "$code" -eq 0 ] && exit 0          # regulär beendet (Abmelden)
+
+    now=$(date +%s)
+    if [ $((now - window_start)) -gt 60 ]; then
+        crashes=0
+        window_start=$now
+    fi
+    crashes=$((crashes + 1))
+    if [ "$crashes" -ge 5 ]; then
+        logger -t creative-shell "Shell stürzt wiederholt ab (Code $code) – gebe auf"
+        # Sitzung offen halten, damit Programme und Daten nicht verloren gehen
+        exec sleep infinity
+    fi
+    logger -t creative-shell "Shell beendet mit Code $code – Neustart"
+    sleep 1
+done

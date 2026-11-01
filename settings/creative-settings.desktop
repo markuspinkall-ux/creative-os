@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Systemsteuerung
+GenericName=Einstellungen
+Comment=WLAN, Bildschirme, Ton, Drucker, Hintergrundbild und Updates
+Keywords=Einstellungen;Settings;WLAN;Bildschirm;Monitor;Ton;Drucker;Hintergrund;Update;System;
+Exec=creative-settings
+Icon=creative-settings
+Terminal=false
+Categories=Settings;System;
+StartupWMClass=creative-settings
+Actions=Displays;Network;
+
+[Desktop Action Displays]
+Name=Bildschirme
+Exec=creative-settings --page bildschirme
+
+[Desktop Action Network]
+Name=Netzwerk
+Exec=creative-settings --page netzwerk

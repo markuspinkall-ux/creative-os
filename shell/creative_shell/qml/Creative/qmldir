@@ -1,0 +1,11 @@
+module Creative
+singleton Theme 1.0 Theme.qml
+SvgIcon 1.0 SvgIcon.qml
+IconButton 1.0 IconButton.qml
+StartButton 1.0 StartButton.qml
+TaskButton 1.0 TaskButton.qml
+CSwitch 1.0 CSwitch.qml
+CSlider 1.0 CSlider.qml
+CButton 1.0 CButton.qml
+Divider 1.0 Divider.qml
+FileIcon 1.0 FileIcon.qml

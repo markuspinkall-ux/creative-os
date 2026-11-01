@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet „Dateien“ aus /usr/lib/creative-files.
+export PYTHONPATH="/usr/lib/creative-files${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_files "$@"

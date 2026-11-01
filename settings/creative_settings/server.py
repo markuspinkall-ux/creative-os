@@ -1,0 +1,189 @@
+"""Mein Server: Webseite auf einer eigenen Festplatte – ein Schalter, fertig.
+
+Die Systemänderungen macht /usr/libexec/creative-server-helper (über pkexec,
+dabei wird das Passwort abgefragt). Hier wird nur angezeigt und angestoßen.
+"""
+
+import json
+import shutil
+import socket
+import subprocess
+from pathlib import Path
+
+from PySide6.QtCore import Property, QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
+
+from creative_shell.runner import Runner, spawn_detached
+
+HELPER = "/usr/libexec/creative-server-helper"
+STATE = Path("/var/lib/creative-server/state.json")
+HIDDEN = {"/boot", "/boot/efi", "/efi"}
+SKIP_FS = {"swap", "LVM2_member", "crypto_LUKS", "linux_raid_member", "squashfs", ""}
+
+
+def fmt_size(b):
+    if not b:
+        return "?"
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if b < 1024 or unit == "TB":
+            text = f"{b:.0f}" if unit in ("B", "KB", "MB") or b >= 100 else f"{b:.1f}".replace(".", ",")
+            return f"{text} {unit}"
+        b /= 1024
+    return "?"
+
+
+def list_disks(selected):
+    try:
+        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSUSED,MODEL"],
+                             capture_output=True, text=True, timeout=5).stdout
+        data = json.loads(out)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    disks = []
+
+    def walk(nodes, model="", removable=False):
+        for n in nodes or []:
+            model_here = n.get("model") or model
+            rem = removable or bool(n.get("rm")) or bool(n.get("hotplug"))
+            mps = [m for m in (n.get("mountpoints") or []) if m]
+            fs = n.get("fstype") or ""
+            if n.get("type") in ("part", "crypt", "lvm") and fs not in SKIP_FS and not any(m in HIDDEN for m in mps):
+                system = any(m in ("/", "/sysroot", "/var", "/home", "/var/home") for m in mps)
+                size = int(n.get("size") or 0)
+                used = int(n.get("fsused") or 0)
+                name = (n.get("label") or (model_here or "Laufwerk").strip())
+                if system:
+                    name = "System-Laufwerk"
+                disks.append({
+                    "device": n["path"], "name": f"{name} · {fmt_size(size)}", "system": system,
+                    "removable": rem, "used": used / size if size and used else 0,
+                    "info": ("Hier läuft Creative OS – der Server bekommt einen eigenen, geschützten Ordner" if system else
+                             (f"Enthält {fmt_size(used)} Daten – sie bleiben unangetastet" if used else "Leer oder noch nicht eingebunden")),
+                    "selected": n["path"] == selected or (system and selected == "system"),
+                })
+            walk(n.get("children"), model_here, rem)
+
+    walk(data.get("blockdevices"))
+    disks = [d for d in disks if not d["removable"]]     # USB-Sticks eignen sich nicht als Server
+    disks.sort(key=lambda d: (not d["system"], d["name"].casefold()))
+    return disks
+
+
+def addresses():
+    host = socket.gethostname()
+    urls = [f"http://{host}.local"]
+    try:
+        out = subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=3).stdout.split()
+        urls += [f"http://{ip}" for ip in out if ":" not in ip][:2]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return urls
+
+
+class ServerModel(QObject):
+    changed = Signal()
+    messageChanged = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._run = Runner(self, force_c_locale=True)
+        self._state = {}
+        self._active = False
+        self._busy = False
+        self._message = ""
+        self._choice = ""
+        self._disks = []
+        self._installed = Path(HELPER).exists() and shutil.which("caddy") is not None
+        self._timer = QTimer(self)
+        self._timer.setInterval(5000)
+        self._timer.timeout.connect(self.refresh)
+        self._timer.start()
+        self.refresh()
+
+    @Slot()
+    def refresh(self):
+        try:
+            self._state = json.loads(STATE.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self._state = {}
+        target = self._state.get("target", "")
+        if not self._choice:
+            self._choice = target
+        self._disks = list_disks(self._choice)
+        self._run.run(["systemctl", "is-active", "creative-server.service"], self._on_active)
+
+    def _on_active(self, _code, out, _err):
+        self._active = out.strip() == "active"
+        self.changed.emit()
+
+    @Slot(str)
+    def choose(self, device):
+        if self._active:
+            self._set_message("Zum Wechseln der Festplatte den Server zuerst ausschalten.")
+            return
+        self._choice = device
+        self._disks = list_disks(device)
+        self.changed.emit()
+
+    @Slot(bool)
+    def setEnabled(self, on):
+        if self._busy:
+            return
+        if not self._installed:
+            self._set_message("„Mein Server“ ist auf diesem System nicht installiert.")
+            return
+        if on:
+            target = self._choice
+            if not target:
+                self._set_message("Bitte zuerst unten eine Festplatte für den Server auswählen.")
+                return
+            disk = next((d for d in self._disks if d["device"] == target), None)
+            arg = "system" if (target == "system" or (disk and disk["system"])) else target
+            args = ["pkexec", HELPER, "enable", arg]
+            self._set_message("Server wird eingerichtet …")
+        else:
+            args = ["pkexec", HELPER, "disable"]
+            self._set_message("Server wird ausgeschaltet …")
+        self._busy = True
+        self.changed.emit()
+
+        def done(code, out, err):
+            self._busy = False
+            try:
+                result = json.loads(out.strip().splitlines()[-1]) if out.strip() else {}
+            except ValueError:
+                result = {}
+            if code == 126 or code == 127:
+                self._set_message("Abgebrochen – ohne Passwort bleibt alles, wie es ist.")
+            elif result.get("ok"):
+                self._set_message("Der Server läuft. Lege deine Webseite in den Ordner „Webseite“." if on
+                                  else "Der Server ist aus. Deine Dateien bleiben erhalten.")
+            else:
+                self._set_message(result.get("error") or "Das hat nicht geklappt.")
+            QTimer.singleShot(600, self.refresh)
+
+        self._run.run(args, done)
+
+    @Slot()
+    def openWebsite(self):
+        QDesktopServices.openUrl(QUrl("http://localhost"))
+
+    @Slot()
+    def openFolder(self):
+        site = self._state.get("site")
+        if site and not spawn_detached(["creative-files", site]):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(site))
+
+    def _set_message(self, text):
+        self._message = text
+        self.messageChanged.emit()
+
+    installed = Property(bool, lambda self: self._installed, notify=changed)
+    active = Property(bool, lambda self: self._active, notify=changed)
+    busy = Property(bool, lambda self: self._busy, notify=changed)
+    disks = Property("QVariantList", lambda self: self._disks, notify=changed)
+    choice = Property(str, lambda self: self._choice, notify=changed)
+    site = Property(str, lambda self: self._state.get("site", ""), notify=changed)
+    php = Property(bool, lambda self: bool(self._state.get("php")), notify=changed)
+    urls = Property("QVariantList", lambda self: addresses(), notify=changed)
+    message = Property(str, lambda self: self._message, notify=messageChanged)

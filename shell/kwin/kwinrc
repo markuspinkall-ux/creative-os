@@ -1,0 +1,18 @@
+# KWin-Voreinstellungen, die nur in der Creative-OS-Sitzung gelten
+# (liegt unter /usr/share/creative-os/xdg und wird von creative-session eingebunden)
+
+[ModifierOnlyShortcuts]
+# Windows-Taste allein öffnet das Creative-Startmenü
+Meta=org.creativeos.Shell,/Shell,org.creativeos.Shell,toggleStartMenu
+
+[Plugins]
+creative-tasksEnabled=true
+
+[org.kde.kdecoration2]
+# Fensterrahmen: KWin-Standard (Breeze, sauber gezeichnet) in Graphit-Farben aus kdeglobals.
+# Der SVG-Rahmen „Creative Graphit“ liegt bei, ist aber abgeschaltet (Nahtstellen).
+BorderSize=Tiny
+BorderSizeAuto=false
+# Wie bei Windows: links das App-Symbol, rechts Minimieren, Maximieren, Schließen
+ButtonsOnLeft=M
+ButtonsOnRight=IAX

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet die Creative Shell aus /usr/lib/creative-shell.
+export PYTHONPATH="/usr/lib/creative-shell${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_shell "$@"

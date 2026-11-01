@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Creative OS
+Comment=Der Creative-Desktop (Graphit)
+Exec=/usr/bin/creative-session
+DesktopNames=Creative;KDE

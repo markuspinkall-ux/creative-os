@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=YouTube
+GenericName=Videos
+Comment=YouTube als eigenes Fenster
+Keywords=Video;Videos;Stream;
+Exec=creative-webapp https://www.youtube.com/
+Icon=creative-youtube
+Terminal=false
+Categories=AudioVideo;Video;Network;
+StartupWMClass=brave-www.youtube.com__-Default

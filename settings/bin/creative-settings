@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet die Systemsteuerung aus /usr/lib/creative-settings.
+export PYTHONPATH="/usr/lib/creative-settings${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_settings "$@"

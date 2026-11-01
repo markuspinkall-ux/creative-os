@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "creative-tasks",
+        "Name": "Creative Tasks",
+        "Description": "Meldet der Creative-Taskleiste die offenen Fenster und stellt die Windows-Tastenkürzel bereit.",
+        "Authors": [{ "Name": "Creative OS" }],
+        "License": "GPL-3.0-or-later",
+        "Version": "0.1",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}

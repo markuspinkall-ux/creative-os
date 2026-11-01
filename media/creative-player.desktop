@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Player
+GenericName=Musik, Videos und Fernsehen
+Comment=Musik und Videos abspielen, Fernsehen über IPTV
+Keywords=Musik;Video;Film;MP3;Fernsehen;TV;IPTV;Player;
+Exec=creative-player %F
+Icon=creative-player
+Terminal=false
+Categories=AudioVideo;Audio;Video;Player;
+MimeType=audio/mpeg;audio/mp3;audio/flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/mp4;audio/x-m4a;audio/aac;audio/wav;audio/x-wav;audio/x-ms-wma;video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/x-m4v;video/x-ms-wmv;video/mp2t;video/mpeg;audio/x-mpegurl;

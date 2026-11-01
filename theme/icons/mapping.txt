@@ -1,0 +1,15 @@
+# Creative-Symbol  →  Symbolnamen, die Programme selbst verwenden (Fenster, Titelleiste, Taskleiste)
+calculator   accessories-calculator org.kde.kcalc kcalc
+terminal     utilities-terminal org.kde.konsole konsole org.gnome.Ptyxis terminal
+editor       accessories-text-editor org.kde.kwrite kwrite org.kde.kate kate text-editor
+image        gwenview org.kde.gwenview image-viewer
+screenshot   spectacle org.kde.spectacle applets-screenshooter
+taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor
+settings     preferences-system systemsettings org.kde.systemsettings creative-settings
+browser      brave-browser com.brave.Browser firefox org.mozilla.firefox web-browser internet-web-browser
+games        steam
+chat         discord com.discordapp.Discord
+store        org.gnome.Software gnome-software system-software-install
+files        system-file-manager org.kde.dolphin creative-files
+player       multimedia-player creative-player
+archive      ark org.kde.ark utilities-file-archiver

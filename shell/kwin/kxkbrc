@@ -1,0 +1,5 @@
+# Tastaturbelegung in der Creative-OS-Sitzung: Deutsch
+# (später wählbar im Willkommens-Assistenten und in der Systemsteuerung)
+[Layout]
+LayoutList=de
+Use=true

@@ -1,0 +1,19 @@
+{
+  "HomepageLocation": "file:///usr/share/creative-os/startpage/index.html",
+  "HomepageIsNewTabPage": false,
+  "ShowHomeButton": true,
+  "RestoreOnStartup": 4,
+  "RestoreOnStartupURLs": ["file:///usr/share/creative-os/startpage/index.html"],
+  "NewTabPageLocation": "file:///usr/share/creative-os/startpage/index.html",
+  "BrowserThemeColor": "#1C2029",
+  "DefaultBrowserSettingEnabled": false,
+  "PromotionalTabsEnabled": false,
+  "MetricsReportingEnabled": false,
+  "BraveRewardsDisabled": true,
+  "BraveWalletDisabled": true,
+  "BraveVPNDisabled": true,
+  "BraveAIChatEnabled": false,
+  "BraveTalkDisabled": true,
+  "TorDisabled": true,
+  "BraveNewsDisabled": true
+}

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Startet die Creative-OS-Sitzung: KWin als Fenstermanager, darauf die
+# Creative Shell (Taskleiste, Startmenü, Schnellzugriff).
+export XDG_CURRENT_DESKTOP=Creative:KDE
+export XDG_SESSION_DESKTOP=creative
+# Tastatur: Belegung des Systems übernehmen (localectl), sonst Deutsch
+layout="$(localectl status 2>/dev/null | awk -F': *' '/X11 Layout/ {print $2; exit}')"
+export XKB_DEFAULT_LAYOUT="${layout:-de}"
+# Creative-Voreinstellungen (Windows-Taste, Fensterknöpfe rechts, Tastatur …) nur in dieser Sitzung
+export XDG_CONFIG_DIRS="/usr/share/creative-os/xdg:${XDG_CONFIG_DIRS:-/etc/xdg}"
+# Aufgeräumtes Startmenü (nur die nötigsten Apps, deutsche Namen, Creative-Symbole)
+data="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+# Flatpak-Apps (aus „Software“) müssen startbar bleiben
+for d in "$HOME/.local/share/flatpak/exports/share" /var/lib/flatpak/exports/share; do
+    case ":$data:" in *":$d:"*) ;; *) data="$data:$d" ;; esac
+done
+export XDG_DATA_DIRS="/usr/share/creative-os/data:$data"
+# Graphit-Farben für Qt- und GTK-Programme
+export QT_QPA_PLATFORMTHEME=kde
+[ -x /usr/libexec/creative-theme-user ] && /usr/libexec/creative-theme-user
+
+exec kwin_wayland --xwayland --exit-with-session /usr/libexec/creative-shell-supervisor

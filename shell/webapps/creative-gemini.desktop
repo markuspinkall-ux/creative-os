@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Gemini
+GenericName=KI-Assistent
+Comment=Gemini als eigenes Fenster
+Keywords=KI;AI;Assistent;Chat;Google;
+Exec=creative-webapp https://gemini.google.com/app
+Icon=creative-gemini
+Terminal=false
+Categories=Network;Office;
+StartupWMClass=brave-gemini.google.com__app-Default

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Twitch
+GenericName=Livestreams
+Comment=Twitch als eigenes Fenster
+Keywords=Stream;Livestream;Gaming;
+Exec=creative-webapp https://www.twitch.tv/
+Icon=creative-twitch
+Terminal=false
+Categories=AudioVideo;Network;Game;
+StartupWMClass=brave-www.twitch.tv__-Default
