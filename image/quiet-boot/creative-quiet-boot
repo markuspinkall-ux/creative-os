@@ -1,8 +1,10 @@
 #!/bin/sh
 # Sorgt dafür, dass beim Starten und Herunterfahren nur das Creative-Logo zu
 # sehen ist – keine Textmeldungen. Wirkt ab dem nächsten Neustart.
+# Zusätzlich malt die Textkonsole alle Farben im Graphit-Hintergrund (#12151b):
+# Meldungen, die trotzdem durchrutschen, sind damit unsichtbar.
 set -eu
-args="rhgb quiet splash loglevel=3 rd.udev.log_level=3 rd.systemd.show_status=false systemd.show_status=false vt.global_cursor_default=0"
+args="rhgb quiet splash loglevel=3 rd.udev.log_level=3 rd.systemd.show_status=false systemd.show_status=false vt.global_cursor_default=0 vt.default_red=0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12 vt.default_grn=0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15 vt.default_blu=0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b"
 missing=""
 for a in $args; do
     grep -qw -- "$a" /proc/cmdline || missing="$missing --append-if-missing=$a"

@@ -246,7 +246,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
  && dracut --no-hostonly --kver "$KVER" --reproducible --zstd --add ostree -f "/usr/lib/modules/$KVER/initramfs.img" \
  && chmod 0600 "/usr/lib/modules/$KVER/initramfs.img" \
  && mkdir -p /usr/lib/bootc/kargs.d \
- && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "vt.global_cursor_default=0"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
+ && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "vt.global_cursor_default=0", "vt.default_red=0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12", "vt.default_grn=0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15", "vt.default_blu=0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
 # ---------------------------------------------------------------------------
 # 9) Systemeinstellungen
