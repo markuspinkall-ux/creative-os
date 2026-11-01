@@ -365,7 +365,8 @@ class CreativeArt(Extension):
             return
         for lab in qw.findChildren(QLabel):
             t = lab.text()
-            if "Krita" in t and len(t) < 200:
+            # Links (Spenden, Webseite, Handbuch) gehören zu Krita und bleiben unverändert
+            if "Krita" in t and len(t) < 200 and "href" not in t and "<a" not in t:
                 lab.setText(t.replace("Krita", APP))
 
     def relabel(self):
