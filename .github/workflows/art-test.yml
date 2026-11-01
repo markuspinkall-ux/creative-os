@@ -38,6 +38,12 @@ jobs:
           magick shots/spaeter.png -resize 1400x -quality 72 /tmp/s.jpg 2>/dev/null || convert shots/spaeter.png -resize 1400x -quality 72 /tmp/s.jpg
           ls -la shots /tmp/s.jpg; echo BILD-ANFANG; base64 /tmp/s.jpg | sed "s/^/B64:/"; echo BILD-ENDE
           grep -v Fontconfig /tmp/h/.cache/creative-art.log | tail -30
+      - name: Ohne Bildschirm (offscreen) wie beim Bauen
+        run: |
+          set +e
+          rm -rf /tmp/o; mkdir -p /tmp/o
+          HOME=/tmp/o XDG_RUNTIME_DIR=/tmp/rt QT_QPA_PLATFORM=offscreen NOSPLASH=1 timeout 45 krita --nosplash >/tmp/o.log 2>&1; echo "offscreen original: Code $?"
+          HOME=/tmp/o XDG_RUNTIME_DIR=/tmp/rt XDG_CONFIG_DIRS=/etc/creative-xdg:/etc/xdg QT_QPA_PLATFORM=offscreen NOSPLASH=1 timeout 45 krita --nosplash >/tmp/o2.log 2>&1; echo "offscreen Creative Art: Code $?"
       - uses: actions/upload-artifact@v4
         with:
           name: bildschirmfotos
