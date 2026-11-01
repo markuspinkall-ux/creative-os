@@ -78,6 +78,35 @@ def say_duration(seconds):
 
 DAY_WORDS = {"heute": 0, "morgen": 1, "übermorgen": 2}
 
+PLAY_VERBS = r"(spiel\w*|abspielen|play|hör\w*|anmachen|mach\w*|leg\w*|starte\w*|such\w*)"
+EDGE_WORDS = {
+    "computer", "hey", "bitte", "mal", "doch", "einmal", "mir", "uns", "kannst", "könntest", "würdest", "du",
+    "ich", "will", "möchte", "würde", "gern", "gerne", "spiel", "spiele", "spielen", "spielst", "abspielen",
+    "play", "hör", "höre", "hören", "mach", "mache", "machen", "leg", "lege", "legen", "starte", "starten",
+    "such", "suche", "suchen", "auf", "an", "ab", "vor", "etwas", "was", "musik", "das", "lied", "den", "die",
+    "song", "titel", "einen", "ein", "eine", "und", "bei", "über", "the", "nach",
+}
+LEADING_ONLY = {"von", "lieder", "songs", "album"}
+
+
+def music_query(t):
+    """Gibt den Suchbegriff zurück, "" wenn nur „spiel Musik“ gesagt wurde,
+    oder None, wenn es nicht um Musik geht."""
+    t = t.replace(",", " ").replace(".", " ")
+    t = re.sub(r"\s+", " ", t).strip()
+    if not re.search(rf"\b{PLAY_VERBS}\b", t) and "youtube" not in t:
+        return None
+    # „… auf/bei/von/über youtube“ am Ende weg
+    t = re.sub(r"\s*\b(auf|bei|von|über|in|mit)\s+youtube\b", " ", t)
+    t = t.replace("youtube", " ")
+    words = t.split()
+    while words and (words[0] in EDGE_WORDS or words[0] in LEADING_ONLY):
+        words.pop(0)
+    while words and words[-1] in EDGE_WORDS:
+        words.pop()
+    return " ".join(words).strip()
+
+
 
 def parse(text):
     """Gibt (absicht, werte) zurück."""
@@ -98,6 +127,13 @@ def parse(text):
         return ("volume", {"delta": -15})
     if re.search(r"(nächste[sn]? (lied|song|titel)|überspringen|skip)", t):
         return ("next", {})
+
+    # --- Beginnt der Satz mit „Spiel …“, geht es um Musik (auch bei „Kalt wie Eis“) ---
+    if re.match(rf"^(?:(?:computer|hey|bitte|mal|kannst du|könntest du|ich (?:will|möchte|würde gern))\s+)*{PLAY_VERBS}\b",
+                t.replace(",", " ")) and not re.search(r"\b(timer|wecker)\b", t):
+        query = music_query(t)
+        if query is not None:
+            return ("music_ask", {}) if query == "" else ("play", {"query": query})
 
     # --- Timer ---
     if "timer" in t or "wecker" in t or "erinnere mich in" in t:
@@ -129,15 +165,10 @@ def parse(text):
     if re.search(r"(welcher tag|welches datum|der wievielte|welcher wochentag|datum)", t):
         return ("date", {})
 
-    # --- Musik abspielen ---
-    m = re.match(r"^(?:bitte )?(?:spiel(?:e)?|spiel mal|abspielen|play|hör|höre|ich will|ich möchte)\s+(?:mir\s+)?(?:mal\s+)?(?:bitte\s+)?(.*)$", t)
-    if m:
-        query = m.group(1)
-        query = re.sub(r"\s*(auf|bei|von) youtube$", "", query)
-        query = re.sub(r"\s*(ab|an|hören|abspielen)$", "", query)
-        query = re.sub(r"^(das lied|den song|das album|musik von|lieder von|songs von|etwas von|was von|musik)\s+", "", query)
-        query = query.strip(" .,")
-        if query in ("", "musik", "etwas", "was"):
+    # --- Musik abspielen (viele Formulierungen, Kommas egal) ---
+    query = music_query(t)
+    if query is not None:
+        if query == "":
             return ("music_ask", {})
         return ("play", {"query": query})
 
