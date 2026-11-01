@@ -147,7 +147,13 @@ class SystemModel(QObject):
             elif code == 0:
                 self._set_upd(state="available", text="Ein Update ist verfügbar.")
             else:
-                self._set_upd(state="error", text="Die Update-Suche hat nicht geklappt. Besteht eine Internetverbindung?")
+                detail = (err.strip().splitlines() or [""])[-1][:160]
+                if "authoriz" in detail.lower() or "polkit" in detail.lower() or "not allowed" in detail.lower():
+                    text = "Für die Update-Suche fehlt noch die Berechtigung – sie kommt mit dem nächsten Update."
+                else:
+                    text = "Die Update-Suche hat nicht geklappt." + (f" ({detail})" if detail else
+                                                                    " Besteht eine Internetverbindung?")
+                self._set_upd(state="error", text=text)
         self._run.run(["rpm-ostree", "upgrade", "--check"], done)
 
     @Slot()
