@@ -6,12 +6,38 @@ export QT_QPA_PLATFORM=wayland
 # Nach 5 Abstürzen innerhalb einer Minute wird aufgegeben, damit kein
 # Endlos-Kreislauf entsteht.
 
+# Reste einer früheren Sitzung beenden (z. B. nach Abmelden ohne Neustart).
+# Sonst hängen alter Sprachassistent, Tray-Dienst oder Laufwerks-Wächter noch
+# herum und können die neue Anmeldung blockieren.
+uid="$(id -u)"
+for p in creative-assistant creative-automount "python3 -m creative_shell" "python3 -m creative_assistant" \
+         kded6 polkit-kde-authentication-agent-1 "parec --device=@DEFAULT_MONITOR@"; do
+    pkill -u "$uid" -f "$p" 2>/dev/null
+done
+# Schleife des Sprachassistenten aus der alten Sitzung (läuft als „sh“)
+pkill -u "$uid" -f "while true; do creative-assistant" 2>/dev/null
+sleep 0.3
+
+# Beim Abmelden alles wieder mitnehmen, was diese Sitzung gestartet hat
+children=""
+cleanup() {
+    [ -n "$children" ] && kill $children 2>/dev/null
+    pkill -u "$uid" -f creative-assistant 2>/dev/null
+    pkill -u "$uid" -f creative-automount 2>/dev/null
+    pkill -u "$uid" -f "parec --device=@DEFAULT_MONITOR@" 2>/dev/null
+    pkill -u "$uid" -x kded6 2>/dev/null
+    pkill -u "$uid" -f polkit-kde-authentication-agent-1 2>/dev/null
+}
+trap cleanup EXIT
+trap 'cleanup; exit 0' INT TERM HUP
+
 # Passwort-Abfrage für Systemänderungen (z. B. Gerätename, Drucker, Updates)
 for agent in /usr/libexec/kf6/polkit-kde-authentication-agent-1 \
              /usr/libexec/polkit-kde-authentication-agent-1 \
              /usr/lib/polkit-kde-authentication-agent-1; do
     if [ -x "$agent" ]; then
         "$agent" >/dev/null 2>&1 &
+        children="$children $!"
         break
     fi
 done
@@ -20,6 +46,7 @@ done
 for kded in /usr/bin/kded6 /usr/libexec/kf6/kded6; do
     if [ -x "$kded" ]; then
         "$kded" >/dev/null 2>&1 &
+        children="$children $!"
         break
     fi
 done
@@ -27,12 +54,14 @@ done
 # Weitere Platten automatisch verbinden (erscheinen nur in „Dieser PC“)
 if command -v creative-automount >/dev/null 2>&1; then
     creative-automount >/dev/null 2>&1 &
+    children="$children $!"
 fi
 
 # Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
 if command -v creative-assistant >/dev/null 2>&1; then
     # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant
     ( while true; do creative-assistant 2>&1 | systemd-cat -t creative-assistant; sleep 5; done ) &
+    children="$children $!"
 fi
 
 # Beim allerersten Start: Willkommens-Assistent (zeigt sich nur einmal)
@@ -46,7 +75,7 @@ window_start=$(date +%s)
 while true; do
     /usr/bin/creative-shell
     code=$?
-    [ "$code" -eq 0 ] && exit 0          # regulär beendet (Abmelden)
+    [ "$code" -eq 0 ] && exit 0          # regulär beendet (Abmelden) – cleanup läuft über trap
 
     now=$(date +%s)
     if [ $((now - window_start)) -gt 60 ]; then
@@ -56,8 +85,10 @@ while true; do
     crashes=$((crashes + 1))
     if [ "$crashes" -ge 5 ]; then
         logger -t creative-shell "Shell stürzt wiederholt ab (Code $code) – gebe auf"
-        # Sitzung offen halten, damit Programme und Daten nicht verloren gehen
-        exec sleep infinity
+        # Sitzung offen halten, damit Programme und Daten nicht verloren gehen,
+        # und ein Terminal öffnen, damit man nicht vor einem leeren Bildschirm sitzt
+        (konsole || ptyxis) >/dev/null 2>&1 &
+        while true; do sleep 3600; done
     fi
     logger -t creative-shell "Shell beendet mit Code $code – Neustart"
     sleep 1
