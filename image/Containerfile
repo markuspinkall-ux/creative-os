@@ -43,7 +43,15 @@ RUN dnf install -y steam steam-devices gamemode mangohud vulkan-tools \
 
 # Discord fest im System (RPM Fusion). Discord will sich sonst selbst
 # aktualisieren und startet dann nicht – Updates kommen mit dem System.
-RUN dnf install -y discord && dnf clean all
+# (/opt ist auf Atomic-Systemen beschreibbar und beim Bauen leer – Discord wird
+#  darum nach /usr/lib verschoben und über einen Link wieder unter /opt eingehängt)
+RUN mkdir -p /var/opt \
+ && dnf install -y discord \
+ && if [ -d /var/opt/discord ]; then \
+        mv /var/opt/discord /usr/lib/discord \
+     && printf 'L+ /var/opt/discord - - - - /usr/lib/discord\n' > /usr/lib/tmpfiles.d/creative-discord.conf; \
+    fi \
+ && dnf clean all
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 
 # ---------------------------------------------------------------------------

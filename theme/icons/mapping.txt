@@ -7,7 +7,7 @@ screenshot   spectacle org.kde.spectacle applets-screenshooter
 taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor
 settings     preferences-system systemsettings org.kde.systemsettings creative-settings
 browser      brave-browser com.brave.Browser firefox org.mozilla.firefox web-browser internet-web-browser
-games        steam
+games        steam steamwebhelper steam_icon_steam com.valvesoftware.Steam
 chat         discord com.discordapp.Discord
 store        org.gnome.Software gnome-software system-software-install
 files        system-file-manager org.kde.dolphin creative-files

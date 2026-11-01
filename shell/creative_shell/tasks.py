@@ -22,6 +22,16 @@ def app_key(desktop_id_or_app):
     return key.lower()
 
 
+# Programme, deren Fenster anders heißen als ihre Startmenü-Verknüpfung
+WINDOW_ALIASES = {
+    "steamwebhelper": "steam",
+    "steam": "steam",
+    "brave-browser-stable": "brave-browser",
+    "discord": "discord",
+    "org.kde.kwrite": "org.kde.kwrite",
+}
+
+
 class TaskModel(QObject):
     revisionChanged = Signal()
 
@@ -59,6 +69,7 @@ class TaskModel(QObject):
     # ---- Für die Taskleiste ---------------------------------------------------
     def _window_key(self, w):
         key = app_key(w.get("app")) or (w.get("cls") or "").lower()
+        key = WINDOW_ALIASES.get(key, key)
         # Web-Apps (Claude, Gemini, ChatGPT …) haben eigene Fensternamen –
         # die werden der angehefteten Verknüpfung zugeordnet.
         names = {key, (w.get("cls") or "").lower()} - {""}
