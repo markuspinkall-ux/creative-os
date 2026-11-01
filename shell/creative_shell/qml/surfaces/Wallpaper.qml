@@ -161,6 +161,7 @@ Item {
             { sep: true },
             { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
+            { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
             { sep: true },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ]
@@ -170,6 +171,7 @@ Item {
             else if (act === "settings") session.openSettings()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
             else if (act === "taskmanager") desktopStats.openTaskManager()
+            else if (act === "viz") visualizer.setEnabled(!visualizer.enabled)
         }
     }
 

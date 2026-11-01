@@ -353,6 +353,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/DetailsPage.qml \
         /usr/lib/creative-shell/creative_shell/qml/Creative/PerfTile.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Wallpaper.qml \
+        /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \

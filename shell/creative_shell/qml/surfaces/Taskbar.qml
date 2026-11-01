@@ -30,6 +30,41 @@ Item {
             onClicked: shell.closePopups()
         }
 
+        // Musik-Visualizer: dunkelblaue Balken über die ganze Breite, hinter allen Knöpfen.
+        // Nimmt keine Klicks an – die Taskleiste bleibt voll bedienbar.
+        Item {
+            id: viz
+            anchors.fill: parent
+            anchors.leftMargin: bar.radius - 4
+            anchors.rightMargin: bar.radius - 4
+            anchors.topMargin: 6
+            anchors.bottomMargin: 3
+            enabled: false
+            opacity: visualizer.active ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
+            readonly property int count: visualizer.bars
+            readonly property real step: width / count
+            Repeater {
+                model: viz.count
+                delegate: Rectangle {
+                    required property int index
+                    readonly property real level: visualizer.levels[index] || 0
+                    x: index * viz.step + 1
+                    width: Math.max(2, viz.step - 3)
+                    height: Math.max(2, viz.height * level)
+                    anchors.bottom: parent.bottom
+                    radius: Math.min(3, width / 2)
+                    // dunkles Creative-Blau, nach oben heller
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: Qt.rgba(0.40, 0.55, 0.92, 0.42) }
+                        GradientStop { position: 1.0; color: Qt.rgba(0.16, 0.27, 0.55, 0.30) }
+                    }
+                    Behavior on height { NumberAnimation { duration: 60 } }
+                }
+            }
+        }
+
         Row {
             anchors.left: parent.left
             anchors.leftMargin: 8

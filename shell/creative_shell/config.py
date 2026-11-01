@@ -16,6 +16,8 @@ DEFAULTS = {
     "wallpaper": "",
     # Leistungsanzeige (CPU, Speicher …) oben rechts auf dem Schreibtisch
     "desktopStats": True,
+    # Musik-Visualizer hinter der Taskleiste
+    "taskbarVisualizer": True,
     "pinned": [
         {
             "icon": "files",
