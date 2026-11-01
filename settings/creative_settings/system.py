@@ -264,7 +264,7 @@ class LookModel(QObject):
         cfg = shell_config.load()
         self._current = cfg.get("wallpaper") or ""
         self._viz_on = bool(cfg.get("taskbarVisualizer", True))
-        self._viz_opacity = float(cfg.get("visualizerOpacity", 0.7))
+        self._viz_opacity = float(cfg.get("visualizerOpacity", 0.1))
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
         self._images = []

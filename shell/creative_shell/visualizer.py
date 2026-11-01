@@ -39,7 +39,7 @@ class Visualizer(QObject):
         cfg = config.load()
         self._can = np is not None and bool(shutil.which("parec"))
         self._enabled = bool(cfg.get("taskbarVisualizer", True)) and self._can
-        self._opacity = float(cfg.get("visualizerOpacity", 0.7))
+        self._opacity = float(cfg.get("visualizerOpacity", 0.1))
         # Änderungen aus der Systemsteuerung sofort übernehmen
         config.config_dir().mkdir(parents=True, exist_ok=True)
         self._cfg_watch = QFileSystemWatcher([str(config.config_dir())], self)
@@ -153,7 +153,7 @@ class Visualizer(QObject):
 
     def _reload_config(self):
         cfg = config.load()
-        op = float(cfg.get("visualizerOpacity", 0.7))
+        op = float(cfg.get("visualizerOpacity", 0.1))
         if abs(op - self._opacity) > 0.001:
             self._opacity = op
             self.enabledChanged.emit()
