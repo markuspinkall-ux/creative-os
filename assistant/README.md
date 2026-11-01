@@ -4,7 +4,7 @@ Sitzt als Mikrofon-Symbol im Tray. Aktivieren: „Computer“ sagen oder aufs Sy
 
 - **Wetter:** „Wie wird das Wetter morgen?“, „Regnet es heute in Hamburg?“ (Open-Meteo, ohne Konto)
 - **Timer:** „Timer auf 10 Minuten“, „Wie lange läuft der Timer noch?“, „Timer stoppen“
-- **Musik:** „Spiele Bohemian Rhapsody von Queen“ – spielt direkt ab (yt-dlp + mpv), ohne YouTube-Seite;
+- **Musik:** „Spiele Bohemian Rhapsody von Queen“ – sucht und spielt im offiziellen YouTube-Music-Player (im Creative Player);
   „Pause“, „Weiter“, „Lauter“, „Leiser“, „Nächstes Lied“, „Stopp“
 - **Uhrzeit/Datum:** „Wie spät ist es?“, „Welcher Tag ist heute?“
 

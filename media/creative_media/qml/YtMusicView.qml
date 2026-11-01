@@ -2,365 +2,235 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Creative
 
-// YouTube Music: oben die Top 10 aus Deutschland, Suche nach Liedern,
-// ein Klick spielt direkt im Player ab.
+// YouTube Music: die offizielle Webseite im Creative Player.
+// Oben unsere Leiste (Zurück, Startseite, Charts, Neu laden, gerade läuft, Herz),
+// rechts aufklappbar die Favoriten (Lesezeichen – ein Klick spielt im offiziellen Player).
 Item {
     id: root
+    property bool showFavs: false
 
-    property var model          // ytmusic
-    signal play(int row)
-
-    readonly property bool isTop: model.mode === "top"
-    readonly property bool isFav: model.mode === "favorites"
-
-    // ---- Kopf --------------------------------------------------------------------------
-    Text {
-        id: title
-        x: 28
-        y: 24
-        text: root.isTop ? "YouTube Music" : (root.isFav ? "Favoriten" : "Suche")
-        color: Theme.text
-        font.family: Theme.fontFamily
-        font.pixelSize: 24
-        font.bold: true
-    }
-    Text {
-        anchors.left: title.left
-        anchors.top: title.bottom
-        anchors.topMargin: 4
-        text: root.model.loading ? (root.isTop ? "Die Top 10 werden geladen …" : "Wird gesucht …")
-            : (root.isTop ? "Die Top 10 in Deutschland"
-               : (root.isFav ? (root.model.count === 1 ? "1 Lied" : root.model.count + " Lieder")
-                             : root.model.count + " Treffer für „" + root.model.query + "“"))
-        color: Theme.textMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: 13
-    }
-
-    Row {
-        anchors.right: parent.right
-        anchors.rightMargin: 28
-        y: 26
-        spacing: 8
-
-        TextField {
-            id: search
-            width: 320
-            height: 38
-            leftPadding: 38
-            rightPadding: 34
-            placeholderText: "Lied oder Künstler suchen – Enter"
-            placeholderTextColor: Theme.textMuted
-            color: Theme.text
-            font.family: Theme.fontFamily
-            font.pixelSize: 13
-            selectByMouse: true
-            background: Rectangle { radius: 19; color: Theme.ground; border.color: search.activeFocus ? Theme.accent : Theme.hairline; border.width: 1 }
-            SvgIcon { x: 14; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 15 }
-            onAccepted: root.model.search(text)
-            Accessible.name: "Lied suchen"
-
-            // Suche leeren → zurück zu den Top 10
-            Rectangle {
-                anchors.right: parent.right
-                anchors.rightMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                visible: search.text.length > 0 || !root.isTop
-                width: 26; height: 26; radius: 13
-                color: clearMouse.containsMouse ? Theme.hover : "transparent"
-                SvgIcon { anchors.centerIn: parent; name: "close"; size: 12 }
-                MouseArea {
-                    id: clearMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { search.text = ""; root.model.loadTop() }
-                }
-                Accessible.role: Accessible.Button
-                Accessible.name: "Zurück zu den Top 10"
-            }
-        }
-        IconButton {
-            width: 38
-            height: 38
-            icon: "refresh"
-            iconSize: 17
-            visible: !root.isFav
-            label: root.isTop ? "Top 10 neu laden" : "Neu suchen"
-            onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
-        }
-    }
-
-    // ---- Reiter: Top 10 | Favoriten ------------------------------------------------------
-    Row {
-        id: tabs
-        anchors.left: title.left
-        anchors.top: title.bottom
-        anchors.topMargin: 30
-        spacing: 6
-        Repeater {
-            model: [
-                { key: "top", label: "Top 10", icon: "ytmusic" },
-                { key: "favorites", label: "Favoriten", icon: "heart" }
-            ]
-            delegate: Rectangle {
-                id: tab
-                required property var modelData
-                readonly property bool current: root.model.mode === modelData.key
-                width: tabRow.implicitWidth + 26
-                height: 32
-                radius: 16
-                color: current ? Theme.accent : (tabMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
-                Row {
-                    id: tabRow
-                    anchors.centerIn: parent
-                    spacing: 7
-                    SvgIcon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: !tab.current
-                        name: tab.modelData.icon
-                        size: 14
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: tab.modelData.label + (tab.modelData.key === "favorites" && root.model.favoriteCount > 0 ? "  " + root.model.favoriteCount : "")
-                        color: tab.current ? Theme.accentText : Theme.text
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 12
-                        font.bold: true
-                    }
-                }
-                MouseArea {
-                    id: tabMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        search.text = ""
-                        if (tab.modelData.key === "favorites") root.model.loadFavorites()
-                        else root.model.loadTop()
-                    }
-                }
-                Accessible.role: Accessible.PageTab
-                Accessible.name: modelData.label
-            }
-        }
-    }
-
-    // ---- Liste ---------------------------------------------------------------------------
-    ListView {
-        id: list
+    // ---- Leiste --------------------------------------------------------------------------
+    Rectangle {
+        id: head
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: tabs.bottom
-        anchors.topMargin: 14
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: 28
-        anchors.rightMargin: 28
-        anchors.bottomMargin: 8
-        clip: true
-        model: root.model
-        spacing: 4
-        boundsBehavior: Flickable.StopAtBounds
-        opacity: root.model.loading ? 0.4 : 1
-        Behavior on opacity { NumberAnimation { duration: 150 } }
-        ScrollBar.vertical: ScrollBar {
-            contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) }
+        height: 58
+        color: Theme.footer
+
+        Row {
+            x: 12
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            IconButton { width: 38; height: 38; icon: "back"; iconSize: 16; label: "Zurück"; enabled: webLoader.item !== null; onClicked: webLoader.item.goBack() }
+            IconButton { width: 38; height: 38; icon: "forward"; iconSize: 16; label: "Vor"; enabled: webLoader.item !== null; onClicked: webLoader.item.goForward() }
+            IconButton { width: 38; height: 38; icon: "home"; iconSize: 16; label: "Startseite"; onClicked: ytmusic.openUrl(ytmusic.home) }
+            Rectangle {
+                width: chartsRow.implicitWidth + 22
+                height: 34
+                anchors.verticalCenter: parent.verticalCenter
+                radius: 17
+                color: cm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06)
+                Row {
+                    id: chartsRow
+                    anchors.centerIn: parent
+                    spacing: 6
+                    SvgIcon { anchors.verticalCenter: parent.verticalCenter; name: "ytmusic"; size: 14 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Charts"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                }
+                MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ytmusic.openUrl(ytmusic.charts) }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Charts"
+            }
+            IconButton { width: 38; height: 38; icon: "refresh"; iconSize: 16; label: "Neu laden"; enabled: webLoader.item !== null; onClicked: webLoader.item.reload() }
         }
 
-        delegate: Rectangle {
-            id: row
-            required property int index
-            required property string title
-            required property string artist
-            required property string duration
-            required property string thumb
-            required property string videoId
-            required property int rank
-            required property bool favorite
-            readonly property bool current: videoId === root.model.currentId
-            readonly property bool big: root.isTop
-
-            width: ListView.view.width
-            height: big ? 72 : 60
-            radius: 12
-            color: current ? Qt.rgba(143 / 255, 179 / 255, 255 / 255, 0.12)
-                           : (rowMouse.containsMouse ? Theme.hover : "transparent")
-
-            // Platz (nur bei den Top 10)
-            Text {
-                id: rankText
-                visible: row.big
-                x: 10
-                width: 40
-                anchors.verticalCenter: parent.verticalCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: row.rank
-                color: row.rank <= 3 ? Theme.accent : Theme.textMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: row.rank <= 3 ? 22 : 18
-                font.bold: true
-            }
-
-            // Cover
+        // Gerade läuft
+        Row {
+            anchors.centerIn: parent
+            spacing: 10
+            visible: ytmusic.nowTitle.length > 0
             Rectangle {
-                id: cover
-                x: row.big ? 58 : 10
+                width: 38; height: 38; radius: 8
                 anchors.verticalCenter: parent.verticalCenter
-                width: row.big ? 54 : 44
-                height: width
-                radius: 9
                 color: "#2b3550"
                 clip: true
-                Image {
-                    anchors.fill: parent
-                    source: row.thumb
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    cache: true
-                    sourceSize.width: 120
-                    sourceSize.height: 120
-                }
-                // Abspielen-Hinweis beim Darüberfahren / läuft gerade
-                Rectangle {
-                    anchors.fill: parent
-                    color: Qt.rgba(0, 0, 0, 0.45)
-                    visible: rowMouse.containsMouse || row.current
-                    SvgIcon {
-                        anchors.centerIn: parent
-                        visible: !(row.current && root.model.resolving)
-                        name: row.current ? "volume" : "play"
-                        size: 18
-                    }
-                    // Lädt gerade
-                    Rectangle {
-                        anchors.centerIn: parent
-                        visible: row.current && root.model.resolving
-                        width: 18; height: 18; radius: 9
-                        color: "transparent"
-                        border.color: Theme.accent
-                        border.width: 2
-                        Rectangle { x: 6; y: -2; width: 6; height: 6; radius: 3; color: Theme.accent }
-                        RotationAnimation on rotation { running: parent.visible; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
-                    }
-                }
+                Image { anchors.fill: parent; source: ytmusic.nowThumb; fillMode: Image.PreserveAspectCrop; asynchronous: true }
             }
-
             Column {
-                anchors.left: cover.right
-                anchors.leftMargin: 14
-                anchors.right: dur.left
-                anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                width: Math.min(300, root.width * 0.28)
+                Text { width: parent.width; elide: Text.ElideRight; text: ytmusic.nowTitle; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                Text { width: parent.width; elide: Text.ElideRight; text: ytmusic.nowArtist; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            }
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 38; height: 38
+                icon: ytmusic.currentFavorite ? "heart-on" : "heart"
+                iconSize: 17
+                enabled: ytmusic.nowVideo.length > 0
+                label: ytmusic.currentFavorite ? "Aus den Favoriten entfernen" : "Zu den Favoriten"
+                onClicked: ytmusic.toggleCurrentFavorite()
+            }
+        }
+
+        Rectangle {
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            width: favRow.implicitWidth + 24
+            height: 34
+            radius: 17
+            color: root.showFavs ? Theme.accent : (fm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+            Row {
+                id: favRow
+                anchors.centerIn: parent
+                spacing: 7
+                SvgIcon { anchors.verticalCenter: parent.verticalCenter; visible: !root.showFavs; name: "heart"; size: 14 }
                 Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: row.title
-                    color: row.current ? Theme.accent : Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 14
-                    font.bold: true
-                }
-                Text {
-                    width: parent.width
-                    elide: Text.ElideRight
-                    text: row.artist
-                    color: Theme.textMuted
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Favoriten" + (ytmusic.favoriteCount > 0 ? "  " + ytmusic.favoriteCount : "")
+                    color: root.showFavs ? Theme.accentText : Theme.text
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
+                    font.bold: true
                 }
             }
-            Text {
-                id: dur
-                anchors.right: heart.left
-                anchors.rightMargin: 10
-                anchors.verticalCenter: parent.verticalCenter
-                text: row.duration
-                color: Theme.textMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-            }
-
-            MouseArea {
-                id: rowMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.play(row.index)
-            }
-
-            // Herz: zu den Favoriten / aus den Favoriten
-            Rectangle {
-                id: heart
-                anchors.right: parent.right
-                anchors.rightMargin: 10
-                anchors.verticalCenter: parent.verticalCenter
-                width: 36; height: 36; radius: 18
-                visible: row.favorite || rowMouse.containsMouse || heartMouse.containsMouse
-                color: heartMouse.containsMouse ? Theme.hover : "transparent"
-                SvgIcon {
-                    anchors.centerIn: parent
-                    name: row.favorite ? "heart-on" : "heart"
-                    size: 17
-                    scale: heartMouse.pressed ? 0.85 : 1
-                    Behavior on scale { NumberAnimation { duration: 80 } }
-                }
-                MouseArea {
-                    id: heartMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.model.toggleFavorite(row.index)
-                }
-                Accessible.role: Accessible.Button
-                Accessible.name: row.favorite ? "Aus den Favoriten entfernen" : "Zu den Favoriten"
-            }
-            Accessible.role: Accessible.ListItem
-            Accessible.name: row.title + ", " + row.artist
-            Accessible.onPressAction: root.play(row.index)
+            MouseArea { id: fm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.showFavs = !root.showFavs }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Favoriten"
         }
+        Divider { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom }
     }
 
-    // ---- Laden / leer / Fehler ---------------------------------------------------------------
-    Column {
-        anchors.centerIn: list
-        width: Math.min(440, list.width - 40)
-        spacing: 14
-        visible: list.count === 0 || (root.model.status.length > 0 && !root.model.loading)
+    // ---- Offizielle Webseite --------------------------------------------------------------------
+    Loader {
+        id: webLoader
+        anchors.left: parent.left
+        anchors.right: favPane.visible ? favPane.left : parent.right
+        anchors.top: head.bottom
+        anchors.bottom: parent.bottom
+        active: webEngineAvailable
+        source: "YtWeb.qml"
+    }
 
-        Item {
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: 40; height: 40
-            visible: root.model.loading
-            Rectangle {
-                anchors.fill: parent
-                radius: 20
-                color: "transparent"
-                border.color: Qt.rgba(1, 1, 1, 0.12)
-                border.width: 3
-            }
-            Rectangle { x: 16; y: -1; width: 8; height: 8; radius: 4; color: Theme.accent }
-            RotationAnimation on rotation { running: root.model.loading; from: 0; to: 360; duration: 1000; loops: Animation.Infinite }
-        }
+    // Ohne eingebauten Browser-Baustein: im eigenen Fenster öffnen
+    Column {
+        anchors.centerIn: webLoader
+        visible: !webEngineAvailable
+        spacing: 14
         Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            visible: !root.model.loading
-            text: root.model.status
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "YouTube Music öffnet sich in einem eigenen Fenster."
             color: Theme.text
             font.family: Theme.fontFamily
             font.pixelSize: 14
         }
         CButton {
             anchors.horizontalCenter: parent.horizontalCenter
-            visible: !root.model.loading && root.model.status.length > 0 && !root.isFav
-            text: "Nochmal versuchen"
-            onClicked: root.isTop ? root.model.reloadTop() : root.model.search(root.model.query)
+            text: "YouTube Music öffnen"
+            primary: true
+            onClicked: Qt.openUrlExternally(ytmusic.home)
         }
     }
 
-    // Beim ersten Öffnen die Top 10 holen
-    onVisibleChanged: if (visible && list.count === 0 && !model.loading && !root.isFav) model.loadTop()
+    // ---- Favoriten ---------------------------------------------------------------------------------
+    Rectangle {
+        id: favPane
+        anchors.right: parent.right
+        anchors.top: head.bottom
+        anchors.bottom: parent.bottom
+        width: 320
+        visible: root.showFavs
+        color: Theme.footer
+        Rectangle { width: 1; height: parent.height; color: Theme.hairline }
+
+        Text {
+            id: favTitle
+            x: 20
+            y: 16
+            text: "Favoriten"
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: 16
+            font.bold: true
+        }
+        Text {
+            anchors.left: favTitle.left
+            anchors.top: favTitle.bottom
+            anchors.topMargin: 2
+            width: parent.width - 40
+            wrapMode: Text.WordWrap
+            text: "Tippe oben auf das Herz, um ein Lied zu merken. Abgespielt wird im offiziellen YouTube-Music-Player."
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+        }
+
+        ListView {
+            id: favList
+            anchors.fill: parent
+            anchors.topMargin: 86
+            anchors.margins: 10
+            clip: true
+            spacing: 4
+            model: ytmusic
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) } }
+            delegate: Rectangle {
+                id: fr
+                required property string title
+                required property string artist
+                required property string thumb
+                required property string videoId
+                readonly property bool current: videoId === ytmusic.nowVideo
+                width: ListView.view.width
+                height: 58
+                radius: 10
+                color: current ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (frm.containsMouse ? Theme.hover : "transparent")
+                Rectangle {
+                    id: fthumb
+                    x: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 42; height: 42; radius: 8
+                    color: "#2b3550"
+                    clip: true
+                    Image { anchors.fill: parent; source: fr.thumb; fillMode: Image.PreserveAspectCrop; asynchronous: true; sourceSize.width: 96; sourceSize.height: 96 }
+                }
+                Column {
+                    anchors.left: fthumb.right
+                    anchors.leftMargin: 10
+                    anchors.right: fdel.left
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    Text { width: parent.width; elide: Text.ElideRight; text: fr.title; color: fr.current ? Theme.accent : Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                    Text { width: parent.width; elide: Text.ElideRight; text: fr.artist; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                }
+                MouseArea { id: frm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ytmusic.playFavorite(fr.videoId) }
+                Rectangle {
+                    id: fdel
+                    anchors.right: parent.right
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 32; height: 32; radius: 16
+                    color: fdm.containsMouse ? Theme.hover : "transparent"
+                    SvgIcon { anchors.centerIn: parent; name: "heart-on"; size: 15 }
+                    MouseArea { id: fdm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ytmusic.removeFavorite(fr.videoId) }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Aus den Favoriten entfernen"
+                }
+            }
+        }
+        Text {
+            anchors.centerIn: favList
+            visible: favList.count === 0
+            width: favList.width - 30
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: "Noch keine Favoriten."
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+        }
+    }
 }

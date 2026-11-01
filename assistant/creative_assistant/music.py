@@ -1,144 +1,96 @@
-"""Musik von YouTube direkt abspielen – nur der Ton, ohne Browser.
+"""Musik für den Sprachassistenten – über den offiziellen YouTube-Music-Player.
 
-yt-dlp sucht den passenden Titel, mpv spielt ihn im Hintergrund ab.
-Gesteuert wird mpv über seine Steuer-Schnittstelle (Pause, Lautstärke …).
+„Spiel …“ öffnet im Creative Player die offizielle YouTube-Music-Seite mit
+der Suche und startet das erste Ergebnis. Pause, Weiter und Stopp steuern
+diesen Player. Es wird nichts heruntergeladen und kein Fremd-Abspieler benutzt.
 """
 
-import json
-import os
 import shutil
-import socket
 import subprocess
-import threading
-from pathlib import Path
 
 
-def _sock_path():
-    base = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/creative-{os.getuid()}"
-    Path(base).mkdir(parents=True, exist_ok=True)
-    return str(Path(base) / "creative-assistant-mpv.sock")
+def _player(*args):
+    try:
+        subprocess.Popen(["creative-player", *args], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+        return True
+    except OSError:
+        return False
 
 
 class MusicPlayer:
     def __init__(self, on_change):
-        self._proc = None
+        self._on_change = on_change
         self._title = ""
-        self._query = ""
-        self._index = 1
-        self._volume = 70
         self._paused = False
         self._ducked = False
-        self._on_change = on_change
-        self._lock = threading.Lock()
 
     @staticmethod
     def available():
-        return bool(shutil.which("mpv") and shutil.which("yt-dlp"))
-
-    # ---- Suchen ---------------------------------------------------------------
-    def find(self, query, index=1):
-        """Liefert (titel, url) für den index-ten Treffer."""
-        out = subprocess.run(
-            ["yt-dlp", "--no-warnings", "--flat-playlist", "--print", "%(title)s\t%(webpage_url)s",
-             f"ytsearch{index}:{query} audio"],
-            capture_output=True, text=True, timeout=25,
-        ).stdout.strip().splitlines()
-        if len(out) < index:
-            return None
-        title, _, url = out[index - 1].partition("\t")
-        return title.strip(), url.strip()
+        return bool(shutil.which("creative-player"))
 
     def play(self, query, index=1):
-        found = self.find(query, index)
-        if not found:
+        if not _player("--ytmusic", query):
             return None
-        title, url = found
-        self.stop(notify=False)
-        sock = _sock_path()
-        try:
-            os.unlink(sock)
-        except OSError:
-            pass
-        with self._lock:
-            self._proc = subprocess.Popen(
-                ["mpv", "--no-video", "--no-terminal", "--really-quiet", f"--volume={self._volume}",
-                 f"--input-ipc-server={sock}", "--ytdl-format=bestaudio/best",
-                 "--title=Creative Assistent", url],
-                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            self._title, self._query, self._index, self._paused = title, query, index, False
-        threading.Thread(target=self._watch, args=(self._proc,), daemon=True).start()
+        self._title, self._paused = query, False
         self._on_change()
-        return title
-
-    def _watch(self, proc):
-        proc.wait()
-        with self._lock:
-            if self._proc is proc:
-                self._proc = None
-                self._title = ""
-        self._on_change()
-
-    # ---- Steuern --------------------------------------------------------------
-    def _send(self, *command):
-        try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.settimeout(1.5)
-                s.connect(_sock_path())
-                s.sendall((json.dumps({"command": list(command)}) + "\n").encode())
-        except OSError:
-            pass
+        return query
 
     def playing(self):
-        return self._proc is not None and self._proc.poll() is None
+        return bool(self._title)
 
     def stop(self, notify=True):
-        with self._lock:
-            proc, self._proc = self._proc, None
-            self._title = ""
-        if proc and proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+        if self._title:
+            _player("--ytmusic-cmd", "pause")
+        self._title = ""
         if notify:
             self._on_change()
 
     def pause(self):
-        if self.playing():
-            self._paused = True
-            self._send("set_property", "pause", True)
-            self._on_change()
+        _player("--ytmusic-cmd", "pause")
+        self._paused = True
+        self._on_change()
 
     def resume(self):
-        if self.playing():
-            self._paused = False
-            self._send("set_property", "pause", False)
-            self._on_change()
+        _player("--ytmusic-cmd", "play")
+        self._paused = False
+        self._on_change()
 
     def toggle(self):
         self.resume() if self._paused else self.pause()
 
     def change_volume(self, delta):
-        self._volume = max(5, min(130, self._volume + delta))
-        self._send("set_property", "volume", self._volume)
+        # Lautstärke des Players über die Systemsteuerung des Tons (alle Ausgaben des Players)
+        try:
+            out = subprocess.run(["pactl", "list", "sink-inputs"], capture_output=True, text=True, timeout=3).stdout
+        except (OSError, subprocess.SubprocessError):
+            return
+        idx = None
+        for line in out.splitlines():
+            line = line.strip()
+            if line.startswith("Sink Input #"):
+                idx = line.split("#", 1)[1]
+            elif idx and "Creative Player" in line:
+                subprocess.run(["pactl", "set-sink-input-volume", idx, f"{'+' if delta > 0 else '-'}{abs(delta)}%"],
+                               capture_output=True, timeout=3)
+                idx = None
 
     def next(self):
-        if self._query:
-            return self.play(self._query, self._index + 1)
-        return None
+        if not self._title:
+            return None
+        _player("--ytmusic-cmd", "next")
+        return self._title
 
     def duck(self, on):
-        """Beim Zuhören leiser stellen."""
-        if self.playing() and on != self._ducked:
-            self._ducked = on
-            self._send("set_property", "volume", max(5, self._volume // 4) if on else self._volume)
+        """Beim Zuhören kurz anhalten, danach weiter (nur wenn wir selbst angehalten haben)."""
+        if not self._title or self._paused or on == self._ducked:
+            return
+        self._ducked = on
+        _player("--ytmusic-cmd", "pause" if on else "play")
 
     @property
     def title(self):
-        return self._title if self.playing() else ""
+        return self._title
 
     @property
     def paused(self):

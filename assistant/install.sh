@@ -8,7 +8,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ "${SKIP_DNF:-0}" != 1 ]; then
-    dnf install -y --skip-unavailable mpv yt-dlp espeak-ng sound-theme-freedesktop pulseaudio-utils \
+    dnf install -y --skip-unavailable mpv espeak-ng sound-theme-freedesktop pulseaudio-utils \
         pipewire-utils python3-pip python3-numpy kf6-kded kded
 fi
 

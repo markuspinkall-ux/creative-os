@@ -338,14 +338,14 @@ class Assistant:
             return "Wie lange soll der Timer laufen? Sag zum Beispiel: Timer auf fünf Minuten."
         if intent == "play":
             if not MusicPlayer.available():
-                return "Zum Abspielen fehlen mpv und yt-dlp."
+                return "Zum Abspielen fehlt der Creative Player."
             self.set_state("thinking")
             self.answer = f"Suche „{v['query']}“ …"
             self.push()
             title = self.music.play(v["query"])
             if not title:
                 return f"Dazu habe ich nichts gefunden."
-            self.answer = f"♪ {title}"
+            self.answer = f"♪ {title} – läuft in YouTube Music"
             self.chat("assistant", self.answer)
             self.set_state("idle")
             return None                                    # Musik spricht für sich
