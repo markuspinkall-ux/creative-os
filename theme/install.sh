@@ -51,13 +51,19 @@ install -Dm644 CreativeGraphit.colors /usr/share/color-schemes/CreativeGraphit.c
 install -Dm644 gtk/gtk-3.0/settings.ini "$XDG/gtk-3.0/settings.ini"
 install -Dm644 gtk/gtk-4.0/settings.ini "$XDG/gtk-4.0/settings.ini"
 install -Dm644 gtk/gtk.css /usr/share/creative-os/gtk/gtk.css
+# KDE soll die GTK-Einstellungen nicht mit eigenen Farben überschreiben
+mkdir -p /etc/xdg
+cat > /etc/xdg/kded6rc <<'KDED'
+[Module-gtkconfig]
+autoload=false
+KDED
 install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
 
 # Creative-Symbole für die mitgelieferten Apps
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
 for pair in settings:settings browser:browser games:games chat:chat store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
-            taskmanager:taskmanager files:files player:media-app drive:drive notes:notes; do
+            taskmanager:taskmanager files:files player:media-app drive:drive notes:notes shots:shots pictures:pictures; do
     name="${pair%%:*}"; file="${pair#*:}"
     install -Dm644 "$ICONS/$file.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$name.svg"
 done

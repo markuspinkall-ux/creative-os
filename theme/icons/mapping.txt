@@ -2,8 +2,8 @@
 calculator   accessories-calculator org.kde.kcalc kcalc
 terminal     utilities-terminal org.kde.konsole konsole org.gnome.Ptyxis terminal
 notes        accessories-text-editor org.kde.kwrite kwrite org.kde.kate kate text-editor creative-notes
-image        gwenview org.kde.gwenview image-viewer
-screenshot   spectacle org.kde.spectacle applets-screenshooter
+pictures     gwenview org.kde.gwenview image-viewer creative-pictures
+shots        spectacle org.kde.spectacle applets-screenshooter creative-shots
 taskmanager  utilities-system-monitor org.kde.plasma-systemmonitor plasma-systemmonitor creative-taskmanager
 settings     preferences-system systemsettings org.kde.systemsettings creative-settings
 browser      brave-browser com.brave.Browser firefox org.mozilla.firefox web-browser internet-web-browser

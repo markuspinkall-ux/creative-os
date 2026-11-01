@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Pictures
+GenericName=Bildbetrachter
+Comment=Fotos und Bilder ansehen, drehen, sammeln
+Keywords=Bilder;Fotos;Bildbetrachter;Galerie;Foto;Diashow;
+Exec=creative-pictures %f
+Icon=creative-pictures
+Terminal=false
+Categories=Graphics;Viewer;Photography;
+MimeType=image/jpeg;image/png;image/gif;image/webp;image/bmp;image/tiff;image/svg+xml;image/heic;image/heif;image/avif;image/jxl;image/x-icon;image/vnd.microsoft.icon;image/x-tga;image/jpg;image/pjpeg;
+StartupWMClass=creative-pictures

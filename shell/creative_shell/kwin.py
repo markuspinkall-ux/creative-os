@@ -22,7 +22,9 @@ function snapshot() {
     const windows = [];
     for (const w of workspace.windowList()) {
         if (!w.normalWindow || w.skipTaskbar) continue;
+        const g = w.frameGeometry;
         windows.push({ id: w.internalId.toString(), app: w.desktopFileName || "", cls: w.resourceClass || "", pid: w.pid || 0,
+                       geo: g ? [g.x, g.y, g.width, g.height] : [0, 0, 0, 0], z: (workspace.stackingOrder || []).indexOf(w),
                        title: w.caption || "", output: w.output ? w.output.name : "",
                        minimized: !!w.minimized, active: w === active });
     }

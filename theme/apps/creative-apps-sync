@@ -42,10 +42,12 @@ VISIBLE = {
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
     "creative-notes.desktop": ("Creative Notes", "creative-notes"),
     "org.kde.kwrite.desktop": ("Texteditor", "creative-notes"),
-    "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-image"),
+    "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-pictures"),
     "creative-calculator.desktop": ("Creative Calculator", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
-    "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-screenshot"),
+    "creative-shots.desktop": ("Creative Shots", "creative-shots"),
+    "creative-pictures.desktop": ("Creative Pictures", "creative-pictures"),
+    "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-shots"),
     "creative-taskmanager.desktop": ("Taskmanager", "creative-taskmanager"),
     "org.kde.plasma-systemmonitor.desktop": ("Taskmanager", "creative-taskmanager"),
     "org.gnome.DiskUtility.desktop": ("Laufwerke (Erweitert)", "creative-drive"),
@@ -60,6 +62,8 @@ PREFER = {
     "org.kde.kcalc.desktop": "creative-calculator.desktop",
     "org.kde.kwrite.desktop": "creative-notes.desktop",
     "org.kde.plasma-systemmonitor.desktop": "creative-taskmanager.desktop",
+    "org.kde.spectacle.desktop": "creative-shots.desktop",
+    "org.kde.gwenview.desktop": "creative-pictures.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 
@@ -129,6 +133,8 @@ def main():
             shown.append(name)
         else:
             text = set_key(text, "NoDisplay", "true")
+            # Ausgeblendete Programme belegen keine Tastenkürzel (z. B. Druck-Taste)
+            text = "\n".join(l for l in text.splitlines() if not l.startswith("X-KDE-Shortcuts")) + "\n"
             hidden += 1
         (TARGET / name).write_text(text, encoding="utf-8")
 

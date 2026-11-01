@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Shots
+GenericName=Bildschirmfoto
+Comment=Bildschirmfotos aufnehmen und beschriften – Rechteck, Fenster, Vollbild oder Freihand
+Keywords=Bildschirmfoto;Screenshot;Snipping;Ausschneiden;Druck;Aufnahme;
+Exec=creative-shots
+Icon=creative-shots
+Terminal=false
+Categories=Utility;Graphics;
+StartupWMClass=creative-shots
+Actions=Snip;Screen;
+
+[Desktop Action Snip]
+Name=Bereich aufnehmen
+Exec=creative-shots --snip
+
+[Desktop Action Screen]
+Name=Ganzen Bildschirm aufnehmen
+Exec=creative-shots --snip --screen

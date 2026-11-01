@@ -166,6 +166,21 @@ COPY taskmanager/creative-taskmanager.desktop /usr/share/applications/creative-t
 RUN chmod 755 /usr/bin/creative-taskmanager
 
 # ---------------------------------------------------------------------------
+# 8a4) Creative Pictures (Bildbetrachter) und Creative Shots (Bildschirmfotos)
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable python3-pillow qt6-qtimageformats kf6-kimageformats spectacle xdg-user-dirs \
+ && dnf clean all
+COPY pictures/creative_pictures /usr/lib/creative-pictures/creative_pictures
+COPY pictures/bin/creative-pictures /usr/bin/creative-pictures
+COPY pictures/creative-pictures.desktop /usr/share/applications/creative-pictures.desktop
+COPY shots/creative_shots /usr/lib/creative-shots/creative_shots
+COPY shots/bin/creative-shots /usr/bin/creative-shots
+COPY shots/creative-shots.desktop /usr/share/applications/creative-shots.desktop
+RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
+ && sed -n 's/^MimeType=//p' /usr/share/applications/creative-pictures.desktop | tr ';' '\n' \
+    | sed '/^$/d; s/$/=creative-pictures.desktop/' >> /etc/xdg/mimeapps.list
+
+# ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
@@ -232,16 +247,16 @@ RUN chmod 755 /usr/bin/creative-welcome
 # ---------------------------------------------------------------------------
 # Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
-# Standard-Apps: Terminal, Bildbetrachter, Bildschirmfoto,
+# Standard-Apps: Terminal, Spectacle (nimmt für Creative Shots im Hintergrund auf),
 # Entpacken (unsichtbar, für ZIP-Dateien)
-RUN dnf install -y --skip-unavailable konsole gwenview spectacle ark liberation-mono-fonts qt6-qttranslations \
+RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts qt6-qttranslations \
         plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,
 # bleibt es installiert und wird nur im Startmenü ausgeblendet.
 RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
              kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
-             kmouth kcharselect kcalc kwrite plasma-systemmonitor kdebugsettings filelight kgpg akregator dragon elisa-player \
+             kmouth kcharselect kcalc kwrite plasma-systemmonitor gwenview kdebugsettings filelight kgpg akregator dragon elisa-player \
              juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
              kjournald mediawriter kwrite-doc; do \
         rpm -q "$p" >/dev/null 2>&1 || continue; \
@@ -333,10 +348,19 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/DetailsPage.qml \
         /usr/lib/creative-shell/creative_shell/qml/Creative/PerfTile.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Wallpaper.qml \
+        /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
+        /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
+        /usr/lib/creative-shots/creative_shots/qml/Main.qml \
+        /usr/lib/creative-shots/creative_shots/qml/Overlay.qml \
  && rm -f /tmp/qml-check.py
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
     || echo "TASKMANAGER-SELBSTTEST FEHLGESCHLAGEN"
+# Creative Shots und Creative Pictures kurz ohne Bildschirm durchtesten
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-shots --selftest \
+    || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
+    QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-pictures --selftest \
+    || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home
 # Creative Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home

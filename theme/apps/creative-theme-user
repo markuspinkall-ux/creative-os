@@ -10,7 +10,10 @@ if [ -f "$src" ]; then
     marker="/* Creative OS – Graphit"
     for v in gtk-3.0 gtk-4.0; do
         dst="$conf/$v/gtk.css"
-        if [ ! -e "$dst" ] || head -n1 "$dst" | grep -qF "$marker"; then
+        # Eigene Datei des Benutzers bleibt – nur unsere oder die von KDE
+        # automatisch erzeugte (nur „@import 'colors.css'“) wird ersetzt.
+        if [ ! -e "$dst" ] || head -n1 "$dst" | grep -qF "$marker" \
+           || ! grep -v -e '^\s*$' -e "@import 'colors.css'" -e '@import "colors.css"' "$dst" | grep -q .; then
             mkdir -p "$conf/$v"
             cmp -s "$src" "$dst" 2>/dev/null || cp "$src" "$dst"
         fi
@@ -31,6 +34,8 @@ RULES = {
     ),
     "kwinrc": (re.compile(r"^org\.kde\.kdecoration2$"), {}),
     "breezerc": (re.compile(r".*"), {}),
+    # Druck-Taste gehört „Creative Shots“, nicht mehr Spectacle
+    "kglobalshortcutsrc": (re.compile(r"^(services\]\[org\.kde\.spectacle\.desktop|org\.kde\.spectacle\.desktop)$"), {}),
 }
 
 for name, (drop_groups, drop_keys) in RULES.items():
@@ -43,7 +48,7 @@ for name, (drop_groups, drop_keys) in RULES.items():
         m = re.match(r"^\[(.+?)\]", line)
         if m:
             group = m.group(1).split("][")[0]
-            skip = bool(drop_groups.match(group))
+            skip = bool(drop_groups.match(group) or drop_groups.match(m.group(1)))
             changed |= skip
             if skip:
                 continue

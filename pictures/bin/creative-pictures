@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet Creative Pictures aus /usr/lib/creative-pictures.
+export PYTHONPATH="/usr/lib/creative-pictures${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_pictures "$@"

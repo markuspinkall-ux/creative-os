@@ -80,7 +80,8 @@ class ShellBus(QObject):
 
     @Slot()
     def screenshot(self):
-        spawn_detached(["spectacle", "--region", "--background", "--copy-image"])
+        if not spawn_detached(["creative-shots", "--snip"]):
+            spawn_detached(["spectacle", "--region", "--background", "--copy-image"])
 
     @Slot()
     def taskManager(self):

@@ -14,9 +14,14 @@ function relevant(w) {
 function snapshot() {
     const active = workspace.activeWindow;
     const windows = [];
+    const order = workspace.stackingOrder || [];
     for (const w of workspace.windowList()) {
         if (!relevant(w)) continue;
+        const g = w.frameGeometry;
         windows.push({
+            pid: w.pid || 0,
+            geo: g ? [g.x, g.y, g.width, g.height] : [0, 0, 0, 0],
+            z: order.indexOf(w),
             id: w.internalId.toString(),
             app: w.desktopFileName || "",
             cls: w.resourceClass || "",
@@ -45,6 +50,10 @@ function watch(w) {
     w.captionChanged.connect(push);
     w.minimizedChanged.connect(push);
     w.outputChanged.connect(push);
+    // Fensterpositionen (für „Fenster aufnehmen“ in Creative Shots)
+    if (w.interactiveMoveResizeFinished) w.interactiveMoveResizeFinished.connect(push);
+    if (w.maximizedChanged) w.maximizedChanged.connect(push);
+    if (w.fullScreenChanged) w.fullScreenChanged.connect(push);
 }
 
 workspace.windowList().forEach(watch);
@@ -62,6 +71,8 @@ registerShortcut("Creative Einstellungen", "Creative OS: Einstellungen öffnen",
 registerShortcut("Creative Sperren", "Creative OS: Bildschirm sperren", "Meta+L",
                  function () { call("lock"); });
 registerShortcut("Creative Bildschirmfoto", "Creative OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
+                 function () { call("screenshot"); });
+registerShortcut("Creative Druck", "Creative OS: Bildschirmfoto (Druck-Taste)", "Print",
                  function () { call("screenshot"); });
 registerShortcut("Creative Aufgaben-Manager", "Creative OS: Taskmanager", "Ctrl+Shift+Escape",
                  function () { call("taskManager"); });

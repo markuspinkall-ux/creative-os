@@ -79,3 +79,66 @@ windowcontrols button > image, .titlebar button.titlebutton > image {
   background: none;
   box-shadow: none;
 }
+
+/* Kopfleiste wie die Fensterrahmen von Creative OS: flach, Graphit */
+headerbar, .titlebar {
+  background-color: #1c2029;
+  color: #dce6ff;
+  box-shadow: inset 0 -1px rgba(255, 255, 255, 0.06);
+  min-height: 42px;
+}
+headerbar:backdrop, .titlebar:backdrop { background-color: #171a22; }
+headerbar .title, .titlebar .title { font-weight: bold; }
+
+/* Knöpfe, Eingabefelder, Schalter */
+button {
+  border-radius: 10px;
+}
+button.flat:hover, button:hover { background-color: rgba(255, 255, 255, 0.08); }
+button.suggested-action, button.default {
+  background-color: #8fb3ff;
+  color: #12151b;
+  font-weight: bold;
+}
+button.suggested-action:hover { background-color: #a3c1ff; }
+button.destructive-action { background-color: #e5484d; color: #ffffff; }
+entry, spinbutton {
+  border-radius: 10px;
+  background-color: #12151b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+entry:focus-within, spinbutton:focus-within { border-color: #8fb3ff; outline-color: rgba(143, 179, 255, 0.5); }
+switch:checked { background-color: #8fb3ff; }
+switch:checked > slider { background-color: #ffffff; }
+checkbutton check:checked, radiobutton radio:checked, check:checked, radio:checked {
+  background-color: #8fb3ff;
+  color: #12151b;
+}
+progressbar > trough > progress, levelbar block.filled { background-color: #8fb3ff; }
+scale highlight { background-color: #8fb3ff; }
+
+/* Listen und Karten */
+list.boxed-list, .boxed-list, .card {
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+row:selected, .navigation-sidebar row:selected {
+  background-color: rgba(143, 179, 255, 0.18);
+  color: #dce6ff;
+}
+row:hover { background-color: rgba(255, 255, 255, 0.05); }
+.navigation-sidebar row { border-radius: 10px; }
+
+/* Menüs und Dialoge */
+popover > contents, popover.menu > contents, menu {
+  background-color: #232836;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+popover modelbutton:hover, menuitem:hover { background-color: rgba(255, 255, 255, 0.08); border-radius: 8px; }
+messagedialog, dialog, .dialog-contents { background-color: #232836; }
+
+/* Bildlaufleisten schmal */
+scrollbar slider { background-color: rgba(255, 255, 255, 0.2); border-radius: 4px; min-width: 6px; min-height: 6px; }
+scrollbar slider:hover { background-color: rgba(255, 255, 255, 0.3); }

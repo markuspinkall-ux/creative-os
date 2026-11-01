@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet Creative Shots aus /usr/lib/creative-shots.
+export PYTHONPATH="/usr/lib/creative-shots${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_shots "$@"
