@@ -56,7 +56,8 @@ RULES = {
     "kwinrc": (re.compile(r"^org\.kde\.kdecoration2$"), {}),
     "breezerc": (re.compile(r".*"), {}),
     # Druck-Taste gehört „Creative Shots“, nicht mehr Spectacle
-    "kglobalshortcutsrc": (re.compile(r"^(services\]\[org\.kde\.spectacle\.desktop|org\.kde\.spectacle\.desktop)$"), {}),
+    "kglobalshortcutsrc": (re.compile(r"^(services\]\[org\.kde\.spectacle\.desktop|org\.kde\.spectacle\.desktop)$"),
+                           {"ksmserver": {"Log Out", "Log Out Without Confirmation"}}),
 }
 
 for name, (drop_groups, drop_keys) in RULES.items():

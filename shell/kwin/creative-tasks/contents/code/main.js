@@ -76,6 +76,8 @@ registerShortcut("Creative Druck", "Creative OS: Bildschirmfoto (Druck-Taste)", 
                  function () { call("screenshot"); });
 registerShortcut("Creative Aufgaben-Manager", "Creative OS: Taskmanager", "Ctrl+Shift+Escape",
                  function () { call("taskManager"); });
+registerShortcut("Creative Taskmanager Strg-Alt-Entf", "Creative OS: Taskmanager (Strg+Alt+Entf)", "Ctrl+Alt+Del",
+                 function () { call("taskManager"); });
 registerShortcut("Creative Desktop", "Creative OS: Desktop anzeigen", "Meta+D",
                  function () { workspace.showingDesktop = !workspace.showingDesktop; });
 
