@@ -28,6 +28,7 @@ jobs:
   image:
     name: Abbild (${{ matrix.variant }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +55,9 @@ jobs:
 
       - name: Abbild bauen
         run: |
-          sudo podman build \
+          # --layers=false: nicht nach jedem Schritt eine Zwischenstufe speichern
+          # (bei einem mehrere GB großen System kostet das sonst Minuten pro Schritt)
+          sudo podman build --layers=false \
             --build-arg NVIDIA=${{ matrix.nvidia }} \
             --label org.opencontainers.image.version=${{ steps.names.outputs.date }} \
             -f image/Containerfile \

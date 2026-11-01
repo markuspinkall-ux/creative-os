@@ -18,7 +18,7 @@ esac
 image="localhost/creative-os:${variant}"
 
 echo "1/2  Baue System-Abbild ${image} …"
-sudo podman build --pull=newer -f image/Containerfile --build-arg NVIDIA="$nv" -t "$image" .
+sudo podman build --layers=false --pull=newer -f image/Containerfile --build-arg NVIDIA="$nv" -t "$image" .
 
 echo "2/2  Erzeuge Installations-ISO …"
 mkdir -p output

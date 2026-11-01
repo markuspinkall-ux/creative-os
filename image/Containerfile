@@ -61,9 +61,11 @@ COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 # ---------------------------------------------------------------------------
 RUN if [ "$NVIDIA" = "1" ]; then \
         KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
-     && dnf install -y "kernel-devel-${KVER}" akmod-nvidia xorg-x11-drv-nvidia \
-                       xorg-x11-drv-nvidia-libs.i686 xorg-x11-drv-nvidia-cuda \
-     && akmods --force --kernels "${KVER}" \
+     && dnf install -y akmods "kernel-devel-${KVER}" \
+     && dnf install -y --setopt=tsflags=noscripts akmod-nvidia \
+     && dnf install -y xorg-x11-drv-nvidia xorg-x11-drv-nvidia-libs.i686 xorg-x11-drv-nvidia-cuda \
+     && akmods --force --kernels "${KVER}" --kmod nvidia \
+     && find "/usr/lib/modules/${KVER}" -name 'nvidia*.ko*' | grep -q . \
      && mkdir -p /usr/lib/bootc/kargs.d \
      && printf 'kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]\n' \
             > /usr/lib/bootc/kargs.d/00-nvidia.toml \
