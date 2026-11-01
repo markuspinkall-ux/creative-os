@@ -1,0 +1,12 @@
+// Creative OS: Updates laden wie bei Windows – ohne Passwortabfrage für
+// Administratoren, die gerade am PC sitzen. (Neustart bleibt eine eigene Aktion.)
+polkit.addRule(function (action, subject) {
+    var allowed = [
+        "org.projectatomic.rpmostree1.upgrade",
+        "org.projectatomic.rpmostree1.repo-refresh",
+        "org.projectatomic.rpmostree1.reload-daemon"
+    ];
+    if (allowed.indexOf(action.id) >= 0 && subject.active && subject.local && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

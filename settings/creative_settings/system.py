@@ -154,12 +154,14 @@ class SystemModel(QObject):
     def downloadUpdate(self):
         self._set_upd(busy=True, text="Update wird heruntergeladen – du kannst normal weiterarbeiten …")
 
-        def done(code, _out, _err):
+        def done(code, _out, err):
             self._upd["busy"] = False
             if code == 0:
                 self.checkStatus()
             else:
-                self._set_upd(state="error", text="Das Update konnte nicht geladen werden.")
+                detail = (err.strip().splitlines() or [""])[-1][:160]
+                self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
+                              + (f" ({detail})" if detail else ""))
         self._run.run(["rpm-ostree", "upgrade"], done)
 
     @Slot()
