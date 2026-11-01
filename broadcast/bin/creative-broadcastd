@@ -1,0 +1,4 @@
+#!/bin/sh
+# Hintergrunddienst von Creative Broadcast (tut nichts, solange alles aus ist)
+export PYTHONPATH="/usr/lib/creative-broadcast${PYTHONPATH:+:$PYTHONPATH}"
+exec nice -n 5 python3 -m creative_broadcast.daemon "$@"

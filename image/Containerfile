@@ -197,6 +197,40 @@ RUN chmod 755 /usr/bin/creative-art \
  && (rpm -q krita >/dev/null && echo "Creative Art: Krita $(rpm -q --qf '%{VERSION}' krita)" || echo "CREATIVE-ART: KRITA FEHLT")
 
 # ---------------------------------------------------------------------------
+# 8a6) Creative Broadcast – rauschfreies Mikrofon (DeepFilterNet) und virtueller
+#      Greenscreen (Robust Video Matting → virtuelle Kamera „Creative Kamera“)
+# ---------------------------------------------------------------------------
+# Virtuelle Kamera: Kernelmodul v4l2loopback (RPM Fusion), beim Bauen erzeugt
+RUN KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
+ && dnf install -y akmods "kernel-devel-${KVER}" \
+ && dnf install -y --setopt=tsflags=noscripts akmod-v4l2loopback v4l2loopback \
+ && akmods --force --kernels "${KVER}" --kmod v4l2loopback \
+ && (find "/usr/lib/modules/${KVER}" -name 'v4l2loopback.ko*' | grep -q . && echo "Creative Broadcast: virtuelle Kamera ok" \
+     || echo "BROADCAST: V4L2LOOPBACK FEHLT") ; dnf clean all
+COPY broadcast/modprobe-creative-kamera.conf /usr/lib/modprobe.d/creative-kamera.conf
+COPY broadcast/modules-load-creative-kamera.conf /usr/lib/modules-load.d/creative-kamera.conf
+# KI-Bausteine: OpenCV, ONNX Runtime (aus Fedora oder als Python-Paket), Freistellungs-Modell
+RUN dnf install -y --skip-unavailable python3-opencv python3-numpy python3-onnxruntime ffmpeg git && dnf clean all \
+ && (python3 -c "import onnxruntime" 2>/dev/null || pip install --no-cache-dir --target /usr/lib/creative-broadcast/vendor \
+        onnxruntime flatbuffers protobuf sympy mpmath coloredlogs humanfriendly --no-deps) \
+ && mkdir -p /usr/share/creative-broadcast \
+ && curl -fsSL -o /usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx \
+        https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/rvm_mobilenetv3_fp32.onnx \
+ || echo "BROADCAST: MODELL ODER ONNX FEHLT"
+# Rauschentfernung: DeepFilterNet als LADSPA-Filter für PipeWire (wird hier übersetzt)
+RUN dnf install -y --skip-unavailable cargo rust gcc git && dnf clean all \
+ && cd /tmp && git clone -q --depth 1 https://github.com/Rikorose/DeepFilterNet \
+ && cd DeepFilterNet && CARGO_HOME=/tmp/cargo cargo build -q --release -p deep-filter-ladspa \
+ && install -Dm755 target/release/libdeep_filter_ladspa.so /usr/lib64/ladspa/libdeep_filter_ladspa.so \
+ && echo "Creative Broadcast: DeepFilterNet ok" || echo "BROADCAST: DEEPFILTERNET FEHLT"; \
+    cd / && rm -rf /tmp/DeepFilterNet /tmp/cargo; dnf remove -y cargo rust >/dev/null 2>&1; dnf clean all
+COPY broadcast/creative_broadcast /usr/lib/creative-broadcast/creative_broadcast
+COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
+COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd
+COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broadcast.desktop
+RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
+
+# ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
@@ -388,6 +422,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
+        /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
  && rm -f /tmp/qml-check.py
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
@@ -400,6 +435,9 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
 # Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
+# Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
+RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
+    || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
 # Creative Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home

@@ -55,6 +55,9 @@ OWN = {
                           "Sammlung nach Monaten, Favoriten, Zoom, Drehen, Diashow und Bildinfos.", "Graphics"),
     "creative-shots": ("Creative Shots", "creative-shots", "Bildschirmfotos aufnehmen und beschriften",
                        "Rechteck, Fenster, Vollbild oder Freihand – mit Stift, Textmarker, Pfeil und Zuschneiden.", "Graphics"),
+    "creative-broadcast": ("Creative Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
+                           "KI-Rauschentfernung (DeepFilterNet) und virtueller Greenscreen (Robust Video Matting) als "
+                           "virtuelle Kamera für Discord, Teams, Zoom und OBS.", "AudioVideo"),
     "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Creative OS",
                           "Netzwerk, Bildschirme, Ton, Laufwerke, Drucker, Mein Server, Aussehen und Updates.", "Settings"),
 }

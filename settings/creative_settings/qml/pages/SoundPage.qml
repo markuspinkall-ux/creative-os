@@ -33,6 +33,17 @@ SettingsPage {
         meter: true
     }
 
+    Card {
+        title: "Rauschfreies Mikrofon und virtueller Hintergrund"
+        subtitle: "KI-Rauschentfernung fürs Mikrofon und Greenscreen für die Kamera – in Creative Broadcast"
+        SettingRow {
+            label: "Creative Broadcast"
+            hint: "Für Discord, Teams, Zoom und OBS"
+            last: true
+            CButton { text: "Öffnen"; onClicked: sound.openBroadcast() }
+        }
+    }
+
     // ---- Einzelne Apps (wie der Lautstärkemixer bei Windows) -----------------------------
     Card {
         title: "Apps"

@@ -48,6 +48,7 @@ VISIBLE = {
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
     "creative-shots.desktop": ("Creative Shots", "creative-shots"),
     "creative-art.desktop": ("Creative Art", "creative-art"),
+    "creative-broadcast.desktop": ("Creative Broadcast", "creative-broadcast"),
     "creative-pictures.desktop": ("Creative Pictures", "creative-pictures"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-shots"),
     "creative-taskmanager.desktop": ("Taskmanager", "creative-taskmanager"),

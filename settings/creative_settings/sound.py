@@ -230,6 +230,11 @@ class SoundModel(QObject):
         self.levelChanged.emit()
 
     @Slot()
+    def openBroadcast(self):
+        from creative_shell.runner import spawn_detached
+        spawn_detached(["creative-broadcast"])
+
+    @Slot()
     def testSound(self):
         for f in ("/usr/share/sounds/freedesktop/stereo/bell.oga",
                   "/usr/share/sounds/freedesktop/stereo/complete.oga"):

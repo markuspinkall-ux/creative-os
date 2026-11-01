@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Broadcast
+GenericName=Mikrofon und Kamera verbessern
+Comment=Rauschfreies Mikrofon und virtueller Hintergrund für Discord, Teams, OBS und Co.
+Keywords=Rauschentfernung;Mikrofon;Kamera;Greenscreen;Hintergrund;Broadcast;Streaming;Webcam;
+Exec=creative-broadcast
+Icon=creative-broadcast
+Terminal=false
+Categories=AudioVideo;Video;Audio;
+StartupWMClass=creative-broadcast
