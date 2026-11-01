@@ -246,7 +246,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
  && dracut --no-hostonly --kver "$KVER" --reproducible --zstd --add ostree -f "/usr/lib/modules/$KVER/initramfs.img" \
  && chmod 0600 "/usr/lib/modules/$KVER/initramfs.img" \
  && mkdir -p /usr/lib/bootc/kargs.d \
- && printf 'kargs = ["rhgb", "quiet", "splash"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
+ && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "vt.global_cursor_default=0"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
 # ---------------------------------------------------------------------------
 # 9) Systemeinstellungen
@@ -257,6 +257,10 @@ RUN sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
            /usr/lib/os-release
 
 # Updates wie bei Windows: im Hintergrund laden, beim nächsten Neustart aktiv
+# Ruhiger Start auch auf bereits installierten PCs (Startparameter nachtragen)
+COPY image/quiet-boot/creative-quiet-boot /usr/libexec/creative-quiet-boot
+COPY image/quiet-boot/creative-quiet-boot.service /usr/lib/systemd/system/creative-quiet-boot.service
+RUN chmod 755 /usr/libexec/creative-quiet-boot && systemctl enable creative-quiet-boot.service
 COPY image/polkit/50-creative-updates.rules /usr/share/polkit-1/rules.d/50-creative-updates.rules
 RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf \
  && systemctl enable rpm-ostreed-automatic.timer

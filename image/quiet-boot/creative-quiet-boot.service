@@ -1,0 +1,11 @@
+[Unit]
+Description=Creative OS – ruhiger Start ohne Textmeldungen
+After=rpm-ostreed.service
+ConditionPathExists=/run/ostree-booted
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/creative-quiet-boot
+
+[Install]
+WantedBy=multi-user.target

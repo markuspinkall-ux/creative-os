@@ -1,0 +1,17 @@
+#!/bin/sh
+# Sorgt dafür, dass beim Starten und Herunterfahren nur das Creative-Logo zu
+# sehen ist – keine Textmeldungen. Wirkt ab dem nächsten Neustart.
+set -eu
+args="rhgb quiet splash loglevel=3 rd.udev.log_level=3 rd.systemd.show_status=false systemd.show_status=false vt.global_cursor_default=0"
+missing=""
+for a in $args; do
+    grep -qw -- "$a" /proc/cmdline || missing="$missing --append-if-missing=$a"
+done
+staged="$(rpm-ostree status --json 2>/dev/null | python3 -c 'import json,sys; print(any(d.get("staged") for d in json.load(sys.stdin).get("deployments",[])))' 2>/dev/null || echo False)"
+# Liegt schon ein Update bereit, warten wir bis nach dessen Neustart
+if [ -n "$missing" ] && [ "$staged" = "False" ] && command -v rpm-ostree >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    rpm-ostree kargs $missing
+fi
+# Startmenü von GRUB nur bei Problemen zeigen (wie bei Windows)
+command -v grub2-editenv >/dev/null 2>&1 && grub2-editenv - set menu_auto_hide=1 || true
