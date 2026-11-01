@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Calculator
+GenericName=Rechner
+Comment=Rechnen – mit Verlauf, Prozent und Wurzel
+Keywords=Rechner;Taschenrechner;Calculator;Rechnen;Prozent;
+Exec=creative-calculator
+Icon=creative-calculator
+Terminal=false
+Categories=Utility;Calculator;
+StartupWMClass=creative-calculator

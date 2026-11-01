@@ -3,6 +3,7 @@
 Musik, Videos und Fernsehen (IPTV) für Creative OS – im Graphit-Look.
 
 - **Musik:** liest den Ordner „Musik“ mit Titel, Künstler, Album und Dauer.
+- **YouTube Music:** die Top 10 aus Deutschland, Suche nach Liedern und Künstlern, ein Klick spielt direkt im Player ab (ohne Browser).
   Suche, Zufall, Wiederholen, Fortschritt, Lautstärke.
 - **Videos:** liest den Ordner „Videos“. Doppelklick aufs Bild = Vollbild.
 - **IPTV** (wie Team Eleven Media Player 1.4.0): voreingestellte deutsche

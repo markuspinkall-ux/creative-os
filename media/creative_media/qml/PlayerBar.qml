@@ -40,6 +40,15 @@ Rectangle {
             clip: true
             Rectangle { x: 30; y: 26; width: 54; height: 54; radius: 27; color: Theme.accent }
             Rectangle { x: 8; y: 8; width: 18; height: 18; radius: 9; color: Theme.flame }
+            Image {
+                anchors.fill: parent
+                visible: bar.host.nowCover.length > 0
+                source: bar.host.nowCover
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                sourceSize.width: 120
+                sourceSize.height: 120
+            }
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter

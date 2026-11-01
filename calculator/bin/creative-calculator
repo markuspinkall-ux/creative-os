@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet den Creative Calculator aus /usr/lib/creative-calculator.
+export PYTHONPATH="/usr/lib/creative-calculator${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_calculator "$@"

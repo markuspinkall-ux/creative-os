@@ -133,13 +133,26 @@ RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/cre
 # ---------------------------------------------------------------------------
 # 8) Creative Player (Musik, Videos, IPTV) – Standardprogramm für Medien
 # ---------------------------------------------------------------------------
-RUN dnf install -y qt6-qtmultimedia python3-mutagen && dnf clean all
+RUN dnf install -y qt6-qtmultimedia python3-mutagen python3-requests python3-pip yt-dlp \
+ && dnf install -y --skip-unavailable deno yt-dlp-ejs \
+ && dnf clean all
 COPY media/creative_media /usr/lib/creative-media/creative_media
+# YouTube Music (Top 10, Suche) – ytmusicapi in einem eigenen Ordner
+RUN pip install --no-cache-dir --no-deps --target /usr/lib/creative-media/vendor ytmusicapi \
+ && rm -rf /usr/lib/creative-media/vendor/bin
 COPY media/bin/creative-player /usr/bin/creative-player
 COPY media/creative-player.desktop /usr/share/applications/creative-player.desktop
 COPY media/creative-player.svg /usr/share/icons/hicolor/scalable/apps/creative-player.svg
 COPY media/mimeapps.list /etc/xdg/mimeapps.list
 RUN chmod 755 /usr/bin/creative-player
+
+# ---------------------------------------------------------------------------
+# 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
+# ---------------------------------------------------------------------------
+COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
+COPY calculator/bin/creative-calculator /usr/bin/creative-calculator
+COPY calculator/creative-calculator.desktop /usr/share/applications/creative-calculator.desktop
+RUN chmod 755 /usr/bin/creative-calculator
 
 # ---------------------------------------------------------------------------
 # 8b) Dateien – eigener Dateimanager, Standard für Ordner
@@ -200,16 +213,16 @@ RUN chmod 755 /usr/bin/creative-welcome
 # ---------------------------------------------------------------------------
 # Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
-# Standard-Apps: Terminal, Texteditor, Bildbetrachter, Rechner, Bildschirmfoto,
+# Standard-Apps: Terminal, Texteditor, Bildbetrachter, Bildschirmfoto,
 # Entpacken (unsichtbar, für ZIP-Dateien), Aufgaben-Manager
-RUN dnf install -y --skip-unavailable konsole kwrite gwenview kcalc spectacle ark \
+RUN dnf install -y --skip-unavailable konsole kwrite gwenview spectacle ark \
         plasma-systemmonitor plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,
 # bleibt es installiert und wird nur im Startmenü ausgeblendet.
 RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwalletmanager5 \
              kfind khelpcenter plasma-welcome skanpage kamoso krdc krfb kmousetool kmag \
-             kmouth kcharselect kdebugsettings filelight kgpg akregator dragon elisa-player \
+             kmouth kcharselect kcalc kdebugsettings filelight kgpg akregator dragon elisa-player \
              juk kolourpaint kontact kmail korganizer neochat qrca kde-partitionmanager \
              kjournald mediawriter kwrite-doc; do \
         rpm -q "$p" >/dev/null 2>&1 || continue; \
@@ -287,4 +300,13 @@ RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rp
  && systemctl enable rpm-ostreed-automatic.timer
 
 # Abschlussprüfung des Abbilds
+# Oberflächen prüfen (Tippfehler in QML fallen so schon beim Bauen auf)
+COPY image/qml-check.py /tmp/qml-check.py
+RUN python3 /tmp/qml-check.py \
+        /usr/lib/creative-calculator/creative_calculator/qml/Main.qml \
+        /usr/lib/creative-media/creative_media/qml/Main.qml \
+        /usr/lib/creative-media/creative_media/qml/YtMusicView.qml \
+        /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
+    ; rm -f /tmp/qml-check.py
+
 RUN bootc container lint

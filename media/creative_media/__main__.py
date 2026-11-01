@@ -17,6 +17,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 from .iptv import IptvModel
 from .library import LibraryModel
 from .settings import Settings
+from .ytmusic import YtMusicModel
 
 HERE = Path(__file__).resolve().parent
 
@@ -51,6 +52,7 @@ def main():
     music = LibraryModel("music")
     videos = LibraryModel("video")
     iptv = IptvModel(settings)
+    ytmusic = YtMusicModel()
 
     files = [QUrl.fromLocalFile(str(Path(a).resolve())).toString()
              for a in sys.argv[1:] if not a.startswith("-") and Path(a).exists()]
@@ -60,6 +62,7 @@ def main():
     ctx.setContextProperty("music", music)
     ctx.setContextProperty("videos", videos)
     ctx.setContextProperty("iptv", iptv)
+    ctx.setContextProperty("ytmusic", ytmusic)
     ctx.setContextProperty("startFiles", files)
 
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))

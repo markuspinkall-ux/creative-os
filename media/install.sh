@@ -9,11 +9,13 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-dnf install -y python3-pyside6 qt6-qtmultimedia qt6-qtsvg python3-mutagen
+dnf install -y python3-pyside6 qt6-qtmultimedia qt6-qtsvg python3-mutagen python3-requests python3-pip yt-dlp
+dnf install -y --skip-unavailable deno yt-dlp-ejs || true
 
 rm -rf /usr/lib/creative-media
 mkdir -p /usr/lib/creative-media
 cp -r creative_media /usr/lib/creative-media/
+pip install --no-deps --target /usr/lib/creative-media/vendor ytmusicapi
 find /usr/lib/creative-media -name '__pycache__' -prune -exec rm -rf {} +
 install -Dm755 bin/creative-player /usr/bin/creative-player
 install -Dm644 creative-player.desktop /usr/share/applications/creative-player.desktop

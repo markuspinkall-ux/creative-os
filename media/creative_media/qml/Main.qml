@@ -16,11 +16,12 @@ Window {
     title: nowTitle.length > 0 ? nowTitle + " – Creative Player" : "Creative Player"
     color: Theme.surface
 
-    property string section: "music"          // music | videos | iptv
+    property string section: "music"          // music | ytmusic | videos | iptv
     property var queueModel: null              // music, videos oder iptv
     property int queueIndex: -1
     property string nowTitle: ""
     property string nowSubtitle: ""
+    property string nowCover: ""               // Cover (YouTube Music)
     property bool shuffle: false
     property bool repeat: false
     property bool fullscreen: false
@@ -29,6 +30,17 @@ Window {
 
     // ---- Wiedergabe ---------------------------------------------------------------
     function playFrom(model, row) {
+        if (model === ytmusic) {
+            // Ton-Adresse wird im Hintergrund geholt → ytmusic.ready
+            errorBox.text = ""
+            if (queueModel !== ytmusic)
+                player.stop()
+            queueModel = ytmusic
+            queueIndex = row
+            ytmusic.play(row)
+            return
+        }
+        nowCover = ""
         const item = model.get(row)
         if (!item || !item.url)
             return
@@ -44,6 +56,10 @@ Window {
     }
 
     function step(delta) {
+        if (queueModel === ytmusic) {
+            ytmusic.step(delta, shuffle)
+            return
+        }
         if (!queueModel || queueModel.count === 0)
             return
         let row
@@ -67,6 +83,9 @@ Window {
             setFullscreen(false)
         player.stop()
         player.source = ""
+        if (queueModel === ytmusic)
+            ytmusic.clearQueue()
+        nowCover = ""
         queueModel = null
         queueIndex = -1
         nowTitle = ""
@@ -87,12 +106,27 @@ Window {
         const name = decodeURIComponent(url.toString().split("/").pop())
         const isVideo = /\.(mp4|mkv|webm|avi|mov|m4v|wmv|ts|mpe?g)$/i.test(name)
         section = isVideo ? "videos" : "music"
+        nowCover = ""
         queueModel = null
         queueIndex = -1
         nowTitle = name.replace(/\.[^.]+$/, "")
         nowSubtitle = ""
         player.source = url
         player.play()
+    }
+
+    Connections {
+        target: ytmusic
+        function onReady(url, title, artist, thumb) {
+            win.nowTitle = title
+            win.nowSubtitle = artist
+            win.nowCover = thumb
+            player.source = url
+            player.play()
+        }
+        function onFailed(message) {
+            errorBox.text = message
+        }
     }
 
     MediaPlayer {
@@ -115,7 +149,8 @@ Window {
         onErrorOccurred: (error, message) => {
             errorBox.text = win.queueModel === iptv
                 ? "Dieser Sender ist gerade nicht erreichbar. Probiere einen anderen."
-                : "Diese Datei kann nicht abgespielt werden."
+                : (win.queueModel === ytmusic ? "Dieser Titel lässt sich gerade nicht abspielen."
+                                              : "Diese Datei kann nicht abgespielt werden.")
         }
     }
 
@@ -162,6 +197,7 @@ Window {
                 Repeater {
                     model: [
                         { key: "music", label: "Musik", icon: "music" },
+                        { key: "ytmusic", label: "YouTube Music", icon: "ytmusic" },
                         { key: "videos", label: "Videos", icon: "video" },
                         { key: "iptv", label: "IPTV", icon: "tv" }
                     ]
@@ -240,6 +276,13 @@ Window {
                 emptyText: "Noch keine Videos gefunden. Lege deine Videos in den Ordner „Videos“."
                 playingUrl: win.queueModel === videos ? player.source.toString() : ""
                 onPlay: (row) => win.playFrom(videos, row)
+            }
+
+            YtMusicView {
+                anchors.fill: parent
+                visible: win.section === "ytmusic"
+                model: ytmusic
+                onPlay: (row) => win.playFrom(ytmusic, row)
             }
 
             VideoView {

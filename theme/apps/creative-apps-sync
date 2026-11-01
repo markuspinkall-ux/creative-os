@@ -42,6 +42,7 @@ VISIBLE = {
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
     "org.kde.kwrite.desktop": ("Texteditor", "creative-editor"),
     "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-image"),
+    "creative-calculator.desktop": ("Creative Calculator", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-screenshot"),
     "org.kde.plasma-systemmonitor.desktop": ("Aufgaben-Manager", "creative-taskmanager"),
@@ -54,6 +55,7 @@ PREFER = {
     "firefox.desktop": "brave-browser.desktop",
     "org.mozilla.firefox.desktop": "brave-browser.desktop",
     "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
+    "org.kde.kcalc.desktop": "creative-calculator.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 
