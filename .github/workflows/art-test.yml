@@ -36,7 +36,7 @@ jobs:
           if ls /proc/*/comm 2>/dev/null | xargs cat 2>/dev/null | grep -qx krita; then echo "=== Krita läuft stabil"; else echo "=== KRITA ABGESTÜRZT"; fi
           ls /tmp/h/.local/share/krita/ | grep -i xmlgui || echo 'keine alte Menüdatei mehr'
           magick shots/spaeter.png -resize 1400x -quality 72 /tmp/s.jpg 2>/dev/null || convert shots/spaeter.png -resize 1400x -quality 72 /tmp/s.jpg
-          echo BILD-ANFANG; base64 -w0 /tmp/s.jpg; echo; echo BILD-ENDE
+          ls -la shots /tmp/s.jpg; echo BILD-ANFANG; base64 /tmp/s.jpg | sed "s/^/B64:/"; echo BILD-ENDE
           grep -v Fontconfig /tmp/h/.cache/creative-art.log | tail -30
       - uses: actions/upload-artifact@v4
         with:
