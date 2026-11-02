@@ -7,18 +7,17 @@ import creative_notify.__main__ as m
 _orig = QGuiApplication.exec
 def _exec():
     def send():
-        r = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+        subprocess.Popen(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
                             "--object-path", "/org/freedesktop/Notifications", "--method",
                             "org.freedesktop.Notifications.Notify", "Steam", "0", "steam",
                             "Freund ist online", "Markus spielt jetzt <b>Cyberpunk 2077</b>.",
                             "['default','Öffnen','chat','Nachricht schreiben']", "{}", "8000"],
-                           capture_output=True, text=True)
-        print("Notify:", r.stdout.strip(), r.stderr.strip()[:200])
-        subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                           )
+        subprocess.Popen(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
                         "--object-path", "/org/freedesktop/Notifications", "--method",
                         "org.freedesktop.Notifications.Notify", "Downloads", "0", "folder-download",
                         "Download abgeschlossen", "creative-os-amd-netinstall.iso (812 MB)", "[]", "{}", "8000"],
-                       capture_output=True, text=True)
+                       )
     def grab():
         for w in QGuiApplication.topLevelWindows():
             if w.isVisible() and hasattr(w, "grabWindow"):
