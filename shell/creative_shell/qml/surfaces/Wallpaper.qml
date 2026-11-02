@@ -59,12 +59,13 @@ Item {
 
     // ---- Leistungsanzeige oben rechts (wie im Taskmanager, ohne Hintergrund) ---------
     // Liegt unter den Symbolen: Ordner und Dateien dürfen darüber liegen.
-    Row {
+    Grid {
         id: stats
         visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
         anchors.right: parent.right
         anchors.rightMargin: 18
         y: 16
+        columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
         spacing: 6
         opacity: 0.82
         Repeater {
@@ -188,11 +189,21 @@ Item {
         visible: root.showIcons && shelf.enabled
         readonly property bool dropHover: shelfDrop.containsDrag || (root.dragPath !== "" && ghost.y < y + height + 30
                                           && ghost.x + ghost.width > x && ghost.x < x + width)
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 12
+        // frei verschiebbar (am Griff links oder an einer freien Stelle ziehen); Position bleibt gespeichert
+        readonly property real maxX: root.width - width - 8
+        readonly property real maxY: root.height - root.barSpace - height - 8
+        property bool moving: false
+        function homeX() { return shelf.posX >= 0 ? 8 + shelf.posX * (maxX - 8) : (root.width - width) / 2 }
+        function homeY() { return shelf.posY >= 0 ? 8 + shelf.posY * (maxY - 8) : 12 }
+        function rebind() {
+            x = Qt.binding(() => shelfBox.homeX())
+            y = Qt.binding(() => shelfBox.homeY())
+        }
+        x: homeX()
+        y: homeY()
         z: 5
         height: 66
-        width: shelf.items.length ? shelfRow.implicitWidth + 24 : emptyHint.implicitWidth + 44
+        width: shelf.items.length ? shelfRow.implicitWidth + 44 : emptyHint.implicitWidth + 64
         Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         radius: 22
         color: Theme.bar
@@ -201,11 +212,62 @@ Item {
         scale: dropHover ? 1.04 : 1
         Behavior on scale { NumberAnimation { duration: 140 } }
 
+        // Verschieben: freie Fläche der Ablage ziehen (liegt unter den Symbolen)
+        MouseArea {
+            id: shelfMove
+            anchors.fill: parent
+            cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            property point start
+            property point origin
+            onPressed: (mouse) => {
+                shell.closePopups()
+                if (mouse.button !== Qt.LeftButton) return
+                const p = mapToItem(root, mouse.x, mouse.y)
+                start = p
+                origin = Qt.point(shelfBox.x, shelfBox.y)
+                shelfBox.moving = true
+            }
+            onPositionChanged: (mouse) => {
+                if (!shelfBox.moving) return
+                const p = mapToItem(root, mouse.x, mouse.y)
+                shelfBox.x = Math.max(8, Math.min(shelfBox.maxX, origin.x + p.x - start.x))
+                shelfBox.y = Math.max(8, Math.min(shelfBox.maxY, origin.y + p.y - start.y))
+            }
+            onReleased: (mouse) => {
+                if (!shelfBox.moving) return
+                const fx = shelfBox.maxX > 8 ? (shelfBox.x - 8) / (shelfBox.maxX - 8) : 0
+                const fy = shelfBox.maxY > 8 ? (shelfBox.y - 8) / (shelfBox.maxY - 8) : 0
+                shelfBox.moving = false
+                if (Math.abs(shelfBox.x - origin.x) + Math.abs(shelfBox.y - origin.y) > 3)
+                    shelf.setPos(fx, fy)
+                shelfBox.rebind()
+            }
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    const p = mapToItem(root, mouse.x, mouse.y)
+                    shelfBgMenu.openAt(p.x, p.y)
+                }
+            }
+        }
+        // Griff links (zeigt, dass man die Ablage verschieben kann)
+        Grid {
+            anchors.left: parent.left
+            anchors.leftMargin: 9
+            anchors.verticalCenter: parent.verticalCenter
+            columns: 2
+            spacing: 3
+            opacity: shelfMove.containsMouse || shelfMove.pressed ? 0.8 : 0.35
+            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+        }
+
         // leer: Hinweis
         Row {
             id: emptyHint
             visible: shelf.items.length === 0
             anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 8
             spacing: 10
             opacity: 0.75
             SvgIcon { anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 16 }
@@ -221,6 +283,7 @@ Item {
         Row {
             id: shelfRow
             anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 8
             spacing: 6
             Repeater {
                 model: shelf.items
@@ -332,7 +395,7 @@ Item {
                             if (!inside)
                                 shelf.remove(root.dragShelfKey)          // herausgezogen = entfernt
                             else
-                                shelf.move(root.dragShelfKey, Math.floor((p.x - 12) / (52 + 6)))
+                                shelf.move(root.dragShelfKey, Math.floor((p.x - shelfRow.x) / (52 + 6)))
                             root.dragShelfKey = ""
                             root.dragShelfItem = null
                         }
@@ -410,6 +473,17 @@ Item {
             if (act === "open") shelf.open(key)
             else if (act === "files") shelf.showInFiles(key)
             else if (act === "remove") shelf.remove(key)
+        }
+    }
+    DesktopMenu {
+        id: shelfBgMenu
+        entries: [
+            { label: "Ablage oben mittig anordnen", icon: "restore", act: "center" },
+            { label: "Ablage ausblenden", icon: "close", act: "hide" }
+        ]
+        onTriggered: (act) => {
+            if (act === "center") shelf.resetPos()
+            else if (act === "hide") shelf.setEnabled(false)
         }
     }
     DesktopMenu {

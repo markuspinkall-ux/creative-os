@@ -28,6 +28,7 @@ class ShelfModel(QObject):
         cfg = config.load()
         self._entries = [e for e in cfg.get("shelf", []) if isinstance(e, str)]
         self._enabled = bool(cfg.get("desktopShelf", True))
+        self._pos = (float(cfg.get("shelfX", -1.0)), float(cfg.get("shelfY", -1.0)))
         self._items = []
         self._build()
         # Apps können später erscheinen (Flatpak-Installation) – dann neu auflösen
@@ -126,6 +127,23 @@ class ShelfModel(QObject):
         if not spawn_detached(["creative-files", folder]):
             subprocess.Popen(["xdg-open", folder], start_new_session=True)
 
+    @Slot(float, float)
+    def setPos(self, fx, fy):
+        """Frei verschoben – als Anteil der Fläche speichern (passt auch bei anderer Auflösung)."""
+        fx = max(0.0, min(1.0, round(fx, 4)))
+        fy = max(0.0, min(1.0, round(fy, 4)))
+        self._pos = (fx, fy)
+        config.set_value("shelfX", fx)
+        config.set_value("shelfY", fy)
+        self.changed.emit()
+
+    @Slot()
+    def resetPos(self):
+        self._pos = (-1.0, -1.0)
+        config.set_value("shelfX", -1.0)
+        config.set_value("shelfY", -1.0)
+        self.changed.emit()
+
     @Slot(bool)
     def setEnabled(self, on):
         self._enabled = bool(on)
@@ -134,3 +152,5 @@ class ShelfModel(QObject):
 
     items = Property("QVariantList", lambda self: self._items, notify=changed)
     enabled = Property(bool, lambda self: self._enabled, notify=changed)
+    posX = Property(float, lambda self: self._pos[0], notify=changed)
+    posY = Property(float, lambda self: self._pos[1], notify=changed)
