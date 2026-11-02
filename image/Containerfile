@@ -182,22 +182,6 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
     | sed '/^$/d; s/$/=creative-pictures.desktop/' >> /etc/xdg/mimeapps.list
 
 # ---------------------------------------------------------------------------
-# 8a5) Creative Art – Bildbearbeitung (Krita mit Aufbau und Tasten wie Photoshop CS2)
-# ---------------------------------------------------------------------------
-RUN dnf install -y --skip-unavailable krita python3-pyqt6 && dnf clean all
-COPY art/krita/creative-menus.xml /usr/share/creative-art/creative-menus.xml
-COPY art/krita/shortcuts/creative_art.shortcuts /usr/share/krita/shortcuts/creative_art.shortcuts
-COPY art/krita/pykrita /usr/share/krita/pykrita
-COPY theme/CreativeGraphit.colors /usr/share/krita/color-schemes/CreativeGraphit.colors
-COPY art/kritarc /usr/share/creative-os/xdg/kritarc
-COPY art/bin/creative-art /usr/bin/creative-art
-COPY art/creative-art.desktop /usr/share/applications/creative-art.desktop
-RUN chmod 755 /usr/bin/creative-art \
- && python3 -c "import xml.dom.minidom,sys; xml.dom.minidom.parse('/usr/share/creative-art/creative-menus.xml'); print('Creative Art: Menüdatei ok')" \
-  && python3 -c "import ast; ast.parse(open('/usr/share/krita/pykrita/creative_art/__init__.py').read()); print('Creative Art: Erweiterung ok')" \
- && (rpm -q krita >/dev/null && echo "Creative Art: Krita $(rpm -q --qf '%{VERSION}' krita)" || echo "CREATIVE-ART: KRITA FEHLT")
-
-# ---------------------------------------------------------------------------
 # 8a6) Creative Broadcast – rauschfreies Mikrofon (DeepFilterNet) und virtueller
 #      Greenscreen (Robust Video Matting → virtuelle Kamera „Creative Kamera“)
 # ---------------------------------------------------------------------------
@@ -497,8 +481,6 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBEN
 # Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
-# Creative Art wird separat mit echtem (virtuellem) Bildschirm geprüft: .github/workflows/art-test.yml
-# (Krita stürzt ohne Bildschirm – „offscreen“ – grundsätzlich ab, auch im Original)
 # Willkommens-Assistent: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 /usr/bin/creative-welcome --selftest \
     || echo "WILLKOMMEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/wl-home

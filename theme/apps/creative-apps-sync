@@ -48,7 +48,6 @@ VISIBLE = {
     "creative-calculator.desktop": ("Creative Calculator", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
     "creative-shots.desktop": ("Creative Shots", "creative-shots"),
-    "creative-art.desktop": ("Creative Art", "creative-art"),
     "creative-broadcast.desktop": ("Creative Broadcast", "creative-broadcast"),
     "creative-iso.desktop": ("Creative Iso", "creative-iso"),
     "creative-capture.desktop": ("Creative Capture", "creative-capture"),
@@ -73,7 +72,6 @@ PREFER = {
     "org.kde.spectacle.desktop": "creative-shots.desktop",
     "org.kde.gwenview.desktop": "creative-pictures.desktop",
     "org.gnome.DiskUtility.desktop": "org.kde.partitionmanager.desktop",
-    "org.kde.krita.desktop": "creative-art.desktop",
 }
 # Ohne Kate ist KWrite der Texteditor; gibt es beides, nur KWrite zeigen.
 

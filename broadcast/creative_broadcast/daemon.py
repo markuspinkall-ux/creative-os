@@ -420,10 +420,8 @@ class Camera:
         return None
 
     def _idle_frame(self, np, cv2):
-        img = np.full((self.H, self.W, 3), (34, 27, 21), dtype=np.uint8)     # Graphit (BGR)
-        cv2.putText(img, "Creative Kamera", (self.W // 2 - 190, self.H // 2), cv2.FONT_HERSHEY_SIMPLEX,
-                    1.4, (255, 230, 220), 2, cv2.LINE_AA)
-        return img
+        # schlichte Graphit-Fläche, ohne Schrift (sieht in Discord, Teams & Co. neutral aus)
+        return np.full((self.H, self.W, 3), (34, 27, 21), dtype=np.uint8)     # Graphit (BGR)
 
     def _background(self, np, cv2, frame, effect, path, cache):
         if effect == "green":

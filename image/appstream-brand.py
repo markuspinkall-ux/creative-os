@@ -24,7 +24,6 @@ REBRAND = {
     "org.kde.spectacle": ("Bildschirmfoto-Dienst", "creative-shots", "Nimmt für Creative Shots im Hintergrund auf"),
     "org.kde.ark": ("Entpacken", "creative-archive", "ZIP- und andere Archive öffnen und entpacken"),
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
-    "org.kde.krita": ("Creative Art", "creative-art", "Fotos und Grafiken bearbeiten – Ebenen, Auswahlen, Korrekturen, Filter"),
     "org.kde.partitionmanager": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
     "org.kde.discover": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),
     "org.gnome.Software": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),

@@ -16,7 +16,11 @@ Window {
     title: cam.cameraDevice && hasVideo ? "Creative Capture – " + cam.cameraDevice.description : "Creative Capture"
     color: hasVideo && cam.active && cam.error === Camera.NoError ? "black" : Theme.surface
 
-    readonly property bool hasVideo: devices.videoInputs.length > 0
+    // Nur echte Capture-Karten – virtuelle Kameras (Creative Kamera, OBS) gehören nicht hierher
+    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Creative Kamera") < 0
+                                     && d.description.indexOf("OBS") < 0 && d.description.indexOf("Virtuelle") < 0
+                                     && d.description.indexOf("Dummy") < 0 && d.description.indexOf("v4l2loopback") < 0)
+    readonly property bool hasVideo: cards.length > 0
     readonly property bool fullscreen: visibility === Window.FullScreen
     property bool barVisible: true
     property string lastFile: ""
@@ -27,16 +31,11 @@ Window {
     MediaDevices { id: devices }
 
     function pickVideo() {
-        const list = devices.videoInputs
+        const list = win.cards
         if (!list.length) return null
         const saved = capture.get("video")
         for (let i = 0; i < list.length; i++)
             if (list[i].id == saved) return list[i]
-        // echte Capture-Karten vor den virtuellen Kameras
-        for (let i = 0; i < list.length; i++) {
-            const d = list[i].description
-            if (d.indexOf("Creative Kamera") < 0 && d.indexOf("OBS") < 0 && d.indexOf("Virtuelle") < 0) return list[i]
-        }
         return list[0]
     }
 
@@ -105,7 +104,11 @@ Window {
         target: devices
         function onVideoInputsChanged() {
             // neu eingesteckt oder abgezogen
-            if (win.indexOfDev(devices.videoInputs, cam.cameraDevice) < 0) applyDevice(pickVideo())
+            if (win.indexOfDev(win.cards, cam.cameraDevice) < 0) {
+                cam.active = false
+                const d = pickVideo()
+                if (d) applyDevice(d)
+            }
         }
     }
 
@@ -254,9 +257,9 @@ Window {
                 width: 230
                 placeholder: "Keine Capture-Karte"
                 enabled: win.hasVideo
-                model: devices.videoInputs.map(d => d.description)
-                currentIndex: Math.max(0, win.indexOfDev(devices.videoInputs, cam.cameraDevice))
-                onActivated: (i) => { const d = devices.videoInputs[i]; capture.set("video", d.id); capture.set("format", ""); win.applyDevice(d) }
+                model: win.cards.map(d => d.description)
+                currentIndex: Math.max(0, win.indexOfDev(win.cards, cam.cameraDevice))
+                onActivated: (i) => { const d = win.cards[i]; capture.set("video", d.id); capture.set("format", ""); win.applyDevice(d) }
                 Accessible.name: "Capture-Karte"
             }
             Dropdown {
