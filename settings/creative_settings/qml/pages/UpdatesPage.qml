@@ -54,11 +54,55 @@ SettingsPage {
                 CButton { visible: u.state === "available"; text: "Herunterladen"; primary: true; enabled: !u.busy; onClicked: system.downloadUpdate() }
                 CButton {
                     visible: u.state !== "reboot" && u.state !== "available"
-                    text: u.state === "classic" ? "Software öffnen" : (u.busy ? "Suche …" : "Nach Updates suchen")
+                    text: u.state === "classic" ? "Software öffnen" : (u.busy ? ((u.progressText || "").length ? "Bitte warten …" : "Suche …") : "Nach Updates suchen")
                     enabled: !u.busy
                     primary: u.state === "classic"
                     onClicked: system.checkUpdates()
                 }
+            }
+        }
+        // Fortschritt beim Herunterladen oder Kanalwechsel
+        Column {
+            visible: u.busy && (u.progressText || "").length > 0
+            width: parent.width
+            spacing: 6
+            Rectangle {
+                id: track
+                width: parent.width
+                height: 8
+                radius: 4
+                color: Qt.rgba(1, 1, 1, 0.08)
+                clip: true
+                // bekannter Fortschritt
+                Rectangle {
+                    visible: u.progress >= 0
+                    width: track.width * Math.max(0.03, u.progress / 100)
+                    height: parent.height
+                    radius: 4
+                    color: Theme.accent
+                    Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+                }
+                // noch unbekannt: laufender Streifen
+                Rectangle {
+                    id: runner
+                    visible: u.progress < 0
+                    width: track.width * 0.25
+                    height: parent.height
+                    radius: 4
+                    color: Theme.accent
+                    SequentialAnimation on x {
+                        running: runner.visible
+                        loops: Animation.Infinite
+                        NumberAnimation { from: -track.width * 0.25; to: track.width; duration: 1400; easing.type: Easing.InOutQuad }
+                    }
+                }
+            }
+            Text {
+                width: parent.width
+                text: u.progressText + (u.progress >= 0 && u.progress < 100 ? "  ·  " + u.progress + " %" : "")
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
             }
         }
     }
@@ -79,9 +123,12 @@ SettingsPage {
         title: "Update-Kanal"
         subtitle: "Welche Versionen dieser PC bekommt"
         SettingRow {
-            label: u.channel === "test" ? "Test – neue Versionen sofort" : "Stabil – nur geprüfte Versionen"
-            hint: u.channel === "test" ? "Du bekommst jede neue Version gleich nach dem Bauen und hilfst beim Testen."
-                                       : "Empfohlen. Neue Versionen kommen erst, wenn sie getestet und freigegeben sind."
+            readonly property string shown: u.wantChannel || u.pendingChannel || u.channel
+            label: (shown === "test" ? "Test – neue Versionen sofort" : "Stabil – nur geprüfte Versionen")
+            hint: u.wantChannel ? "Wechsel läuft – die passende Version wird geladen (Fortschritt oben)."
+                  : (u.pendingChannel ? "Gewechselt – aktiv nach dem nächsten Neustart. Ein Klick auf den anderen Kanal macht es rückgängig."
+                  : (shown === "test" ? "Du bekommst jede neue Version gleich nach dem Bauen und hilfst beim Testen."
+                                      : "Empfohlen. Neue Versionen kommen erst, wenn sie getestet und freigegeben sind."))
             last: true
             Row {
                 spacing: 6
@@ -89,7 +136,7 @@ SettingsPage {
                     model: [{ k: "stabil", t: "Stabil" }, { k: "test", t: "Test" }]
                     delegate: Rectangle {
                         required property var modelData
-                        readonly property bool cur: u.channel === modelData.k
+                        readonly property bool cur: (u.wantChannel || u.pendingChannel || u.channel) === modelData.k
                         width: chText.implicitWidth + 28
                         height: 34
                         radius: 17

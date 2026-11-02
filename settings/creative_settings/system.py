@@ -9,7 +9,7 @@ import socket
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QProcess, QProcessEnvironment, QTimer, QUrl, Signal, Slot
 
 from creative_shell import config as shell_config
 from creative_shell.runner import Runner, spawn_detached
@@ -88,7 +88,8 @@ class SystemModel(QObject):
         self._message = ""
         self._atomic = shutil.which("rpm-ostree") is not None and Path("/run/ostree-booted").exists()
         self._upd = {"state": "unknown", "text": "", "version": "", "busy": False,
-                     "channel": "", "rolledBack": "", "channelBusy": False}
+                     "channel": "", "rolledBack": "", "channelBusy": False,
+                     "pendingChannel": "", "wantChannel": "", "progress": -1, "progressText": ""}
         self.checkStatus()
 
     # ---- Gerätename -------------------------------------------------------------
@@ -129,13 +130,22 @@ class SystemModel(QObject):
         booted = next((d for d in deps if d.get("booted")), {})
         staged = next((d for d in deps if d.get("staged")), None)
         self._upd["version"] = booted.get("version", "")
-        ref = booted.get("container-image-reference", "") or ""
-        self._upd["channel"] = "" if not ref else ("test" if ref.endswith("-testing") else "stabil")
+
+        def chan(d):
+            ref = (d or {}).get("container-image-reference", "") or ""
+            return "" if not ref else ("test" if ref.endswith("-testing") else "stabil")
+        self._upd["channel"] = chan(booted)
+        # Bereits gewechselt, aber erst nach dem Neustart aktiv?
+        pend = chan(staged) if staged else ""
+        self._upd["pendingChannel"] = pend if pend and pend != self._upd["channel"] else ""
         try:
             self._upd["rolledBack"] = Path("/var/lib/creative-os/rolled-back").read_text().strip()
         except OSError:
             self._upd["rolledBack"] = ""
-        if staged:
+        if staged and self._upd["pendingChannel"]:
+            name = "Test" if self._upd["pendingChannel"] == "test" else "Stabil"
+            self._set_upd(state="reboot", text=f"Der Kanal „{name}“ ist vorbereitet – er wird beim nächsten Neustart aktiv.")
+        elif staged:
             self._set_upd(state="reboot", text="Ein Update ist bereit. Es wird beim nächsten Neustart aktiv.")
         else:
             self._set_upd(state="current", text="Creative OS ist auf dem neuesten Stand.")
@@ -163,6 +173,64 @@ class SystemModel(QObject):
                 self._set_upd(state="error", text=text)
         self._run.run(self._update_cmd("--check"), done, timeout_ms=0)
 
+    # ---- Herunterladen mit Fortschritt ---------------------------------------------
+    def _stream(self, args, done):
+        """Startet ein Update-Programm und liest seine Ausgabe laufend mit (für den Balken).
+        rpm-ostree meldet: „layers needed: 12 (1.2 GB)“, dann je Schicht „Fetching … done“."""
+        p = QProcess(self)
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("LC_ALL", "C")
+        env.insert("LANG", "C")
+        p.setProcessEnvironment(env)
+        p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        st = {"buf": "", "out": [], "need": 0, "got": 0}
+        self._set_upd(progress=-1, progressText="Warte auf dein Passwort …")
+
+        def handle(line):
+            st["out"].append(line)
+            low = line.lower()
+            m = re.search(r"layers needed:\s*(\d+)\s*\(([^)]*)\)", low)
+            if m:
+                st["need"] = int(m.group(1))
+                self._set_upd(progress=0, progressText=f"Lade {st['need']} Teile ({m.group(2).upper().replace('.', ',')}) …")
+                return
+            if "fetching" in low and ("done" in low or "layer" in low or "chunk" in low):
+                if "done" in low or st["need"] == 0:
+                    st["got"] += 1
+                if st["need"]:
+                    pct = min(95, int(st["got"] * 95 / st["need"]))
+                    self._set_upd(progress=pct, progressText=f"Teil {min(st['got'], st['need'])} von {st['need']} geladen …")
+                return
+            if "receiving" in low or "pulling" in low or "checking out" in low:
+                self._set_upd(progressText="Update wird geladen …")
+            elif "staging deployment" in low or "writing objects" in low:
+                self._set_upd(progress=97, progressText="Wird für den nächsten Neustart vorbereitet …")
+            elif "no upgrade available" in low or "no updates available" in low:
+                self._set_upd(progress=100, progressText="Kein neues Update.")
+
+        def read():
+            st["buf"] += bytes(p.readAllStandardOutput()).decode("utf-8", "replace")
+            parts = re.split(r"[\r\n]", st["buf"])
+            st["buf"] = parts.pop()
+            for line in parts:
+                if line.strip():
+                    handle(line.strip())
+
+        def finished(code, status):
+            read()
+            if st["buf"].strip():
+                handle(st["buf"].strip())
+            if status != QProcess.ExitStatus.NormalExit:
+                code = -1
+            out = "\n".join(st["out"])
+            self._set_upd(progress=100 if code == 0 else -1, progressText="")
+            p.deleteLater()
+            done(code, out, out)
+
+        p.readyReadStandardOutput.connect(read)
+        p.finished.connect(finished)
+        p.start(args[0], list(args[1:]))
+
     @Slot()
     def downloadUpdate(self):
         self._set_upd(busy=True, text="Update wird heruntergeladen – du kannst normal weiterarbeiten …")
@@ -171,30 +239,36 @@ class SystemModel(QObject):
             self._upd["busy"] = False
             if code == 0:
                 self.checkStatus()
+            elif code in (126, 127):
+                self._set_upd(state="available", text="Abgebrochen – das Update wurde nicht geladen.")
             else:
                 detail = (err.strip().splitlines() or [""])[-1][:160]
                 self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
                               + (f" ({detail})" if detail else ""))
-        self._run.run(self._update_cmd(), done, timeout_ms=0)
+        self._stream(self._update_cmd(), done)
 
     @Slot(str)
     def setChannel(self, name):
         """Update-Kanal wechseln: „stabil“ (geprüft) oder „test“ (Vorabversionen)."""
-        if name == self._upd.get("channel") or name not in ("stabil", "test"):
+        shown = self._upd.get("pendingChannel") or self._upd.get("channel")
+        if name == shown or name not in ("stabil", "test") or self._upd.get("busy"):
             return
-        self._set_upd(channelBusy=True, busy=True,
-                      text="Wechsle den Update-Kanal – die passende Version wird geladen …")
+        self._set_upd(channelBusy=True, busy=True, wantChannel=name,
+                      text="Wechsle zu „" + ("Test" if name == "test" else "Stabil") + "“ – die passende Version wird geladen …")
 
         def done(code, _out, err):
             self._upd["busy"] = False
             self._upd["channelBusy"] = False
+            self._upd["wantChannel"] = ""
             if code == 0:
                 self.checkStatus()
+            elif code in (126, 127):
+                self._set_upd(text="Abgebrochen – der Kanal bleibt, wie er ist.")
             else:
                 detail = (err.strip().splitlines() or [""])[-1][:160]
                 self._set_upd(state="error", text="Der Kanal konnte nicht gewechselt werden."
                               + (f" ({detail})" if detail else ""))
-        self._run.run(self._update_cmd("--channel", name), done, timeout_ms=0)
+        self._stream(self._update_cmd("--channel", name), done)
 
     @staticmethod
     def _update_cmd(*extra):

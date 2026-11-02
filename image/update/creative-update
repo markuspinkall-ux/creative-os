@@ -43,7 +43,12 @@ if [ "${1:-}" = "--channel" ]; then
         stabil) new="$base:$variant" ;;
         *) echo "Kanal: test oder stabil" >&2; exit 2 ;;
     esac
-    if [ "$new" = "$ref" ]; then echo "Schon auf diesem Kanal."; exit 0; fi
+    if [ "$new" = "$ref" ]; then
+        # Zurück zum laufenden Kanal: vorbereiteten Wechsel einfach verwerfen
+        rpm-ostree cleanup -p >/dev/null 2>&1
+        echo "Bleibt auf diesem Kanal."
+        exit 0
+    fi
     echo "Wechsle zu $new …"
     rpm-ostree rebase "$new"
     rc=$?
