@@ -1,0 +1,10 @@
+name: Abbild-Probe
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe
+        run: bash tools/imgprobe.sh
