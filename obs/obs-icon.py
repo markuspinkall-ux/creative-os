@@ -38,3 +38,16 @@ out = sys.argv[1] if len(sys.argv) > 1 else "/usr/share/icons/hicolor/256x256/ap
 os.makedirs(os.path.dirname(out), exist_ok=True)
 img.save(out)
 print("OBS-Symbol im Creative-Look:", out)
+
+# Auch die Original-Symboldateien von OBS ersetzen – so zeigen Startmenü, Ablage,
+# Taskleiste und Titelleiste überall die angepasste Kachel, egal wie nachgeschlagen wird.
+for f in glob.glob("/usr/share/icons/hicolor/*/apps/com.obsproject.Studio*"):
+    size_dir = f.split("/")[5]
+    if f.endswith(".svg"):
+        os.remove(f)
+        img.save(f[:-4] + ".png")
+        print("ersetzt:", f)
+    elif f.endswith(".png"):
+        n = int(size_dir.split("x")[0]) if size_dir[0].isdigit() else SIZE
+        img.scaled(n, n, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation).save(f)
+        print("ersetzt:", f)
