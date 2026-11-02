@@ -21,7 +21,7 @@ def _exec(self):
                 break
         QGuiApplication.quit()
     QTimer.singleShot(wait, grab)
-    return _orig(self)
+    return _orig()
 
 
 QGuiApplication.exec = _exec

@@ -10,3 +10,4 @@ for app in iso:creative_iso capture:creative_capture; do
   (cd $dir && PYTHONPATH=. timeout 60 python3 ../tools/shot.py $mod /tmp/$dir.png 3500) 2>&1 | grep -v "^qt.\|Fontconfig" | tail -5
   [ -f /tmp/$dir.png ] && { echo "BILD-$dir-ANFANG"; base64 /tmp/$dir.png | sed "s/^/B64$dir:/"; echo "BILD-$dir-ENDE"; }
 done
+exit 0
