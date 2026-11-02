@@ -2,8 +2,9 @@
 """Laufwerke einrichten – Hilfsprogramm mit Administratorrechten (über pkexec).
 
 Befehle:
-  setup <gerät> <name> <ext4|exfat>   Platte komplett neu einrichten (LÖSCHT ALLES darauf)
-  automount <partition> <on|off>       Beim Start verbinden (fstab-Eintrag)
+  setup <gerät> <name> <ext4|exfat|ntfs>  Platte komplett neu einrichten (LÖSCHT ALLES darauf)
+  automount <partition> <on|off>          Beim Start verbinden (fstab-Eintrag)
+  rename <partition> <name>               Laufwerk umbenennen (Daten bleiben)
 
 Sicherheitsregeln: Das System-Laufwerk und eingebundene Systempfade werden
 nie angefasst. Eine Platte wird nur eingerichtet, wenn keine ihrer
@@ -143,10 +144,12 @@ def setup(disk, name, fstype):
         fail("Diese Platte wurde nicht gefunden.")
     if is_system(n):
         fail("Das System-Laufwerk kann nicht neu eingerichtet werden.")
-    if fstype not in ("ext4", "exfat"):
+    if fstype not in ("ext4", "exfat", "ntfs"):
         fail("Unbekanntes Format.")
     if fstype == "exfat" and not shutil.which("mkfs.exfat"):
         fail("Das Format exFAT ist nicht installiert.")
+    if fstype == "ntfs" and not (shutil.which("mkfs.ntfs") or shutil.which("mkntfs")):
+        fail("Das Format NTFS ist nicht installiert.")
     name = safe_name(name)
     # Alles von dieser Platte lösen (z. B. automatisch eingebundene USB-Partitionen)
     for x in walk([n]):
@@ -170,6 +173,8 @@ def setup(disk, name, fstype):
     part = parts[0]["path"]
     if fstype == "ext4":
         r = run("mkfs.ext4", "-F", "-L", name[:16], part)
+    elif fstype == "ntfs":
+        r = run(shutil.which("mkfs.ntfs") or "mkntfs", "-f", "-L", name[:32], part)
     else:
         r = run("mkfs.exfat", "-L", name[:15], part)
     if r.returncode != 0:
@@ -182,13 +187,47 @@ def setup(disk, name, fstype):
         fail("Die Platte ist eingerichtet, aber noch nicht erkannt. Bitte neu starten.")
     target = mount_dir(name)
     target.mkdir(parents=True, exist_ok=True)
-    fstab_add(uuid, target, fstype)
+    fstab_add(uuid, target, "ntfs3" if fstype == "ntfs" else fstype)
     run("mount", str(target))
     if fstype == "ext4":
         uid, gid = user_ids()
         os.chown(target, uid, gid)
         os.chmod(target, 0o755)
     done(mount=str(target), name=name)
+
+
+def rename(part, name):
+    n = find(part)
+    if not n or n.get("type") not in ("part", "disk", "crypt"):
+        fail("Dieses Laufwerk wurde nicht gefunden.")
+    if is_system(n):
+        fail("Das System-Laufwerk kann nicht umbenannt werden.")
+    fstype = (n.get("fstype") or "").lower()
+    name = safe_name(name)
+    tools = {
+        "ext4": ["e2label", part, name[:16]], "ext3": ["e2label", part, name[:16]], "ext2": ["e2label", part, name[:16]],
+        "exfat": ["exfatlabel", part, name[:15]],
+        "ntfs": ["ntfslabel", part, name[:32]],
+        "vfat": ["fatlabel", part, name[:11].upper()],
+        "btrfs": ["btrfs", "filesystem", "label", part, name[:32]],
+    }
+    cmd = tools.get(fstype)
+    if not cmd:
+        fail("Dieses Format kann nicht umbenannt werden.")
+    # FAT, exFAT und NTFS nur im getrennten Zustand umbenennen – danach wieder verbinden
+    was = [m for m in mounts(n)]
+    if fstype in ("exfat", "ntfs", "vfat"):
+        for m in was:
+            if run("umount", m).returncode != 0:
+                fail(f"„{m}“ wird gerade benutzt. Bitte offene Dateien schließen und erneut versuchen.")
+    r = run(*cmd)
+    if fstype in ("exfat", "ntfs", "vfat"):
+        for m in was:
+            run("mount", n["path"], m)
+    if r.returncode != 0:
+        fail("Umbenennen hat nicht geklappt: " + (r.stderr.strip()[-200:] or "unbekannter Fehler"))
+    run("udevadm", "trigger", part)
+    done(name=name)
 
 
 if __name__ == "__main__":
@@ -199,5 +238,7 @@ if __name__ == "__main__":
         setup(a[1], a[2], a[3])
     elif len(a) == 3 and a[0] == "automount" and a[2] in ("on", "off"):
         automount(a[1], a[2])
+    elif len(a) == 3 and a[0] == "rename":
+        rename(a[1], a[2])
     else:
         fail("Unbekannter Befehl.")

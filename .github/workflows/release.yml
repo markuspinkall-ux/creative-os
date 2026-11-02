@@ -1,0 +1,20 @@
+# Freigeben: Die zuletzt gebaute Test-Version wird zur stabilen Version.
+# Alle PCs auf dem stabilen Kanal bekommen sie dann als Update.
+name: Freigeben
+on:
+  workflow_dispatch:
+permissions:
+  packages: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Test-Version → stabil
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          img="ghcr.io/${owner}/creative-os"
+          echo "${{ secrets.GITHUB_TOKEN }}" | skopeo login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for v in amd nvidia; do
+            skopeo copy --all "docker://${img}:${v}-testing" "docker://${img}:${v}"
+            echo "freigegeben: ${img}:${v}"
+          done

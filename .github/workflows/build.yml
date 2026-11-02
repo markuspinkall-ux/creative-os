@@ -61,16 +61,26 @@ jobs:
             --build-arg NVIDIA=${{ matrix.nvidia }} \
             --label org.opencontainers.image.version=${{ steps.names.outputs.date }} \
             -f image/Containerfile \
-            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }} \
+            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing \
             -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }} \
             .
 
       - name: In die GitHub-Registry hochladen
         if: github.event_name != 'pull_request'
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+          # Jeder Bau geht zuerst in den Test-Kanal (…-testing). Der stabile Kanal
+          # bekommt ihn erst nach der Freigabe (Workflow „Freigeben“) – oder sofort,
+          # wenn die Änderung „[freigeben]“ in der Beschreibung trägt.
+          sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing
           sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }}
+          if printf '%s' "$COMMIT_MSG" | grep -qF "[freigeben]"; then
+            sudo podman tag ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+            sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+            echo "Freigegeben für den stabilen Kanal"
+          fi
 
       - name: Installations-ISO erzeugen
         if: github.event_name == 'workflow_dispatch' && inputs.iso
@@ -93,7 +103,7 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type anaconda-iso --rootfs btrfs \
             --target-arch amd64 \
-            ${{ steps.names.outputs.image }}:${{ matrix.variant }}
+            ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing
           sudo mv output/bootiso/install.iso "creative-os-${{ matrix.variant }}-${{ steps.names.outputs.date }}.iso"
           ls -lh *.iso
 

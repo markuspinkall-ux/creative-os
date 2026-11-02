@@ -1,10 +1,13 @@
-// Creative OS: weitere Platten ohne Passwort verbinden (nur wer am PC sitzt).
+// Creative OS: weitere Platten ohne Passwort verbinden und Wechseldatenträger auswerfen
+// (nur wer am PC sitzt). Das System-Laufwerk schützt die Systemsteuerung zusätzlich.
 // Formatieren, Löschen und Partitionieren brauchen weiterhin das Passwort.
 polkit.addRule(function (action, subject) {
     var allowed = [
         "org.freedesktop.udisks2.filesystem-mount",
         "org.freedesktop.udisks2.filesystem-mount-system",
-        "org.freedesktop.udisks2.filesystem-mount-other-seat"
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.power-off-drive",
+        "org.freedesktop.udisks2.eject-media"
     ];
     if (allowed.indexOf(action.id) >= 0 && subject.active && subject.local) {
         return polkit.Result.YES;

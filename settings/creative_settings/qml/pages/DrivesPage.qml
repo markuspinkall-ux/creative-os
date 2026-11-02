@@ -6,12 +6,13 @@ import ".."
 SettingsPage {
     id: root
     property var setupDisk: null       // Platte, die gerade eingerichtet werden soll
+    property string setupFs: "ext4"
+    property var renamePart: null
 
     PageHeader {
         title: "Laufwerke"
-        subtitle: "Festplatten, SSDs und M2 – Zustand, einrichten, beim Start verbinden"
+        subtitle: "Festplatten, SSDs, M2 und USB – Zustand, einrichten, umbenennen, auswerfen"
         CButton { text: "Aktualisieren"; onClicked: drives.refresh() }
-        CButton { visible: drives.expertAvailable; text: "Erweitert …"; onClicked: drives.openExpert() }
     }
 
     Message { text: drives.message; warning: drives.message.indexOf("nicht") >= 0 || drives.message.indexOf("benutzt") >= 0 }
@@ -54,7 +55,7 @@ SettingsPage {
                 label: "Noch nicht eingerichtet"
                 hint: "Neue Platte? Mit einem Klick einrichten – danach erscheint sie in „Dateien › Dieser PC“."
                 last: true
-                CButton { text: "Einrichten …"; primary: true; enabled: !drives.busy; onClicked: { root.setupDisk = d; nameField.text = d.kind === "M2" ? "M2" : (d.kind === "SSD" ? "SSD" : "Daten"); confirm.checked = false; windowsBox.checked = false; setupDialog.open() } }
+                CButton { text: "Einrichten …"; primary: true; enabled: !drives.busy; onClicked: { root.setupDisk = d; nameField.text = d.kind === "M2" ? "M2" : (d.kind === "SSD" ? "SSD" : (d.removable ? "USB" : "Daten")); confirm.checked = false; root.setupFs = d.removable ? "exfat" : "ext4"; setupDialog.open() } }
             }
 
             // Partitionen
@@ -65,9 +66,24 @@ SettingsPage {
                     SettingRow {
                         label: (modelData.label || "Ohne Namen") + "  ·  " + modelData.fstype
                         hint: modelData.mount ? modelData.usage + "  ·  " + modelData.mount : "Nicht verbunden"
-                        CButton { visible: modelData.mount !== ""; text: "Öffnen"; onClicked: drives.openFolder(modelData.mount) }
+                        Row {
+                            spacing: 8
+                            CButton { visible: modelData.mount !== ""; text: "Öffnen"; onClicked: drives.openFolder(modelData.mount) }
+                            CButton {
+                                visible: !modelData.automount
+                                text: modelData.mount !== "" ? "Trennen" : "Verbinden"
+                                enabled: !drives.busy
+                                onClicked: modelData.mount !== "" ? drives.unmount(modelData.device) : drives.mount(modelData.device)
+                            }
+                            CButton {
+                                text: "Umbenennen …"
+                                enabled: !drives.busy
+                                onClicked: { root.renamePart = modelData; renameField.text = modelData.label || ""; renameDialog.open() }
+                            }
+                        }
                     }
                     SettingRow {
+                        visible: !dcard.d.removable
                         label: "Beim Start verbinden"
                         hint: "Fester Ort schon vor der Anmeldung – gut für Spiele-Bibliotheken"
                         CSwitch {
@@ -80,13 +96,22 @@ SettingsPage {
                 }
             }
 
-            // Bereits eingerichtete Platte trotzdem neu einrichten
+            // Bereits eingerichtete Platte trotzdem neu einrichten (formatieren)
             SettingRow {
-                visible: !d.system && !d.empty && !d.removable
-                label: "Neu einrichten"
-                hint: "Löscht alles auf dieser Platte und richtet sie neu ein."
+                visible: !d.system && !d.empty
+                label: d.removable ? "Formatieren" : "Neu einrichten"
+                hint: "Löscht alles auf " + (d.removable ? "diesem Laufwerk" : "dieser Platte") + " und richtet es neu ein."
+                last: !d.removable
+                CButton { text: d.removable ? "Formatieren …" : "Neu einrichten …"; enabled: !drives.busy; onClicked: { root.setupDisk = d; nameField.text = (d.parts[0] && d.parts[0].label) || (d.removable ? "USB" : "Daten"); confirm.checked = false; root.setupFs = d.removable ? "exfat" : "ext4"; setupDialog.open() } }
+            }
+
+            // USB-Sticks und externe Platten sicher entfernen
+            SettingRow {
+                visible: d.removable && !d.system
+                label: "Sicher entfernen"
+                hint: "Trennt das Laufwerk und schaltet es ab – danach kann es abgezogen werden."
                 last: true
-                CButton { text: "Neu einrichten …"; enabled: !drives.busy; onClicked: { root.setupDisk = d; nameField.text = (d.parts[0] && d.parts[0].label) || "Daten"; confirm.checked = false; windowsBox.checked = false; setupDialog.open() } }
+                CButton { text: "Auswerfen"; primary: true; enabled: !drives.busy; onClicked: drives.eject(d.device) }
             }
         }
     }
@@ -135,12 +160,34 @@ SettingsPage {
                 font.pixelSize: 14
                 background: Rectangle { radius: 10; color: Theme.ground; border.color: nameField.activeFocus ? Theme.accent : Theme.hairline }
             }
-            Row {
-                spacing: 10
-                CSwitch { id: windowsBox; checked: false; label: "Auch unter Windows lesbar"; onToggled: (v) => checked = v }
-                Column {
-                    Text { text: "Auch unter Windows lesbar (exFAT)"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
-                    Text { text: "Für Spiele unter Creative OS besser ausgeschaltet lassen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            Text { text: "Format"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+            Column {
+                width: parent.width
+                spacing: 6
+                Repeater {
+                    model: [
+                        { k: "ext4", t: "Nur Creative OS (ext4)", h: "Am schnellsten – ideal für Spiele und interne Platten" },
+                        { k: "exfat", t: "Überall lesbar (exFAT)", h: "Windows, Mac, Fernseher – ideal für USB-Sticks" },
+                        { k: "ntfs", t: "Windows (NTFS)", h: "Für Platten, die oft an Windows-PCs hängen" }
+                    ]
+                    delegate: Rectangle {
+                        required property var modelData
+                        readonly property bool cur: root.setupFs === modelData.k
+                        width: parent.width
+                        height: 48
+                        radius: 10
+                        color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : (fsMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.04))
+                        border.color: cur ? Theme.accent : "transparent"
+                        Column {
+                            x: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text { text: modelData.t; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: parent.parent.cur }
+                            Text { text: modelData.h; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                        }
+                        MouseArea { id: fsMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.setupFs = modelData.k }
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: modelData.t
+                    }
                 }
             }
             Row {
@@ -156,7 +203,53 @@ SettingsPage {
                     text: "Einrichten"
                     primary: true
                     enabled: confirm.checked && nameField.text.trim().length > 0
-                    onClicked: { setupDialog.close(); drives.setup(root.setupDisk.device, nameField.text, windowsBox.checked) }
+                    onClicked: { setupDialog.close(); drives.setup(root.setupDisk.device, nameField.text, root.setupFs) }
+                }
+            }
+        }
+    }
+
+    // ---- Umbenennen -------------------------------------------------------------------------
+    Popup {
+        id: renameDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: 400
+        modal: true
+        focus: true
+        padding: 24
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.5) }
+        background: Rectangle { radius: 18; color: Theme.raised; border.color: Theme.hairline }
+        contentItem: Column {
+            spacing: 14
+            Text { text: "Laufwerk umbenennen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Die Daten darauf bleiben erhalten."
+                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+            }
+            TextField {
+                id: renameField
+                width: parent.width
+                height: 38
+                maximumLength: 16
+                leftPadding: 12
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 14
+                background: Rectangle { radius: 10; color: Theme.ground; border.color: renameField.activeFocus ? Theme.accent : Theme.hairline }
+                onAccepted: if (text.trim().length) { renameDialog.close(); drives.rename(root.renamePart.device, text) }
+            }
+            Row {
+                anchors.right: parent.right
+                spacing: 8
+                CButton { text: "Abbrechen"; onClicked: renameDialog.close() }
+                CButton {
+                    text: "Umbenennen"
+                    primary: true
+                    enabled: renameField.text.trim().length > 0
+                    onClicked: { renameDialog.close(); drives.rename(root.renamePart.device, renameField.text) }
                 }
             }
         }

@@ -266,10 +266,12 @@ RUN chmod 755 /usr/bin/creative-files \
 RUN dnf install -y --skip-unavailable libkscreen pipewire-utils pulseaudio-utils cups-client \
         pciutils polkit-kde system-config-printer \
  && dnf clean all
-# Laufwerke: eigener Helfer (Einrichten, beim Start verbinden) + GNOME Laufwerke für Profis
-# „Laufwerke (Erweitert)“ = KDE-Partitionsmanager (Qt → gleiche Titelleiste und Farben wie alle Fenster)
-RUN dnf install -y --skip-unavailable kde-partitionmanager exfatprogs udisks2 smartmontools && dnf clean all \
- && (rpm -q gnome-disk-utility >/dev/null 2>&1 && dnf remove -y gnome-disk-utility >/dev/null 2>&1 || true)
+# Laufwerke: nur die eigene, sichere Verwaltung in der Systemsteuerung (einrichten, formatieren,
+# umbenennen, verbinden, auswerfen, Zustand). Das System-Laufwerk bleibt immer geschützt –
+# deshalb kein Partitionsmanager mehr, der tief ins System eingreifen könnte.
+RUN dnf install -y --skip-unavailable exfatprogs ntfsprogs dosfstools udisks2 smartmontools && dnf clean all \
+ && for p in kde-partitionmanager gnome-disk-utility; do \
+      rpm -q $p >/dev/null 2>&1 && dnf remove -y $p >/dev/null 2>&1 || true; done
 COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
 COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
 COPY drives/creative-automount /usr/bin/creative-automount
@@ -391,6 +393,17 @@ COPY image/quiet-boot/creative-quiet-boot.service /usr/lib/systemd/system/creati
 RUN chmod 755 /usr/libexec/creative-quiet-boot && systemctl enable creative-quiet-boot.service
 COPY image/polkit/50-creative-updates.rules /usr/share/polkit-1/rules.d/50-creative-updates.rules
 COPY image/polkit/50-creative-drives.rules /usr/share/polkit-1/rules.d/50-creative-drives.rules
+# Automatisch zurückrollen: Startet eine neue Version nicht richtig (Anmeldebildschirm
+# kommt nicht, Taskleiste beschädigt), geht der PC von selbst auf die letzte gesunde zurück.
+RUN dnf install -y --skip-unavailable greenboot greenboot-default-health-checks && dnf clean all \
+ && rm -f /usr/lib/greenboot/check/required.d/01_repository_dns_check.sh
+COPY image/greenboot/50-creative-desktop.sh /usr/lib/greenboot/check/required.d/50-creative-desktop.sh
+COPY image/greenboot/50-creative-mark-good.sh /usr/lib/greenboot/green.d/50-creative-mark-good.sh
+COPY image/greenboot/50-creative-rollback.sh /usr/lib/greenboot/red.d/50-creative-rollback.sh
+RUN chmod 755 /usr/lib/greenboot/check/required.d/50-creative-desktop.sh /usr/lib/greenboot/green.d/50-creative-mark-good.sh \
+      /usr/lib/greenboot/red.d/50-creative-rollback.sh \
+ && (systemctl enable greenboot-healthcheck.service && echo "Zurückrollen: greenboot aktiv" || echo "ZURÜCKROLLEN: GREENBOOT FEHLT") \
+ && (systemctl enable greenboot-set-rollback-trigger.service 2>/dev/null || true)
 COPY image/update/creative-update /usr/bin/creative-update
 COPY image/update/org.creativeos.update.policy /usr/share/polkit-1/actions/org.creativeos.update.policy
 COPY image/update/rpm-ostreed-automatic.conf /usr/lib/systemd/system/rpm-ostreed-automatic.service.d/10-creative.conf
@@ -427,6 +440,8 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/SoundPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/LookPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/SystemPage.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/DrivesPage.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \

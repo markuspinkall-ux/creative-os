@@ -63,11 +63,68 @@ SettingsPage {
         }
     }
 
+    // Automatisch zurückgerollt?
+    Card {
+        visible: (u.rolledBack || "").length > 0
+        SettingRow {
+            label: "Ein Update wurde automatisch zurückgenommen"
+            hint: "Am " + u.rolledBack + " ist eine neue Version nicht richtig gestartet. Creative OS ist von selbst zur letzten funktionierenden Version zurückgekehrt – deine Daten sind unberührt."
+            last: true
+            Item { width: 1; height: 1 }
+        }
+    }
+
+    Card {
+        visible: u.channel === "stabil" || u.channel === "test"
+        title: "Update-Kanal"
+        subtitle: "Welche Versionen dieser PC bekommt"
+        SettingRow {
+            label: u.channel === "test" ? "Test – neue Versionen sofort" : "Stabil – nur geprüfte Versionen"
+            hint: u.channel === "test" ? "Du bekommst jede neue Version gleich nach dem Bauen und hilfst beim Testen."
+                                       : "Empfohlen. Neue Versionen kommen erst, wenn sie getestet und freigegeben sind."
+            last: true
+            Row {
+                spacing: 6
+                Repeater {
+                    model: [{ k: "stabil", t: "Stabil" }, { k: "test", t: "Test" }]
+                    delegate: Rectangle {
+                        required property var modelData
+                        readonly property bool cur: u.channel === modelData.k
+                        width: chText.implicitWidth + 28
+                        height: 34
+                        radius: 17
+                        opacity: u.busy && !cur ? 0.5 : 1
+                        color: cur ? Theme.accent : (chMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                        Text {
+                            id: chText
+                            anchors.centerIn: parent
+                            text: modelData.t
+                            color: parent.cur ? Theme.accentText : Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
+                        MouseArea {
+                            id: chMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: !u.busy
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: system.setChannel(modelData.k)
+                        }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Update-Kanal " + modelData.t
+                    }
+                }
+            }
+        }
+    }
+
     Card {
         title: "So funktionieren Updates"
         SettingRow { label: "Automatisch im Hintergrund"; hint: "Creative OS lädt Updates selbst herunter, während du arbeitest."; Item { width: 1; height: 1 } }
         SettingRow { label: "Aktiv nach dem nächsten Neustart"; hint: "Nichts ändert sich mitten in der Arbeit."; Item { width: 1; height: 1 } }
-        SettingRow { label: "Immer ein Weg zurück"; hint: "Läuft nach einem Update etwas nicht, im Startmenü beim Einschalten einfach den vorherigen Eintrag wählen."; Item { width: 1; height: 1 } }
+        SettingRow { label: "Immer ein Weg zurück"; hint: "Startet eine neue Version nicht richtig, kehrt Creative OS von selbst zur letzten funktionierenden zurück."; Item { width: 1; height: 1 } }
         SettingRow {
             label: "Apps aktualisieren"
             hint: "Apps aus „Software“ (Flathub) werden dort aktualisiert."

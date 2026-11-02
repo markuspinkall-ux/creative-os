@@ -170,21 +170,68 @@ class DrivesModel(QObject):
 
         self._run.run(["pkexec", HELPER] + args, done)
 
-    @Slot(str, str, bool)
-    def setup(self, device, name, windows):
+    @Slot(str, str, str)
+    def setup(self, device, name, fstype):
         name = name.strip() or "Daten"
-        self._helper(["setup", device, name, "exfat" if windows else "ext4"],
+        if fstype not in ("ext4", "exfat", "ntfs"):
+            fstype = "ext4"
+        self._helper(["setup", device, name, fstype],
                      f"Fertig! „{name}“ ist eingerichtet und erscheint in „Dateien“.")
+
+    @Slot(str, str)
+    def rename(self, part, name):
+        name = name.strip()
+        if not name:
+            return
+        self._helper(["rename", part, name], f"Umbenannt in „{name}“.")
+
+    # ---- Verbinden, trennen, auswerfen: ohne Passwort (UDisks, nur wer am PC sitzt) ----
+    def _udisks(self, cmds, ok_text):
+        if self._busy:
+            return
+        self._busy = True
+        self._set_message("Einen Moment …")
+        self.changed.emit()
+        cmds = list(cmds)
+
+        def step(code=0, _out="", err=""):
+            if code != 0:
+                self._busy = False
+                msg = (err or "").strip().splitlines()[-1:] or [""]
+                busy = "busy" in msg[0].lower() or "target is busy" in msg[0].lower()
+                self._set_message("Das Laufwerk wird gerade benutzt – bitte offene Dateien schließen."
+                                  if busy else "Das hat nicht geklappt." + (f" ({msg[0][:140]})" if msg[0] else ""))
+                QTimer.singleShot(300, self.refresh)
+                return
+            if not cmds:
+                self._busy = False
+                self._set_message(ok_text)
+                QTimer.singleShot(300, self.refresh)
+                return
+            self._run.run(cmds.pop(0), step)
+        step()
+
+    @Slot(str)
+    def mount(self, part):
+        self._udisks([["udisksctl", "mount", "-b", part]], "Verbunden – erscheint in „Dateien“.")
+
+    @Slot(str)
+    def unmount(self, part):
+        self._udisks([["udisksctl", "unmount", "-b", part]], "Getrennt.")
+
+    @Slot(str)
+    def eject(self, disk):
+        d = next((x for x in self._disks if x["device"] == disk), None)
+        if not d or d.get("system"):
+            return
+        cmds = [["udisksctl", "unmount", "-b", p["device"]] for p in d["parts"] if p["mount"]]
+        cmds.append(["udisksctl", "power-off", "-b", disk])
+        self._udisks(cmds, "Kann jetzt sicher abgezogen werden.")
 
     @Slot(str, bool)
     def setAutomount(self, part, on):
         self._helper(["automount", part, "on" if on else "off"],
                      "Wird jetzt bei jedem Start verbunden." if on else "Wird beim Start nicht mehr verbunden.")
-
-    @Slot()
-    def openExpert(self):
-        if not spawn_detached(["partitionmanager"]):
-            spawn_detached(["gnome-disks"])
 
     @Slot(str)
     def openFolder(self, path):
@@ -198,5 +245,3 @@ class DrivesModel(QObject):
     disks = Property("QVariantList", lambda self: self._disks, notify=changed)
     busy = Property(bool, lambda self: self._busy, notify=changed)
     message = Property(str, lambda self: self._message, notify=messageChanged)
-    expertAvailable = Property(bool, lambda self: Path("/usr/bin/partitionmanager").exists()
-                               or Path("/usr/bin/gnome-disks").exists(), constant=True)

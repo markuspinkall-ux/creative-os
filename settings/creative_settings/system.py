@@ -87,7 +87,8 @@ class SystemModel(QObject):
         self._host = socket.gethostname()
         self._message = ""
         self._atomic = shutil.which("rpm-ostree") is not None and Path("/run/ostree-booted").exists()
-        self._upd = {"state": "unknown", "text": "", "version": "", "busy": False}
+        self._upd = {"state": "unknown", "text": "", "version": "", "busy": False,
+                     "channel": "", "rolledBack": "", "channelBusy": False}
         self.checkStatus()
 
     # ---- Gerätename -------------------------------------------------------------
@@ -128,6 +129,12 @@ class SystemModel(QObject):
         booted = next((d for d in deps if d.get("booted")), {})
         staged = next((d for d in deps if d.get("staged")), None)
         self._upd["version"] = booted.get("version", "")
+        ref = booted.get("container-image-reference", "") or ""
+        self._upd["channel"] = "" if not ref else ("test" if ref.endswith("-testing") else "stabil")
+        try:
+            self._upd["rolledBack"] = Path("/var/lib/creative-os/rolled-back").read_text().strip()
+        except OSError:
+            self._upd["rolledBack"] = ""
         if staged:
             self._set_upd(state="reboot", text="Ein Update ist bereit. Es wird beim nächsten Neustart aktiv.")
         else:
@@ -169,6 +176,25 @@ class SystemModel(QObject):
                 self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
                               + (f" ({detail})" if detail else ""))
         self._run.run(self._update_cmd(), done)
+
+    @Slot(str)
+    def setChannel(self, name):
+        """Update-Kanal wechseln: „stabil“ (geprüft) oder „test“ (Vorabversionen)."""
+        if name == self._upd.get("channel") or name not in ("stabil", "test"):
+            return
+        self._set_upd(channelBusy=True, busy=True,
+                      text="Wechsle den Update-Kanal – die passende Version wird geladen …")
+
+        def done(code, _out, err):
+            self._upd["busy"] = False
+            self._upd["channelBusy"] = False
+            if code == 0:
+                self.checkStatus()
+            else:
+                detail = (err.strip().splitlines() or [""])[-1][:160]
+                self._set_upd(state="error", text="Der Kanal konnte nicht gewechselt werden."
+                              + (f" ({detail})" if detail else ""))
+        self._run.run(self._update_cmd("--channel", name), done)
 
     @staticmethod
     def _update_cmd(*extra):

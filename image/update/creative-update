@@ -4,13 +4,51 @@
 #   sudo creative-update          Update herunterladen (danach neu starten)
 #   sudo creative-update --check  nur nachsehen, ob es ein Update gibt (Ausgang 77 = keins)
 #   creative-update --auto        für die automatischen Updates (Dienst)
+#   creative-update --channel     zeigt den Update-Kanal (stabil | test)
+#   sudo creative-update --channel test|stabil   Kanal wechseln (lädt die Version des Kanals)
 #
 # Klappt der Download nicht, weil die Verbindung über IPv6 abgelehnt wird
 # (kommt in manchen Heimnetzen und VMs vor), wird IPv6 für diesen einen
 # Versuch kurz ausgeschaltet und danach wieder eingeschaltet.
 set -u
+
+# Aktuelle Quelle, z. B. ostree-unverified-registry:ghcr.io/…/creative-os:amd-testing
+current_ref() {
+    rpm-ostree status --json 2>/dev/null | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+b = next((x for x in d.get('deployments', []) if x.get('booted')), {})
+print(b.get('container-image-reference', ''))"
+}
+
+if [ "${1:-}" = "--channel" ] && [ -z "${2:-}" ]; then
+    case "$(current_ref)" in
+        *-testing) echo test ;;
+        "") echo unbekannt ;;
+        *) echo stabil ;;
+    esac
+    exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
     exec pkexec "$0" "$@"
+fi
+
+if [ "${1:-}" = "--channel" ]; then
+    ref="$(current_ref)"
+    [ -n "$ref" ] || { echo "Update-Quelle unbekannt" >&2; exit 1; }
+    base="${ref%:*}"; tag="${ref##*:}"; variant="${tag%%-*}"
+    case "$2" in
+        test)   new="$base:$variant-testing" ;;
+        stabil) new="$base:$variant" ;;
+        *) echo "Kanal: test oder stabil" >&2; exit 2 ;;
+    esac
+    if [ "$new" = "$ref" ]; then echo "Schon auf diesem Kanal."; exit 0; fi
+    echo "Wechsle zu $new …"
+    rpm-ostree rebase "$new"
+    rc=$?
+    [ "$rc" -eq 0 ] && echo && echo "Fertig. Mit einem Neustart wird der Kanal aktiv:  systemctl reboot"
+    exit "$rc"
 fi
 
 case "${1:-}" in
