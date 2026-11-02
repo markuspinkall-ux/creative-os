@@ -66,6 +66,8 @@ SettingsPage {
             visible: u.busy && (u.progressText || "").length > 0
             width: parent.width
             spacing: 6
+            topPadding: 6
+            bottomPadding: 12
             Rectangle {
                 id: track
                 width: parent.width
