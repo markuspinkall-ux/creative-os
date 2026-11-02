@@ -18,11 +18,11 @@ sleep 2
 export DISPLAY=:99 LANG=de_DE.UTF-8
 mkdir -p /tmp/sys
 dbus-daemon --system --fork 2>/dev/null
-(anaconda --dirinstall /tmp/sys --graphical --noninteractive=0 --kickstart /tmp/ks.cfg --lang de_DE.UTF-8 > /tmp/ana.out 2>&1 &)
+(anaconda --dirinstall /tmp/sys --graphical --kickstart /tmp/ks.cfg --lang de_DE.UTF-8 > /tmp/ana.out 2>&1 &)
 sleep 75
 mkdir -p shots
 import -window root /tmp/s1.png
 magick /tmp/s1.png -resize 1100x -quality 75 /tmp/s.jpg 2>/dev/null || convert /tmp/s1.png -resize 1100x -quality 75 /tmp/s.jpg
-tail -15 /tmp/ana.out
+tail -25 /tmp/ana.out; tail -20 /tmp/anaconda.log 2>/dev/null
 grep -i "css\|error" /tmp/anaconda.log /tmp/*.log 2>/dev/null | grep -i css | head
 echo BILD-ANFANG; base64 /tmp/s.jpg | sed "s/^/B64:/"; echo BILD-ENDE
