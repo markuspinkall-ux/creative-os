@@ -33,7 +33,11 @@ fi
 fail() { echo "STARTTEST FEHLGESCHLAGEN: $1"; shot final; exit 1; }
 qmp() { printf '{"execute":"qmp_capabilities"}\n%s\n' "$1" | timeout 5 socat - UNIX-CONNECT:"$W/qmp.sock" >/dev/null 2>&1; }
 shot() { qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$W/$1.ppm\"}}"; sleep 1
-         [ -f "$W/$1.ppm" ] && pnmtopng "$W/$1.ppm" > "$W/$1.png" 2>/dev/null && rm -f "$W/$1.ppm" && echo "Bildschirmfoto: $1.png"; }
+         [ -f "$W/$1.ppm" ] || return 0
+         pnmtopng "$W/$1.ppm" > "$W/$1.png" 2>/dev/null
+         # verkleinert ins Protokoll (zum Ansehen ohne Download)
+         pnmscale -width 1000 "$W/$1.ppm" 2>/dev/null | pnmtopng 2>/dev/null | base64 | sed "s/^/B64$1:/"
+         rm -f "$W/$1.ppm"; echo "Bildschirmfoto: $1.png"; }
 SSH="ssh -i $W/key -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o LogLevel=ERROR tester@127.0.0.1"
 command -v socat >/dev/null || sudo apt-get install -y -qq socat >/dev/null
 
