@@ -9,7 +9,7 @@ curl -fsSL -o /tmp/n.iso "$base/$iso"
 xorriso -osirrox on -indev /tmp/n.iso -extract /images/install.img /tmp/install.img -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg >/dev/null 2>&1
 grep -n "linux" /tmp/grub.cfg | head -4
 file /tmp/install.img
-cd /tmp && (unsquashfs -q -d /tmp/r /tmp/install.img 2>/dev/null || fsck.erofs --extract=/tmp/r /tmp/install.img >/dev/null 2>&1); ls /tmp/r | head
+cd /tmp && unsquashfs -no-xattrs -d /tmp/r /tmp/install.img usr/share/anaconda usr/share/cockpit etc/anaconda usr/lib/python3.14/site-packages/pyanaconda/ui/gui/__init__.py 2>&1 | tail -3; ls /tmp/r /tmp/r/usr/share
 # install.img kann ein weiteres rootfs-Abbild enthalten
 if [ -f /tmp/r/LiveOS/rootfs.img ]; then mkdir -p /tmp/rr; unsquashfs -q -d /tmp/rr /tmp/r/LiveOS/rootfs.img 2>/dev/null || (dnf install -y -q e2fsprogs >/dev/null; debugfs -R "rdump /usr/share/anaconda /tmp" /tmp/r/LiveOS/rootfs.img); R=/tmp/rr; else R=/tmp/r; fi
 ls $R/usr/share/ | grep -i "anaconda\|cockpit" 
