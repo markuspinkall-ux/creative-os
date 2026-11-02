@@ -1,4 +1,5 @@
-"""Startpunkt: `creative-welcome` – zeigt sich einmal nach der ersten Anmeldung.
+"""Startpunkt: `creative-welcome` – zeigt sich nach jeder Anmeldung, bis unten links
+„Nicht mehr anzeigen“ angehakt wird.
 
 Mit `--force` erscheint er erneut (z. B. zum Ausprobieren).
 """
@@ -29,10 +30,16 @@ MARKER = shell_config.config_dir() / "welcome-done"
 
 
 class Welcome(QObject):
-    @Slot()
-    def finish(self):
-        MARKER.parent.mkdir(parents=True, exist_ok=True)
-        MARKER.write_text("1\n")
+    @Slot(bool)
+    def finish(self, dont_show):
+        if dont_show:
+            MARKER.parent.mkdir(parents=True, exist_ok=True)
+            MARKER.write_text("1\n")
+        else:
+            try:
+                MARKER.unlink()
+            except OSError:
+                pass
         QGuiApplication.quit()
 
     @Slot(str)
@@ -41,7 +48,7 @@ class Welcome(QObject):
 
 
 def main():
-    if MARKER.exists() and "--force" not in sys.argv:
+    if MARKER.exists() and "--force" not in sys.argv and "--selftest" not in sys.argv:
         return 0
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
@@ -68,6 +75,9 @@ def main():
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
         return 1
+    if "--selftest" in sys.argv:
+        print("Willkommen: Selbsttest bestanden")
+        return 0
     ticker = QTimer()
     ticker.start(300)
     ticker.timeout.connect(lambda: None)

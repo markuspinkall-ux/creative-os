@@ -375,12 +375,14 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
  && mkdir -p /usr/share/plymouth/themes/creative \
  && cp /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/creative/ \
  && cp /tmp/creative-plymouth/creative.plymouth /tmp/creative-plymouth/watermark.png /usr/share/plymouth/themes/creative/ \
- && rm -f /usr/share/plymouth/themes/creative/background-tile.png \
+ && cp /tmp/creative-plymouth/background-tile.png /usr/share/plymouth/themes/creative/background-tile.png \
  && rm -rf /tmp/creative-plymouth \
  && plymouth-set-default-theme creative \
  && KVER="$(ls /usr/lib/modules | sort -V | tail -n1)" \
  && dracut --no-hostonly --kver "$KVER" --reproducible --zstd --add ostree -f "/usr/lib/modules/$KVER/initramfs.img" \
  && chmod 0600 "/usr/lib/modules/$KVER/initramfs.img" \
+ && (lsinitrd "/usr/lib/modules/$KVER/initramfs.img" 2>/dev/null | grep -q "plymouth/themes/creative/background-tile.png" \
+     && echo "Startbildschirm: Graphit-Thema in der Startdatei" || echo "STARTBILDSCHIRM: THEMA FEHLT IN DER STARTDATEI") \
  && mkdir -p /usr/lib/bootc/kargs.d \
  && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "vt.global_cursor_default=0", "vt.default_red=0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12", "vt.default_grn=0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15", "vt.default_blu=0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b,0x1b"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
@@ -466,6 +468,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/DrivesPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
         /usr/lib/creative-iso/creative_iso/qml/Main.qml \
+        /usr/lib/creative-welcome/creative_welcome/qml/Main.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/StartMenu.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
@@ -489,6 +492,9 @@ RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadca
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
 # Creative Art wird separat mit echtem (virtuellem) Bildschirm geprüft: .github/workflows/art-test.yml
 # (Krita stürzt ohne Bildschirm – „offscreen“ – grundsätzlich ab, auch im Original)
+# Willkommens-Assistent: Oberfläche lädt?
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 /usr/bin/creative-welcome --selftest \
+    || echo "WILLKOMMEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/wl-home
 # Creative Iso: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/iso-home timeout 60 /usr/bin/creative-iso --selftest \
     || echo "ISO-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/iso-home

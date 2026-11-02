@@ -12,6 +12,7 @@ ApplicationWindow {
     minimumHeight: 560
     visible: true
     title: "Willkommen bei Creative OS"
+    property bool dontShow: false
     color: Theme.ground
     font.family: Theme.fontFamily
 
@@ -21,7 +22,7 @@ ApplicationWindow {
     function next() { if (step < steps.length - 1) step++ }
     function back() { if (step > 0) step-- }
 
-    Shortcut { sequences: ["Return", "Enter"]; enabled: win.step !== 1; onActivated: win.step === win.steps.length - 1 ? welcome.finish() : win.next() }
+    Shortcut { sequences: ["Return", "Enter"]; enabled: win.step !== 1; onActivated: win.step === win.steps.length - 1 ? welcome.finish(win.dontShow) : win.next() }
 
     // Hintergrund: Graphit, abgedunkelt
     Image {
@@ -304,15 +305,50 @@ ApplicationWindow {
             anchors.bottom: parent.bottom
             anchors.margins: 24
             height: 40
-            CButton {
-                visible: win.step > 0 && win.step < win.steps.length - 1
+            // Häkchen unten links: Hinweis künftig nicht mehr anzeigen
+            Row {
+                id: dontShowRow
                 anchors.left: parent.left
-                text: "Zurück"
-                onClicked: win.back()
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 10
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20; height: 20; radius: 6
+                    color: win.dontShow ? Theme.accent : "transparent"
+                    border.color: win.dontShow ? Theme.accent : Qt.rgba(1, 1, 1, 0.35)
+                    border.width: 1.5
+                    Text {
+                        anchors.centerIn: parent
+                        visible: win.dontShow
+                        text: "✓"
+                        color: Theme.accentText
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Nicht mehr anzeigen"
+                    color: Theme.text
+                    font.pixelSize: 13
+                }
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: "Nicht mehr anzeigen"
+                Accessible.checked: win.dontShow
+            }
+            MouseArea {
+                anchors.fill: dontShowRow
+                cursorShape: Qt.PointingHandCursor
+                onClicked: win.dontShow = !win.dontShow
             }
             Row {
                 anchors.right: parent.right
                 spacing: 8
+                CButton {
+                    visible: win.step > 0 && win.step < win.steps.length - 1
+                    text: "Zurück"
+                    onClicked: win.back()
+                }
                 CButton {
                     visible: win.step === 1 || win.step === 2
                     text: "Überspringen"
@@ -321,12 +357,12 @@ ApplicationWindow {
                 CButton {
                     text: win.step === 0 ? "Los geht's" : (win.step === win.steps.length - 1 ? "Fertig" : "Weiter")
                     primary: true
-                    onClicked: win.step === win.steps.length - 1 ? welcome.finish() : win.next()
+                    onClicked: win.step === win.steps.length - 1 ? welcome.finish(win.dontShow) : win.next()
                 }
             }
         }
     }
 
     onStepChanged: if (step === 1) network.rescan()
-    onClosing: welcome.finish()
+    onClosing: welcome.finish(win.dontShow)
 }

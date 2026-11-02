@@ -75,9 +75,11 @@ if command -v creative-assistant >/dev/null 2>&1; then
     children="$children $!"
 fi
 
-# Beim allerersten Start: Willkommens-Assistent (zeigt sich nur einmal)
+# Willkommens-Assistent: nach jeder Anmeldung, bis „Nicht mehr anzeigen“ angehakt ist
 if command -v creative-welcome >/dev/null 2>&1; then
-    (sleep 3; creative-welcome) >/dev/null 2>&1 &
+    # Meldungen landen in ~/.cache/creative-welcome.log (falls er sich unerwartet schließt)
+    mkdir -p "$HOME/.cache"
+    (sleep 3; creative-welcome) >"$HOME/.cache/creative-welcome.log" 2>&1 &
 fi
 
 crashes=0
