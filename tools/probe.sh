@@ -1,13 +1,22 @@
 #!/bin/bash
-# Bildschirmfotos von Creative Iso und Creative Capture (ohne Bildschirm gerendert)
+# Creative Shell in einem virtuellen KWin starten und Fehler mitschneiden
 set +e
-dnf install -y -q python3-pyside6 qt6-qtmultimedia qt6-qtdeclarative qt6-qtsvg liberation-sans-fonts liberation-fonts-all google-noto-sans-fonts mesa-dri-drivers xdg-user-dirs >/dev/null 2>&1
-rpm -q python3-pyside6
-export QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp/rt HOME=/tmp/h QT_QUICK_BACKEND=software
-mkdir -p /tmp/rt /tmp/h; chmod 700 /tmp/rt
-for app in iso:creative_iso; do
-  dir=${app%%:*}; mod=${app#*:}
-  (cd $dir && PYTHONPATH=. timeout 60 python3 ../tools/shot.py $mod /tmp/$dir.png 4000 --usb) 2>&1 | grep -v "^qt.\|Fontconfig" | tail -5
-  [ -f /tmp/$dir.png ] && { echo "BILD-$dir-ANFANG"; base64 /tmp/$dir.png | sed "s/^/B64$dir:/"; echo "BILD-$dir-ENDE"; }
+dnf install -y -q kwin-wayland layer-shell-qt python3-pyside6 qt6-qtdeclarative qt6-qtsvg qt6-qtmultimedia python3-psutil python3-numpy dbus-daemon dbus-x11 liberation-sans-fonts xdg-user-dirs glib2 >/dev/null 2>&1
+rpm -q kwin-wayland layer-shell-qt python3-pyside6 | tail -3
+export XDG_RUNTIME_DIR=/tmp/rt HOME=/tmp/h QT_QPA_PLATFORM=wayland
+mkdir -p /tmp/rt /tmp/h/Schreibtisch; chmod 700 /tmp/rt
+touch /tmp/h/Schreibtisch/test.txt
+for kb in neu alt; do
+  if [ "$kb" = alt ]; then sed -i 's/geo.width(), geo.height(), True)/geo.width(), geo.height(), False)/' shell/creative_shell/__main__.py; fi
+  echo "=== Variante $kb: $(grep -o 'geo.height(), [A-Za-z]*)' shell/creative_shell/__main__.py | head -1)"
+  cat > /tmp/run.sh <<'S'
+#!/bin/sh
+cd /__w/creative-os/creative-os/shell 2>/dev/null || cd "$GITHUB_WORKSPACE/shell"
+PYTHONPATH=. timeout 20 python3 -m creative_shell 2>&1 | grep -v "^qt.qpa\|Fontconfig" | head -40
+echo "Shell-Ende: Code $?"
+S
+  chmod +x /tmp/run.sh
+  timeout 40 dbus-run-session -- kwin_wayland --virtual --width 1280 --height 800 --no-lockscreen --exit-with-session /tmp/run.sh 2>&1 \
+     | grep -v "^kwin_\|Fontconfig\|libinput\|^qt.qpa" | tail -40
 done
 exit 0
