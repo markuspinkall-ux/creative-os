@@ -1,21 +1,28 @@
 #!/bin/bash
-# Schnelle Prüfungen in einem frischen Fedora (Werkzeug für die Entwicklung)
+# Installer-Look prüfen: Anaconda im virtuellen Bildschirm starten und fotografieren
 set +e
-dnf install -y -q xorriso squashfs-tools curl erofs-utils file >/dev/null 2>&1
-base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
-iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
-echo "ISO: $iso"
-curl -fsSL -o /tmp/n.iso "$base/$iso"
-xorriso -osirrox on -indev /tmp/n.iso -extract /images/install.img /tmp/install.img -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg >/dev/null 2>&1
-grep -n "linux" /tmp/grub.cfg | head -4
-file /tmp/install.img
-cd /tmp && unsquashfs -no-xattrs -d /tmp/r /tmp/install.img usr/share/anaconda usr/share/cockpit etc/anaconda usr/lib/python3.14/site-packages/pyanaconda/ui/gui/__init__.py 2>&1 | tail -3; ls /tmp/r /tmp/r/usr/share
-# install.img kann ein weiteres rootfs-Abbild enthalten
-if [ -f /tmp/r/LiveOS/rootfs.img ]; then mkdir -p /tmp/rr; unsquashfs -q -d /tmp/rr /tmp/r/LiveOS/rootfs.img 2>/dev/null || (dnf install -y -q e2fsprogs >/dev/null; debugfs -R "rdump /usr/share/anaconda /tmp" /tmp/r/LiveOS/rootfs.img); R=/tmp/rr; else R=/tmp/r; fi
-ls $R/usr/share/ | grep -i "anaconda\|cockpit" 
-ls $R/usr/share/cockpit 2>/dev/null | head
-ls $R/usr/share/anaconda/ 2>/dev/null | head -30
-echo "=== fedora.css"; cat $R/usr/share/anaconda/pixmaps/fedora.css 2>/dev/null || find / -name fedora.css -path "*anaconda*" -exec cat {} \; 2>/dev/null | head -50
-echo "=== webui?"; ls $R/usr/share/cockpit/anaconda-webui 2>/dev/null | head -3; ls $R/usr/libexec/ | grep -i webui
-grep -rn "webui" $R/usr/share/anaconda/*.conf $R/etc/anaconda 2>/dev/null | head
-ls $R/etc/anaconda/profile.d 2>/dev/null | head
+dnf install -y -q anaconda-gui anaconda-install-env-deps xorg-x11-server-Xvfb ImageMagick dbus-daemon google-noto-sans-fonts liberation-sans-fonts >/dev/null 2>&1
+rpm -q anaconda-gui
+mkdir -p /run/install/updates/usr/share/anaconda/pixmaps /etc/gtk-3.0
+cp image/netinstall/installer/anaconda-gtk.css /run/install/updates/
+cp image/netinstall/installer/pixmaps/*.png /run/install/updates/usr/share/anaconda/pixmaps/
+cp image/netinstall/installer/pixmaps/*.png /usr/share/anaconda/pixmaps/
+printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > /etc/gtk-3.0/settings.ini
+cat > /tmp/ks.cfg <<'KS'
+lang de_DE.UTF-8
+keyboard de
+timezone Europe/Berlin
+KS
+Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+sleep 2
+export DISPLAY=:99 LANG=de_DE.UTF-8
+mkdir -p /tmp/sys
+dbus-daemon --system --fork 2>/dev/null
+(anaconda --dirinstall /tmp/sys --graphical --noninteractive=0 --kickstart /tmp/ks.cfg --lang de_DE.UTF-8 > /tmp/ana.out 2>&1 &)
+sleep 75
+mkdir -p shots
+import -window root /tmp/s1.png
+magick /tmp/s1.png -resize 1100x -quality 75 /tmp/s.jpg 2>/dev/null || convert /tmp/s1.png -resize 1100x -quality 75 /tmp/s.jpg
+tail -15 /tmp/ana.out
+grep -i "css\|error" /tmp/anaconda.log /tmp/*.log 2>/dev/null | grep -i css | head
+echo BILD-ANFANG; base64 /tmp/s.jpg | sed "s/^/B64:/"; echo BILD-ENDE

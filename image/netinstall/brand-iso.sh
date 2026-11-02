@@ -22,6 +22,16 @@ Variant=Everything
 [Compose]
 Lorax=creative-os
 STAMP
+# Look: Graphit-Farben, Creative-Logo statt Fedora-Blau (Anaconda lädt
+# /run/install/updates/anaconda-gtk.css mit Vorrang; die Bilder ersetzen die von Fedora)
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ -d "$here/installer" ]; then
+    cp "$here/installer/anaconda-gtk.css" "$work/upd/anaconda-gtk.css"
+    mkdir -p "$work/upd/usr/share/anaconda/pixmaps" "$work/upd/etc/gtk-3.0"
+    cp "$here"/installer/pixmaps/*.png "$work/upd/usr/share/anaconda/pixmaps/"
+    # dunkle Grundfarben für alles, was die eigene Datei nicht abdeckt
+    printf '[Settings]\ngtk-application-prefer-dark-theme=1\ngtk-font-name=Liberation Sans 11\n' > "$work/upd/etc/gtk-3.0/settings.ini"
+fi
 (cd "$work/upd" && find . | cpio -o -H newc --quiet | gzip -9) > "$work/updates.img"
 
 # 2) Kickstart + updates.img einbauen
