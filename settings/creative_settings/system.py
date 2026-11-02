@@ -310,6 +310,15 @@ class SystemModel(QObject):
             self.refreshSecureBoot()
         self._run.run(["pkexec", "/usr/libexec/creative-secureboot", "enroll"], done, timeout_ms=0)
 
+    @Slot(str)
+    def openUrl(self, url):
+        if url.startswith("file://"):
+            path = url[7:]
+            if not spawn_detached(["creative-files", path]):
+                spawn_detached(["xdg-open", path])
+        else:
+            spawn_detached(["xdg-open", url])
+
     @Slot()
     def reboot(self):
         spawn_detached(["systemctl", "reboot"])

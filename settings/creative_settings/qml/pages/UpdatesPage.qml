@@ -194,6 +194,11 @@ SettingsPage {
         SettingRow { label: "Aktiv nach dem nächsten Neustart"; hint: "Nichts ändert sich mitten in der Arbeit."; Item { width: 1; height: 1 } }
         SettingRow { label: "Immer ein Weg zurück"; hint: "Startet eine neue Version nicht richtig, kehrt Creative OS von selbst zur letzten funktionierenden zurück."; Item { width: 1; height: 1 } }
         SettingRow {
+            label: "Was ist neu?"
+            hint: "Alle Neuerungen jeder freigegebenen Version"
+            CButton { text: "Neuerungen ansehen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os/releases") }
+        }
+        SettingRow {
             label: "Apps aktualisieren"
             hint: "Apps aus „Software“ (Flathub) werden dort aktualisiert."
             last: true

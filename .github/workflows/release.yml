@@ -1,14 +1,19 @@
 # Freigeben: Die zuletzt gebaute Test-Version wird zur stabilen Version.
 # Alle PCs auf dem stabilen Kanal bekommen sie dann als Update.
+# Dazu entsteht eine Seite „Creative OS <Datum>“ mit allen Neuerungen seit der letzten Freigabe.
 name: Freigeben
 on:
   workflow_dispatch:
 permissions:
   packages: write
+  contents: write
 jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Test-Version → stabil
         run: |
           owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
@@ -18,3 +23,22 @@ jobs:
             skopeo copy --all "docker://${img}:${v}-testing" "docker://${img}:${v}"
             echo "freigegeben: ${img}:${v}"
           done
+      - name: Was ist neu (Neuerungen seit der letzten Freigabe)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          date="$(date +%Y.%m.%d)"
+          tag="version-$(date +%Y%m%d)-${{ github.run_number }}"
+          prev="$(git tag --list 'version-*' --sort=-creatordate | head -n1)"
+          range="${prev:+$prev..}HEAD"
+          {
+            echo "## Neu in Creative OS ${date}"
+            echo
+            git log --no-merges --pretty='%s' $range \
+              | grep -v '^Werkzeug\|^Probe\|^wip\|^Bauen für' \
+              | sed -E 's/ \[(skip ci|freigeben)\]//g; s/^/- /' | head -n 80
+            echo
+            echo "Update: Systemsteuerung › Software & Updates › Nach Updates suchen."
+          } > notes.md
+          git tag "$tag" && git push origin "$tag"
+          gh release create "$tag" --title "Creative OS ${date}" --notes-file notes.md --repo "${{ github.repository }}"

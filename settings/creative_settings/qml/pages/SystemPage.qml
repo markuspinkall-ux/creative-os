@@ -74,6 +74,7 @@ SettingsPage {
         title: "Über Creative OS"
         subtitle: "Creative OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
         Repeater {
+            id: credits
             model: [
                 { app: "Unterbau", base: "Fedora Kinoite (Fedora-Projekt)" },
                 { app: "Fenster, Anmeldung, Sitzung", base: "KDE Plasma: KWin, SDDM, KDE Frameworks" },
@@ -98,8 +99,24 @@ SettingsPage {
                 required property int index
                 label: modelData.app
                 hint: modelData.base
-                last: index === 13
+                last: index === credits.count - 1
             }
+        }
+    }
+
+    // ---- Quellcode und Lizenzen -------------------------------------------------------------
+    Card {
+        title: "Quellcode und Lizenzen"
+        SettingRow {
+            label: "Quellcode von Creative OS"
+            hint: "github.com/markuspinkall-ux/creative-os – alle eigenen Teile, Bauanleitung und Änderungen"
+            CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
+        }
+        SettingRow {
+            label: "Enthaltene Open-Source-Programme"
+            hint: "Behalten ihre eigenen Lizenzen (z. B. GPL, LGPL, MIT). Die Lizenztexte liegen unter /usr/share/licenses, die Quellen stellt das Fedora-Projekt bereit."
+            last: true
+            CButton { text: "Lizenzen ansehen"; onClicked: system.openUrl("file:///usr/share/licenses") }
         }
     }
 }
