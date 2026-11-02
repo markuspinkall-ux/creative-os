@@ -14,7 +14,7 @@ Window {
     minimumHeight: 440
     visible: true
     title: cam.cameraDevice && hasVideo ? "Creative Capture – " + cam.cameraDevice.description : "Creative Capture"
-    color: "black"
+    color: hasVideo && cam.active && cam.error === Camera.NoError ? "black" : Theme.surface
 
     readonly property bool hasVideo: devices.videoInputs.length > 0
     readonly property bool fullscreen: visibility === Window.FullScreen
@@ -187,7 +187,7 @@ Window {
         onDoubleClicked: win.toggleFullscreen()
     }
 
-    Timer { id: hideTimer; interval: 2800; running: true; onTriggered: if (!barMouse.containsMouse && !formatBox.popup.visible && !videoBox.popup.visible && !audioBox.popup.visible) win.barVisible = false }
+    Timer { id: hideTimer; interval: 2800; running: true; onTriggered: if (win.hasVideo && !barMouse.containsMouse && !formatBox.popup.visible && !videoBox.popup.visible && !audioBox.popup.visible) win.barVisible = false }
     Timer { id: toastTimer; interval: 2600; onTriggered: win.toastText = "" }
 
     Shortcut { sequences: ["F11", "F"]; onActivated: win.toggleFullscreen() }
