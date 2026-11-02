@@ -7,7 +7,7 @@ export XDG_RUNTIME_DIR=/tmp/rt HOME=/tmp/h QT_QPA_PLATFORM=wayland
 mkdir -p /tmp/rt /tmp/h/Schreibtisch; chmod 700 /tmp/rt
 touch /tmp/h/Schreibtisch/test.txt
 cp "$(command -v kwin_wayland)" /tmp/kwin_wayland_nocap; chmod 755 /tmp/kwin_wayland_nocap
-for kb in neu alt; do
+for kb in neu; do
   if [ "$kb" = alt ]; then sed -i 's/geo.width(), geo.height(), True)/geo.width(), geo.height(), False)/' shell/creative_shell/__main__.py; fi
   echo "=== Variante $kb: $(grep -o 'geo.height(), [A-Za-z]*)' shell/creative_shell/__main__.py | head -1)"
   cat > /tmp/run.sh <<'S'
@@ -18,6 +18,6 @@ echo "Shell-Ende: Code $?"
 S
   chmod +x /tmp/run.sh
   timeout 40 dbus-run-session -- /tmp/kwin_wayland_nocap --virtual --width 1280 --height 800 --no-lockscreen --exit-with-session /tmp/run.sh 2>&1 \
-     | grep -v "^kwin_\|Fontconfig\|libinput\|^qt.qpa" | tail -40
+     | grep -v "Fontconfig\|libinput" | tail -60
 done
 exit 0
