@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="120" viewBox="0 0 750 120">
+  <rect width="750" height="120" rx="14" fill="#1c2029"/>
+  <rect x="22" y="26" width="68" height="68" rx="18" fill="#8fb3ff"/>
+  <path d="M56 38c8 6 12 15 12 25l6 7-9 2-3 6h-12l-3-6-9-2 6-7c0-10 4-19 12-25z" fill="#12151b"/>
+  <circle cx="56" cy="55" r="4.5" fill="#8fb3ff"/>
+  <path d="M51 80h10l-5 9z" fill="#ffb07a"/>
+  <text x="112" y="52" font-family="Liberation Sans, Arial, sans-serif" font-size="24" font-weight="700" fill="#dce6ff">Spielen und Streamen</text>
+  <text x="112" y="82" font-family="Liberation Sans, Arial, sans-serif" font-size="14" fill="#a9b6d3">Steam, Discord, OBS Studio und Creative Broadcast sind bereits installiert.</text>
+</svg>

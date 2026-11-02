@@ -29,6 +29,10 @@ if [ -d "$here/installer" ]; then
     cp "$here/installer/anaconda-gtk.css" "$work/upd/anaconda-gtk.css"
     mkdir -p "$work/upd/usr/share/anaconda/pixmaps" "$work/upd/etc/gtk-3.0"
     cp "$here"/installer/pixmaps/*.png "$work/upd/usr/share/anaconda/pixmaps/"
+    # Bilder während der Installation: Creative OS statt Fedora-Hinweise
+    mkdir -p "$work/upd/usr/share/anaconda/pixmaps/rnotes/en" "$work/upd/usr/share/anaconda/pixmaps/rnotes/de"
+    cp "$here"/installer/rnotes/*.svg "$work/upd/usr/share/anaconda/pixmaps/rnotes/en/"
+    cp "$here"/installer/rnotes/*.svg "$work/upd/usr/share/anaconda/pixmaps/rnotes/de/"
     # dunkle Grundfarben für alles, was die eigene Datei nicht abdeckt
     printf '[Settings]\ngtk-application-prefer-dark-theme=1\ngtk-font-name=Liberation Sans 11\n' > "$work/upd/etc/gtk-3.0/settings.ini"
 fi

@@ -397,6 +397,11 @@ RUN v="$(date +%Y.%m.%d)" \
  && (grep -q '^DEFAULT_HOSTNAME=' /usr/lib/os-release \
        && sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="creative-os"/' /usr/lib/os-release \
        || echo 'DEFAULT_HOSTNAME="creative-os"' >> /usr/lib/os-release)
+# Fedora-Logos überall durch das Creative-Logo ersetzen (Fedora bleibt nur der Unterbau)
+COPY image/debrand.py /tmp/debrand.py
+RUN python3 /tmp/debrand.py /usr/share/pixmaps/creative-os-logo.png \
+ && rm -f /tmp/debrand.py /usr/share/kf6/searchproviders/fedora.desktop \
+ && gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; true
 
 # Updates wie bei Windows: im Hintergrund laden, beim nächsten Neustart aktiv
 # Ruhiger Start auch auf bereits installierten PCs (Startparameter nachtragen)
