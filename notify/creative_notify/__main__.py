@@ -90,6 +90,15 @@ class Center(QObject):
                 except Exception:
                     pass
 
+    @Slot(str, result=bool)
+    def iconOk(self, name):
+        from PySide6.QtGui import QIcon
+        if not name:
+            return False
+        if name.startswith("/"):
+            return os.path.exists(name)
+        return QIcon.hasThemeIcon(name)
+
     items = Property("QVariantList", lambda self: self._items, notify=changed)
 
 

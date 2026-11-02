@@ -66,13 +66,26 @@ Window {
                     width: parent.width - 28
                     spacing: 12
 
-                    Image {
+                    Item {
                         id: appIcon
                         width: 34; height: 34
-                        sourceSize.width: 68; sourceSize.height: 68
-                        source: "image://icon/" + (toast.modelData.icon || "dialog-information")
-                        asynchronous: true
-                        smooth: true
+                        readonly property bool known: center.iconOk(toast.modelData.icon)
+                        Image {
+                            visible: appIcon.known
+                            anchors.fill: parent
+                            sourceSize.width: 68; sourceSize.height: 68
+                            source: appIcon.known ? "image://icon/" + toast.modelData.icon : ""
+                            asynchronous: true
+                            smooth: true
+                        }
+                        // ohne Symbol: Glocke auf Creative-Kachel
+                        Rectangle {
+                            visible: !appIcon.known
+                            anchors.fill: parent
+                            radius: 10
+                            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+                            SvgIcon { anchors.centerIn: parent; name: "info"; size: 18 }
+                        }
                     }
                     Column {
                         width: parent.width - appIcon.width - 12 - 22
