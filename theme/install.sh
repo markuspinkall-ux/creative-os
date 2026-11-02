@@ -63,7 +63,7 @@ install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
 for pair in settings:settings browser:browser games:games chat:chat store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
-            taskmanager:taskmanager files:files player:media-app drive:drive notes:notes shots:shots pictures:pictures archive:archive art:art broadcast:broadcast iso:disc; do
+            taskmanager:taskmanager files:files player:media-app drive:drive notes:notes shots:shots pictures:pictures archive:archive art:art broadcast:broadcast iso:disc capture:capture; do
     name="${pair%%:*}"; file="${pair#*:}"
     install -Dm644 "$ICONS/$file.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$name.svg"
 done

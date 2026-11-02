@@ -51,6 +51,7 @@ VISIBLE = {
     "creative-art.desktop": ("Creative Art", "creative-art"),
     "creative-broadcast.desktop": ("Creative Broadcast", "creative-broadcast"),
     "creative-iso.desktop": ("Creative Iso", "creative-iso"),
+    "creative-capture.desktop": ("Creative Capture", "creative-capture"),
     "com.obsproject.Studio.desktop": (None, "creative-obs"),
     "creative-pictures.desktop": ("Creative Pictures", "creative-pictures"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-shots"),

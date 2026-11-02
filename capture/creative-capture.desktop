@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Capture
+GenericName=Capture-Karte anzeigen
+Comment=Bild und Ton einer Capture-Karte (HDMI-Grabber) anzeigen – mit Vollbild, Bildschirmfoto und Aufnahme
+Keywords=Capture;Capturekarte;HDMI;Grabber;Elgato;Cam Link;Konsole;PlayStation;Xbox;Switch;Video;Aufnahme;
+Exec=creative-capture
+Icon=creative-capture
+Terminal=false
+Categories=AudioVideo;Video;Player;
+StartupWMClass=creative-capture

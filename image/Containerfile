@@ -230,6 +230,12 @@ COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
 COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd
 COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broadcast.desktop
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
+# Creative Capture – Capture-Karte anzeigen (Bild + Ton, Vollbild, Foto, Aufnahme)
+COPY capture/creative_capture /usr/lib/creative-capture/creative_capture
+COPY capture/bin/creative-capture /usr/bin/creative-capture
+COPY capture/creative-capture.desktop /usr/share/applications/creative-capture.desktop
+RUN chmod 755 /usr/bin/creative-capture
+
 # Creative Iso – Installations-ISOs erstellen (aus diesem System oder als Netzinstallation)
 COPY iso/creative_iso /usr/lib/creative-iso/creative_iso
 COPY iso/bin/creative-iso /usr/bin/creative-iso
@@ -468,6 +474,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/DrivesPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
         /usr/lib/creative-iso/creative_iso/qml/Main.qml \
+        /usr/lib/creative-capture/creative_capture/qml/Main.qml \
         /usr/lib/creative-welcome/creative_welcome/qml/Main.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/StartMenu.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
@@ -495,6 +502,9 @@ RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadca
 # Willkommens-Assistent: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 /usr/bin/creative-welcome --selftest \
     || echo "WILLKOMMEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/wl-home
+# Creative Capture: Oberfläche lädt?
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/cap-home timeout 60 /usr/bin/creative-capture --selftest \
+    || echo "CAPTURE-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/cap-home
 # Creative Iso: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/iso-home timeout 60 /usr/bin/creative-iso --selftest \
     || echo "ISO-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/iso-home

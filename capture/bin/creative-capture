@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/usr/lib/creative-capture${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_capture "$@"
