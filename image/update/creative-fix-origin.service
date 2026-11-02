@@ -1,0 +1,11 @@
+[Unit]
+Description=Creative OS: Update-Quelle prüfen
+After=network.target
+ConditionPathExists=/run/ostree-booted
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/creative-fix-origin
+
+[Install]
+WantedBy=multi-user.target

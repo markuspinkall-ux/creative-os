@@ -33,6 +33,7 @@ WINDOW_ALIASES = {
     "plasma-discover": "org.kde.discover",
     "org.kde.krita": "creative-art",
     "obs": "com.obsproject.studio",
+    "brave-web.whatsapp.com__-default": "creative-whatsapp",
 }
 
 

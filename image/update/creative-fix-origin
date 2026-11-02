@@ -1,0 +1,15 @@
+#!/bin/bash
+# Creative OS: Wurde von einer selbst erstellten ISO (Creative Iso) installiert, zeigt die
+# Update-Quelle evtl. auf ein lokales Abbild. Dann auf die Registry umstellen, damit der
+# PC ganz normal Updates bekommt. Ändert nur die Quelle, lädt nichts herunter.
+ref=$(rpm-ostree status --json 2>/dev/null | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+b = next((x for x in d.get('deployments', []) if x.get('booted')), {})
+print(b.get('container-image-reference', ''))")
+case "$ref" in
+    ""|*ghcr.io/*|*quay.io/*|*docker.io/*) exit 0 ;;
+esac
+variant=$(cat /usr/share/creative-os/variant 2>/dev/null || echo amd)
+echo "Update-Quelle war „$ref“ – stelle auf ghcr.io/markuspinkall-ux/creative-os:$variant um"
+exec bootc switch --mutate-in-place --transport registry "ghcr.io/markuspinkall-ux/creative-os:$variant"

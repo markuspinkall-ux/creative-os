@@ -202,5 +202,9 @@ class DesktopModel(QAbstractListModel):
         if not spawn_detached(["creative-files", target]):
             QDesktopServices.openUrl(QUrl.fromLocalFile(target))
 
+    @Slot(result="QVariantList")
+    def selectedPaths(self):
+        return [r["path"] for r in self._selected()]
+
     selectedCount = Property(int, lambda self: len(self._selected()), notify=selectionChanged)
     folder = Property(str, lambda self: str(self._dir), constant=True)

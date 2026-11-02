@@ -21,6 +21,9 @@ DEFAULTS = {
     "visualizerOpacity": 0.1,
     # Interpret und Titel des laufenden Liedes mittig in der Taskleiste
     "taskbarNowPlaying": True,
+    # Ablage oben mittig auf dem Schreibtisch (Verknüpfungen, wie das Dock bei macOS)
+    "desktopShelf": True,
+    "shelf": [],
     "pinned": [
         {
             "icon": "files",
@@ -75,6 +78,11 @@ DEFAULTS = {
             "icon": "twitch",
             "candidates": ["creative-twitch.desktop"],
             "match": ["brave-www.twitch.tv", "brave-twitch.tv", "creative-twitch"],
+        },
+        {
+            "icon": "whatsapp",
+            "candidates": ["creative-whatsapp.desktop"],
+            "match": ["brave-web.whatsapp.com", "creative-whatsapp"],
         },
     ],
 }

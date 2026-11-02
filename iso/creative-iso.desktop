@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Iso
+GenericName=Installations-ISO erstellen
+Comment=Aus diesem System oder einer heruntergeladenen ISO eine Creative-OS-Installations-ISO machen
+Keywords=ISO;Abbild;Installation;Installer;Image;USB;Backup;
+Exec=creative-iso
+Icon=creative-iso
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=creative-iso

@@ -13,6 +13,7 @@ Item {
     function opened() {
         search.text = ""
         powerMenu.visible = false
+        appMenu.visible = false
         list.currentIndex = -1
         list.positionViewAtBeginning()
         search.forceActiveFocus()
@@ -153,6 +154,7 @@ Item {
                 required property string name
                 required property string icon
                 required property string comment
+                required property string desktopId
 
                 width: ListView.view.width
                 height: 44
@@ -190,8 +192,17 @@ Item {
                     id: rowMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            appMenu.desktopId = row.desktopId
+                            const p = row.mapToItem(menu, mouse.x, mouse.y)
+                            appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
+                            appMenu.y = p.y
+                            appMenu.visible = true
+                            return
+                        }
                         apps.launchAt(row.index)
                         shell.closePopups()
                     }
@@ -294,6 +305,41 @@ Item {
                         Accessible.role: Accessible.MenuItem
                         Accessible.name: modelData.label
                     }
+                }
+            }
+        }
+
+        // Rechtsklick auf eine App
+        Rectangle {
+            id: appMenu
+            property string desktopId: ""
+            visible: false
+            z: 3
+            width: 230
+            height: 44
+            radius: 12
+            color: Theme.raised
+            border.color: Theme.hairline
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 4
+                radius: 9
+                color: amMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 15 }
+                Text {
+                    x: 36
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Zur Ablage hinzufügen"
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                MouseArea {
+                    id: amMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { shelf.addApp(appMenu.desktopId); appMenu.visible = false }
                 }
             }
         }

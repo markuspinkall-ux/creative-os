@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=WhatsApp
+GenericName=Messenger
+Comment=WhatsApp Web als eigenes Fenster
+Keywords=WhatsApp;Chat;Messenger;Nachrichten;
+Exec=creative-webapp https://web.whatsapp.com/
+Icon=creative-whatsapp
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+StartupWMClass=brave-web.whatsapp.com__-Default

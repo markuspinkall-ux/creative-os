@@ -11,6 +11,14 @@ Item {
     readonly property bool showIcons: shell.primaryScreen === "" || shell.primaryScreen === screenName
     readonly property int barSpace: 74
 
+    // Ziehen: Schreibtisch-Symbol → Ablage, oder Ablage-Eintrag heraus (= entfernen)
+    property string dragPath: ""
+    property bool dragIsDir: false
+    property string dragTint: ""
+    property string dragExt: ""
+    property string dragShelfKey: ""
+    property var dragShelfItem: null
+
     Rectangle {
         anchors.fill: parent
         color: Theme.ground
@@ -123,7 +131,32 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
+                property point pressPos
+                onPositionChanged: (mouse) => {
+                    if (!(mouse.buttons & Qt.LeftButton))
+                        return
+                    if (root.dragPath === "" && Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) > 12) {
+                        root.dragPath = model.path
+                        root.dragIsDir = model.isDir
+                        root.dragTint = model.tint
+                        root.dragExt = model.ext
+                    }
+                    if (root.dragPath !== "") {
+                        const p = cell.mapToItem(root, mouse.x, mouse.y)
+                        ghost.x = p.x - ghost.width / 2
+                        ghost.y = p.y - ghost.height / 2
+                    }
+                }
+                onReleased: (mouse) => {
+                    if (root.dragPath === "")
+                        return
+                    const p = cell.mapToItem(shelfBox, mouse.x, mouse.y)
+                    if (shelfBox.visible && p.x >= 0 && p.y >= 0 && p.x <= shelfBox.width && p.y <= shelfBox.height + 20)
+                        shelf.addPath(root.dragPath)
+                    root.dragPath = ""
+                }
                 onPressed: (mouse) => {
+                    pressPos = Qt.point(mouse.x, mouse.y)
                     shell.closePopups()
                     if (mouse.button === Qt.RightButton) {
                         desktop.selectKeep(index)
@@ -140,17 +173,225 @@ Item {
         }
     }
 
+    // ---- Ablage oben mittig (wie das Dock bei macOS) ------------------------------------
+    Rectangle {
+        id: shelfBox
+        visible: root.showIcons && shelf.enabled
+        readonly property bool dropHover: shelfDrop.containsDrag || (root.dragPath !== "" && ghost.y < y + height + 30
+                                          && ghost.x + ghost.width > x && ghost.x < x + width)
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 12
+        z: 5
+        height: 66
+        width: shelf.items.length ? shelfRow.implicitWidth + 24 : emptyHint.implicitWidth + 44
+        Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        radius: 22
+        color: Theme.bar
+        border.width: 1
+        border.color: dropHover ? Theme.accent : Theme.hairline
+        scale: dropHover ? 1.04 : 1
+        Behavior on scale { NumberAnimation { duration: 140 } }
+
+        // leer: Hinweis
+        Row {
+            id: emptyHint
+            visible: shelf.items.length === 0
+            anchors.centerIn: parent
+            spacing: 10
+            opacity: 0.75
+            SvgIcon { anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 16 }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Ablage – Apps, Ordner und Dateien hierher ziehen"
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+            }
+        }
+
+        Row {
+            id: shelfRow
+            anchors.centerIn: parent
+            spacing: 6
+            Repeater {
+                model: shelf.items
+                delegate: Item {
+                    id: slot
+                    required property var modelData
+                    readonly property bool dragged: root.dragShelfKey === modelData.key
+                    width: 52
+                    height: 52
+                    opacity: dragged ? 0.25 : (modelData.missing ? 0.45 : 1)
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 14
+                        color: sm.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+                    }
+                    Item {
+                        id: slotIcon
+                        anchors.centerIn: parent
+                        width: 38; height: 38
+                        scale: sm.containsMouse && !sm.pressed ? 1.15 : 1
+                        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                        Image {
+                            visible: slot.modelData.kind === "app"
+                            anchors.fill: parent
+                            sourceSize.width: 76
+                            sourceSize.height: 76
+                            source: slot.modelData.kind === "app" ? "image://icon/" + slot.modelData.icon : ""
+                            asynchronous: true
+                            smooth: true
+                        }
+                        FileIcon {
+                            visible: slot.modelData.kind !== "app"
+                            anchors.centerIn: parent
+                            size: 36
+                            isDir: slot.modelData.kind === "dir"
+                            tint: slot.modelData.tint
+                            ext: slot.modelData.ext
+                        }
+                    }
+                    // Name unter der Ablage beim Darüberfahren
+                    Rectangle {
+                        visible: sm.containsMouse && root.dragShelfKey === ""
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: parent.height + 14
+                        width: tipText.implicitWidth + 18
+                        height: 26
+                        radius: 9
+                        color: Theme.raised
+                        border.color: Theme.hairline
+                        Text {
+                            id: tipText
+                            anchors.centerIn: parent
+                            text: slot.modelData.name
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                        }
+                    }
+                    MouseArea {
+                        id: sm
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: Qt.PointingHandCursor
+                        property point pressPos
+                        onPressed: (mouse) => { pressPos = Qt.point(mouse.x, mouse.y); shell.closePopups() }
+                        onPositionChanged: (mouse) => {
+                            if (!(mouse.buttons & Qt.LeftButton))
+                                return
+                            if (root.dragShelfKey === "" && Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) > 12) {
+                                root.dragShelfKey = slot.modelData.key
+                                root.dragShelfItem = slot.modelData
+                            }
+                            if (root.dragShelfKey !== "") {
+                                const p = slot.mapToItem(root, mouse.x, mouse.y)
+                                ghost.x = p.x - ghost.width / 2
+                                ghost.y = p.y - ghost.height / 2
+                            }
+                        }
+                        onReleased: (mouse) => {
+                            if (root.dragShelfKey === "")
+                                return
+                            const p = slot.mapToItem(shelfBox, mouse.x, mouse.y)
+                            const inside = p.x >= 0 && p.y >= 0 && p.x <= shelfBox.width && p.y <= shelfBox.height + 20
+                            if (!inside)
+                                shelf.remove(root.dragShelfKey)          // herausgezogen = entfernt
+                            else
+                                shelf.move(root.dragShelfKey, Math.floor((p.x - 12) / (52 + 6)))
+                            root.dragShelfKey = ""
+                            root.dragShelfItem = null
+                        }
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.RightButton) {
+                                shelfMenu.key = slot.modelData.key
+                                shelfMenu.isApp = slot.modelData.kind === "app"
+                                const p = slot.mapToItem(root, mouse.x, mouse.y)
+                                shelfMenu.openAt(p.x, p.y + 10)
+                            } else if (root.dragShelfKey === "") {
+                                shelf.open(slot.modelData.key)
+                            }
+                        }
+                    }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: slot.modelData.name
+                }
+            }
+        }
+
+        // Aus anderen Programmen hineinziehen (z. B. aus „Dateien“)
+        DropArea {
+            id: shelfDrop
+            anchors.fill: parent
+            anchors.margins: -12
+            onDropped: (drop) => {
+                if (drop.hasUrls) {
+                    shelf.addUrls(drop.urls)
+                    drop.acceptProposedAction()
+                }
+            }
+        }
+    }
+
+    // Was gerade gezogen wird
+    Item {
+        id: ghost
+        visible: root.dragPath !== "" || root.dragShelfKey !== ""
+        z: 20
+        width: 52; height: 52
+        opacity: 0.85
+        Image {
+            visible: root.dragShelfItem !== null && root.dragShelfItem.kind === "app"
+            anchors.centerIn: parent
+            width: 38; height: 38
+            sourceSize.width: 76; sourceSize.height: 76
+            source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? "image://icon/" + root.dragShelfItem.icon : ""
+        }
+        FileIcon {
+            visible: root.dragPath !== "" || (root.dragShelfItem !== null && root.dragShelfItem.kind !== "app")
+            anchors.centerIn: parent
+            size: 38
+            isDir: root.dragPath !== "" ? root.dragIsDir : (root.dragShelfItem ? root.dragShelfItem.kind === "dir" : false)
+            tint: root.dragPath !== "" ? root.dragTint : (root.dragShelfItem ? root.dragShelfItem.tint : "")
+            ext: root.dragPath !== "" ? root.dragExt : (root.dragShelfItem ? root.dragShelfItem.ext : "")
+        }
+    }
+
     // ---- Menüs ------------------------------------------------------------------------
+    DesktopMenu {
+        id: shelfMenu
+        property string key: ""
+        property bool isApp: false
+        entries: isApp ? [
+            { label: "Öffnen", icon: "open", act: "open" },
+            { sep: true },
+            { label: "Von der Ablage entfernen", icon: "trash", act: "remove" }
+        ] : [
+            { label: "Öffnen", icon: "open", act: "open" },
+            { label: "In Dateien zeigen", icon: "files", act: "files" },
+            { sep: true },
+            { label: "Von der Ablage entfernen", icon: "trash", act: "remove" }
+        ]
+        onTriggered: (act) => {
+            if (act === "open") shelf.open(key)
+            else if (act === "files") shelf.showInFiles(key)
+            else if (act === "remove") shelf.remove(key)
+        }
+    }
     DesktopMenu {
         id: itemMenu
         entries: [
             { label: "Öffnen", icon: "open", act: "open" },
             { label: "In Dateien zeigen", icon: "files", act: "files" },
+            { label: "Zur Ablage hinzufügen", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "In den Papierkorb", icon: "trash", act: "trash" }
         ]
         onTriggered: (act) => {
-            if (act === "open") desktop.openSelected()
+            if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
+            else if (act === "open") desktop.openSelected()
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()
         }
@@ -164,6 +405,7 @@ Item {
             { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
             { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
+            { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ]
@@ -174,6 +416,7 @@ Item {
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
             else if (act === "taskmanager") desktopStats.openTaskManager()
             else if (act === "viz") visualizer.setEnabled(!visualizer.enabled)
+            else if (act === "shelf") shelf.setEnabled(!shelf.enabled)
         }
     }
 
