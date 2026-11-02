@@ -108,8 +108,8 @@ SettingsPage {
     Card {
         title: "Quellcode und Lizenzen"
         SettingRow {
-            label: "Quellcode von Creative OS"
-            hint: "github.com/markuspinkall-ux/creative-os – alle eigenen Teile, Bauanleitung und Änderungen"
+            label: "Eigene Programme von Creative OS"
+            hint: "© 2026 Markus Pinkall – alle Rechte vorbehalten. Der Quellcode ist auf GitHub einsehbar, darf aber ohne Erlaubnis nicht übernommen werden."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }
         SettingRow {

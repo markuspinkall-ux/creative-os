@@ -402,6 +402,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
 # Überall „Creative OS“ statt Fedora (ID bleibt "fedora", damit Updates und
 # Paketquellen weiter passen – Fedora ist nur noch der Unterbau)
 COPY image/plymouth/watermark.png /usr/share/pixmaps/creative-os-logo.png
+COPY LICENSE /usr/share/licenses/creative-os/LICENSE
 RUN v="$(date +%Y.%m.%d)" \
  && sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
            -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Creative OS"/' \

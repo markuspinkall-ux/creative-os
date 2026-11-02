@@ -1,0 +1,29 @@
+Creative OS
+Copyright (c) 2026 Markus Pinkall. Alle Rechte vorbehalten.
+
+1. Eigene Programme und Bestandteile
+   Alle von Creative OS selbst entwickelten Programme und Bestandteile – insbesondere
+   Creative Shell (Taskleiste, Startmenü, Schreibtisch, Ablage), Systemsteuerung,
+   Creative Player, Creative Notes, Creative Calculator, Creative Pictures, Creative Shots,
+   Creative Broadcast, Creative Capture, Creative Iso, Taskmanager, Dateien, Sprachassistent,
+   Willkommens-Assistent, Benachrichtigungen, Datensicherung, Mein Server sowie die
+   Creative-Symbole, Hintergrundbilder, das Graphit-Design und die Bau- und Installations-
+   Skripte – sind urheberrechtlich geschützt.
+
+   Der Quellcode ist zur Einsicht öffentlich. Ohne vorherige schriftliche Erlaubnis des
+   Rechteinhabers ist es NICHT gestattet, ihn ganz oder in Teilen zu kopieren, zu verändern,
+   weiterzugeben, zu veröffentlichen, zu verkaufen oder in andere Software zu übernehmen.
+   Erlaubt ist die Nutzung von Creative OS in der vom Rechteinhaber veröffentlichten Form.
+
+2. Enthaltene Open-Source-Software
+   Creative OS enthält und nutzt Programme anderer Projekte (u. a. Fedora, KDE, Qt/PySide,
+   OBS Studio, PipeWire, FFmpeg, Caddy). Diese stehen ausschließlich unter ihren eigenen
+   Lizenzen (z. B. GPL, LGPL, MIT, Apache); Abschnitt 1 gilt für sie nicht. Die Lizenztexte
+   liegen im installierten System unter /usr/share/licenses.
+
+   Ausnahme in diesem Repository: obs/Yami_CreativeGraphit.ovt ist eine Abwandlung des
+   OBS-Designs „Yami“ und steht wie OBS Studio unter der GNU GPL v2 oder neuer.
+
+3. Marken
+   „Creative OS“ und das Creative-OS-Logo sind Kennzeichen des Rechteinhabers. Genannte
+   Namen anderer Produkte gehören ihren jeweiligen Inhabern.
