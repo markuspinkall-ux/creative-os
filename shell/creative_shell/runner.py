@@ -21,8 +21,9 @@ class Runner(QObject):
             self._env.insert("LC_ALL", "C")
             self._env.insert("LANG", "C")
 
-    def run(self, args, callback=None, stdin=None):
-        """Führt args aus und ruft danach callback(code, stdout, stderr) auf."""
+    def run(self, args, callback=None, stdin=None, timeout_ms=TIMEOUT_MS):
+        """Führt args aus und ruft danach callback(code, stdout, stderr) auf.
+        timeout_ms=0: ohne Zeitlimit (z. B. Updates, Passwort-Abfrage)."""
         if not args or shutil.which(args[0]) is None:
             if callback:
                 callback(127, "", f"{args[0] if args else '?'} nicht gefunden")
@@ -52,7 +53,8 @@ class Runner(QObject):
         if stdin is not None:
             proc.write(stdin.encode("utf-8"))
             proc.closeWriteChannel()
-        timer.start(TIMEOUT_MS)
+        if timeout_ms:
+            timer.start(timeout_ms)
 
 
 def spawn_detached(args):

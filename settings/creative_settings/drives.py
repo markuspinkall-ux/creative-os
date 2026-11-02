@@ -168,7 +168,7 @@ class DrivesModel(QObject):
                 self._set_message(res.get("error") or "Das hat nicht geklappt.")
             QTimer.singleShot(500, self.refresh)
 
-        self._run.run(["pkexec", HELPER] + args, done)
+        self._run.run(["pkexec", HELPER] + args, done, timeout_ms=0)   # Passwort + Formatieren dauern
 
     @Slot(str, str, str)
     def setup(self, device, name, fstype):
@@ -208,7 +208,7 @@ class DrivesModel(QObject):
                 self._set_message(ok_text)
                 QTimer.singleShot(300, self.refresh)
                 return
-            self._run.run(cmds.pop(0), step)
+            self._run.run(cmds.pop(0), step, timeout_ms=120000)
         step()
 
     @Slot(str)

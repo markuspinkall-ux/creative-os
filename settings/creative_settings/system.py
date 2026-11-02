@@ -105,7 +105,7 @@ class SystemModel(QObject):
                 self._set_message("Der Gerätename wurde geändert.")
             else:
                 self._set_message("Der Name konnte nicht geändert werden.")
-        self._run.run(["hostnamectl", "set-hostname", name], done)
+        self._run.run(["hostnamectl", "set-hostname", name], done, timeout_ms=0)
         return ""
 
     # ---- Updates ----------------------------------------------------------------
@@ -161,7 +161,7 @@ class SystemModel(QObject):
                     text = "Die Update-Suche hat nicht geklappt." + (f" ({detail})" if detail else
                                                                     " Besteht eine Internetverbindung?")
                 self._set_upd(state="error", text=text)
-        self._run.run(self._update_cmd("--check"), done)
+        self._run.run(self._update_cmd("--check"), done, timeout_ms=0)
 
     @Slot()
     def downloadUpdate(self):
@@ -175,7 +175,7 @@ class SystemModel(QObject):
                 detail = (err.strip().splitlines() or [""])[-1][:160]
                 self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
                               + (f" ({detail})" if detail else ""))
-        self._run.run(self._update_cmd(), done)
+        self._run.run(self._update_cmd(), done, timeout_ms=0)
 
     @Slot(str)
     def setChannel(self, name):
@@ -194,7 +194,7 @@ class SystemModel(QObject):
                 detail = (err.strip().splitlines() or [""])[-1][:160]
                 self._set_upd(state="error", text="Der Kanal konnte nicht gewechselt werden."
                               + (f" ({detail})" if detail else ""))
-        self._run.run(self._update_cmd("--channel", name), done)
+        self._run.run(self._update_cmd("--channel", name), done, timeout_ms=0)
 
     @staticmethod
     def _update_cmd(*extra):

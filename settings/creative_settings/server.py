@@ -171,7 +171,7 @@ class ServerModel(QObject):
                 self._set_message(result.get("error") or "Das hat nicht geklappt.")
             QTimer.singleShot(600, self.refresh)
 
-        self._run.run(args, done)
+        self._run.run(args, done, timeout_ms=0)
 
     @Slot(str, str)
     def enableInternet(self, name, token):
@@ -200,7 +200,7 @@ class ServerModel(QObject):
                 self._set_message(result.get("error") or "Das hat nicht geklappt.")
             QTimer.singleShot(600, self.refresh)
 
-        self._run.run(["pkexec", HELPER, "internet", name], done, stdin=token + "\n")
+        self._run.run(["pkexec", HELPER, "internet", name], done, stdin=token + "\n", timeout_ms=0)
 
     @Slot()
     def disableInternet(self):
@@ -215,7 +215,7 @@ class ServerModel(QObject):
                               "Abgebrochen.")
             QTimer.singleShot(600, self.refresh)
 
-        self._run.run(["pkexec", HELPER, "internet-off"], done)
+        self._run.run(["pkexec", HELPER, "internet-off"], done, timeout_ms=0)
 
     @Slot()
     def openDuckDns(self):

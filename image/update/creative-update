@@ -51,6 +51,18 @@ if [ "${1:-}" = "--channel" ]; then
     exit "$rc"
 fi
 
+# Nachsehen, ob es ein Update gibt: bootc vergleicht zuverlässig mit der Registry
+# (rpm-ostree --check ist bei Container-Abbildern unzuverlässig).
+if [ "${1:-}" = "--check" ] && command -v bootc >/dev/null 2>&1; then
+    out=$(bootc upgrade --check 2>&1); rc=$?
+    echo "$out"
+    if [ "$rc" -eq 0 ]; then
+        if echo "$out" | grep -qiE "no changes|no update"; then exit 77; fi
+        if echo "$out" | grep -qiE "update available|available for"; then exit 0; fi
+    fi
+    echo "(bootc ohne eindeutiges Ergebnis – frage rpm-ostree)" >&2
+fi
+
 case "${1:-}" in
     --check) args=(upgrade --check) ;;
     --auto)  args=(upgrade --quiet --trigger-automatic-update-policy) ;;
