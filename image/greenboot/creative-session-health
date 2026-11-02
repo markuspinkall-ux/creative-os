@@ -1,0 +1,41 @@
+#!/bin/bash
+# Creative OS – Gesundheitsprüfung NACH der Anmeldung.
+# Läuft nach jedem Start im Hintergrund und wartet auf die erste Anmeldung:
+#  - Oberfläche läuft eine Minute stabil  → diese Version gilt als gesund (merken)
+#  - Oberfläche stürzt immer wieder ab    → ist es eine NEUE Version, automatisch zur
+#                                           letzten gesunden zurück und neu starten
+set -u
+mkdir -p /var/lib/creative-os
+booted() {
+    rpm-ostree status --json 2>/dev/null | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+b = next((x for x in d.get('deployments', []) if x.get('booted')), None)
+print(b['checksum'] if b else '')"
+}
+cur=$(booted)
+[ -n "$cur" ] || exit 0
+while true; do
+    for f in /tmp/creative-shell-state-*; do
+        [ -f "$f" ] || continue
+        # nur Dateien echter Benutzer (nicht von irgendwem angelegt)
+        owner=$(stat -c %u "$f"); name=${f##*-}
+        [ "$owner" = "$name" ] || continue
+        case "$(cat "$f" 2>/dev/null)" in
+            ok)
+                echo "$cur" > /var/lib/creative-os/last-good
+                echo "Creative OS: Oberfläche läuft stabil – Version als gesund gemerkt"
+                exit 0 ;;
+            failed)
+                good=$(cat /var/lib/creative-os/last-good 2>/dev/null || true)
+                if [ -n "$good" ] && [ "$good" != "$cur" ]; then
+                    echo "Creative OS: Oberfläche stürzt nach dem Update ab – zurück zur letzten gesunden Version"
+                    date '+%Y-%m-%d %H:%M' > /var/lib/creative-os/rolled-back
+                    sleep 8
+                    rpm-ostree rollback && systemctl reboot
+                fi
+                exit 0 ;;
+        esac
+    done
+    sleep 10
+done

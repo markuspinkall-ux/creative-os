@@ -1,0 +1,11 @@
+[Unit]
+Description=Creative OS: Gesundheitsprüfung nach der Anmeldung
+After=display-manager.service
+ConditionPathExists=/run/ostree-booted
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/creative-session-health
+
+[Install]
+WantedBy=graphical.target

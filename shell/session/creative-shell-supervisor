@@ -10,7 +10,7 @@ export QT_QPA_PLATFORM=wayland
 # Sonst hängen alter Sprachassistent, Tray-Dienst oder Laufwerks-Wächter noch
 # herum und können die neue Anmeldung blockieren.
 uid="$(id -u)"
-for p in creative-assistant creative-automount "creative_broadcast.daemon" "python3 -m creative_shell" "python3 -m creative_assistant" \
+for p in creative-assistant creative-automount "creative_broadcast.daemon" "python3 -m creative_notify" "python3 -m creative_shell" "python3 -m creative_assistant" \
          kded6 polkit-kde-authentication-agent-1 "parec --device=@DEFAULT_MONITOR@"; do
     pkill -u "$uid" -f "$p" 2>/dev/null
 done
@@ -25,6 +25,8 @@ cleanup() {
     pkill -u "$uid" -f creative-assistant 2>/dev/null
     pkill -u "$uid" -f creative-automount 2>/dev/null
     pkill -u "$uid" -f creative_broadcast.daemon 2>/dev/null
+    pkill -u "$uid" -f "python3 -m creative_notify" 2>/dev/null
+    pkill -u "$uid" -f "while true; do creative-notifyd" 2>/dev/null
     pkill -u "$uid" -f "parec --device=@DEFAULT_MONITOR@" 2>/dev/null
     pkill -u "$uid" -x kded6 2>/dev/null
     pkill -u "$uid" -f polkit-kde-authentication-agent-1 2>/dev/null
@@ -68,6 +70,12 @@ if command -v creative-broadcastd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Benachrichtigungen (Steam, Discord, Downloads …) unten rechts – startet nach einem Absturz neu
+if command -v creative-notifyd >/dev/null 2>&1; then
+    ( while true; do creative-notifyd 2>&1 | systemd-cat -t creative-notifyd; sleep 3; done ) &
+    children="$children $!"
+fi
+
 # Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
 if command -v creative-assistant >/dev/null 2>&1; then
     # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant
@@ -84,9 +92,16 @@ fi
 
 crashes=0
 window_start=$(date +%s)
+# Zustand für die Gesundheitsprüfung des Systems (creative-session-health):
+# „ok“ = Oberfläche läuft stabil, „failed“ = stürzt immer wieder ab → neue Version zurückrollen
+state="/tmp/creative-shell-state-$uid"
+rm -f "$state"
 
 while true; do
-    /usr/bin/creative-shell
+    /usr/bin/creative-shell &
+    spid=$!
+    ( sleep 60; kill -0 "$spid" 2>/dev/null && echo ok > "$state" ) &
+    wait "$spid"
     code=$?
     [ "$code" -eq 0 ] && exit 0          # regulär beendet (Abmelden) – cleanup läuft über trap
 
@@ -98,6 +113,7 @@ while true; do
     crashes=$((crashes + 1))
     if [ "$crashes" -ge 5 ]; then
         logger -t creative-shell "Shell stürzt wiederholt ab (Code $code) – gebe auf"
+        echo failed > "$state"
         # Sitzung offen halten, damit Programme und Daten nicht verloren gehen,
         # und ein Terminal öffnen, damit man nicht vor einem leeren Bildschirm sitzt
         (konsole || ptyxis) >/dev/null 2>&1 &

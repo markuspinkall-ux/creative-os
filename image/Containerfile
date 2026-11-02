@@ -214,6 +214,12 @@ COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
 COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd
 COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broadcast.desktop
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
+# Benachrichtigungen (org.freedesktop.Notifications) im Creative-Look
+RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
+COPY notify/creative_notify /usr/lib/creative-notify/creative_notify
+COPY notify/bin/creative-notifyd /usr/bin/creative-notifyd
+RUN chmod 755 /usr/bin/creative-notifyd
+
 # Creative Capture – Capture-Karte anzeigen (Bild + Ton, Vollbild, Foto, Aufnahme)
 COPY capture/creative_capture /usr/lib/creative-capture/creative_capture
 COPY capture/bin/creative-capture /usr/bin/creative-capture
@@ -415,9 +421,11 @@ COPY image/polkit/50-creative-drives.rules /usr/share/polkit-1/rules.d/50-creati
 RUN dnf install -y --skip-unavailable greenboot greenboot-default-health-checks && dnf clean all \
  && rm -f /usr/lib/greenboot/check/required.d/01_repository_dns_check.sh
 COPY image/greenboot/50-creative-desktop.sh /usr/lib/greenboot/check/required.d/50-creative-desktop.sh
-COPY image/greenboot/50-creative-mark-good.sh /usr/lib/greenboot/green.d/50-creative-mark-good.sh
+COPY image/greenboot/creative-session-health /usr/libexec/creative-session-health
+COPY image/greenboot/creative-session-health.service /usr/lib/systemd/system/creative-session-health.service
 COPY image/greenboot/50-creative-rollback.sh /usr/lib/greenboot/red.d/50-creative-rollback.sh
-RUN chmod 755 /usr/lib/greenboot/check/required.d/50-creative-desktop.sh /usr/lib/greenboot/green.d/50-creative-mark-good.sh \
+RUN chmod 755 /usr/lib/greenboot/check/required.d/50-creative-desktop.sh /usr/libexec/creative-session-health \
+ && systemctl enable creative-session-health.service \
       /usr/lib/greenboot/red.d/50-creative-rollback.sh \
  && (systemctl enable greenboot-healthcheck.service && echo "Zurückrollen: greenboot aktiv" || echo "ZURÜCKROLLEN: GREENBOOT FEHLT") \
  && (systemctl enable greenboot-set-rollback-trigger.service 2>/dev/null || true)
@@ -464,6 +472,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
         /usr/lib/creative-iso/creative_iso/qml/Main.qml \
         /usr/lib/creative-capture/creative_capture/qml/Main.qml \
+        /usr/lib/creative-notify/creative_notify/qml/Main.qml \
         /usr/lib/creative-welcome/creative_welcome/qml/Main.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/StartMenu.qml \
         /usr/lib/creative-pictures/creative_pictures/qml/Main.qml \
@@ -489,6 +498,9 @@ RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadca
 # Willkommens-Assistent: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 /usr/bin/creative-welcome --selftest \
     || echo "WILLKOMMEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/wl-home
+# Benachrichtigungen: Oberfläche lädt?
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/nt-home timeout 60 /usr/bin/creative-notifyd --selftest \
+    || echo "BENACHRICHTIGUNGEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/nt-home
 # Creative Capture: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/cap-home timeout 60 /usr/bin/creative-capture --selftest \
     || echo "CAPTURE-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/cap-home
