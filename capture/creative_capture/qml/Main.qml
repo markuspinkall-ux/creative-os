@@ -252,6 +252,7 @@ Window {
             Dropdown {
                 id: videoBox
                 width: 230
+                placeholder: "Keine Capture-Karte"
                 enabled: win.hasVideo
                 model: devices.videoInputs.map(d => d.description)
                 currentIndex: Math.max(0, win.indexOfDev(devices.videoInputs, cam.cameraDevice))
@@ -261,6 +262,7 @@ Window {
             Dropdown {
                 id: formatBox
                 width: 210
+                placeholder: "Auflösung"
                 enabled: win.formats.length > 0
                 model: win.formats.map(f => f.text)
                 onActivated: (i) => { cam.cameraFormat = win.formats[i].fmt; capture.set("format", win.formats[i].key) }
@@ -353,6 +355,7 @@ Window {
     // ---- Baustein: Auswahlliste im Creative-Look -------------------------------------------------
     component Dropdown: ComboBox {
         id: dd
+        property string placeholder: ""
         height: 40
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
         font.family: Theme.fontFamily
@@ -361,7 +364,7 @@ Window {
         contentItem: Text {
             leftPadding: 12
             rightPadding: 28
-            text: dd.displayText
+            text: dd.count > 0 ? dd.displayText : dd.placeholder
             color: dd.enabled ? Theme.text : Theme.textMuted
             font: dd.font
             elide: Text.ElideRight
