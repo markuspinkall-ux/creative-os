@@ -1,0 +1,4 @@
+#!/bin/sh
+# Datensicherung: creative-backup --run (jetzt sichern) | --auto (nur wenn fällig)
+export PYTHONPATH="/usr/lib/creative-settings${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_settings.backup "$@"

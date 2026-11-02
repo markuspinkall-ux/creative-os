@@ -76,6 +76,12 @@ if command -v creative-notifyd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Datensicherung: stündlich prüfen, ob eine automatische Sicherung fällig ist
+if command -v creative-backup >/dev/null 2>&1; then
+    ( sleep 300; while true; do creative-backup --auto >/dev/null 2>&1; sleep 3600; done ) &
+    children="$children $!"
+fi
+
 # Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
 if command -v creative-assistant >/dev/null 2>&1; then
     # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant

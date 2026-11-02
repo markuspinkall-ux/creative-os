@@ -87,6 +87,9 @@ class SystemModel(QObject):
         self._host = socket.gethostname()
         self._message = ""
         self._atomic = shutil.which("rpm-ostree") is not None and Path("/run/ostree-booted").exists()
+        self._sb = {"secureboot": False, "enrolled": False, "pending": False}
+        self._sb_msg = ""
+        self.refreshSecureBoot()
         self._upd = {"state": "unknown", "text": "", "version": "", "busy": False,
                      "channel": "", "rolledBack": "", "channelBusy": False,
                      "pendingChannel": "", "wantChannel": "", "progress": -1, "progressText": ""}
@@ -277,6 +280,36 @@ class SystemModel(QObject):
             return ["pkexec", "/usr/bin/creative-update", *extra]
         return ["rpm-ostree", "upgrade", *extra]
 
+    # ---- Secure Boot: Treiber freischalten ----------------------------------------------
+    sbChanged = Signal()
+
+    @Slot()
+    def refreshSecureBoot(self):
+        def done(code, out, _err):
+            try:
+                self._sb = json.loads(out.strip().splitlines()[-1])
+            except (ValueError, IndexError):
+                pass
+            self.sbChanged.emit()
+        if Path("/usr/libexec/creative-secureboot").exists():
+            self._run.run(["/usr/libexec/creative-secureboot", "status"], done)
+
+    @Slot()
+    def enrollSecureBoot(self):
+        self._sb_msg = "Warte auf dein Passwort …"
+        self.sbChanged.emit()
+
+        def done(code, out, err):
+            if code == 0:
+                self._sb_msg = ("Vorgemerkt. Beim nächsten Neustart erscheint ein blauer Bildschirm: "
+                                "„Enroll MOK“ › „Continue“ › „Yes“ wählen, Passwort creative eingeben, dann „Reboot“.")
+            elif code in (126, 127):
+                self._sb_msg = "Abgebrochen."
+            else:
+                self._sb_msg = "Das hat nicht geklappt: " + ((err or out).strip().splitlines() or [""])[-1][:140]
+            self.refreshSecureBoot()
+        self._run.run(["pkexec", "/usr/libexec/creative-secureboot", "enroll"], done, timeout_ms=0)
+
     @Slot()
     def reboot(self):
         spawn_detached(["systemctl", "reboot"])
@@ -293,6 +326,8 @@ class SystemModel(QObject):
     info = Property("QVariantMap", lambda self: self._info, constant=True)
     hostName = Property(str, lambda self: self._host, notify=changed)
     updates = Property("QVariantMap", lambda self: dict(self._upd), notify=updatesChanged)
+    secureBoot = Property("QVariantMap", lambda self: dict(self._sb), notify=sbChanged)
+    secureBootMessage = Property(str, lambda self: self._sb_msg, notify=sbChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
 
 

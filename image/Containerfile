@@ -54,18 +54,28 @@ RUN mkdir -p /var/opt \
  && dnf clean all
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 
+# Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
+COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
+COPY image/secureboot/sign-modules.sh /usr/libexec/creative-sign-modules
+COPY image/secureboot/creative-secureboot /usr/libexec/creative-secureboot
+COPY image/secureboot/postinstall.sh /usr/share/creative-os/secureboot/postinstall.sh
+COPY image/secureboot/org.creativeos.secureboot.policy /usr/share/polkit-1/actions/org.creativeos.secureboot.policy
+RUN chmod 755 /usr/libexec/creative-sign-modules /usr/libexec/creative-secureboot \
+ && (command -v mokutil >/dev/null || dnf install -y --skip-unavailable mokutil) && dnf clean all
+
 # ---------------------------------------------------------------------------
 # 4) NVIDIA-Treiber (nur Variante NVIDIA=1)
 #    Das Kernelmodul wird hier beim Bauen erzeugt – auf dem fertigen,
 #    schreibgeschützten System muss nichts mehr kompiliert werden.
 # ---------------------------------------------------------------------------
-RUN if [ "$NVIDIA" = "1" ]; then \
+RUN --mount=type=secret,id=mokkey if [ "$NVIDIA" = "1" ]; then \
         KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
      && dnf install -y akmods "kernel-devel-${KVER}" \
      && dnf install -y --setopt=tsflags=noscripts akmod-nvidia \
      && dnf install -y xorg-x11-drv-nvidia xorg-x11-drv-nvidia-libs.i686 xorg-x11-drv-nvidia-cuda \
      && akmods --force --kernels "${KVER}" --kmod nvidia \
      && find "/usr/lib/modules/${KVER}" -name 'nvidia*.ko*' | grep -q . \
+     && /usr/libexec/creative-sign-modules "${KVER}" 'nvidia*' \
      && mkdir -p /usr/lib/bootc/kargs.d \
      && printf 'kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1"]\n' \
             > /usr/lib/bootc/kargs.d/00-nvidia.toml \
@@ -186,10 +196,11 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
 #      Greenscreen (Robust Video Matting → virtuelle Kamera „Creative Kamera“)
 # ---------------------------------------------------------------------------
 # Virtuelle Kamera: Kernelmodul v4l2loopback (RPM Fusion), beim Bauen erzeugt
-RUN KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
+RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
  && dnf install -y akmods "kernel-devel-${KVER}" \
  && dnf install -y --setopt=tsflags=noscripts akmod-v4l2loopback v4l2loopback \
  && akmods --force --kernels "${KVER}" --kmod v4l2loopback \
+ && /usr/libexec/creative-sign-modules "${KVER}" 'v4l2loopback' \
  && (find "/usr/lib/modules/${KVER}" -name 'v4l2loopback.ko*' | grep -q . && echo "Creative Broadcast: virtuelle Kamera ok" \
      || echo "BROADCAST: V4L2LOOPBACK FEHLT") ; dnf clean all
 COPY broadcast/modprobe-creative-kamera.conf /usr/lib/modprobe.d/creative-kamera.conf
@@ -286,6 +297,8 @@ COPY drives/creative-automount /usr/bin/creative-automount
 RUN chmod 755 /usr/libexec/creative-drives-helper /usr/bin/creative-automount
 COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
 COPY settings/bin/creative-settings /usr/bin/creative-settings
+COPY settings/bin/creative-backup /usr/bin/creative-backup
+RUN chmod 755 /usr/bin/creative-backup && (command -v rsync >/dev/null || dnf install -y rsync) && dnf clean all
 COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
 RUN chmod 755 /usr/bin/creative-settings
 
@@ -470,6 +483,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/SystemPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/DrivesPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
+        /usr/lib/creative-settings/creative_settings/qml/pages/BackupPage.qml \
         /usr/lib/creative-iso/creative_iso/qml/Main.qml \
         /usr/lib/creative-capture/creative_capture/qml/Main.qml \
         /usr/lib/creative-notify/creative_notify/qml/Main.qml \

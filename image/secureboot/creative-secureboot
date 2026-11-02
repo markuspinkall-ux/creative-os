@@ -1,0 +1,21 @@
+#!/bin/bash
+# Creative OS – Secure Boot: Schlüssel der Creative-OS-Treiber freischalten.
+#   creative-secureboot status   → JSON: {"secureboot": bool, "enrolled": bool, "pending": bool}
+#   creative-secureboot enroll   → Schlüssel zur Freischaltung vormerken (Passwort: creative)
+CERT=/usr/share/creative-os/secureboot/creative-os-mok.der
+PW=creative
+sb=false; enrolled=false; pending=false
+if command -v mokutil >/dev/null 2>&1 && [ -d /sys/firmware/efi ]; then
+    mokutil --sb-state 2>/dev/null | grep -qi "enabled" && sb=true
+    out=$(mokutil --test-key "$CERT" 2>&1)
+    echo "$out" | grep -qi "already enrolled" && enrolled=true
+    echo "$out" | grep -qi "to be enrolled\|already in the enrollment request" && pending=true
+fi
+case "${1:-status}" in
+    status) echo "{\"secureboot\": $sb, \"enrolled\": $enrolled, \"pending\": $pending}" ;;
+    enroll)
+        [ "$(id -u)" -eq 0 ] || exec pkexec "$0" enroll
+        $enrolled && { echo "schon freigeschaltet"; exit 0; }
+        printf '%s\n%s\n' "$PW" "$PW" | mokutil --import "$CERT" && echo "vorgemerkt – bitte neu starten"
+        ;;
+esac

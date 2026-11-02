@@ -109,6 +109,25 @@ SettingsPage {
         }
     }
 
+    // Secure Boot: Treiber (Grafik, virtuelle Kamera) freischalten
+    Card {
+        visible: system.secureBoot.secureboot === true && system.secureBoot.enrolled !== true
+        title: "Treiber für Secure Boot freischalten"
+        subtitle: "Ohne Freischaltung laden NVIDIA-Treiber und die virtuelle Kamera nicht"
+        SettingRow {
+            label: system.secureBoot.pending ? "Vorgemerkt – jetzt neu starten" : "Einmalig bestätigen"
+            hint: system.secureBootMessage || (system.secureBoot.pending
+                  ? "Beim Neustart: „Enroll MOK“ › „Continue“ › „Yes“, Passwort creative, dann „Reboot“."
+                  : "Nach einem Klick fragt der PC beim nächsten Start einmal auf einem blauen Bildschirm nach (Passwort: creative).")
+            last: true
+            Row {
+                spacing: 8
+                CButton { visible: !system.secureBoot.pending; text: "Freischalten"; primary: true; onClicked: system.enrollSecureBoot() }
+                CButton { visible: system.secureBoot.pending === true; text: "Jetzt neu starten"; primary: true; onClicked: system.reboot() }
+            }
+        }
+    }
+
     // Automatisch zurückgerollt?
     Card {
         visible: (u.rolledBack || "").length > 0

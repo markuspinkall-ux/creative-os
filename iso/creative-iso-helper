@@ -97,7 +97,7 @@ full() {
 
     cat > "$WORK/config.toml" <<TOML
 [customizations.installer.kickstart]
-contents = """
+contents = '''
 lang de_DE.UTF-8
 keyboard --vckeymap=de --xlayouts=de
 timezone Europe/Berlin --utc
@@ -106,7 +106,11 @@ network --bootproto=dhcp --activate --hostname=creative-os
 %post --erroronfail
 bootc switch --mutate-in-place --transport registry $regref
 %end
-"""
+
+%post
+$(cat /usr/share/creative-os/secureboot/postinstall.sh 2>/dev/null)
+%end
+'''
 TOML
 
     say 30 "ISO wird gebaut – das dauert 15 bis 40 Minuten …"

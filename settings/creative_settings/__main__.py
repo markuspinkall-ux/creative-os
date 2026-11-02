@@ -21,6 +21,7 @@ from creative_shell.network import NetworkModel  # noqa: E402
 from creative_shell.session import SessionModel  # noqa: E402
 
 from .displays import DisplayModel  # noqa: E402
+from .backup import BackupModel  # noqa: E402
 from .drives import DrivesModel  # noqa: E402
 from .server import ServerModel  # noqa: E402
 from .sound import SoundModel  # noqa: E402
@@ -35,6 +36,7 @@ PAGES = {
     "updates": "updates", "system": "system",
     "drives": "drives", "laufwerke": "drives", "festplatten": "drives",
     "server": "server", "meinserver": "server", "mein-server": "server",
+    "backup": "backup", "sicherung": "backup", "datensicherung": "backup",
 }
 
 
@@ -67,6 +69,7 @@ def main():
         "printerList": PrinterListModel(),
         "server": ServerModel(),
         "drives": DrivesModel(),
+        "backup": BackupModel(),
         "look": LookModel(qml_root / "Creative" / "wallpapers"),
     }
     ctx = engine.rootContext()
