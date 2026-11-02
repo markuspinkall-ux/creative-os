@@ -15,10 +15,10 @@ timezone Europe/Berlin
 KS
 Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
 sleep 2
-export DISPLAY=:99 LANG=de_DE.UTF-8
+export DISPLAY=:99 LANG=de_DE.UTF-8 XDG_RUNTIME_DIR=/tmp/xdg; mkdir -p /tmp/xdg; chmod 700 /tmp/xdg
 mkdir -p /tmp/sys
 dbus-daemon --system --fork 2>/dev/null
-(anaconda --dirinstall /tmp/sys --graphical --kickstart /tmp/ks.cfg --lang de_DE.UTF-8 > /tmp/ana.out 2>&1 &)
+(anaconda --dirinstall /tmp/sys --graphical --lang de_DE.UTF-8 > /tmp/ana.out 2>&1 &)
 sleep 75
 mkdir -p shots
 import -window root /tmp/s1.png
