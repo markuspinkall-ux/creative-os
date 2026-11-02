@@ -1,0 +1,29 @@
+@OBSThemeMeta {
+    name: 'Creative Graphit';
+    id: 'com.obsproject.Yami.CreativeGraphit';
+    extends: 'com.obsproject.Yami';
+    author: 'Creative OS';
+    dark: 'true';
+}
+
+/* Graphit-Farben von Creative OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
+@OBSThemeVars {
+    --grey1: #4a5468;
+    --grey2: #3f4859;
+    --grey3: #3a4252;
+    --grey4: #2e3442;
+    --grey5: #282d3a;
+    --grey6: #232836;
+    --grey7: #1c2029;
+    --grey8: #12151b;
+
+    --primary: #4a6fc2;
+    --primary_light: #5f83d4;
+    --primary_lighter: #8fb3ff;
+    --primary_dark: #3a5aa3;
+    --primary_darker: #2c4580;
+
+    --text: #dce6ff;
+    --text_light: #ffffff;
+    --text_muted: #8f9bb5;
+}

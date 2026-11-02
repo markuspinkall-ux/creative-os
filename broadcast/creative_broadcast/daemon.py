@@ -88,7 +88,8 @@ def list_cameras():
             index = int((d / "index").read_text().strip() or 0)
         except (OSError, ValueError):
             continue
-        if "Creative Kamera" in name or index != 0:      # index 0 = eigentlicher Bildstrom
+        # virtuelle Kameras (unsere und die für OBS) sind keine echten Kameras
+        if "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
             continue
         out.append({"device": f"/dev/{d.name}", "name": name})
     return out

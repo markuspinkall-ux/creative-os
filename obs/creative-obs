@@ -1,0 +1,13 @@
+#!/bin/sh
+# OBS Studio unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen
+# (z. B. globale Tastenkürzel, einzelne Fenster aufnehmen ohne Nachfrage).
+# Beim ersten Start bekommt OBS den Graphit-Look von Creative OS.
+cfg="${XDG_CONFIG_HOME:-$HOME/.config}/obs-studio"
+if [ ! -e "$cfg/user.ini" ] && [ ! -e "$cfg/global.ini" ]; then
+    mkdir -p "$cfg"
+    printf '[Appearance]\nTheme=com.obsproject.Yami.CreativeGraphit\n' > "$cfg/user.ini"
+    printf '[General]\nLanguage=de-DE\n' > "$cfg/global.ini"
+fi
+export QT_QPA_PLATFORM=xcb
+unset QT_QUICK_CONTROLS_STYLE
+exec obs "$@"

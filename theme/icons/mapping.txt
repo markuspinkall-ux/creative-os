@@ -15,3 +15,4 @@ player       multimedia-player creative-player
 archive      ark org.kde.ark utilities-file-archiver
 drive        org.gnome.DiskUtility gnome-disks drive-harddisk-system partitionmanager org.kde.partitionmanager
 art          krita org.kde.krita creative-art
+stream      com.obsproject.Studio obs

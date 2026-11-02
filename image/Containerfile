@@ -229,6 +229,15 @@ COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
 COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd
 COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broadcast.desktop
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
+# OBS Studio (Original, Qt) – läuft unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen.
+# Look: Graphit-Variante des OBS-Designs „Yami“; eigene virtuelle Kamera „OBS Virtuelle Kamera“ (/dev/video43)
+RUN dnf install -y --skip-unavailable obs-studio && dnf clean all \
+ && (rpm -q obs-studio >/dev/null && echo "OBS: $(rpm -q --qf '%{VERSION}' obs-studio)" || echo "OBS FEHLT")
+COPY obs/Yami_CreativeGraphit.ovt /usr/share/obs/obs-studio/themes/Yami_CreativeGraphit.ovt
+COPY obs/creative-obs /usr/bin/creative-obs
+RUN chmod 755 /usr/bin/creative-obs \
+ && f=/usr/share/applications/com.obsproject.Studio.desktop; if [ -f "$f" ]; then \
+      sed -i -E 's#^Exec=obs( |$)#Exec=creative-obs\1#; s#^TryExec=obs$#TryExec=creative-obs#' "$f"; grep -n "^Exec" "$f"; fi
 
 # ---------------------------------------------------------------------------
 # 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)

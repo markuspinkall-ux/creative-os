@@ -250,7 +250,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             shell.closePopups()
-                            broadcast.open()
+                            // schon offen → nur nach vorn holen
+                            if (!tasks.focusApp("creative-broadcast.desktop"))
+                                broadcast.open()
                         }
                     }
                     Accessible.role: Accessible.Button

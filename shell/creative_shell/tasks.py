@@ -32,6 +32,7 @@ WINDOW_ALIASES = {
     "krita": "creative-art",
     "plasma-discover": "org.kde.discover",
     "org.kde.krita": "creative-art",
+    "obs": "com.obsproject.studio",
 }
 
 
@@ -148,6 +149,16 @@ class TaskModel(QObject):
         current = next((n for n, w in enumerate(wins) if w.get("active")), -1)
         target = wins[(current + 1) % len(wins)] if item else wins[0]
         self._kwin.activate(target["id"])
+
+    @Slot(str, result=bool)
+    def focusApp(self, desktop_id):
+        """Hat das Programm schon ein Fenster, wird es nach vorn geholt (→ True), sonst False."""
+        key = app_key(desktop_id)
+        for w in self._windows:
+            if self._window_key(w) == key:
+                self._kwin.activate(w["id"])
+                return True
+        return False
 
     @Slot(str)
     def launchNew(self, desktop_id):
