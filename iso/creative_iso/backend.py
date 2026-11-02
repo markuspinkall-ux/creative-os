@@ -3,6 +3,7 @@
 „@@ <prozent> <text>“ = Fortschritt, „@@ok <datei>“ = fertig, „@@fehler <text>“ = Fehler.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -33,6 +34,40 @@ def free_gb(path):
         return 0.0
 
 
+SYSTEM_MOUNTS = ("/", "/boot", "/boot/efi", "/efi", "/sysroot", "/var", "/home", "/var/home", "/usr", "/etc")
+
+
+def usb_sticks():
+    """USB-Sticks und Speicherkarten (nie das System-Laufwerk)."""
+    try:
+        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,TYPE,SIZE,MODEL,VENDOR,TRAN,RM,HOTPLUG,MOUNTPOINTS"],
+                             capture_output=True, text=True, timeout=5).stdout
+        data = json.loads(out).get("blockdevices", [])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+
+    def walk(n):
+        yield n
+        for c in n.get("children") or []:
+            yield from walk(c)
+
+    sticks = []
+    for d in data:
+        if d.get("type") != "disk" or not d.get("size"):
+            continue
+        if not ((d.get("tran") or "") == "usb" or d.get("rm") in (True, 1, "1") or d.get("hotplug") in (True, 1, "1")):
+            continue
+        mounts = [m for x in walk(d) for m in (x.get("mountpoints") or []) if m]
+        if any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") or m.startswith("/boot") for m in mounts):
+            continue
+        size = int(d["size"])
+        name = " ".join(x for x in ((d.get("vendor") or "").strip(), (d.get("model") or "").strip()) if x) or "USB-Stick"
+        gb = size / 1e9
+        sticks.append({"device": d["path"], "name": name, "size": size,
+                       "label": f"{name} · {gb:.0f} GB".replace(".", ",") if gb >= 10 else f"{name} · {gb:.1f} GB".replace(".", ",")})
+    return sticks
+
+
 class IsoMaker(QObject):
     changed = Signal()
     logChanged = Signal()
@@ -54,6 +89,10 @@ class IsoMaker(QObject):
         self._log = []
         self._proc = None
         self._buf = ""
+        self._usb_iso = ""
+        self._usb_dev = ""
+        self._sticks = []
+        self._last_iso = ""
 
     # ---- Einstellungen ----------------------------------------------------------------
     @Slot(str)
@@ -78,6 +117,44 @@ class IsoMaker(QObject):
         if url:
             self._outdir = QUrl(url).toLocalFile() if url.startswith("file:") else url
             self.changed.emit()
+
+    # ---- USB-Stick -----------------------------------------------------------------------
+    @Slot()
+    def refreshUsb(self):
+        sticks = usb_sticks()
+        if sticks != self._sticks:
+            self._sticks = sticks
+            if self._usb_dev not in [s["device"] for s in sticks]:
+                self._usb_dev = sticks[0]["device"] if len(sticks) == 1 else ""
+            self.changed.emit()
+
+    @Slot(str)
+    def setUsbDevice(self, dev):
+        self._usb_dev = dev
+        self.changed.emit()
+
+    @Slot(str)
+    def setUsbIso(self, url):
+        self._usb_iso = QUrl(url).toLocalFile() if url.startswith("file:") else url
+        self.changed.emit()
+
+    @Slot()
+    def useResultForUsb(self):
+        if self._result.endswith(".iso"):
+            self._usb_iso = self._result
+            self.changed.emit()
+
+    @Slot()
+    def makeUsb(self):
+        if self._usb_iso and self._usb_dev:
+            self._start(["usb", self._usb_iso, self._usb_dev])
+
+    def _usb_fits(self):
+        st = next((s for s in self._sticks if s["device"] == self._usb_dev), None)
+        try:
+            return bool(st) and os.path.getsize(self._usb_iso) <= st["size"]
+        except OSError:
+            return False
 
     # ---- Ablauf --------------------------------------------------------------------------
     def _start(self, args):
@@ -167,4 +244,11 @@ class IsoMaker(QObject):
     status = Property(str, lambda self: self._status, notify=changed)
     result = Property(str, lambda self: self._result, notify=changed)
     error = Property(str, lambda self: self._error, notify=changed)
+    sticks = Property("QVariantList", lambda self: self._sticks, notify=changed)
+    usbDevice = Property(str, lambda self: self._usb_dev, notify=changed)
+    usbIso = Property(str, lambda self: self._usb_iso, notify=changed)
+    usbIsoName = Property(str, lambda self: Path(self._usb_iso).name if self._usb_iso else "", notify=changed)
+    usbIsoSize = Property(str, lambda self: (f"{os.path.getsize(self._usb_iso) / 1e9:.1f} GB".replace(".", ",")
+                                             if self._usb_iso and os.path.exists(self._usb_iso) else ""), notify=changed)
+    usbFits = Property(bool, _usb_fits, notify=changed)
     log = Property(str, lambda self: "\n".join(self._log[-200:]), notify=logChanged)

@@ -16,7 +16,12 @@ Window {
     title: "Creative Iso"
     color: Theme.surface
 
-    property string mode: "full"     // full | net
+    property string mode: "full"     // full | net | usb
+    property bool usbConfirm: false
+    Component.onCompleted: if (Qt.application.arguments.indexOf("--usb") >= 0) mode = "usb"
+    onModeChanged: { usbConfirm = false; if (mode === "usb") iso.refreshUsb() }
+    // Sticks ein-/ausstecken wird laufend erkannt
+    Timer { interval: 2500; repeat: true; running: win.mode === "usb" && !iso.running; onTriggered: iso.refreshUsb() }
     property bool showLog: false
 
     // ---- Kopf -------------------------------------------------------------------------
@@ -32,7 +37,7 @@ Window {
         Column {
             anchors.verticalCenter: parent.verticalCenter
             Text { text: "Creative Iso"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
-            Text { text: "Installations-ISOs von Creative OS erstellen – zum Installieren auf anderen PCs oder in einer VM"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+            Text { text: "Installations-ISOs von Creative OS erstellen und bootfähige USB-Sticks daraus machen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
         }
     }
 
@@ -47,18 +52,25 @@ Window {
         opacity: enabled ? 1 : 0.6
 
         ModeCard {
-            width: (modes.width - 16) / 2
+            width: (modes.width - 32) / 3
             key: "full"
             icon: "screen-tool"
             title: "Dieses System als ISO"
-            text: "Vollständige ISO mit allem, was auf diesem PC an Creative OS installiert ist. Installiert ohne Internet. Etwa 5 GB, dauert 15–40 Minuten."
+            text: "Vollständige ISO von diesem PC. Installiert ohne Internet. Etwa 5 GB, dauert 15–40 Minuten."
         }
         ModeCard {
-            width: (modes.width - 16) / 2
+            width: (modes.width - 32) / 3
             key: "net"
             icon: "download"
             title: "Kleine Installations-ISO"
-            text: "Unter 1 GB. Creative OS wird während der Installation frisch aus dem Internet geladen – immer die neueste Version. Grundlage ist eine Fedora-Netzinstallation."
+            text: "Unter 1 GB. Creative OS wird während der Installation frisch aus dem Internet geladen – immer die neueste Version."
+        }
+        ModeCard {
+            width: (modes.width - 32) / 3
+            key: "usb"
+            icon: "usb"
+            title: "Bootfähiger USB-Stick"
+            text: "Schreibt eine ISO auf einen USB-Stick. Davon startet jeder PC die Installation. Alles auf dem Stick wird gelöscht."
         }
     }
 
@@ -112,6 +124,63 @@ Window {
                 }
             }
             OptRow {
+                visible: win.mode === "usb"
+                label: "ISO-Datei"
+                Row {
+                    spacing: 10
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, 420)
+                        elide: Text.ElideMiddle
+                        text: iso.usbIsoName ? iso.usbIsoName + "  (" + iso.usbIsoSize + ")" : "Noch keine gewählt"
+                        color: iso.usbIsoName ? Theme.text : Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
+                    }
+                    CButton { text: "ISO wählen …"; onClicked: usbIsoDialog.open() }
+                }
+            }
+            OptRow {
+                visible: win.mode === "usb"
+                label: "USB-Stick"
+                Row {
+                    spacing: 8
+                    Chips {
+                        visible: iso.sticks.length > 0
+                        current: iso.usbDevice
+                        items: iso.sticks.map(s => ({ k: s.device, t: s.label }))
+                        onPicked: (k) => { iso.setUsbDevice(k); win.usbConfirm = false }
+                    }
+                    Text {
+                        visible: iso.sticks.length === 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Kein USB-Stick gefunden – bitte einstecken (in einer VM unter „Geräte › USB“ durchreichen)."
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
+                    }
+                }
+            }
+            Row {
+                visible: win.mode === "usb" && iso.usbDevice !== ""
+                spacing: 10
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20; height: 20; radius: 6
+                    color: win.usbConfirm ? "#e5484d" : "transparent"
+                    border.color: win.usbConfirm ? "#e5484d" : Qt.rgba(1, 1, 1, 0.35)
+                    border.width: 1.5
+                    Text { anchors.centerIn: parent; visible: win.usbConfirm; text: "✓"; color: "white"; font.pixelSize: 14; font.bold: true }
+                    MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: win.usbConfirm = !win.usbConfirm }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Ja, alles auf diesem Stick darf gelöscht werden"
+                    color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.usbConfirm = !win.usbConfirm }
+                }
+                Accessible.role: Accessible.CheckBox
+                Accessible.name: "Löschen bestätigen"
+                Accessible.checked: win.usbConfirm
+            }
+            OptRow {
+                visible: win.mode !== "usb"
                 label: "Speichern in"
                 Row {
                     spacing: 10
@@ -128,10 +197,14 @@ Window {
             Text {
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: win.mode === "full"
+                text: win.mode === "usb"
+                      ? (iso.usbIso && iso.usbDevice && !iso.usbFits ? "Der Stick ist zu klein für diese ISO."
+                         : "Danach den Stick in den PC stecken, beim Einschalten das Startmenü öffnen (meist F12, F11 oder Esc) und den Stick wählen.")
+                      : (win.mode === "full"
                       ? ("Benötigt etwa 25 GB freien Speicher (frei: " + iso.systemFree.toFixed(0) + " GB) und eine Internetverbindung für das ISO-Werkzeug. Das installierte System bekommt danach ganz normal Updates.")
-                      : ("Benötigt etwa 6 GB freien Speicher (frei: " + iso.freeSpace.toFixed(0) + " GB). Ohne eigene ISO wird die Fedora-Netzinstallation (etwa 1 GB) geladen.")
-                color: (win.mode === "full" ? iso.systemFree < 25 : iso.freeSpace < 6) ? Theme.flame : Theme.textMuted
+                      : ("Benötigt etwa 6 GB freien Speicher (frei: " + iso.freeSpace.toFixed(0) + " GB). Ohne eigene ISO wird die Fedora-Netzinstallation (etwa 1 GB) geladen."))
+                color: (win.mode === "usb" ? (iso.usbIso && iso.usbDevice && !iso.usbFits)
+                        : (win.mode === "full" ? iso.systemFree < 25 : iso.freeSpace < 6)) ? Theme.flame : Theme.textMuted
                 font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }
@@ -163,14 +236,18 @@ Window {
                     Text {
                         width: parent.width
                         elide: Text.ElideRight
-                        text: iso.result ? "ISO ist fertig" : (iso.error ? "Hat nicht geklappt" : (iso.running ? iso.status : "Bereit"))
+                        text: iso.result ? (iso.result.indexOf("/dev/") === 0 ? "USB-Stick ist fertig" : "ISO ist fertig")
+                              : (iso.error ? "Hat nicht geklappt" : (iso.running ? iso.status : "Bereit"))
                         color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.bold: true
                     }
                     Text {
                         width: parent.width
                         wrapMode: Text.WordWrap
-                        text: iso.result ? iso.result : (iso.error ? iso.error
-                              : (iso.running ? "Du kannst nebenbei normal weiterarbeiten." : "Mit „ISO erstellen“ geht es los. Dein Passwort wird einmal abgefragt."))
+                        text: iso.result ? (iso.result.indexOf("/dev/") === 0 ? "Du kannst den Stick jetzt abziehen und davon starten." : iso.result)
+                              : (iso.error ? iso.error
+                              : (iso.running ? (win.mode === "usb" ? "Den Stick bitte nicht abziehen." : "Du kannst nebenbei normal weiterarbeiten.")
+                                 : (win.mode === "usb" ? "Mit „Stick erstellen“ geht es los. Dein Passwort wird einmal abgefragt."
+                                                       : "Mit „ISO erstellen“ geht es los. Dein Passwort wird einmal abgefragt.")))
                         color: iso.error ? Theme.flame : Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
                     }
                 }
@@ -178,13 +255,23 @@ Window {
                     id: btnRow
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
-                    CButton { visible: iso.result !== ""; text: "Ordner öffnen"; onClicked: iso.openFolder() }
+                    CButton { visible: iso.result !== "" && iso.result.indexOf("/dev/") !== 0; text: "Ordner öffnen"; onClicked: iso.openFolder() }
+                    CButton {
+                        visible: iso.result !== "" && iso.result.indexOf("/dev/") !== 0
+                        text: "Auf USB-Stick schreiben"
+                        onClicked: { iso.useResultForUsb(); win.mode = "usb" }
+                    }
                     CButton { visible: iso.running; text: "Abbrechen"; onClicked: iso.cancel() }
                     CButton {
                         visible: !iso.running
                         primary: true
-                        text: iso.result || iso.error ? "Neue ISO erstellen" : "ISO erstellen"
-                        onClicked: win.mode === "full" ? iso.makeFull() : iso.makeNet()
+                        text: win.mode === "usb" ? "Stick erstellen" : (iso.result || iso.error ? "Neue ISO erstellen" : "ISO erstellen")
+                        enabled: win.mode !== "usb" || (iso.usbIso !== "" && iso.usbDevice !== "" && iso.usbFits && win.usbConfirm)
+                        onClicked: {
+                            if (win.mode === "usb") { win.usbConfirm = false; iso.makeUsb() }
+                            else if (win.mode === "full") iso.makeFull()
+                            else iso.makeNet()
+                        }
                     }
                 }
             }
@@ -248,6 +335,13 @@ Window {
         nameFilters: ["ISO-Dateien (*.iso)"]
         onAccepted: iso.setSource(selectedFile.toString())
     }
+    FileDialog {
+        id: usbIsoDialog
+        title: "ISO für den USB-Stick wählen"
+        nameFilters: ["ISO-Dateien (*.iso)"]
+        currentFolder: iso.outdirUrl
+        onAccepted: iso.setUsbIso(selectedFile.toString())
+    }
     FolderDialog {
         id: folderDialog
         title: "Speicherort für die ISO"
@@ -263,7 +357,7 @@ Window {
         property string title
         property string text
         readonly property bool cur: win.mode === key
-        height: 132
+        height: 140
         radius: 18
         color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (mcMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : Theme.raised)
         border.color: cur ? Theme.accent : Theme.hairline

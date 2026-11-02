@@ -4,6 +4,7 @@
 #   full  <zielordner> <uid>                              ISO von diesem System (vollständig, ohne Internet installierbar)
 #   net   <amd|nvidia> <stabil|test> <quelle> <zielordner> <uid>
 #                                                         kleine Installations-ISO; quelle = ISO-Datei oder „download“
+#   usb   <iso-datei> <gerät>                             bootfähigen USB-Stick erstellen (LÖSCHT den Stick)
 #   cancel                                                laufenden Vorgang abbrechen
 #
 # Fortschritt für die Oberfläche: Zeilen „@@ <prozent> <text>“, Ergebnis „@@ok <datei>“,
@@ -176,7 +177,51 @@ net() {
     cleanup
 }
 
+# ---------------------------------------------------------------------------------------
+usb() {
+    local iso="$1" dev="$2"
+    [ -f "$iso" ] || fail "Die ISO-Datei wurde nicht gefunden."
+    case "$dev" in /dev/sd[a-z]|/dev/sd[a-z][a-z]|/dev/mmcblk[0-9]|/dev/nvme[0-9]n[0-9]) ;; *) fail "Ungültiges Laufwerk." ;; esac
+    [ -b "$dev" ] || fail "Der USB-Stick wurde nicht gefunden – noch eingesteckt?"
+    [ "$(lsblk -dno TYPE "$dev")" = "disk" ] || fail "Bitte den ganzen Stick wählen, nicht eine Partition."
+    local tran rm hot
+    tran=$(lsblk -dno TRAN "$dev" | tr -d ' '); rm=$(lsblk -dno RM "$dev" | tr -d ' '); hot=$(lsblk -dno HOTPLUG "$dev" | tr -d ' ')
+    [ "$tran" = "usb" ] || [ "$rm" = "1" ] || [ "$hot" = "1" ] || fail "Aus Sicherheitsgründen werden nur USB-Sticks und Speicherkarten beschrieben."
+    # Nie das System-Laufwerk
+    if lsblk -lnpo MOUNTPOINTS "$dev" | grep -qE '^(/|/boot.*|/sysroot.*|/var|/home|/var/home|/usr|/etc|/efi)$'; then
+        fail "Das ist das System-Laufwerk – es wird nicht beschrieben."
+    fi
+    local isosize devsize
+    isosize=$(stat -c %s "$iso"); devsize=$(blockdev --getsize64 "$dev")
+    [ "$devsize" -ge "$isosize" ] || fail "Der Stick ist zu klein ($((devsize/1000000000)) GB) für diese ISO ($((isosize/1000000000+1)) GB)."
+
+    say 2 "Stick wird vorbereitet …"
+    for part in $(lsblk -lnpo NAME "$dev" | tail -n +2); do umount "$part" 2>/dev/null; done
+    for m in $(lsblk -lnpo MOUNTPOINTS "$dev" | grep -v '^$'); do umount "$m" 2>/dev/null || fail "Der Stick wird gerade benutzt – bitte Dateien darauf schließen."; done
+    wipefs -a "$dev" >/dev/null 2>&1
+
+    say 4 "ISO wird auf den Stick geschrieben …"
+    local total_mb=$((isosize/1000000))
+    dd if="$iso" of="$dev" bs=4M oflag=direct conv=fsync status=progress 2>&1 | tr '\r' '\n' | while IFS= read -r line; do
+        case "$line" in
+            [0-9]*" bytes"*)
+                b=${line%% *}
+                pct=$(( 4 + b * 92 / isosize ))
+                say "$pct" "Schreibe … $((b/1000000)) von ${total_mb} MB"
+                ;;
+            *) [ -n "$line" ] && echo "$line" ;;
+        esac
+    done
+    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Schreiben fehlgeschlagen – Stick abgezogen oder defekt?"
+    say 97 "Letzte Daten werden auf den Stick übertragen …"
+    sync; blockdev --flushbufs "$dev" 2>/dev/null; partprobe "$dev" 2>/dev/null
+    rm -f "$PIDFILE"
+    say 100 "Fertig"
+    echo "@@ok $dev"
+}
+
 case "${1:-}" in
+    usb)  [ $# -eq 3 ] || fail "Aufruf: usb <iso> <gerät>"; usb "$2" "$3" ;;
     full) [ $# -eq 3 ] || fail "Aufruf: full <zielordner> <uid>"; full "$2" "$3" ;;
     net)  [ $# -eq 6 ] || fail "Aufruf: net <variante> <kanal> <quelle> <zielordner> <uid>"; net "$2" "$3" "$4" "$5" "$6" ;;
     *)    fail "Unbekannter Befehl." ;;

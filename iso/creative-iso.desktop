@@ -9,3 +9,8 @@ Icon=creative-iso
 Terminal=false
 Categories=System;Utility;
 StartupWMClass=creative-iso
+Actions=usb;
+
+[Desktop Action usb]
+Name=Bootfähigen USB-Stick erstellen
+Exec=creative-iso --usb

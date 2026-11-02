@@ -5,7 +5,7 @@ import sys
 
 mod, out = sys.argv[1], sys.argv[2]
 wait = int(sys.argv[3]) if len(sys.argv) > 3 else 3000
-sys.argv = [mod]
+sys.argv = [mod] + sys.argv[4:]
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QGuiApplication
 
