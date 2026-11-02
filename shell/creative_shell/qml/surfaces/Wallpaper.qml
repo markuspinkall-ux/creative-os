@@ -6,6 +6,13 @@ import Creative
 // Auf dem Hauptbildschirm zeigt es die Dateien vom Schreibtisch (wie bei Windows).
 Item {
     id: root
+    focus: true
+
+    // Tastatur auf dem Schreibtisch: Entf = in den Papierkorb, Eingabe = öffnen
+    Keys.onDeletePressed: desktop.trashSelected()
+    Keys.onReturnPressed: desktop.openSelected()
+    Keys.onEnterPressed: desktop.openSelected()
+    Keys.onEscapePressed: desktop.clearSelection()
 
     property string screenName
     readonly property bool showIcons: shell.primaryScreen === "" || shell.primaryScreen === screenName
@@ -40,6 +47,7 @@ Item {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
+            root.forceActiveFocus()
             shell.closePopups()
             desktop.clearSelection()
             if (mouse.button === Qt.RightButton && root.showIcons)
@@ -157,6 +165,7 @@ Item {
                 }
                 onPressed: (mouse) => {
                     pressPos = Qt.point(mouse.x, mouse.y)
+                    root.forceActiveFocus()
                     shell.closePopups()
                     if (mouse.button === Qt.RightButton) {
                         desktop.selectKeep(index)
@@ -251,6 +260,29 @@ Item {
                             tint: slot.modelData.tint
                             ext: slot.modelData.ext
                         }
+                    }
+                    // Entfernen-Knopf beim Darüberfahren (alternativ: herausziehen oder Rechtsklick)
+                    Rectangle {
+                        id: removeBadge
+                        visible: (sm.containsMouse || rmMouse.containsMouse) && root.dragShelfKey === ""
+                        z: 3
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: -3
+                        width: 18; height: 18; radius: 9
+                        color: rmMouse.containsMouse ? "#e5484d" : Theme.raised
+                        border.color: Theme.hairline
+                        Text { anchors.centerIn: parent; text: "×"; color: "white"; font.pixelSize: 13; font.bold: true }
+                        MouseArea {
+                            id: rmMouse
+                            anchors.fill: parent
+                            anchors.margins: -3
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: shelf.remove(slot.modelData.key)
+                        }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Von der Ablage entfernen"
                     }
                     // Name unter der Ablage beim Darüberfahren
                     Rectangle {
@@ -387,7 +419,7 @@ Item {
             { label: "In Dateien zeigen", icon: "files", act: "files" },
             { label: "Zur Ablage hinzufügen", icon: "plus", act: "shelf" },
             { sep: true },
-            { label: "In den Papierkorb", icon: "trash", act: "trash" }
+            { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
         ]
         onTriggered: (act) => {
             if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))

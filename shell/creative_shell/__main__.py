@@ -122,7 +122,7 @@ class ShellController(QObject):
         self._surfaces[name] = entry
         geo = screen.geometry()
         if self._layer:  # im Testmodus kein Hintergrund, sonst wäre der Desktop verdeckt
-            entry["bg"] = self._create(screen, "background", "Wallpaper.qml", geo.width(), geo.height(), False)
+            entry["bg"] = self._create(screen, "background", "Wallpaper.qml", geo.width(), geo.height(), True)
             _win_show(entry["bg"])
         entry["bar"] = self._create(screen, "bar", "Taskbar.qml", geo.width(), BAR_HEIGHT, False)
         _win_show(entry["bar"])

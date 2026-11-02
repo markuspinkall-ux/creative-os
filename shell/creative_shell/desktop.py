@@ -173,9 +173,17 @@ class DesktopModel(QAbstractListModel):
 
     @Slot()
     def trashSelected(self):
+        """Ausgewählte Dateien und Ordner in den Papierkorb (lassen sich dort zurückholen)."""
         for r in self._selected():
+            ok = False
             if shutil.which("gio"):
-                subprocess.run(["gio", "trash", "--", r["path"]], capture_output=True)
+                ok = subprocess.run(["gio", "trash", "--", r["path"]], capture_output=True).returncode == 0
+            if not ok:
+                try:
+                    from PySide6.QtCore import QFile
+                    QFile.moveToTrash(r["path"])
+                except Exception:
+                    pass
         self.refresh()
 
     @Slot()
