@@ -439,8 +439,8 @@ COPY image/greenboot/creative-session-health /usr/libexec/creative-session-healt
 COPY image/greenboot/creative-session-health.service /usr/lib/systemd/system/creative-session-health.service
 COPY image/greenboot/50-creative-rollback.sh /usr/lib/greenboot/red.d/50-creative-rollback.sh
 RUN chmod 755 /usr/lib/greenboot/check/required.d/50-creative-desktop.sh /usr/libexec/creative-session-health \
- && systemctl enable creative-session-health.service \
       /usr/lib/greenboot/red.d/50-creative-rollback.sh \
+ && systemctl enable creative-session-health.service \
  && (systemctl enable greenboot-healthcheck.service && echo "Zurückrollen: greenboot aktiv" || echo "ZURÜCKROLLEN: GREENBOOT FEHLT") \
  && (systemctl enable greenboot-set-rollback-trigger.service 2>/dev/null || true)
 COPY image/update/creative-update /usr/bin/creative-update
