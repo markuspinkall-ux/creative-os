@@ -24,6 +24,7 @@ id=\$(gdbus call --session --dest org.kde.KWin --object-path /Scripting --method
 gdbus call --session --dest org.kde.KWin --object-path /Scripting/Script\$id --method org.kde.kwin.Script.run >/dev/null
 sleep 3
 echo "######## \$1"; grep -o "\(SCREEN\|WIN\) .*" /tmp/kwin-\$1.log
+echo "--- kwin log"; tail -15 /tmp/kwin-\$1.log
 echo "--- shell log"; grep -v "^\$" /tmp/shell-\$1.log | grep -iv "fontconfig" | head -25
 kill %2 %1 2>/dev/null; sleep 2
 SH
