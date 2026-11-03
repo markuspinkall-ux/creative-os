@@ -5,7 +5,7 @@ set +e
 img=ghcr.io/markuspinkall-ux/creative-os:amd-testing
 sudo podman pull -q "$img" >/dev/null
 sudo podman run --rm -v "$PWD:/src:ro" "$img" bash -c '
-useradd -m t >/dev/null 2>&1
+useradd -m t >/dev/null 2>&1; cp /usr/bin/kwin_wayland /tmp/kwin; chmod 755 /tmp/kwin  # Kopie ohne Datei-Fähigkeiten
 cat > /tmp/dump.js <<JS
 for (const o of workspace.screens) console.info("SCREEN", o.name, o.geometry.x, o.geometry.y, o.geometry.width, o.geometry.height);
 for (const w of workspace.stackingOrder) console.info("WIN", JSON.stringify(w.caption), "out=" + (w.output ? w.output.name : "?"), w.x, w.y, w.width, w.height);
@@ -14,7 +14,7 @@ chmod 644 /tmp/dump.js
 cat > /tmp/inner.sh <<SH
 export XDG_RUNTIME_DIR=/tmp/xdg-t; mkdir -p -m700 \$XDG_RUNTIME_DIR
 export QT_LOGGING_RULES="kwin_scripting=true;js=true;qml=true"
-kwin_wayland --virtual --no-lockscreen --output-count 3 --width 1280 --height 720 --socket wayland-9 > /tmp/kwin-\$1.log 2>&1 &
+/tmp/kwin --virtual --no-lockscreen --output-count 3 --width 1280 --height 720 --socket wayland-9 > /tmp/kwin-\$1.log 2>&1 &
 sleep 8
 export WAYLAND_DISPLAY=wayland-9 QT_QPA_PLATFORM=wayland
 if [ "\$1" = repo ]; then export PYTHONPATH=/src/shell; else export PYTHONPATH=/usr/lib/creative-shell; fi
