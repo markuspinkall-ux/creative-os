@@ -68,9 +68,14 @@ def main():
     welcome = Welcome()
     ctx = engine.rootContext()
     ctx.setContextProperty("welcome", welcome)
-    ctx.setContextProperty("network", NetworkModel())
-    ctx.setContextProperty("session", SessionModel())
-    ctx.setContextProperty("look", LookModel(qml_root / "Creative" / "wallpapers"))
+    # Die Modelle müssen in Python festgehalten werden – sonst räumt Python sie weg,
+    # QML sieht nur noch „null“ und das Fenster schließt sich scheinbar von selbst.
+    network = NetworkModel()
+    session = SessionModel()
+    look = LookModel(qml_root / "Creative" / "wallpapers")
+    ctx.setContextProperty("network", network)
+    ctx.setContextProperty("session", session)
+    ctx.setContextProperty("look", look)
     ctx.setContextProperty("wallpaperUrl", QUrl.fromLocalFile(str(qml_root / "Creative" / "wallpapers" / "graphit.svg")))
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
