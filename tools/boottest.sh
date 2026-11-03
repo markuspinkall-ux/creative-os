@@ -57,6 +57,7 @@ sleep 100
 shot desktop
 $SSH 'journalctl -b --no-pager -t creative-shell -t creative-notifyd -t creative-session 2>/dev/null | tail -40' > "$W/session.log" 2>&1
 $SSH 'journalctl -b --no-pager -p err 2>/dev/null | tail -60' > "$W/errors.log" 2>&1
+echo "--- Willkommen-Protokoll:"; $SSH 'cat ~/.cache/creative-welcome.log 2>/dev/null | tail -20; pgrep -af creative_welcome' 2>&1 | tail -22
 state=$($SSH 'cat /tmp/creative-shell-state-$(id -u) 2>/dev/null')
 shell=$($SSH 'pgrep -u tester -f "python3 -m creative_shell" | head -1')
 notif=$($SSH 'pgrep -u tester -f "python3 -m creative_notify" | head -1')
