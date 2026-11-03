@@ -73,6 +73,18 @@ def _win_set_screen(win, screen):
         win.setScreen(screen)
     else:
         win.setProperty("screen", screen)
+    # Layer-Shell: Ziel-Monitor ausdrücklich festlegen. Sonst legt KWin bei
+    # mehreren Monitoren alle Leisten auf denselben (aktiven) Bildschirm.
+    for child in win.children():
+        meta = child.metaObject()
+        if meta.className() != "LayerShellQt::Window":
+            continue
+        if meta.indexOfProperty("wantsToBeOnActiveScreen") >= 0:
+            child.setProperty("wantsToBeOnActiveScreen", False)
+        if meta.indexOfProperty("screen") >= 0:          # ab Plasma 6.7
+            child.setProperty("screen", screen)
+        elif meta.indexOfProperty("screenConfiguration") >= 0:
+            child.setProperty("screenConfiguration", 0)   # ScreenFromQWindow
 
 
 def _win_move(win, x, y):
