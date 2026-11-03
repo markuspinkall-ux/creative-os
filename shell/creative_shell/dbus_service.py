@@ -59,6 +59,11 @@ class ShellBus(QObject):
 
     # ---- Tastenkürzel -------------------------------------------------------------
     @Slot()
+    def refreshScreens(self):
+        """Systemsteuerung hat die Bildschirme geändert (z. B. Hauptbildschirm)."""
+        self._shell.refreshPrimary()
+
+    @Slot()
     def toggleStartMenu(self):
         self._shell.toggleStartMenuOnActiveScreen(self._tasks.active_output)
 

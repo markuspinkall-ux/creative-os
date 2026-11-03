@@ -8,6 +8,7 @@ man nie mit einem schwarzen Bildschirm sitzen.
 
 import copy
 import json
+import subprocess
 
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 
@@ -91,13 +92,29 @@ def build_commands(old, new):
             args.append(f"{n}.rotation.{o['rotation']}")
         if (o["x"], o["y"]) != (p.get("x"), p.get("y")):
             args.append(f"{n}.position.{o['x']},{o['y']}")
-        if o["primary"] and not p.get("primary"):
-            args.append(f"{n}.priority.1")
+    # Hauptbildschirm: Reihenfolge für alle setzen (1 = Haupt, die anderen danach)
+    old_primary = next((o["name"] for o in old if o.get("primary")), None)
+    new_primary = next((o["name"] for o in new if o["enabled"] and o["primary"]), None)
+    if new_primary and new_primary != old_primary:
+        rest = [o["name"] for o in sorted(new, key=lambda o: o["x"]) if o["enabled"] and o["name"] != new_primary]
+        for i, name in enumerate([new_primary] + rest, 1):
+            args.append(f"output.{name}.priority.{i}")
     return args
+
+
+def tell_shell():
+    """Taskleiste/Schreibtisch sofort auf den neuen Hauptbildschirm umstellen."""
+    try:
+        subprocess.Popen(["gdbus", "call", "--session", "--dest", "org.creativeos.Shell", "--object-path", "/Shell",
+                          "--method", "org.creativeos.Shell.refreshScreens"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
 
 
 class DisplayModel(QObject):
     changed = Signal()
+    selectionChanged = Signal()   # eigenes Signal: sonst baut die Vorschau beim Anklicken neu auf und Ziehen geht nicht
     confirmChanged = Signal()
     messageChanged = Signal()
 
@@ -114,6 +131,7 @@ class DisplayModel(QObject):
         self._tick = QTimer(self)
         self._tick.setInterval(1000)
         self._tick.timeout.connect(self._on_tick)
+        self.changed.connect(self.selectionChanged)    # Details folgen jeder Änderung
         self.refresh()
 
     # ---- Laden ------------------------------------------------------------------
@@ -145,9 +163,9 @@ class DisplayModel(QObject):
 
     @Slot(int)
     def select(self, i):
-        if 0 <= i < len(self._edit):
+        if 0 <= i < len(self._edit) and i != self._selected:
             self._selected = i
-            self.changed.emit()
+            self.selectionChanged.emit()
 
     @Slot(str)
     def setResolution(self, text):
@@ -246,6 +264,7 @@ class DisplayModel(QObject):
         self._tick.start()
         self.confirmChanged.emit()
         QTimer.singleShot(800, self.refresh)
+        QTimer.singleShot(900, tell_shell)
 
     def _on_tick(self):
         self._seconds -= 1
@@ -271,7 +290,8 @@ class DisplayModel(QObject):
             self._edit = copy.deepcopy(self._backup)
             self._backup = None
             if args:
-                self._run.run(["kscreen-doctor"] + args, lambda *_: QTimer.singleShot(800, self.refresh))
+                self._run.run(["kscreen-doctor"] + args, lambda *_: (QTimer.singleShot(800, self.refresh),
+                                                                      QTimer.singleShot(900, tell_shell)))
             self._set_message("Die vorherige Einstellung wurde wiederhergestellt.")
         self.changed.emit()
 
@@ -313,8 +333,8 @@ class DisplayModel(QObject):
         }
 
     screens = Property("QVariantList", _screens, notify=changed)
-    selected = Property(int, lambda self: self._selected, notify=changed)
-    details = Property("QVariantMap", _details, notify=changed)
+    selected = Property(int, lambda self: self._selected, notify=selectionChanged)
+    details = Property("QVariantMap", _details, notify=selectionChanged)
     dirty = Property(bool, lambda self: bool(build_commands(self._applied, self._edit)), notify=changed)
     confirmSeconds = Property(int, lambda self: self._seconds, notify=confirmChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)

@@ -111,14 +111,66 @@ class ShellController(QObject):
         self._panel_focus = ""                      # "calendar": Schnellzugriff zeigt den Kalender
         self._tray_menu_key = ""
         self._last_screen = ""
+        self._primary_name = ""      # Hauptbildschirm laut KWin
+        self._primary_proc = None
         self._last_auto_close = ("", 0.0)
         host = "HostLayer.qml" if use_layer_shell else "HostPlain.qml"
         self._component = QQmlComponent(engine, QUrl.fromLocalFile(str(QML_DIR / host)))
         if self._component.isError():
             raise RuntimeError("\n".join(e.toString() for e in self._component.errors()))
 
+    # ---- Hauptbildschirm: kommt von KWin (Systemsteuerung › Bildschirme) ---------
+    # Qt kennt unter Wayland den von KWin festgelegten Hauptbildschirm nicht
+    # zuverlässig – darum direkt bei kscreen-doctor nachfragen.
+    def _read_primary(self):
+        if self._primary_proc is not None:
+            return
+        from PySide6.QtCore import QProcess
+        p = QProcess(self)
+        self._primary_proc = p
+
+        def done(_code, _status):
+            self._primary_proc = None
+            raw = bytes(p.readAllStandardOutput()).decode("utf-8", "replace")
+            p.deleteLater()
+            try:
+                import json
+                data = json.loads(raw[raw.index("{"):])
+                outs = [o for o in data.get("outputs", []) if o.get("enabled", True) and o.get("connected", True)]
+                outs.sort(key=lambda o: int(o.get("priority", 99) or 99))
+                name = outs[0].get("name", "") if outs else ""
+            except (ValueError, IndexError, AttributeError):
+                return
+            if name and name != self._primary_name:
+                self._primary_name = name
+                self.openChanged.emit()
+
+        p.finished.connect(done)
+        p.start("kscreen-doctor", ["-j"])
+
+    @Slot()
+    def refreshPrimary(self):
+        self._primary_timer.start()
+
+    def _primary(self):
+        if self._primary_name and self._primary_name in self._surfaces:
+            return self._primary_name
+        prim = self._app.primaryScreen()
+        return prim.name() if prim else ""
+
     def start(self):
-        self._app.primaryScreenChanged.connect(lambda _s: self.openChanged.emit())
+        self._primary_timer = QTimer(self)
+        self._primary_timer.setSingleShot(True)
+        self._primary_timer.setInterval(700)
+        self._primary_timer.timeout.connect(self._read_primary)
+        self._primary_poll = QTimer(self)
+        self._primary_poll.setInterval(5000)
+        self._primary_poll.timeout.connect(self._read_primary)
+        self._primary_poll.start()
+        self._read_primary()
+        self._app.primaryScreenChanged.connect(lambda _s: self.refreshPrimary())
+        self._app.screenAdded.connect(lambda _s: self.refreshPrimary())
+        self._app.screenRemoved.connect(lambda _s: self.refreshPrimary())
         for screen in self._app.screens():
             self._add_screen(screen)
         self._app.screenAdded.connect(self._add_screen)
@@ -139,6 +191,7 @@ class ShellController(QObject):
         entry["bar"] = self._create(screen, "bar", "Taskbar.qml", geo.width(), BAR_HEIGHT, False)
         _win_show(entry["bar"])
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
+        screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
 
     def _remove_screen(self, screen):
         entry = self._surfaces.pop(screen.name(), None)
@@ -296,8 +349,8 @@ class ShellController(QObject):
     def _bubble_screen(self):
         if self._last_screen in self._surfaces:
             return self._last_screen
-        prim = self._app.primaryScreen()
-        return prim.name() if prim and prim.name() in self._surfaces else next(iter(self._surfaces), "")
+        prim = self._primary()
+        return prim if prim in self._surfaces else next(iter(self._surfaces), "")
 
     @Slot()
     def showBubble(self):
@@ -344,8 +397,7 @@ class ShellController(QObject):
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
     chatOpenOn = Property(str, lambda self: self._open["chat"], notify=openChanged)
     # Schreibtisch-Symbole erscheinen nur auf dem Hauptbildschirm
-    primaryScreen = Property(str, lambda self: self._app.primaryScreen().name() if self._app.primaryScreen() else "",
-                             notify=openChanged)
+    primaryScreen = Property(str, lambda self: self._primary(), notify=openChanged)
 
 
 def main():

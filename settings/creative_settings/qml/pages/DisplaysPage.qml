@@ -99,7 +99,7 @@ SettingsPage {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: modelData.primary ? "Hauptbildschirm" : (modelData.enabled ? modelData.resolution : "Aus")
+                        text: modelData.name + " · " + (modelData.primary ? "Hauptbildschirm" : (modelData.enabled ? modelData.resolution : "Aus"))
                         color: Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: 11
@@ -115,7 +115,8 @@ SettingsPage {
                     drag.threshold: 6
                     onPressed: displays.select(modelData.index)
                     onReleased: {
-                        if (Math.abs(mon.x - (stage.ox + modelData.x * stage.k)) > 2) {
+                        if (Math.abs(mon.x - (stage.ox + modelData.x * stage.k)) > 2
+                                || Math.abs(mon.y - (stage.oy + modelData.y * stage.k)) > 2) {
                             displays.moveTo(modelData.index,
                                             Math.round((mon.x - stage.ox) / stage.k),
                                             Math.round((mon.y - stage.oy) / stage.k))
