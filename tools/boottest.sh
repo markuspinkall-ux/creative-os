@@ -65,6 +65,8 @@ health=$($SSH 'systemctl is-active creative-session-health.service; cat /var/lib
 echo "Oberfläche: ${shell:-läuft NICHT}  ·  Zustand: ${state:-unbekannt}  ·  Benachrichtigungen: ${notif:-läuft nicht}"
 echo "Gesundheitsprüfung: $health"
 [ -n "$shell" ] || fail "Die Oberfläche (Taskleiste) läuft nicht"
+$SSH 'modinfo v4l2loopback >/dev/null 2>&1' || fail "Die virtuelle Kamera (v4l2loopback) fehlt im Abbild"
+echo "Treiber-Signatur: $($SSH 'modinfo -F signer v4l2loopback 2>/dev/null')"
 welcome=$($SSH 'pgrep -u tester -f creative_welcome | head -1')
 [ -n "$welcome" ] || fail "Das Willkommen-Fenster läuft nicht"
 $SSH 'grep -q "of null\|Traceback" ~/.cache/creative-welcome.log 2>/dev/null' && fail "Fehler im Willkommen-Fenster (siehe Protokoll)"

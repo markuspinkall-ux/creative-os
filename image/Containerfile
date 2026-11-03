@@ -57,10 +57,11 @@ COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 # Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
 COPY image/secureboot/sign-modules.sh /usr/libexec/creative-sign-modules
+COPY image/secureboot/kernel-devel.sh /usr/libexec/creative-kernel-devel
 COPY image/secureboot/creative-secureboot /usr/libexec/creative-secureboot
 COPY image/secureboot/postinstall.sh /usr/share/creative-os/secureboot/postinstall.sh
 COPY image/secureboot/org.creativeos.secureboot.policy /usr/share/polkit-1/actions/org.creativeos.secureboot.policy
-RUN chmod 755 /usr/libexec/creative-sign-modules /usr/libexec/creative-secureboot \
+RUN chmod 755 /usr/libexec/creative-sign-modules /usr/libexec/creative-secureboot /usr/libexec/creative-kernel-devel \
  && (command -v mokutil >/dev/null || dnf install -y --skip-unavailable mokutil) && dnf clean all
 
 # ---------------------------------------------------------------------------
@@ -70,7 +71,7 @@ RUN chmod 755 /usr/libexec/creative-sign-modules /usr/libexec/creative-secureboo
 # ---------------------------------------------------------------------------
 RUN --mount=type=secret,id=mokkey if [ "$NVIDIA" = "1" ]; then \
         KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
-     && dnf install -y akmods "kernel-devel-${KVER}" \
+     && /usr/libexec/creative-kernel-devel \
      && dnf install -y --setopt=tsflags=noscripts akmod-nvidia \
      && dnf install -y xorg-x11-drv-nvidia xorg-x11-drv-nvidia-libs.i686 xorg-x11-drv-nvidia-cuda \
      && akmods --force --kernels "${KVER}" --kmod nvidia \
@@ -197,7 +198,7 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
 # ---------------------------------------------------------------------------
 # Virtuelle Kamera: Kernelmodul v4l2loopback (RPM Fusion), beim Bauen erzeugt
 RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
- && dnf install -y akmods "kernel-devel-${KVER}" \
+ && /usr/libexec/creative-kernel-devel \
  && dnf install -y --setopt=tsflags=noscripts akmod-v4l2loopback v4l2loopback \
  && akmods --force --kernels "${KVER}" --kmod v4l2loopback \
  && /usr/libexec/creative-sign-modules "${KVER}" 'v4l2loopback' \
