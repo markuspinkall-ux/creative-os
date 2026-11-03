@@ -32,7 +32,7 @@ fi
 # ---- run ---------------------------------------------------------------------------------
 fail() { echo "STARTTEST FEHLGESCHLAGEN: $1"; shot final; exit 1; }
 qmp() { printf '{"execute":"qmp_capabilities"}\n%s\n' "$1" | timeout 5 socat - UNIX-CONNECT:"$W/qmp.sock" >/dev/null 2>&1; }
-shot() { qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$W/$1.ppm\"}}"; sleep 1
+shot() { dev=${2:+,\"device\":\"$2\"}; qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$W/$1.ppm\"$dev}}"; sleep 1
          [ -f "$W/$1.ppm" ] || return 0
          pnmtopng "$W/$1.ppm" > "$W/$1.png" 2>/dev/null
          # verkleinert ins Protokoll (zum Ansehen ohne Download)
@@ -44,7 +44,7 @@ command -v socat >/dev/null || sudo apt-get install -y -qq socat >/dev/null
 qemu-system-x86_64 -enable-kvm -machine q35 -cpu host -m 6144 -smp 4 \
     -drive file="$W/out/qcow2/disk.qcow2",if=virtio,format=qcow2 \
     -nic user,model=virtio-net-pci,hostfwd=tcp::2222-:22 \
-    -device virtio-vga -display none -qmp unix:"$W/qmp.sock",server,nowait \
+    -device virtio-vga,id=gpu0 -device virtio-gpu-pci,id=gpu1 -device virtio-gpu-pci,id=gpu2 -display none -qmp unix:"$W/qmp.sock",server,nowait \
     -serial file:"$W/serial.log" -daemonize -pidfile "$W/qemu.pid" || fail "QEMU startet nicht"
 
 echo "Warte auf das System …"
@@ -55,6 +55,19 @@ echo "System läuft. Anmeldung wird automatisch durchgeführt …"
 $SSH "echo creative-test | sudo -S sh -c 'mkdir -p /etc/sddm.conf.d && printf \"[Autologin]\nUser=tester\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -3
 sleep 100
 shot desktop
+# drei Monitore: jeder braucht eigenen Hintergrund und eigene Taskleiste
+shot monitor2 gpu1
+shot monitor3 gpu2
+cat > "$W/dump.js" <<'JS'
+for (const o of workspace.screens) console.warn("CREATIVE-MM SCREEN", o.name, o.geometry.x, o.geometry.y, o.geometry.width, o.geometry.height);
+for (const w of workspace.stackingOrder) console.warn("CREATIVE-MM WIN", JSON.stringify(w.caption), "out=" + (w.output ? w.output.name : "?"), w.x, w.y, w.width, w.height);
+JS
+scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/dump.js" tester@127.0.0.1:/tmp/dump.js
+echo "--- Monitore und Flächen:"
+$SSH 'export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
+id=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting --method org.kde.kwin.Scripting.loadScript /tmp/dump.js mm | grep -o "[0-9]\+" | head -1)
+gdbus call --session --dest org.kde.KWin --object-path /Scripting/Script$id --method org.kde.kwin.Script.run >/dev/null; sleep 2
+journalctl --user -b --no-pager 2>/dev/null | grep -o "CREATIVE-MM.*"; journalctl -b --no-pager 2>/dev/null | grep -o "CREATIVE-MM.*" | sort -u' 2>&1 | sort -u | head -40
 $SSH 'journalctl -b --no-pager -t creative-shell -t creative-notifyd -t creative-session 2>/dev/null | tail -40' > "$W/session.log" 2>&1
 $SSH 'journalctl -b --no-pager -p err 2>/dev/null | tail -60' > "$W/errors.log" 2>&1
 echo "--- Willkommen-Protokoll:"; $SSH 'cat ~/.cache/creative-welcome.log 2>/dev/null | tail -20; pgrep -af creative_welcome' 2>&1 | tail -22
