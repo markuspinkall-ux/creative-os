@@ -230,9 +230,15 @@ def rename(part, name):
     done(name=name)
 
 
+BUSY = Path("/run/creative-drives-busy")   # hält das automatische Verbinden an
+
+
 if __name__ == "__main__":
     if os.geteuid() != 0:
         fail("Bitte über die Systemsteuerung starten.")
+    import atexit
+    BUSY.touch()
+    atexit.register(lambda: BUSY.unlink(missing_ok=True))
     a = sys.argv[1:]
     if len(a) == 4 and a[0] == "setup":
         setup(a[1], a[2], a[3])

@@ -8,8 +8,11 @@ werden nie angefasst. Angezeigt werden die Platten ausschließlich in
 „Dateien › Dieser PC“ unter „Geräte und Laufwerke“ – nicht auf dem Schreibtisch.
 """
 import json
+import os
 import subprocess
 import time
+
+BUSY = "/run/creative-drives-busy"     # Systemsteuerung richtet gerade eine Platte ein
 
 SKIP_FS = {"", "swap", "crypto_LUKS", "LVM2_member", "linux_raid_member", "iso9660", "squashfs"}
 SKIP_LABELS = {"efi", "boot", "esp", "system reserved", "recovery", "sicherheit"}
@@ -25,14 +28,23 @@ SYSTEM_MOUNTS = ("/", "/sysroot", "/boot", "/boot/efi", "/var", "/usr", "/etc")
 
 def lsblk():
     r = subprocess.run(
-        ["lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,LABEL,PARTTYPE,MOUNTPOINTS,RM,HOTPLUG"],
+        ["lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,PARTTYPE,MOUNTPOINTS,RM,HOTPLUG"],
         capture_output=True, text=True, timeout=10,
     )
     return json.loads(r.stdout).get("blockdevices", []) if r.returncode == 0 else []
 
 
+def fstab_uuids():
+    try:
+        with open("/etc/fstab", encoding="utf-8") as fh:
+            return {l.split()[0][5:] for l in fh if l.startswith("UUID=")}
+    except OSError:
+        return set()
+
+
 def candidates():
     out = []
+    fixed = fstab_uuids()
     for disk in lsblk():
         nodes = [disk] + list(disk.get("children") or [])
         mps_all = [m for n in nodes for m in (n.get("mountpoints") or []) if m]
@@ -51,11 +63,15 @@ def candidates():
                 continue
             if any(m for m in (n.get("mountpoints") or []) if m):
                 continue                                # schon verbunden
+            if n.get("uuid") and n["uuid"] in fixed:
+                continue                                # fest eingerichtet (fstab) – verbindet das System
             out.append(n["path"])
     return out
 
 
 def mount_all():
+    if os.path.exists(BUSY):
+        return
     for dev in candidates():
         # --no-user-interaction: niemals eine Passwortabfrage aufpoppen lassen
         subprocess.run(["udisksctl", "mount", "--no-user-interaction", "-b", dev],
@@ -65,14 +81,15 @@ def mount_all():
 def main():
     time.sleep(4)
     mount_all()
-    # Neu angesteckte Platten mitbekommen
+    # Nur NEU angesteckte Platten verbinden. Was der Benutzer selbst getrennt hat,
+    # bleibt getrennt (sonst ließe sich nichts trennen oder formatieren).
     try:
         mon = subprocess.Popen(["udisksctl", "monitor"], stdout=subprocess.PIPE, text=True)
     except OSError:
         return
     last = 0.0
     for line in mon.stdout:
-        if "Added" in line or "InterfacesAdded" in line or "Changed" in line:
+        if "Added" in line and "block_devices" in line:
             now = time.monotonic()
             if now - last > 2:
                 time.sleep(1.5)
