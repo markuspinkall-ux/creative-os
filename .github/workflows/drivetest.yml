@@ -1,29 +1,64 @@
 name: Laufwerke-Test
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'drives/**'
+      - 'tests/test_drives_helper.py'
+      - 'tests/drives_integration.sh'
+      - '.github/workflows/drivetest.yml'
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Platte einrichten (Testplatte)
-        shell: bash {0}
+      - name: Werkzeuge installieren
         run: |
-          truncate -s 2G /tmp/disk.img
-          dev=$(sudo losetup -fP --show /tmp/disk.img)
-          # alte Aufteilung mit zwei Partitionen, eine davon eingehängt
-          printf 'label: gpt\n,500M,L\n,,L\n' | sudo sfdisk -q $dev
-          sudo mkfs.ext4 -q ${dev}p1 && sudo mkfs.ext4 -q ${dev}p2
-          sudo mkdir -p /mnt/alt && sudo mount ${dev}p1 /mnt/alt
-          lsblk $dev
-          sudo apt-get install -y -qq exfatprogs >/dev/null 2>&1
-          systemctl is-active udisks2 || true
-          for fs in ext4 exfat ext4; do
-            sudo CREATIVE_DRIVES_TEST=1 PKEXEC_UID=1001 python3 drives/creative-drives-helper setup $dev Testplatte $fs; echo "Code $?"
-            lsblk -f $dev; findmnt -S ${dev}p1 || true
-          done
-          tail -3 /etc/fstab
-          echo "=== System-Laufwerk muss abgelehnt werden"
-          root=$(lsblk -s -n -p -o PATH,TYPE $(findmnt -n -o SOURCE / | cut -d[ -f1) | awk '$2=="disk"{print $1}' | sed 's/[^/a-z0-9]//g' | head -1)
-          echo "Systemplatte: $root"
-          sudo CREATIVE_DRIVES_TEST=1 python3 drives/creative-drives-helper setup "$root" X ext4; echo "Code $?"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fdisk e2fsprogs exfatprogs ntfs-3g
+      - name: Systemplattenschutz und Fehlerfälle simulieren
+        run: python3 -m unittest discover -s tests -p test_drives_helper.py
+      - name: Formatieren und Umbenennen auf einer eigenen Testplatte
+        run: bash tests/drives_integration.sh
+  creative-os:
+    name: Laufwerke in Creative OS
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Virtuelle Maschine vorbereiten
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat
+          sudo chmod 666 /dev/kvm
+      - name: Creative OS aus dem Testkanal vorbereiten
+        run: bash tools/boottest.sh build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+      - name: Creative OS starten und Laufwerkskorrektur testen
+        run: |
+          # Bestehenden Starttest nutzen; VM für den anschließenden Test weiterlaufen lassen.
+          sed '/^kill "$(cat "$W\/qemu.pid")"/d' tools/boottest.sh > /tmp/creative-starttest.sh
+          bash /tmp/creative-starttest.sh run
+          ssh_opts=(-i "$PWD/boottest/key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
+          ssh "${ssh_opts[@]}" -p 2222 tester@127.0.0.1 'mkdir -p /tmp/creative-drive-test/drives /tmp/creative-drive-test/tests'
+          scp "${ssh_opts[@]}" -P 2222 drives/creative-drives-helper tester@127.0.0.1:/tmp/creative-drive-test/drives/
+          scp "${ssh_opts[@]}" -P 2222 tests/drives_integration.sh tester@127.0.0.1:/tmp/creative-drive-test/tests/
+          ssh "${ssh_opts[@]}" -p 2222 tester@127.0.0.1 'cd /tmp/creative-drive-test && printf "%s\n" creative-test | sudo -S bash tests/drives_integration.sh' | tee boottest/drives.log
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creative-os-laufwerke-test
+          path: |
+            boottest/*.log
+            boottest/*.png
