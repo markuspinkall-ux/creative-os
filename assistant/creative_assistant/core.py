@@ -68,7 +68,7 @@ def list_inputs():
 
 class Assistant:
     def __init__(self):
-        self.cfg = {"device": "", "voice": "", "wake": True, "city": default_city()}
+        self.cfg = {"device": "", "voice": "", "wake": True, "muted": False, "city": default_city()}
         try:
             self.cfg.update(json.loads(CONFIG.read_text(encoding="utf-8")))
         except (OSError, ValueError):
@@ -84,6 +84,8 @@ class Assistant:
         self.wake = WakeWord()
         self.stt = Transcriber()
         self.speaker = Speaker()
+        self._audio_lock = threading.Lock()
+        self._chimes = []
         self.music = MusicPlayer(self.push)
         self.voices = list_voices()
         if not self.cfg["voice"] or not any(v["id"] == self.cfg["voice"] for v in self.voices):
@@ -111,6 +113,7 @@ class Assistant:
             "music": self.music.title, "paused": self.music.paused,
             "devices": self.devices, "device": self.cfg["device"],
             "voices": [{"id": v["id"], "name": v["name"]} for v in self.voices], "voice": self.cfg["voice"],
+            "muted": bool(self.cfg["muted"]),
             "wake": bool(self.cfg["wake"]), "wakeAvailable": self.wake.available,
             "sttAvailable": True, "city": self.cfg["city"],
         }
@@ -141,13 +144,27 @@ class Assistant:
     def say(self, text):
         self.chat("assistant", text)
         self.answer = text
+        if self.cfg["muted"]:
+            self.set_state("idle")
+            return
         self.set_state("speaking")
         wav = self.speaker.synth(text, self.cfg["voice"])
         if wav:
             # Pegel für den Visualizer aus der WAV-Datei schätzen
             t = threading.Thread(target=self._fake_level, args=(text,), daemon=True)
             t.start()
-            self.speaker.play(wav)
+            with self._audio_lock:
+                if self.cfg["muted"]:
+                    os.unlink(wav)
+                    self.set_state("idle")
+                    return
+                self.speaker.play(wav, wait=False)
+                proc = self.speaker._proc
+            proc.wait()
+            try:
+                os.unlink(wav)
+            except OSError:
+                pass
         self.set_state("idle")
 
     def _fake_level(self, text):
@@ -158,9 +175,24 @@ class Assistant:
 
     def chime(self, name="message.oga"):
         f = SOUNDS / name
-        if f.exists():
-            subprocess.Popen(["pw-play" if shutil.which("pw-play") else "paplay", str(f)],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with self._audio_lock:
+            self._chimes = [p for p in self._chimes if p.poll() is None]
+            if f.exists() and not self.cfg["muted"]:
+                self._chimes.append(subprocess.Popen(
+                    ["pw-play" if shutil.which("pw-play") else "paplay", str(f)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+
+    def set_muted(self, muted):
+        with self._audio_lock:
+            self.cfg["muted"] = bool(muted)
+            if muted:
+                self.speaker.stop()
+                for proc in self._chimes:
+                    if proc.poll() is None:
+                        proc.terminate()
+                self._chimes.clear()
+        self.save()
+        self.push()
 
     # ---- Mikrofon ------------------------------------------------------------------
     def _open_mic(self):
@@ -420,7 +452,9 @@ class Assistant:
     # ---- Befehle aus der Taskleiste ---------------------------------------------------
     def command(self, msg):
         cmd = msg.get("cmd")
-        if cmd == "activate":
+        if cmd == "setMuted":
+            self.set_muted(msg.get("on", False))
+        elif cmd == "activate":
             if self.state == "alarm":
                 self.stop_timer()
             elif self.state in ("listening",):

@@ -235,6 +235,8 @@ COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
 COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd
 COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broadcast.desktop
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
+# Bluetooth: BlueZ-Steuerung im Tray, KDE-Agent für sichere PIN-Kopplung.
+RUN dnf install -y bluez bluedevil && systemctl enable bluetooth.service && dnf clean all
 # Benachrichtigungen (org.freedesktop.Notifications) im Creative-Look
 RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
 COPY notify/creative_notify /usr/lib/creative-notify/creative_notify
@@ -505,6 +507,9 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
         /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
+        /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
+        /usr/lib/creative-shell/creative_shell/qml/surfaces/AssistantMenu.qml \
+        /usr/lib/creative-shell/creative_shell/qml/surfaces/BluetoothMenu.qml \
  && rm -f /tmp/qml-check.py
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \

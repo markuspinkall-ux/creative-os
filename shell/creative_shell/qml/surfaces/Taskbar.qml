@@ -265,7 +265,7 @@ Item {
                     visible: assistant.available
                     anchors.verticalCenter: parent.verticalCenter
                     readonly property string st: assistant.state
-                    readonly property bool active: st === "listening" || st === "thinking" || st === "speaking" || st === "alarm"
+                    readonly property bool active: !assistant.muted && (st === "listening" || st === "thinking" || st === "speaking" || st === "alarm")
                     width: 30
                     height: 30
                     radius: 8
@@ -278,7 +278,7 @@ Item {
                     SvgIcon {
                         anchors.centerIn: parent
                         visible: !assistantBtn.active
-                        name: "mic"
+                        name: assistant.muted ? "volume-off" : "mic"
                         size: 17
                         opacity: assistant.music ? 1 : 0.95
                     }
@@ -341,7 +341,7 @@ Item {
                         }
                     }
                     Accessible.role: Accessible.Button
-                    Accessible.name: "Sprachassistent"
+                    Accessible.name: assistant.muted ? "Sprachassistent – stumm" : "Sprachassistent"
                     Accessible.onPressAction: assistant.activate()
                 }
 
@@ -399,6 +399,14 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     name: network.wired ? "wired" : (network.connected ? "wifi" : "wifi-off")
                     size: 16
+                }
+                IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30; height: 30; iconSize: 17
+                    icon: "bluetooth"
+                    label: bluetooth.powered ? "Bluetooth eingeschaltet" : "Bluetooth ausgeschaltet"
+                    opacity: bluetooth.powered ? 1 : 0.5
+                    onClicked: shell.toggleBluetooth(root.screenName)
                 }
                 // Uhr und Datum – Klick öffnet den Kalender
                 Item {

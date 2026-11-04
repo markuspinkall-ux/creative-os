@@ -75,8 +75,8 @@ class AssistantClient(QObject):
                 old_state = self._s.get("state", "")
                 self._s = msg
                 self.changed.emit()
-                if (msg.get("answer") and msg.get("answer") != old_answer) or \
-                   (msg.get("state") == "listening" and old_state != "listening"):
+                if not msg.get("muted", False) and ((msg.get("answer") and msg.get("answer") != old_answer) or \
+                   (msg.get("state") == "listening" and old_state != "listening")):
                     self.spoke.emit()
 
     def _fade(self):
@@ -108,6 +108,10 @@ class AssistantClient(QObject):
     @Slot(bool)
     def setWake(self, on):
         self._send(cmd="setWake", on=on)
+
+    @Slot(bool)
+    def setMuted(self, on):
+        self._send(cmd="setMuted", on=on)
 
     @Slot(str)
     def setCity(self, city):
@@ -153,6 +157,7 @@ class AssistantClient(QObject):
     device = Property(str, lambda self: self._g("device", ""), notify=changed)
     voices = Property("QVariantList", lambda self: self._g("voices", []), notify=changed)
     voice = Property(str, lambda self: self._g("voice", ""), notify=changed)
+    muted = Property(bool, lambda self: bool(self._g("muted", False)), notify=changed)
     wake = Property(bool, lambda self: bool(self._g("wake", False)), notify=changed)
     wakeAvailable = Property(bool, lambda self: bool(self._g("wakeAvailable", False)), notify=changed)
     city = Property(str, lambda self: self._g("city", ""), notify=changed)

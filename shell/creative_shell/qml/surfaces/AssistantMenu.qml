@@ -120,6 +120,28 @@ Item {
 
                 Divider { width: parent.width }
 
+                Item {
+                    width: parent.width
+                    height: 58
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 60
+                        Text { text: "Nicht stören"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                        Text {
+                            width: parent.width; wrapMode: Text.WordWrap
+                            text: "Keine Stimme, Hinweistöne oder Sprechblasen. Timer bleiben stumm; Textchat bleibt verfügbar."
+                            color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                        }
+                    }
+                    CSwitch {
+                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                        checked: assistant.muted; enabled: assistant.available
+                        label: "Assistent stummschalten"
+                        onToggled: (v) => assistant.setMuted(v)
+                    }
+                }
+                Divider { width: parent.width }
+
                 // Aktivierungswort
                 Item {
                     width: parent.width
