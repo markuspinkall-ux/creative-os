@@ -207,8 +207,8 @@ RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{A
 COPY broadcast/modprobe-creative-kamera.conf /usr/lib/modprobe.d/creative-kamera.conf
 COPY broadcast/modules-load-creative-kamera.conf /usr/lib/modules-load.d/creative-kamera.conf
 # KI-Bausteine: OpenCV, ONNX Runtime (aus Fedora oder als Python-Paket), Freistellungs-Modell
-RUN dnf install -y --skip-unavailable python3-opencv python3-numpy python3-onnxruntime ffmpeg git && dnf clean all \
- && (python3 -c "import onnxruntime" 2>/dev/null || pip install --no-cache-dir --target /usr/lib/creative-broadcast/vendor \
+RUN dnf install -y --skip-unavailable python3-opencv python3-numpy python3-onnxruntime python3-pip ffmpeg git && dnf clean all \
+ && (python3 -c "import onnxruntime" 2>/dev/null || python3 -m pip install --no-cache-dir --target /usr/lib/creative-broadcast/vendor \
         onnxruntime flatbuffers protobuf sympy mpmath coloredlogs humanfriendly --no-deps) \
  && mkdir -p /usr/share/creative-broadcast \
  && curl -fsSL -o /usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx \
@@ -224,7 +224,7 @@ RUN dnf install -y --skip-unavailable cargo rust gcc git && dnf clean all \
 # CUDA-Runtime nur im NVIDIA-Abbild, isoliert von anderen Systemprogrammen.
 # CUDA 12 bleibt für diese erste Integration explizit ausgewählt.
 RUN if [ "$NVIDIA" = "1" ]; then \
-      pip install --no-cache-dir --only-binary=:all: \
+      python3 -m pip install --no-cache-dir --only-binary=:all: \
         --target /usr/lib/creative-broadcast/gpu \
         'onnxruntime-gpu[cuda,cudnn]>=1.21,<1.27' \
       && PYTHONPATH=/usr/lib/creative-broadcast/gpu python3 -c \
