@@ -193,7 +193,14 @@ def setup(disk, name, fstype):
             run("wipefs", "-a", x["path"])          # alte Kennungen auf den Partitionen
     run("wipefs", "-a", disk)
     run("udevadm", "settle")
-    r = run("sfdisk", "--wipe", "always", "--wipe-partitions", "always", disk, inp="label: gpt\n,,L\n")
+    # Sicherheitsprüfung selbst machen: nichts von der Platte darf eingehängt oder als Auslagerung aktiv sein
+    still = mounts(find(disk) or n)
+    swaps = Path("/proc/swaps").read_text() if Path("/proc/swaps").exists() else ""
+    if still or any(x["path"] in swaps for x in walk([n])):
+        fail("Die Platte wird noch benutzt (" + (", ".join(still) or "Auslagerung") + "). Bitte neu starten und erneut versuchen.")
+    # --no-reread: neu eingelesen wird danach gezielt (wait_partition) – sonst bricht sfdisk ab,
+    # sobald irgendein Dienst die Platte nur kurz geöffnet hat
+    r = run("sfdisk", "--no-reread", "--wipe", "always", "--wipe-partitions", "always", disk, inp="label: gpt\n,,L\n")
     if r.returncode != 0:
         fail("Die Platte konnte nicht aufgeteilt werden: " + r.stderr.strip()[-200:])
     part = wait_partition(disk)
