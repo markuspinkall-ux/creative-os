@@ -165,7 +165,9 @@ def wait_partition(disk):
 
 def setup(disk, name, fstype):
     n = find(disk)
-    if not n or n.get("type") != "disk":
+    # (Testplatten nur im automatischen Test – pkexec reicht diese Variable nicht durch)
+    kinds = ("disk", "loop") if os.environ.get("CREATIVE_DRIVES_TEST") == "1" else ("disk",)
+    if not n or n.get("type") not in kinds:
         fail("Diese Platte wurde nicht gefunden.")
     if is_system(n):
         fail("Das System-Laufwerk kann nicht neu eingerichtet werden.")

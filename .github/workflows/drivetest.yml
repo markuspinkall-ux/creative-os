@@ -16,7 +16,7 @@ jobs:
           sudo mkdir -p /mnt/alt && sudo mount ${dev}p1 /mnt/alt
           lsblk $dev
           for fs in ext4 exfat ext4; do
-            sudo PKEXEC_UID=1001 python3 drives/creative-drives-helper setup $dev Testplatte $fs; echo "Code $?"
+            sudo CREATIVE_DRIVES_TEST=1 PKEXEC_UID=1001 python3 drives/creative-drives-helper setup $dev Testplatte $fs; echo "Code $?"
             lsblk -f $dev; findmnt -S ${dev}p1 || true
           done
           tail -3 /etc/fstab
