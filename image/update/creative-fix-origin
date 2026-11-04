@@ -7,6 +7,16 @@ import json, sys
 d = json.load(sys.stdin)
 b = next((x for x in d.get('deployments', []) if x.get('booted')), {})
 print(b.get('container-image-reference', ''))")
+# Voll-ISOs werden aus dem Test-Abbild gebaut, folgen nach der Installation
+# aber demselben stabilen Kanal wie Netz-ISOs und bestehende Installationen.
+case "$ref" in
+    *ghcr.io/markuspinkall-ux/creative-os:amd-testing*) variant=amd ;;
+    *ghcr.io/markuspinkall-ux/creative-os:nvidia-testing*) variant=nvidia ;;
+    *) variant="" ;;
+esac
+if [ -n "$variant" ]; then
+    exec bootc switch --mutate-in-place --transport registry "ghcr.io/markuspinkall-ux/creative-os:$variant"
+fi
 case "$ref" in
     ""|*ghcr.io/*|*quay.io/*|*docker.io/*) exit 0 ;;
 esac
