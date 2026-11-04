@@ -23,6 +23,10 @@ class Broadcast(QObject):
         self._mic = ""
         self._preview_rev = 0
         self._preview_on = False
+        self._preview_stamp = None
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setInterval(33)
+        self._preview_timer.timeout.connect(self._update_preview)
         self._timer = QTimer(self)
         self._timer.setInterval(250)
         self._timer.timeout.connect(self._tick)
@@ -74,10 +78,18 @@ class Broadcast(QObject):
                 flag.touch()
             except OSError:
                 pass
-            p = daemon.runtime_dir() / "preview.jpg"
-            if p.exists():
-                self._preview_rev += 1
-                self.previewChanged.emit()
+    def _update_preview(self):
+        if not self._preview_on:
+            return
+        try:
+            st = (daemon.runtime_dir() / "preview.jpg").stat()
+        except OSError:
+            return
+        stamp = (st.st_ino, st.st_mtime_ns, st.st_size)
+        if stamp != self._preview_stamp:
+            self._preview_stamp = stamp
+            self._preview_rev += 1
+            self.previewChanged.emit()
 
     def _set(self, **kw):
         self._cfg.update(kw)
@@ -119,6 +131,12 @@ class Broadcast(QObject):
     @Slot(bool)
     def setPreview(self, on):
         self._preview_on = bool(on)
+        if on:
+            self._preview_stamp = None
+            self._preview_timer.start()
+            self._update_preview()
+        else:
+            self._preview_timer.stop()
         flag = daemon.runtime_dir() / "preview-wanted"
         try:
             if on:

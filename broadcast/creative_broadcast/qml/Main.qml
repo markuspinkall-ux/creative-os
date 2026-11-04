@@ -113,6 +113,7 @@ Window {
                     fillMode: Image.PreserveAspectFit
                     cache: false
                     asynchronous: true
+                    retainWhileLoading: true
                 }
                 Text {
                     anchors.centerIn: parent

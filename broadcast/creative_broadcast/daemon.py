@@ -349,6 +349,7 @@ class Camera:
         last_check, consumers = 0.0, 0
         t_frames, n_frames = time.monotonic(), 0
         prev_alpha = None
+        last_preview = 0.0
         try:
             while not self.stop_flag.is_set():
                 now = time.monotonic()
@@ -401,10 +402,11 @@ class Camera:
                 ff.stdin.write(out.tobytes())
                 output_ms = (time.monotonic() - output_start) * 1000
                 n_frames += 1
-                if (runtime_dir() / "preview-wanted").exists() and n_frames % 5 == 0:
-                    cv2.imwrite(str(runtime_dir() / "preview.tmp.jpg"), cv2.resize(out, (640, 360)),
-                                [cv2.IMWRITE_JPEG_QUALITY, 80])
-                    os.replace(runtime_dir() / "preview.tmp.jpg", runtime_dir() / "preview.jpg")
+                if (runtime_dir() / "preview-wanted").exists() and time.monotonic() - last_preview >= 1 / self.FPS:
+                    if cv2.imwrite(str(runtime_dir() / "preview.tmp.jpg"), cv2.resize(out, (640, 360)),
+                                   [cv2.IMWRITE_JPEG_QUALITY, 80]):
+                        os.replace(runtime_dir() / "preview.tmp.jpg", runtime_dir() / "preview.jpg")
+                        last_preview = time.monotonic()
                 measured_at = time.monotonic()
                 if measured_at - t_frames >= 2:
                     STATUS.set(camera="aktiv", fps=round(n_frames / (measured_at - t_frames)),
