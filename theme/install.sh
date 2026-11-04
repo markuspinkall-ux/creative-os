@@ -47,6 +47,11 @@ install -Dm644 breezerc "$XDG/breezerc"
 install -Dm644 kdeglobals "$XDG/kdeglobals"
 install -Dm644 CreativeGraphit.colors /usr/share/color-schemes/CreativeGraphit.colors
 
+# Terminal: nur die Innenfläche leicht transparent, Text bleibt deckend.
+install -Dm644 konsole/CreativeGraphit.colorscheme /usr/share/konsole/CreativeGraphit.colorscheme
+install -Dm644 konsole/CreativeGraphit.profile /usr/share/konsole/CreativeGraphit.profile
+printf '[Desktop Entry]\nDefaultProfile=CreativeGraphit.profile\n' > "$XDG/konsolerc"
+
 # GTK
 install -Dm644 gtk/gtk-3.0/settings.ini "$XDG/gtk-3.0/settings.ini"
 install -Dm644 gtk/gtk-4.0/settings.ini "$XDG/gtk-4.0/settings.ini"

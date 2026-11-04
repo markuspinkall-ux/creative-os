@@ -126,8 +126,10 @@ COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
 COPY shell/kwin/kwinrc /usr/share/creative-os/xdg/kwinrc
 COPY shell/kwin/kscreenlockerrc /usr/share/creative-os/xdg/kscreenlockerrc
 COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
-# Den mit Plasma ausgelieferten Sperrbildschirm verwenden.
-# Authentifizierung und Entsperren bleiben dadurch zur installierten KDE-Version passend.
+# KDE-Sperrbildschirm nur optisch anpassen; Authentifizierung bleibt original.
+COPY shell/lockscreen/style-lockscreen.py shell/lockscreen/install-lockscreen.sh /tmp/creative-lockscreen/
+COPY login/creative/background.svg /usr/share/creative-os/lockscreen/background.svg
+RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
@@ -507,6 +509,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
         /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
+        /usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/LockScreenUi.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/AssistantMenu.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/BluetoothMenu.qml \

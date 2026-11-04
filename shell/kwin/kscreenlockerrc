@@ -6,3 +6,10 @@
 Autolock=true
 Timeout=10
 LockOnResume=true
+
+[Greeter]
+WallpaperPlugin=org.kde.image
+
+[Greeter][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/creative-os/lockscreen/background.svg
+FillMode=2
