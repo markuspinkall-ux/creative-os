@@ -1,0 +1,12 @@
+name: Broadcast Syntax
+on:
+  pull_request:
+    paths: ['broadcast/**', 'image/Containerfile', '.github/workflows/broadcast-check.yml']
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m compileall -q broadcast/creative_broadcast

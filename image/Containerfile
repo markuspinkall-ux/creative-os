@@ -221,6 +221,15 @@ RUN dnf install -y --skip-unavailable cargo rust gcc git && dnf clean all \
  && install -Dm755 target/release/libdeep_filter_ladspa.so /usr/lib64/ladspa/libdeep_filter_ladspa.so \
  && echo "Creative Broadcast: DeepFilterNet ok" || echo "BROADCAST: DEEPFILTERNET FEHLT"; \
     cd / && rm -rf /tmp/DeepFilterNet /tmp/cargo; dnf remove -y cargo rust >/dev/null 2>&1; dnf clean all
+# CUDA-Runtime nur im NVIDIA-Abbild, isoliert von anderen Systemprogrammen.
+# CUDA 12 bleibt für diese erste Integration explizit ausgewählt.
+RUN if [ "$NVIDIA" = "1" ]; then \
+      pip install --no-cache-dir --only-binary=:all: \
+        --target /usr/lib/creative-broadcast/gpu \
+        'onnxruntime-gpu[cuda,cudnn]>=1.21,<1.27' \
+      && PYTHONPATH=/usr/lib/creative-broadcast/gpu python3 -c \
+        "import onnxruntime as o; assert 'CUDAExecutionProvider' in o.get_available_providers()"; \
+    fi
 COPY broadcast/creative_broadcast /usr/lib/creative-broadcast/creative_broadcast
 COPY broadcast/bin/creative-broadcast /usr/bin/creative-broadcast
 COPY broadcast/bin/creative-broadcastd /usr/bin/creative-broadcastd

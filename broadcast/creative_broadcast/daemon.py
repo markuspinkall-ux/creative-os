@@ -28,9 +28,9 @@ VOICE_NODE = "creative_voice"
 DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "camera": False, "cameraDevice": "",
             "effect": "blur", "background": "", "quality": "sparsam"}
 
-for _v in (Path("/usr/lib/creative-broadcast/vendor"),):
+for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
     if _v.is_dir() and str(_v) not in sys.path:
-        sys.path.append(str(_v))
+        sys.path.insert(0, str(_v))
 
 
 def config_file():
@@ -255,6 +255,11 @@ class Matting:
         import numpy as np
         import onnxruntime as ort
         self.np = np
+        if hasattr(ort, "preload_dlls") and Path("/usr/lib/creative-broadcast/gpu").is_dir():
+            try:
+                ort.preload_dlls(directory="", msvc=False)
+            except Exception as exc:
+                print(f"Creative Broadcast: CUDA-Bibliotheken nicht geladen: {exc}", file=sys.stderr)
         opts = ort.SessionOptions()
         threads = max(1, min(4, (os.cpu_count() or 2) // 2))
         opts.intra_op_num_threads = threads
@@ -262,7 +267,10 @@ class Matting:
         providers = [p for p in ("CUDAExecutionProvider", "ROCMExecutionProvider") if p in ort.get_available_providers()]
         providers.append("CPUExecutionProvider")
         self.sess = ort.InferenceSession(str(MODEL), sess_options=opts, providers=providers)
-        self.engine = providers[0].replace("ExecutionProvider", "")
+        # Tatsächlich registrierte Provider melden, nicht nur angeforderte.
+        self.engine = self.sess.get_providers()[0].replace("ExecutionProvider", "")
+        self.outputs = [output.name for output in self.sess.get_outputs()][1:]
+        print(f"Creative Broadcast: KI-Backend {self.engine}", file=sys.stderr)
         self.size = (640, 360) if quality == "sparsam" else (1280, 720)
         self.ratio = np.array([0.375 if quality == "sparsam" else 0.25], dtype=np.float32)
         self.rec = [np.zeros((1, 1, 1, 1), dtype=np.float32)] * 4
@@ -273,10 +281,10 @@ class Matting:
         h, w = frame_bgr.shape[:2]
         small = cv2.resize(frame_bgr, self.size, interpolation=cv2.INTER_AREA)
         src = small[:, :, ::-1].astype(np.float32).transpose(2, 0, 1)[None] / 255.0
-        out = self.sess.run(None, {"src": src, "r1i": self.rec[0], "r2i": self.rec[1], "r3i": self.rec[2],
+        out = self.sess.run(self.outputs, {"src": src, "r1i": self.rec[0], "r2i": self.rec[1], "r3i": self.rec[2],
                                    "r4i": self.rec[3], "downsample_ratio": self.ratio})
-        pha = out[1][0, 0]
-        self.rec = out[2:6]
+        pha = out[0][0, 0]
+        self.rec = out[1:5]
         if (pha.shape[1], pha.shape[0]) != (w, h):
             pha = cv2.resize(pha, (w, h), interpolation=cv2.INTER_LINEAR)
         return pha
@@ -368,12 +376,15 @@ class Camera:
                         ff.stdin.write(idle.tobytes())
                         time.sleep(1)
                         continue
+                capture_start = time.monotonic()
                 ok, frame = cap.read()
                 if not ok or frame is None:
                     time.sleep(0.05)
                     continue
                 if frame.shape[1] != self.W or frame.shape[0] != self.H:
                     frame = cv2.resize(frame, (self.W, self.H))
+                capture_ms = (time.monotonic() - capture_start) * 1000
+                processing_start = time.monotonic()
                 effect = cfg.get("effect", "blur")
                 if effect == "none":
                     out = frame
@@ -385,15 +396,21 @@ class Camera:
                     bg = self._background(np, cv2, frame, effect, cfg.get("background", ""), bg_cache)
                     a3 = a[:, :, None]
                     out = (frame.astype(np.float32) * a3 + bg.astype(np.float32) * (1 - a3)).astype(np.uint8)
+                processing_ms = (time.monotonic() - processing_start) * 1000
+                output_start = time.monotonic()
                 ff.stdin.write(out.tobytes())
+                output_ms = (time.monotonic() - output_start) * 1000
                 n_frames += 1
                 if (runtime_dir() / "preview-wanted").exists() and n_frames % 5 == 0:
                     cv2.imwrite(str(runtime_dir() / "preview.tmp.jpg"), cv2.resize(out, (640, 360)),
                                 [cv2.IMWRITE_JPEG_QUALITY, 80])
                     os.replace(runtime_dir() / "preview.tmp.jpg", runtime_dir() / "preview.jpg")
-                if now - t_frames >= 2:
-                    STATUS.set(camera="aktiv", fps=round(n_frames / (now - t_frames)))
-                    t_frames, n_frames = now, 0
+                measured_at = time.monotonic()
+                if measured_at - t_frames >= 2:
+                    STATUS.set(camera="aktiv", fps=round(n_frames / (measured_at - t_frames)),
+                               captureMs=round(capture_ms, 1), processingMs=round(processing_ms, 1),
+                               outputMs=round(output_ms, 1))
+                    t_frames, n_frames = measured_at, 0
         except (BrokenPipeError, OSError) as exc:
             STATUS.set(camera=f"Fehler: {exc.__class__.__name__}")
         finally:
