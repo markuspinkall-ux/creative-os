@@ -11,6 +11,8 @@ import sys
 import time
 from pathlib import Path
 
+from .audio_routing import matching_audio
+
 from PySide6.QtCore import Property, QObject, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
@@ -37,7 +39,7 @@ class Capture(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._cfg = {"video": "", "audio": "", "format": "", "volume": 1.0, "muted": False}
+        self._cfg = {"video": "", "audio": "", "format": "", "volume": 1.0, "muted": False, "audioByVideo": {}}
         try:
             data = json.loads(CFG.read_text(encoding="utf-8"))
             if isinstance(data, dict):
@@ -87,13 +89,34 @@ class Capture(QObject):
             else ["xdg-open", folder]
         subprocess.Popen(prog, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    @Slot(str, str, result=int)
-    def matchScore(self, video_name, audio_name):
-        """Wie gut passt ein Audiogerät zur Capture-Karte? (gleiche Wörter im Namen)"""
-        stop = {"usb", "audio", "video", "device", "capture", "stereo", "analog", "digital", "input", "mono", "-"}
-        a = {w for w in video_name.lower().replace(":", " ").replace("_", " ").split() if w not in stop and len(w) > 1}
-        b = {w for w in audio_name.lower().replace(":", " ").replace("_", " ").split() if w not in stop and len(w) > 1}
-        return len(a & b)
+    @Slot("QVariant", result=str)
+    def deviceKey(self, value):
+        if isinstance(value, str):
+            return value
+        try:
+            return bytes(value).decode("utf-8")
+        except (TypeError, ValueError, UnicodeDecodeError):
+            return ""
+
+    @Slot(str, result=str)
+    def savedAudio(self, video_id):
+        mapping = self._cfg.get("audioByVideo")
+        return mapping.get(video_id, "") if isinstance(mapping, dict) else ""
+
+    @Slot(str, str)
+    def saveAudio(self, video_id, audio_id):
+        if not video_id:
+            return
+        mapping = self._cfg.get("audioByVideo")
+        if not isinstance(mapping, dict):
+            mapping = {}
+        self._cfg["audioByVideo"] = {**mapping, video_id: audio_id}
+        self._save()
+        self.changed.emit()
+
+    @Slot(str, "QVariantList", result=str)
+    def matchedAudio(self, video_id, candidates):
+        return matching_audio(video_id, candidates)
 
 
 def _raise_running():

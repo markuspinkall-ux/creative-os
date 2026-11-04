@@ -1,0 +1,13 @@
+name: Capture Audio
+on:
+  pull_request:
+    paths: ['capture/**', '.github/workflows/capture-check.yml']
+permissions:
+  contents: read
+jobs:
+  audio-routing:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m compileall -q capture/creative_capture
+      - run: python3 -m unittest discover -s capture/tests -v
