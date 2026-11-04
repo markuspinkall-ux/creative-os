@@ -21,6 +21,11 @@ permissions:
   contents: write        # für die Download-Seite (Releases)
   packages: write
 
+# Builds und Freigaben teilen eine Sperre: kein gegenseitiges Überschreiben.
+concurrency:
+  group: creative-os-publish
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io/${{ github.repository_owner }}
 
@@ -51,7 +56,7 @@ jobs:
         run: |
           owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           echo "image=ghcr.io/${owner}/creative-os" >> "$GITHUB_OUTPUT"
-          echo "date=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date +%Y%m%d)-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
 
       - name: Abbild bauen
         env:
@@ -69,6 +74,13 @@ jobs:
             -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing \
             -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }} \
             .
+
+      - name: Prüfen, dass main noch diesen Stand enthält
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq .object.sha)
+          test "$current" = "${{ github.sha }}" || { echo "main wurde inzwischen geändert; dieser ältere Bau wird nicht veröffentlicht."; exit 1; }
 
       - name: In die GitHub-Registry hochladen
         if: github.event_name != 'pull_request'
@@ -88,7 +100,7 @@ jobs:
           fi
 
       - name: Installations-ISO erzeugen
-        if: github.event_name == 'workflow_dispatch' && inputs.iso
+        if: (github.event_name == 'workflow_dispatch' && inputs.iso) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[iso]'))
         run: |
           mkdir -p output
           cat > output/config.toml <<'TOML'
@@ -136,7 +148,7 @@ jobs:
           ls -lh *.iso
 
       - name: ISO zum Herunterladen bereitstellen
-        if: github.event_name == 'workflow_dispatch' && inputs.iso
+        if: (github.event_name == 'workflow_dispatch' && inputs.iso) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[iso]'))
         uses: actions/upload-artifact@v4
         with:
           name: creative-os-${{ matrix.variant }}-iso
@@ -150,7 +162,7 @@ jobs:
   netinstall:
     name: Kleine Installations-ISO
     needs: image
-    if: github.event_name == 'workflow_dispatch' && inputs.iso
+    if: (github.event_name == 'workflow_dispatch' && inputs.iso) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[iso]'))
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

@@ -225,6 +225,18 @@ class ShellController(QObject):
         if not self._layer:
             _win_move(bar, geo.x(), geo.y() + geo.height() - BAR_HEIGHT)
 
+    @Slot()
+    def restoreDesktop(self):
+        """Sichtbarkeit und Rendering nach dem Entsperren wiederherstellen."""
+        for name, entry in self._surfaces.items():
+            self._relayout(name)
+            for key in ("bg", "bar"):
+                win = entry.get(key)
+                if win is not None:
+                    _win_show(win)
+                    QMetaObject.invokeMethod(win, "requestUpdate")
+        self.refreshPrimary()
+
     def _popup_height(self, screen, wanted):
         return min(wanted, screen.geometry().height() - BAR_HEIGHT - 40) + POPUP_GAP
 

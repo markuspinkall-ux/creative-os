@@ -126,8 +126,8 @@ COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
 COPY shell/kwin/kwinrc /usr/share/creative-os/xdg/kwinrc
 COPY shell/kwin/kscreenlockerrc /usr/share/creative-os/xdg/kscreenlockerrc
 COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
-COPY shell/lockscreen /tmp/creative-lockscreen
-RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
+# Den mit Plasma ausgelieferten Sperrbildschirm verwenden.
+# Authentifizierung und Entsperren bleiben dadurch zur installierten KDE-Version passend.
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
@@ -394,7 +394,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
  && (lsinitrd "/usr/lib/modules/$KVER/initramfs.img" 2>/dev/null | grep -q "plymouth/themes/creative/background-tile.png" \
      && echo "Startbildschirm: Graphit-Thema in der Startdatei" || echo "STARTBILDSCHIRM: THEMA FEHLT IN DER STARTDATEI") \
  && mkdir -p /usr/lib/bootc/kargs.d \
- && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "vt.global_cursor_default=0", "vt.default_red=0x12,0xaa,0x00,0xaa,0x00,0xaa,0x00,0xdc,0x55,0xff,0x55,0xff,0x8f,0xff,0x55,0xff", "vt.default_grn=0x15,0x00,0xaa,0x55,0x00,0x00,0xaa,0xe6,0x55,0x55,0xff,0xff,0xb3,0x55,0xff,0xff", "vt.default_blu=0x1b,0x00,0x00,0x00,0xaa,0xaa,0xaa,0xff,0x55,0x55,0x55,0x55,0xff,0xff,0xff,0xff"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
+ && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
 # ---------------------------------------------------------------------------
 # 9) Systemeinstellungen

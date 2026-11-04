@@ -4,7 +4,7 @@ Hierüber meldet das KWin-Skript die offenen Fenster, und die
 Windows-Tastenkürzel (Win-Taste, Win+E …) erreichen die Shell.
 """
 
-from PySide6.QtCore import ClassInfo, QObject, Slot
+from PySide6.QtCore import ClassInfo, QObject, SLOT, Slot
 
 from .runner import spawn_detached
 
@@ -36,10 +36,23 @@ class ShellBus(QObject):
             return False
         if not bus.registerService(SERVICE):
             print("creative-shell: D-Bus-Name belegt (läuft die Shell schon?)")
+        # KWin darf Layer-Shell-Flächen während der Sperre ausblenden.
+        # Nach erfolgreichem Entsperren die Desktop-Flächen erneut einblenden.
+        bus.connect("org.freedesktop.ScreenSaver", "/ScreenSaver",
+                    "org.freedesktop.ScreenSaver", "ActiveChanged",
+                    self, SLOT("screenSaverChanged(bool)"))
         ok = bus.registerObject(PATH, self, QDBusConnection.RegisterOption.ExportAllSlots)
         if ok:
             self._tasks.request_snapshot()  # Fensterliste von KWin holen
         return ok
+
+    @Slot(bool)
+    def screenSaverChanged(self, active):
+        if active:
+            self._shell.closePopups()
+            self._shell.hideBubble()
+        else:
+            self._shell.restoreDesktop()
 
     # ---- vom KWin-Skript --------------------------------------------------------
     @Slot(str)
