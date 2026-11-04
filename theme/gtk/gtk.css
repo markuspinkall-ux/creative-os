@@ -214,3 +214,64 @@ selection, *:selected, entry selection, textview text selection {
 infobar, .app-notification { background-color: #232836; color: #dce6ff; }
 spinner { color: #8fb3ff; }
 link, *:link, label:link { color: #8fb3ff; }
+
+/* Öffnen/Speichern/Upload: native GTK-Verläufe dürfen Graphit nicht überdecken.
+   Adwaita 3 zeichnet in der Kopfleiste zusätzlich ein helles Hintergrundbild. */
+headerbar, headerbar:backdrop, .titlebar, .titlebar:backdrop {
+  background-image: none;
+  text-shadow: none;
+}
+headerbar, .titlebar {
+  background-color: #1c2029;
+  color: #dce6ff;
+  border-color: rgba(220, 230, 255, 0.10);
+}
+headerbar:backdrop, .titlebar:backdrop {
+  background-color: #171a22;
+  color: #bac6df;
+}
+headerbar label, .titlebar label {
+  color: inherit;
+  text-shadow: none;
+}
+headerbar button.suggested-action, .titlebar button.suggested-action {
+  background-image: none;
+  background-color: #8fb3ff;
+  color: #12151b;
+  border-color: transparent;
+}
+headerbar button.suggested-action:hover, .titlebar button.suggested-action:hover {
+  background-color: #a3c1ff;
+}
+headerbar button:disabled, .titlebar button:disabled {
+  background-image: none;
+  background-color: #242936;
+  color: #929db3;
+}
+headerbar entry, .titlebar entry, filechooser entry {
+  background-image: none;
+  background-color: #12151b;
+  color: #dce6ff;
+  caret-color: #dce6ff;
+  border: 1px solid #465269;
+  box-shadow: none;
+}
+headerbar entry:focus, .titlebar entry:focus, filechooser entry:focus {
+  border-color: #8fb3ff;
+}
+filechooser, filechooser .dialog-action-box, filechooser actionbar {
+  background-image: none;
+  background-color: #1c2029;
+  color: #dce6ff;
+}
+filechooser .path-bar button {
+  border-radius: 9px;
+  padding: 6px 10px;
+}
+filechooser treeview.view header button {
+  background-image: none;
+  background-color: #242936;
+  color: #bac6df;
+  border-radius: 0;
+  padding: 7px 10px;
+}
