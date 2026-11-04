@@ -138,6 +138,31 @@ def automount(part, state):
     done(mount=str(target))
 
 
+def wait_partition(disk):
+    """Bis zu 15 s warten, bis der Kernel die neue Partition kennt – notfalls nachhelfen."""
+    base = Path(disk).name
+    for i in range(30):
+        if i in (0, 6, 14):
+            run("blockdev", "--rereadpt", disk)
+            run("partx", "-u", disk)
+            run("partx", "-a", disk)
+            if shutil.which("partprobe"):
+                run("partprobe", disk)
+        run("udevadm", "settle", "--timeout=5")
+        sysfs = sorted(p.name for p in Path("/sys/block", base).glob(base + "*") if (p / "partition").exists())
+        if len(sysfs) == 1:     # genau eine Partition über (fast) die ganze Platte = die neue
+            try:
+                total = int((Path("/sys/block", base) / "size").read_text())
+                size = int((Path("/sys/block", base, sysfs[0]) / "size").read_text())
+            except (OSError, ValueError):
+                total = size = 0
+            dev = "/dev/" + sysfs[0]
+            if total and size > total * 0.9 and Path(dev).exists():
+                return dev
+        time.sleep(0.5)
+    return None
+
+
 def setup(disk, name, fstype):
     n = find(disk)
     if not n or n.get("type") != "disk":
@@ -159,18 +184,20 @@ def setup(disk, name, fstype):
                     fail(f"„{m}“ wird gerade benutzt. Bitte offene Dateien schließen und erneut versuchen.")
         if x.get("uuid"):
             fstab_remove(x["uuid"])
+    run("systemctl", "daemon-reload")
     # Neu einrichten: eine Partition über die ganze Platte
+    for x in walk([n]):
+        if x.get("type") == "part":
+            run("wipefs", "-a", x["path"])          # alte Kennungen auf den Partitionen
     run("wipefs", "-a", disk)
-    r = run("sfdisk", "--wipe", "always", disk, inp="label: gpt\n,,L\n")
+    run("udevadm", "settle")
+    r = run("sfdisk", "--wipe", "always", "--wipe-partitions", "always", disk, inp="label: gpt\n,,L\n")
     if r.returncode != 0:
         fail("Die Platte konnte nicht aufgeteilt werden: " + r.stderr.strip()[-200:])
-    run("partx", "-u", disk)
-    run("udevadm", "settle")
-    time.sleep(1)
-    parts = [x for x in walk([find(disk)]) if x.get("type") == "part"]
-    if not parts:
-        fail("Die neue Partition wurde nicht gefunden.")
-    part = parts[0]["path"]
+    part = wait_partition(disk)
+    if not part:
+        fail("Die neue Aufteilung wird vom System noch nicht erkannt (die Platte ist noch in Benutzung). "
+             "Bitte den PC neu starten und das Einrichten noch einmal ausführen.")
     if fstype == "ext4":
         r = run("mkfs.ext4", "-F", "-L", name[:16], part)
     elif fstype == "ntfs":
@@ -179,10 +206,13 @@ def setup(disk, name, fstype):
         r = run("mkfs.exfat", "-L", name[:15], part)
     if r.returncode != 0:
         fail("Formatieren fehlgeschlagen: " + r.stderr.strip()[-200:])
-    run("udevadm", "settle")
-    time.sleep(1)
-    p = find(part)
-    uuid = p.get("uuid") if p else None
+    uuid = None
+    for _ in range(20):
+        run("udevadm", "trigger", "--settle", part)
+        uuid = run("blkid", "-s", "UUID", "-o", "value", part).stdout.strip()
+        if uuid:
+            break
+        time.sleep(0.5)
     if not uuid:
         fail("Die Platte ist eingerichtet, aber noch nicht erkannt. Bitte neu starten.")
     target = mount_dir(name)
