@@ -46,7 +46,7 @@ def fail(msg):
 def tree():
     # Achtung: mit der Spalte PKNAME gibt lsblk eine flache Liste aus (ohne Unterpunkte) –
     # dann wären Partitionen und ihre Einhängepunkte unsichtbar. Darum ohne.
-    out = run("lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS").stdout
+    out = run("lsblk", "-J", "--tree=PATH", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS").stdout
     return json.loads(out).get("blockdevices", [])
 
 

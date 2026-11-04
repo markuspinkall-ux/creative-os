@@ -34,7 +34,7 @@ def fmt_size(b):
 
 def list_disks(selected):
     try:
-        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSUSED,MODEL,ROTA,TRAN"],
+        out = subprocess.run(["lsblk", "-J", "--tree=PATH", "-b", "-p", "-o", "PATH,LABEL,SIZE,FSTYPE,MOUNTPOINTS,RM,HOTPLUG,TYPE,FSUSED,MODEL,ROTA,TRAN"],
                              capture_output=True, text=True, timeout=5).stdout
         data = json.loads(out)
     except (OSError, ValueError, subprocess.SubprocessError):

@@ -18,9 +18,8 @@ jobs:
           lsblk $dev
           sudo apt-get install -y -qq exfatprogs >/dev/null 2>&1
           systemctl is-active udisks2 || true
-          lsblk -J -p -o PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS,PKNAME | python3 -c "import json,sys; d=json.load(sys.stdin); print([x for x in d[\"blockdevices\"] if \"loop0\" in x[\"path\"]])"
           for fs in ext4 exfat ext4; do
-            sudo CREATIVE_DRIVES_TEST=1 PKEXEC_UID=1001 python3 drives/creative-drives-helper setup $dev Testplatte $fs; echo "Code $?"; ls /sys/block/$(basename $dev)/
+            sudo CREATIVE_DRIVES_TEST=1 PKEXEC_UID=1001 python3 drives/creative-drives-helper setup $dev Testplatte $fs; echo "Code $?"
             lsblk -f $dev; findmnt -S ${dev}p1 || true
           done
           tail -3 /etc/fstab

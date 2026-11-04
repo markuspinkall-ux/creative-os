@@ -40,7 +40,7 @@ SYSTEM_MOUNTS = ("/", "/boot", "/boot/efi", "/efi", "/sysroot", "/var", "/home",
 def usb_sticks():
     """USB-Sticks und Speicherkarten (nie das System-Laufwerk)."""
     try:
-        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o", "PATH,TYPE,SIZE,MODEL,VENDOR,TRAN,RM,HOTPLUG,MOUNTPOINTS"],
+        out = subprocess.run(["lsblk", "-J", "--tree=PATH", "-b", "-p", "-o", "PATH,TYPE,SIZE,MODEL,VENDOR,TRAN,RM,HOTPLUG,MOUNTPOINTS"],
                              capture_output=True, text=True, timeout=5).stdout
         data = json.loads(out).get("blockdevices", [])
     except (OSError, ValueError, subprocess.SubprocessError):

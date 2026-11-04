@@ -77,7 +77,7 @@ def health(device):
 
 def list_disks():
     try:
-        out = subprocess.run(["lsblk", "-J", "-b", "-p", "-o",
+        out = subprocess.run(["lsblk", "-J", "--tree=PATH", "-b", "-p", "-o",
                               "PATH,TYPE,SIZE,MODEL,TRAN,ROTA,RM,HOTPLUG,FSTYPE,LABEL,UUID,MOUNTPOINTS,FSUSED,FSSIZE"],
                              capture_output=True, text=True, timeout=5).stdout
         data = json.loads(out)

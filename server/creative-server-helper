@@ -69,7 +69,7 @@ def user_ids():
 
 
 def find_device(dev):
-    out = run("lsblk", "-J", "-p", "-o", "PATH,UUID,FSTYPE,MOUNTPOINTS,TYPE,LABEL").stdout
+    out = run("lsblk", "-J", "--tree=PATH", "-p", "-o", "PATH,UUID,FSTYPE,MOUNTPOINTS,TYPE,LABEL").stdout
     def walk(nodes):
         for n in nodes or []:
             yield n

@@ -49,7 +49,7 @@ def save(cfg):
 def drives():
     """Beschreibbare Zusatz-Laufwerke (USB-Platten, zweite Platte) – nie das System."""
     try:
-        out = subprocess.run(["lsblk", "-J", "-b", "-o", "PATH,UUID,LABEL,FSTYPE,MOUNTPOINTS,FSAVAIL,FSSIZE,TRAN,RM"],
+        out = subprocess.run(["lsblk", "-J", "--tree=PATH", "-b", "-o", "PATH,UUID,LABEL,FSTYPE,MOUNTPOINTS,FSAVAIL,FSSIZE,TRAN,RM"],
                              capture_output=True, text=True, timeout=5).stdout
         data = json.loads(out).get("blockdevices", [])
     except (OSError, ValueError, subprocess.SubprocessError):
