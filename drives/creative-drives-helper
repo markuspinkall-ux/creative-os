@@ -44,7 +44,9 @@ def fail(msg):
 
 
 def tree():
-    out = run("lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS,PKNAME").stdout
+    # Achtung: mit der Spalte PKNAME gibt lsblk eine flache Liste aus (ohne Unterpunkte) –
+    # dann wären Partitionen und ihre Einhängepunkte unsichtbar. Darum ohne.
+    out = run("lsblk", "-J", "-p", "-o", "PATH,TYPE,FSTYPE,UUID,LABEL,MOUNTPOINTS").stdout
     return json.loads(out).get("blockdevices", [])
 
 
@@ -62,8 +64,22 @@ def mounts(node):
     return [m for x in walk([node]) for m in (x.get("mountpoints") or []) if m]
 
 
+def system_devices():
+    """Alle Geräte, auf denen das System liegt – samt übergeordneter Platten (zweite Absicherung)."""
+    devs = set()
+    for m in SYSTEM_MOUNTS + ("/sysroot", "/boot", "/boot/efi"):
+        src = run("findmnt", "-n", "-o", "SOURCE", m).stdout.strip().split("[")[0]
+        if src.startswith("/dev/"):
+            for line in run("lsblk", "-s", "-n", "-p", "-o", "PATH", src).stdout.split():
+                devs.add(line.strip("├─└│ "))
+    return devs
+
+
 def is_system(node):
-    return any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") or m.startswith("/boot") for m in mounts(node))
+    if any(m in SYSTEM_MOUNTS or m.startswith("/sysroot") or m.startswith("/boot") for m in mounts(node)):
+        return True
+    sysdevs = system_devices()
+    return any(x.get("path") in sysdevs for x in walk([node]))
 
 
 def user_ids():

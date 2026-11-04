@@ -24,3 +24,7 @@ jobs:
             lsblk -f $dev; findmnt -S ${dev}p1 || true
           done
           tail -3 /etc/fstab
+          echo "=== System-Laufwerk muss abgelehnt werden"
+          root=$(lsblk -s -n -p -o PATH,TYPE $(findmnt -n -o SOURCE / | cut -d[ -f1) | awk '$2=="disk"{print $1}' | sed 's/[^/a-z0-9]//g' | head -1)
+          echo "Systemplatte: $root"
+          sudo CREATIVE_DRIVES_TEST=1 python3 drives/creative-drives-helper setup "$root" X ext4; echo "Code $?"
