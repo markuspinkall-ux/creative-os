@@ -27,7 +27,10 @@ MARK = "# Creative OS – Laufwerke"
 
 
 def run(*args, check=False, inp=None):
-    return subprocess.run(list(args), capture_output=True, text=True, check=check, input=inp)
+    r = subprocess.run(list(args), capture_output=True, text=True, check=check, input=inp)
+    if os.environ.get("CREATIVE_DRIVES_TEST") == "1" and args[0] != "lsblk":
+        print("·", " ".join(args), "→", r.returncode, (r.stderr or "").strip()[:200], file=sys.stderr)
+    return r
 
 
 def done(**kw):
