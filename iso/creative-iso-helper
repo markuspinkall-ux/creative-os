@@ -1,7 +1,6 @@
 #!/bin/bash
 # Creative Iso – Hilfsprogramm mit Administratorrechten (über pkexec).
 #
-#   full  <zielordner> <uid>                              ISO von diesem System (vollständig, ohne Internet installierbar)
 #   net   <amd|nvidia> <stabil|test> <quelle> <zielordner> <uid>
 #                                                         kleine Installations-ISO; quelle = ISO-Datei oder „download“
 #   usb   <iso-datei> <gerät>                             bootfähigen USB-Stick erstellen (LÖSCHT den Stick)
@@ -13,14 +12,12 @@ set -u
 PIDFILE=/run/creative-iso.pid
 WORK=/var/tmp/creative-iso
 REGISTRY_IMAGE=ghcr.io/markuspinkall-ux/creative-os
-BIB=quay.io/centos-bootc/bootc-image-builder:latest
 NETDIR=/usr/share/creative-iso/netinstall
 
 say()  { echo "@@ $1 $2"; }
 fail() { echo "@@fehler $1"; cleanup; exit 1; }
 cleanup() {
     rm -f "$PIDFILE"
-    podman rmi -f localhost/creative-os-iso:latest >/dev/null 2>&1 || true
     rm -rf "$WORK"
 }
 
@@ -57,82 +54,6 @@ finish() {   # <iso> <zielordner> <uid> <name>
     chown "$uid:$(id -g "$uid" 2>/dev/null || echo "$uid")" "$dst" "$outdir" 2>/dev/null
     say 100 "Fertig"
     echo "@@ok $dst"
-}
-
-booted_ref() {
-    rpm-ostree status --json 2>/dev/null | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-b = next((x for x in d.get('deployments', []) if x.get('booted')), {})
-print(b.get('container-image-reference', ''))"
-}
-
-# ---------------------------------------------------------------------------------------
-full() {
-    local outdir="$1" uid="$2"
-    command -v podman >/dev/null || fail "podman fehlt."
-    rm -rf "$WORK"; mkdir -p "$WORK/output"
-    local f; f=$(free_gb /var/lib/containers)
-    [ "${f:-0}" -ge 25 ] || fail "Zu wenig Speicherplatz: Für eine vollständige ISO werden etwa 25 GB frei benötigt (frei: ${f:-?} GB)."
-
-    # Welche Quelle bekommt das installierte System später für Updates?
-    local ref regref tag variant
-    ref="$(booted_ref)"
-    regref="${ref#*registry:}"; regref="${regref#docker://}"
-    case "$regref" in
-        ghcr.io/*|quay.io/*|docker.io/*) ;;
-        *) variant=$(cat /usr/share/creative-os/variant 2>/dev/null || echo amd); regref="$REGISTRY_IMAGE:$variant" ;;
-    esac
-    tag="${regref##*:}"; variant="${tag%%-*}"
-
-    say 3 "Dieses System wird für die ISO vorbereitet …"
-    if ! bootc image copy-to-storage --target localhost/creative-os-iso:latest 2>&1; then
-        echo "Kopieren des laufenden Systems klappt nicht – lade die gleiche Version aus der Registry …"
-        podman pull "$regref" 2>&1 || fail "Das System-Abbild konnte nicht geladen werden."
-        podman tag "$regref" localhost/creative-os-iso:latest
-    fi
-
-    say 20 "Werkzeug zum Erstellen von ISOs wird geladen …"
-    podman pull "$BIB" 2>&1 || fail "Das ISO-Werkzeug konnte nicht geladen werden (Internet?)."
-
-    cat > "$WORK/config.toml" <<TOML
-[customizations.installer.kickstart]
-contents = '''
-lang de_DE.UTF-8
-keyboard --vckeymap=de --xlayouts=de
-timezone Europe/Berlin --utc
-network --bootproto=dhcp --activate --hostname=creative-os
-
-%post --erroronfail
-bootc switch --mutate-in-place --transport registry $regref
-%end
-
-%post
-$(cat /usr/share/creative-os/secureboot/postinstall.sh 2>/dev/null)
-%end
-'''
-TOML
-
-    say 30 "ISO wird gebaut – das dauert 15 bis 40 Minuten …"
-    podman run --rm --privileged --label creative-iso=1 \
-        --security-opt label=type:unconfined_t \
-        -v "$WORK/output:/output" \
-        -v "$WORK/config.toml:/config.toml:ro" \
-        -v /var/lib/containers/storage:/var/lib/containers/storage \
-        "$BIB" --type anaconda-iso --rootfs btrfs \
-        localhost/creative-os-iso:latest 2>&1 \
-      | while IFS= read -r line; do
-            echo "$line"
-            case "$line" in
-                *"Pipeline build"*)   say 40 "Grundsystem wird zusammengestellt …" ;;
-                *"Pipeline anaconda"*|*"Pipeline anaconda-tree"*) say 55 "Installer wird eingebaut …" ;;
-                *"Pipeline bootiso-tree"*|*"Pipeline efiboot-tree"*) say 75 "Startdateien werden erzeugt …" ;;
-                *"Pipeline bootiso"*) say 88 "ISO-Datei wird geschrieben …" ;;
-            esac
-        done
-    [ -f "$WORK/output/bootiso/install.iso" ] || fail "Die ISO wurde nicht erzeugt – Details im Protokoll."
-    finish "$WORK/output/bootiso/install.iso" "$outdir" "$uid" "Creative-OS-${variant}-$(date +%Y%m%d).iso"
-    cleanup
 }
 
 # ---------------------------------------------------------------------------------------
@@ -226,7 +147,6 @@ usb() {
 
 case "${1:-}" in
     usb)  [ $# -eq 3 ] || fail "Aufruf: usb <iso> <gerät>"; usb "$2" "$3" ;;
-    full) [ $# -eq 3 ] || fail "Aufruf: full <zielordner> <uid>"; full "$2" "$3" ;;
     net)  [ $# -eq 6 ] || fail "Aufruf: net <variante> <kanal> <quelle> <zielordner> <uid>"; net "$2" "$3" "$4" "$5" "$6" ;;
     *)    fail "Unbekannter Befehl." ;;
 esac

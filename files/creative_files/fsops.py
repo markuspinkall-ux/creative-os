@@ -301,7 +301,7 @@ def parse_lsblk(data, user=None):
                     else:
                         name = drive_kind(tran, n.get("rota", rota), disk)
                         tag = label if label and label.lower() not in (name.lower(), "creative os") else ""
-                    mount = "/" if system else (mps[0] if mps else "")
+                    mount = ("/sysroot" if "/sysroot" in mps else "/") if system else (mps[0] if mps else "")
                     drives.append({
                         "device": n.get("path") or "/dev/" + n.get("name", ""),
                         "name": name, "tag": tag, "system": system, "removable": removable,
@@ -336,8 +336,13 @@ def list_drives():
     for d in drives:
         if d["mounted"]:
             try:
-                usage = shutil.disk_usage(d["mountPath"])
-                d["size"], d["used"] = usage.total, usage.used
+                # Atomic deployments can expose a tiny read-only image at /.
+                # Query the backing filesystem, not that deployment image.
+                path = d["mountPath"]
+                if d["system"] and Path("/run/ostree-booted").exists():
+                    path = "/sysroot" if os.path.ismount("/sysroot") else "/var"
+                usage = shutil.disk_usage(path)
+                d["size"], d["used"], d["free"] = usage.total, usage.used, usage.free
             except OSError:
                 pass
     return drives

@@ -174,10 +174,6 @@ class IsoMaker(QObject):
         p.start("pkexec", [HELPER] + args)
 
     @Slot()
-    def makeFull(self):
-        self._start(["full", self._outdir, str(os.getuid())])
-
-    @Slot()
     def makeNet(self):
         self._start(["net", self._variant, self._channel, self._source or "download", self._outdir, str(os.getuid())])
 
@@ -238,7 +234,6 @@ class IsoMaker(QObject):
     outdir = Property(str, lambda self: self._outdir, notify=changed)
     outdirUrl = Property(str, lambda self: QUrl.fromLocalFile(self._outdir).toString(), notify=changed)
     freeSpace = Property(float, lambda self: round(free_gb(self._outdir), 1), notify=changed)
-    systemFree = Property(float, lambda self: round(free_gb("/var/lib/containers"), 1), notify=changed)
     running = Property(bool, lambda self: self._running, notify=changed)
     percent = Property(int, lambda self: self._percent, notify=changed)
     status = Property(str, lambda self: self._status, notify=changed)
