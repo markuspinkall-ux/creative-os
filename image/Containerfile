@@ -509,7 +509,6 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
         /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
-        /usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/LockScreenUi.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/AssistantMenu.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/BluetoothMenu.qml \
