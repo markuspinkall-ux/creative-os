@@ -26,6 +26,7 @@ from .desktop import DesktopModel
 from .tasks import TaskModel
 from .icons import IconProvider
 from .network import NetworkModel
+from .bluetooth import BluetoothModel
 from .printers import PrinterModel
 from .assistant_client import AssistantClient
 from .session import SessionModel
@@ -45,7 +46,7 @@ PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
-POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat")
+POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth")
 SURFACES = POPUPS + ("bubble",)
 
 
@@ -277,6 +278,9 @@ class ShellController(QObject):
             elif key == "panel":
                 entry[key] = self._create(screen, "right", "QuickPanel.qml", PANEL_WIDTH,
                                           self._popup_height(screen, 940), True, key)
+            elif key == "bluetooth":
+                entry[key] = self._create(screen, "right", "BluetoothMenu.qml", PANEL_WIDTH,
+                                          self._popup_height(screen, 620), True, key)
             elif key == "trash":
                 entry[key] = self._create(screen, "right", "TrashMenu.qml", TRASH_WIDTH,
                                           200 + POPUP_GAP, True, key)
@@ -332,6 +336,10 @@ class ShellController(QObject):
     def toggleQuickPanel(self, name):
         self._panel_focus = ""
         self._toggle(name, "panel")
+
+    @Slot(str)
+    def toggleBluetooth(self, name):
+        self._toggle(name, "bluetooth")
 
     @Slot(str)
     def toggleCalendar(self, name):
@@ -436,6 +444,7 @@ def main():
         "apps": apps,
         "tasks": tasks,
         "network": NetworkModel(),
+        "bluetooth": BluetoothModel(),
         "brightness": BrightnessModel(),
         "printers": PrinterModel(),
         "session": SessionModel(),
@@ -472,6 +481,8 @@ def main():
         ctx.setContextProperty(name, model)
     shell.start()
     models["assistant"].spoke.connect(shell.showBubble)
+    models["assistant"].changed.connect(
+        lambda: shell.hideBubble() if models["assistant"].muted else None)
 
     # Fensterliste von KWin und Windows-Tastenkürzel über D-Bus
     bus = ShellBus(shell, tasks, apps, models["session"])
