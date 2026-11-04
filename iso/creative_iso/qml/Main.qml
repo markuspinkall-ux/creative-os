@@ -4,8 +4,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 import Creative
 
-// Creative Iso – Installations-ISOs erstellen: aus diesem System oder als kleine
-// Netzinstallation (aus einer heruntergeladenen Fedora-ISO).
+// Creative Iso – Netzinstallations-ISOs und bootfähige USB-Sticks erstellen.
 Window {
     id: win
     width: 1000
@@ -16,7 +15,7 @@ Window {
     title: "Creative Iso"
     color: Theme.surface
 
-    property string mode: "full"     // full | net | usb
+    property string mode: "net"     // net | usb
     property bool usbConfirm: false
     Component.onCompleted: if (Qt.application.arguments.indexOf("--usb") >= 0) mode = "usb"
     onModeChanged: { usbConfirm = false; if (mode === "usb") iso.refreshUsb() }
@@ -52,21 +51,14 @@ Window {
         opacity: enabled ? 1 : 0.6
 
         ModeCard {
-            width: (modes.width - 32) / 3
-            key: "full"
-            icon: "screen-tool"
-            title: "Dieses System als ISO"
-            text: "Vollständige ISO von diesem PC. Installiert ohne Internet. Etwa 5 GB, dauert 15–40 Minuten."
-        }
-        ModeCard {
-            width: (modes.width - 32) / 3
+            width: (modes.width - 16) / 2
             key: "net"
             icon: "download"
             title: "Kleine Installations-ISO"
             text: "Unter 1 GB. Creative OS wird während der Installation frisch aus dem Internet geladen – immer die neueste Version."
         }
         ModeCard {
-            width: (modes.width - 32) / 3
+            width: (modes.width - 16) / 2
             key: "usb"
             icon: "usb"
             title: "Bootfähiger USB-Stick"
@@ -200,11 +192,9 @@ Window {
                 text: win.mode === "usb"
                       ? (iso.usbIso && iso.usbDevice && !iso.usbFits ? "Der Stick ist zu klein für diese ISO."
                          : "Danach den Stick in den PC stecken, beim Einschalten das Startmenü öffnen (meist F12, F11 oder Esc) und den Stick wählen.")
-                      : (win.mode === "full"
-                      ? ("Benötigt etwa 25 GB freien Speicher (frei: " + iso.systemFree.toFixed(0) + " GB) und eine Internetverbindung für das ISO-Werkzeug. Das installierte System bekommt danach ganz normal Updates.")
-                      : ("Benötigt etwa 6 GB freien Speicher (frei: " + iso.freeSpace.toFixed(0) + " GB). Ohne eigene ISO wird die Fedora-Netzinstallation (etwa 1 GB) geladen."))
+                      : ("Benötigt etwa 6 GB freien Speicher (frei: " + iso.freeSpace.toFixed(0) + " GB). Ohne eigene ISO wird die Fedora-Netzinstallation (etwa 1 GB) geladen.")
                 color: (win.mode === "usb" ? (iso.usbIso && iso.usbDevice && !iso.usbFits)
-                        : (win.mode === "full" ? iso.systemFree < 25 : iso.freeSpace < 6)) ? Theme.flame : Theme.textMuted
+                        : iso.freeSpace < 6) ? Theme.flame : Theme.textMuted
                 font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }
@@ -269,7 +259,6 @@ Window {
                         enabled: win.mode !== "usb" || (iso.usbIso !== "" && iso.usbDevice !== "" && iso.usbFits && win.usbConfirm)
                         onClicked: {
                             if (win.mode === "usb") { win.usbConfirm = false; iso.makeUsb() }
-                            else if (win.mode === "full") iso.makeFull()
                             else iso.makeNet()
                         }
                     }

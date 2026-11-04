@@ -609,9 +609,13 @@ class FileManager(QObject):
         out = []
         for d in drives:
             size, used = d.get("size"), d.get("used")
-            if d["mounted"] and size:
-                info = f"{fsops.format_size(size - (used or 0))} frei von {fsops.format_size(size)}"
-                frac = (used or 0) / size
+            if d["mounted"] and size and (d.get("free") is not None or used is not None):
+                free = d.get("free", max(0, size - used)) if used is not None else d["free"]
+                info = f"{fsops.format_size(free)} frei von {fsops.format_size(size)}"
+                frac = max(0, min(1, (used or 0) / size))
+            elif d["mounted"]:
+                info = "Speicherbelegung nicht verfügbar"
+                frac = 0
             else:
                 info = "Nicht verbunden – zum Öffnen anklicken"
                 frac = 0
