@@ -65,15 +65,35 @@ jobs:
           # Signaturschlüssel für Secure Boot nur als Build-Geheimnis (landet nicht im Abbild)
           umask 077
           printf '%s' "$MOK_PRIVATE_KEY" > /tmp/mokkey
-          # --layers=false: nicht nach jedem Schritt eine Zwischenstufe speichern
-          # (bei einem mehrere GB großen System kostet das sonst Minuten pro Schritt)
+          # Zwischenstufen sparen und erst das fertige Dateisystem aufteilen.
           sudo podman build --layers=false --secret id=mokkey,src=/tmp/mokkey \
             --build-arg NVIDIA=${{ matrix.nvidia }} \
             --label org.opencontainers.image.version=${{ steps.names.outputs.date }} \
             -f image/Containerfile \
-            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-testing \
-            -t ${{ steps.names.outputs.image }}:${{ matrix.variant }}-${{ steps.names.outputs.date }} \
+            -t localhost/creative-os:${{ matrix.variant }}-build \
             .
+
+      - name: Abbild in wiederverwendbare Schichten aufteilen
+        run: |
+          image="${{ steps.names.outputs.image }}"
+          variant="${{ matrix.variant }}"
+          sudo podman run --rm --privileged \
+            -v /var/lib/containers:/var/lib/containers \
+            quay.io/fedora/fedora-bootc:44 \
+            /usr/libexec/bootc-base-imagectl rechunk \
+            "localhost/creative-os:${variant}-build" "${image}:${variant}-testing"
+          sudo podman tag "${image}:${variant}-testing" "${image}:${variant}-${{ steps.names.outputs.date }}"
+          sudo podman rmi "localhost/creative-os:${variant}-build"
+
+      - name: Bisherige Manifeste für Größenvergleich sichern
+        continue-on-error: true
+        run: |
+          command -v skopeo >/dev/null || sudo apt-get install -y skopeo
+          image="${{ steps.names.outputs.image }}"
+          variant="${{ matrix.variant }}"
+          for channel in "${variant}-testing" "$variant"; do
+            skopeo inspect --raw "docker://${image}:${channel}" > "$RUNNER_TEMP/previous-${channel}.json" || true
+          done
 
       - name: Prüfen, dass main noch diesen Stand enthält
         env:
@@ -98,6 +118,34 @@ jobs:
             sudo podman push ${{ steps.names.outputs.image }}:${{ matrix.variant }}
             echo "Freigegeben für den stabilen Kanal"
           fi
+
+      - name: Voraussichtliche Update-Downloads zusammenfassen
+        continue-on-error: true
+        run: |
+          image="${{ steps.names.outputs.image }}"
+          variant="${{ matrix.variant }}"
+          skopeo inspect --raw "docker://${image}:${variant}-${{ steps.names.outputs.date }}" > "$RUNNER_TEMP/current.json"
+          python3 - "$RUNNER_TEMP" "$variant" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          directory = Path(sys.argv[1])
+          variant = sys.argv[2]
+          current = json.loads((directory / "current.json").read_text())
+          layers = {layer["digest"]: layer["size"] for layer in current["layers"]}
+          print(f"### Update-Größe ({variant})")
+          print(f"Alle komprimierten Schichten: {sum(layers.values()) / 2**20:.1f} MiB")
+          for label, tag in [("Bisheriger Teststand", f"{variant}-testing"), ("Bisheriger Stable-Stand", variant)]:
+              try:
+                  previous = json.loads((directory / f"previous-{tag}.json").read_text())
+                  known = {layer["digest"] for layer in previous["layers"]}
+              except (OSError, ValueError, KeyError):
+                  print(f"- {label}: Vergleich nicht verfügbar")
+                  continue
+              missing = sum(size for digest, size in layers.items() if digest not in known)
+              print(f"- {label}: {missing / 2**20:.1f} MiB neue Schichten")
+          PY
 
       - name: Installations-ISO erzeugen
         if: (github.event_name == 'workflow_dispatch' && inputs.iso) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[iso]'))
