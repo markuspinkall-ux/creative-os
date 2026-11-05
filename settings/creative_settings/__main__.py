@@ -22,6 +22,7 @@ from creative_shell.session import SessionModel  # noqa: E402
 
 from .displays import DisplayModel  # noqa: E402
 from .backup import BackupModel  # noqa: E402
+from .google_drive import GoogleDriveModel
 from .drives import DrivesModel  # noqa: E402
 from .server import ServerModel  # noqa: E402
 from .sound import SoundModel  # noqa: E402
@@ -33,6 +34,7 @@ PAGES = {
     "sound": "sound", "ton": "sound",
     "printers": "printers", "drucker": "printers",
     "look": "look", "darstellung": "look", "hintergrund": "look", "wallpaper": "look",
+    "google-drive": "google-drive",
     "updates": "updates", "system": "system",
     "drives": "drives", "laufwerke": "drives", "festplatten": "drives",
     "server": "server", "meinserver": "server", "mein-server": "server",
@@ -69,6 +71,7 @@ def main():
         "printerList": PrinterListModel(),
         "server": ServerModel(),
         "drives": DrivesModel(),
+        "googleDrive": GoogleDriveModel(),
         "backup": BackupModel(),
         "look": LookModel(qml_root / "Creative" / "wallpapers"),
     }

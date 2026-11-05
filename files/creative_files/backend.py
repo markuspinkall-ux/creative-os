@@ -444,6 +444,9 @@ class FileManager(QObject):
         if self._page != "folder" or not self._clip or self._busy:
             return
         sources, cut, target = list(self._clip), self._clip_cut, self._path
+        if cut and any(fsops.is_google_drive(p) for p in [target, *sources]):
+            self._show_toast("Für Google Drive bitte Kopieren statt Ausschneiden verwenden.")
+            return
         if cut:
             self._clip = []
         self._run_bg("Verschiebe …" if cut else "Kopiere …",
@@ -620,6 +623,16 @@ class FileManager(QObject):
                 info = "Nicht verbunden – zum Öffnen anklicken"
                 frac = 0
             out.append({**d, "info": info, "usedFraction": frac})
+        cloud = fsops.google_drive_path()
+        if cloud and (Path.home() / ".config/creative-drive/rclone.conf").is_file():
+            try:
+                mounted = cloud.is_mount()
+            except OSError:
+                mounted = False
+            out.append({"name": "Google Drive", "tag": "Cloud", "system": False,
+                        "removable": False, "mounted": mounted, "mountPath": str(cloud),
+                        "device": "", "cloud": True, "usedFraction": 0,
+                        "info": "Online-Speicher" if mounted else "Zum Einbinden anklicken"})
         if out != self._drives:
             self._drives = out
             self.drivesChanged.emit()
@@ -629,6 +642,16 @@ class FileManager(QObject):
         if not 0 <= index < len(self._drives):
             return
         d = self._drives[index]
+        if d.get("cloud"):
+            mount = fsops.google_drive_path()
+            try:
+                if mount and mount.is_mount():
+                    self.navigate(str(mount))
+                else:
+                    subprocess.Popen(["creative-settings", "--page", "google-drive"])
+            except OSError:
+                self._show_toast("Google Drive ist nicht erreichbar.")
+            return
         if d["system"]:
             self.navigate(str(fsops.HOME))
         elif d["mounted"]:

@@ -20,6 +20,7 @@ ApplicationWindow {
         { key: "displays", name: "Bildschirme", icon: "pc", file: "DisplaysPage.qml", words: "monitor auflösung skalierung hz anordnen hauptbildschirm" },
         { key: "sound", name: "Ton", icon: "speaker", file: "SoundPage.qml", words: "lautstärke lautsprecher kopfhörer mikrofon audio sound" },
         { key: "drives", name: "Laufwerke", icon: "drive", file: "DrivesPage.qml", words: "festplatte ssd m2 nvme formatieren einrichten partition laufwerk zustand smart" },
+        { key: "google-drive", name: "Google Drive", icon: "drive", file: "GoogleDrivePage.qml", words: "cloud google konto online speicher" },
         { key: "backup", name: "Datensicherung", icon: "save", file: "BackupPage.qml", words: "sicherung backup sichern externe platte wiederherstellen" },
         { key: "printers", name: "Drucker", icon: "printer", file: "PrintersPage.qml", words: "drucken testseite scanner" },
         { key: "server", name: "Mein Server", icon: "server", file: "ServerPage.qml", words: "webserver webseite homepage php caddy festplatte" },
