@@ -24,6 +24,7 @@ DEFAULTS = {
     # Ablage oben mittig auf dem Schreibtisch (Verknüpfungen, wie das Dock bei macOS)
     "desktopShelf": True,
     "shelf": [],
+    "hiddenStartApps": [],
     # Position der Ablage (Anteil der freien Fläche 0…1; -1 = oben mittig)
     "shelfX": -1.0,
     "shelfY": -1.0,

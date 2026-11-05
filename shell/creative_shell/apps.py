@@ -25,6 +25,7 @@ from PySide6.QtCore import (
     Slot,
 )
 
+from . import config
 from .runner import spawn_detached
 
 DESKTOP_NAMES = {"creative", "kde"}
@@ -180,17 +181,27 @@ class AppModel(QAbstractListModel):
 
     def _apply_filter(self):
         self.beginResetModel()
+        hidden = set(e for e in config.load()['hiddenStartApps'] if isinstance(e, str))
+        visible = [e for e in self._all if e.desktop_id not in hidden]
         terms = _plain(self._filter).split()
         if terms:
-            hits = [e for e in self._all if all(t in e.search for t in terms)]
+            hits = [e for e in visible if all(t in e.search for t in terms)]
             # Treffer am Namensanfang zuerst
             hits.sort(key=lambda e: (not _plain(e.name).startswith(terms[0]), _plain(e.name)))
             self._shown = hits
         else:
-            self._shown = list(self._all)
+            self._shown = visible
         self.endResetModel()
 
     # ---- Model --------------------------------------------------------------
+    @Slot(str)
+    def hideFromStartMenu(self, desktop_id):
+        if desktop_id in self._by_id:
+            hidden = config.load()["hiddenStartApps"]
+            if desktop_id not in hidden:
+                config.set_value("hiddenStartApps", [*hidden, desktop_id])
+                self._apply_filter()
+
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._shown)
 
