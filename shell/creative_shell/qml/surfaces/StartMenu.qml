@@ -199,7 +199,7 @@ Item {
                             appMenu.desktopId = row.desktopId
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
-                            appMenu.y = p.y
+                            appMenu.y = Math.min(p.y, menu.height - appMenu.height - 8)
                             appMenu.visible = true
                             return
                         }
@@ -316,13 +316,13 @@ Item {
             visible: false
             z: 3
             width: 230
-            height: 44
+            height: 84
             radius: 12
             color: Theme.raised
             border.color: Theme.hairline
             Rectangle {
-                anchors.fill: parent
-                anchors.margins: 4
+                x: 4; y: 4
+                width: parent.width - 8; height: 36
                 radius: 9
                 color: amMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                 SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 15 }
@@ -340,6 +340,36 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { shelf.addApp(appMenu.desktopId); appMenu.visible = false }
+                }
+            }
+            Rectangle {
+                x: 4; y: 44
+                width: parent.width - 8; height: 36
+                radius: 9
+                color: hideMouse.containsMouse ? Theme.hover : "transparent"
+                Text {
+                    x: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Aus Startmenü entfernen"
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                MouseArea {
+                    id: hideMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        appMenu.visible = false
+                        apps.hideFromStartMenu(appMenu.desktopId)
+                    }
+                }
+                Accessible.role: Accessible.MenuItem
+                Accessible.name: "Aus Startmenü entfernen"
+                Accessible.onPressAction: {
+                    appMenu.visible = false
+                    apps.hideFromStartMenu(appMenu.desktopId)
                 }
             }
         }

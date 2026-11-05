@@ -89,6 +89,7 @@ Window {
         const a = dev ? pickAudio(dev) : null
         audioOn = false
         if (a) { audioIn.device = a; audioOn = true }
+        updateChannelSource()
     }
 
     function applyDevice(dev) {
@@ -105,6 +106,30 @@ Window {
     }
 
     property bool audioOn: false
+    property string monitorSource: ""
+    property int channelCount: 0
+    property int monitorChannel: 0
+
+    function updateChannelSource() {
+        monitorSource = audioOn ? capture.deviceKey(audioIn.device.id) : ""
+        channelCount = monitorSource ? capture.channelCount(monitorSource) : 0
+        const saved = capture.savedChannel(monitorSource)
+        monitorChannel = saved <= channelCount ? saved : 0
+        syncMonitor()
+    }
+
+    function syncMonitor() {
+        if (!selftest && audioOn && monitorChannel > 0 && !audioOut.muted)
+            capture.playChannel(monitorSource, channelCount, monitorChannel, audioOut.volume)
+        else
+            capture.stopMonitor()
+    }
+
+    Timer { id: monitorVolume; interval: 180; onTriggered: win.syncMonitor() }
+    Connections {
+        target: capture
+        function onToast(message) { win.toast(message) }
+    }
 
     Component.onCompleted: { if (!selftest) applyDevice(pickVideo()) }
     Connections {
@@ -128,7 +153,7 @@ Window {
             active: false
         }
         audioInput: win.audioOn ? audioIn : null
-        audioOutput: win.audioOn ? audioOut : null
+        audioOutput: win.audioOn && win.monitorChannel === 0 ? audioOut : null
         videoOutput: video
         imageCapture: ImageCapture {
             id: shot
@@ -199,12 +224,12 @@ Window {
         onDoubleClicked: win.toggleFullscreen()
     }
 
-    Timer { id: hideTimer; interval: 2800; running: true; onTriggered: if (win.hasVideo && !barMouse.containsMouse && !formatBox.popup.visible && !videoBox.popup.visible && !audioBox.popup.visible) win.barVisible = false }
+    Timer { id: hideTimer; interval: 2800; running: true; onTriggered: if (win.hasVideo && !barMouse.containsMouse && !formatBox.popup.visible && !videoBox.popup.visible && !audioBox.popup.visible && !channelBox.popup.visible) win.barVisible = false }
     Timer { id: toastTimer; interval: 2600; onTriggered: win.toastText = "" }
 
     Shortcut { sequences: ["F11", "F"]; onActivated: win.toggleFullscreen() }
     Shortcut { sequence: "Escape"; enabled: win.fullscreen; onActivated: win.visibility = Window.Windowed }
-    Shortcut { sequence: "M"; onActivated: { audioOut.muted = !audioOut.muted; capture.set("muted", audioOut.muted) } }
+    Shortcut { sequence: "M"; onActivated: { audioOut.muted = !audioOut.muted; capture.set("muted", audioOut.muted); win.syncMonitor() } }
     Shortcut { sequence: "Print"; onActivated: shot.captureToFile(capture.newFile("photo")) }
 
     // Aufnahme läuft: roter Punkt oben links
@@ -258,12 +283,13 @@ Window {
 
         Row {
             id: barRow
+            readonly property real selectorWidth: Math.max(56, (win.width - (channelBox.visible ? 550 : 430)) / 3)
             anchors.centerIn: parent
             spacing: 8
 
             Dropdown {
                 id: videoBox
-                width: 230
+                width: Math.min(230, barRow.selectorWidth)
                 placeholder: "Keine Capture-Karte"
                 enabled: win.hasVideo
                 model: win.cards.map(d => d.description)
@@ -273,7 +299,7 @@ Window {
             }
             Dropdown {
                 id: formatBox
-                width: 210
+                width: Math.min(210, barRow.selectorWidth)
                 placeholder: "Auflösung"
                 enabled: win.formats.length > 0
                 model: win.formats.map(f => f.text)
@@ -285,21 +311,35 @@ Window {
 
             Dropdown {
                 id: audioBox
-                width: 200
+                width: Math.min(200, barRow.selectorWidth)
                 model: ["Ton aus / Quelle wählen"].concat(devices.audioInputs.map(d => d.description))
                 currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(devices.audioInputs, audioIn.device) + 1) : 0
                 onActivated: (i) => {
                     if (i === 0) { win.audioOn = false; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), "none") }
                     else { audioIn.device = devices.audioInputs[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(devices.audioInputs[i - 1].id)) }
+                    win.updateChannelSource()
                 }
                 Accessible.name: "Tonquelle"
+            }
+            Dropdown {
+                id: channelBox
+                width: 112
+                visible: win.audioOn && win.channelCount > 1
+                model: ["Alle Kanäle"].concat(Array.from({ length: win.channelCount }, (_, i) => "Kanal " + (i + 1)))
+                currentIndex: win.monitorChannel
+                onActivated: (i) => {
+                    win.monitorChannel = i
+                    capture.saveChannel(win.monitorSource, i)
+                    win.syncMonitor()
+                }
+                Accessible.name: "Wiedergabekanal"
             }
             IconButton {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 40; height: 40; iconSize: 18
                 icon: audioOut.muted || !win.audioOn ? "volume-off" : "volume"
                 label: audioOut.muted ? "Ton einschalten" : "Stumm"
-                onClicked: { audioOut.muted = !audioOut.muted; capture.set("muted", audioOut.muted) }
+                onClicked: { audioOut.muted = !audioOut.muted; capture.set("muted", audioOut.muted); win.syncMonitor() }
             }
             CSlider {
                 anchors.verticalCenter: parent.verticalCenter
@@ -307,7 +347,7 @@ Window {
                 from: 0; to: 1; stepSize: 0.05
                 value: audioOut.volume
                 enabled: win.audioOn
-                onMoved: { audioOut.volume = value; capture.set("volume", value) }
+                onMoved: { audioOut.volume = value; capture.set("volume", value); if (win.monitorChannel > 0) monitorVolume.restart() }
                 Accessible.name: "Lautstärke"
             }
 

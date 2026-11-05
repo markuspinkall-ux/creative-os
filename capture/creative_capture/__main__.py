@@ -13,7 +13,7 @@ from pathlib import Path
 
 from .audio_routing import matching_audio
 
-from PySide6.QtCore import Property, QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QObject, QProcess, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
@@ -39,7 +39,14 @@ class Capture(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._cfg = {"video": "", "audio": "", "format": "", "volume": 1.0, "muted": False, "audioByVideo": {}}
+        self._cfg = {"video": "", "audio": "", "format": "", "volume": 1.0, "muted": False, "audioByVideo": {}, "monitorChannels": {}}
+        self._monitor = QProcess(self)
+        self._monitor.setStandardErrorFile(QProcess.nullDevice())
+        self._monitor.setStandardOutputFile(QProcess.nullDevice())
+        self._monitor_active = False
+        self._monitor.errorOccurred.connect(self._monitor_error)
+        self._monitor.finished.connect(self._monitor_finished)
+        QGuiApplication.instance().aboutToQuit.connect(self.stopMonitor)
         try:
             data = json.loads(CFG.read_text(encoding="utf-8"))
             if isinstance(data, dict):
@@ -97,6 +104,63 @@ class Capture(QObject):
             return bytes(value).decode("utf-8")
         except (TypeError, ValueError, UnicodeDecodeError):
             return ""
+
+    @Slot(str, result=int)
+    def channelCount(self, source):
+        try:
+            result = subprocess.run(["pactl", "-f", "json", "list", "sources"],
+                                    capture_output=True, text=True, timeout=2, check=True)
+            for device in json.loads(result.stdout):
+                if device.get("name") == source and not source.endswith(".monitor"):
+                    channel_map = device.get("channel_map") or ""
+                    return min(32, len(channel_map.split(","))) if channel_map else 0
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
+        return 0
+
+    @Slot(str, result=int)
+    def savedChannel(self, source):
+        mapping = self._cfg["monitorChannels"]
+        channel = mapping.get(source, 0) if isinstance(mapping, dict) else 0
+        return channel if type(channel) is int and channel > 0 else 0
+
+    @Slot(str, int)
+    def saveChannel(self, source, channel):
+        mapping = self._cfg["monitorChannels"]
+        if not isinstance(mapping, dict):
+            mapping = {}
+        self.set("monitorChannels", {**mapping, source: channel})
+
+    @Slot()
+    def stopMonitor(self):
+        self._monitor_active = False
+        if self._monitor.state() != QProcess.ProcessState.NotRunning:
+            self._monitor.kill()
+            self._monitor.waitForFinished(500)
+
+    def _monitor_error(self, error):
+        if error == QProcess.ProcessError.FailedToStart:
+            self._monitor_finished()
+
+    def _monitor_finished(self, *_args):
+        if self._monitor_active:
+            self._monitor_active = False
+            self.toast.emit("Der gewählte Tonkanal konnte nicht wiedergegeben werden.")
+
+    @Slot(str, int, int, float)
+    def playChannel(self, source, channels, channel, volume):
+        self.stopMonitor()
+        if not source or source.endswith(".monitor") or not 1 <= channel <= channels <= 32:
+            return
+        selected = channel - 1
+        gain = max(0.0, min(1.0, volume))
+        self._monitor_active = True
+        self._monitor.start("ffmpeg", [
+            "-nostdin", "-loglevel", "error", "-f", "pulse", "-channels", str(channels),
+            "-fragment_size", "4096", "-i", source,
+            "-af", f"pan=stereo|c0=c{selected}|c1=c{selected},volume={gain}",
+            "-f", "pulse", "-buffer_duration", "50", "Creative Capture",
+        ])
 
     @Slot(str, result=str)
     def savedAudio(self, video_id):
