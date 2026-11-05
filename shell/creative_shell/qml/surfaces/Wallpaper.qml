@@ -13,6 +13,16 @@ Item {
     Keys.onReturnPressed: desktop.openSelected()
     Keys.onEnterPressed: desktop.openSelected()
     Keys.onEscapePressed: desktop.clearSelection()
+    Keys.onPressed: (event) => {
+        if (!root.showIcons) return
+        if (event.matches(StandardKey.Copy)) {
+            desktop.copySelected()
+            event.accepted = true
+        } else if (event.matches(StandardKey.Paste)) {
+            desktop.paste()
+            event.accepted = true
+        }
+    }
 
     property string screenName
     readonly property bool showIcons: shell.primaryScreen === "" || shell.primaryScreen === screenName
@@ -44,43 +54,104 @@ Item {
 
     // Klick auf den freien Desktop: Menüs schließen, Auswahl aufheben, Rechtsklick-Menü
     MouseArea {
+        id: backgroundMouse
+        property point origin
+        property bool selecting: false
         anchors.fill: parent
+        onPressed: (mouse) => {
+            if (mouse.button !== Qt.LeftButton || !root.showIcons) return
+            marquee.width = 0
+            marquee.height = 0
+            origin = Qt.point(mouse.x, mouse.y)
+        }
+        onPositionChanged: (mouse) => {
+            if (!(mouse.buttons & Qt.LeftButton) || !root.showIcons) return
+            if (!selecting && Math.abs(mouse.x - origin.x) + Math.abs(mouse.y - origin.y) < 6) return
+            if (!selecting) {
+                root.forceActiveFocus()
+                shell.closePopups()
+                selecting = true
+            }
+            marquee.x = Math.min(origin.x, mouse.x)
+            marquee.y = Math.min(origin.y, mouse.y)
+            marquee.width = Math.abs(mouse.x - origin.x)
+            marquee.height = Math.abs(mouse.y - origin.y)
+            const rows = []
+            for (let i = 0; i < icons.count; ++i) {
+                const item = icons.itemAtIndex(i)
+                if (!item) continue
+                const p = item.mapToItem(root, 3, 3)
+                if (p.x < marquee.x + marquee.width && p.x + item.width - 6 > marquee.x
+                        && p.y < marquee.y + marquee.height && p.y + item.height - 6 > marquee.y)
+                    rows.push(i)
+            }
+            desktop.selectRows(rows)
+        }
+        onReleased: (mouse) => {
+            if (mouse.button === Qt.LeftButton) selecting = false
+        }
+        onCanceled: selecting = false
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: (mouse) => {
+            if (marquee.width > 0 || marquee.height > 0) {
+                marquee.width = 0
+                marquee.height = 0
+                if (mouse.button === Qt.LeftButton) return
+            }
             root.forceActiveFocus()
             shell.closePopups()
-            desktop.clearSelection()
-            if (mouse.button === Qt.RightButton && root.showIcons)
-                bgMenu.openAt(mouse.x, mouse.y)
+            if (mouse.button === Qt.RightButton && root.showIcons) {
+                if (desktop.selectedCount > 0) itemMenu.openAt(mouse.x, mouse.y)
+                else bgMenu.openAt(mouse.x, mouse.y)
+            } else {
+                desktop.clearSelection()
+            }
         }
         // Doppelklick auf den freien Schreibtisch: alle Fenster minimieren (nochmal: zurückholen)
         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) tasks.showDesktop() }
     }
 
-    // ---- Leistungsanzeige oben rechts (wie im Taskmanager, ohne Hintergrund) ---------
-    // Liegt unter den Symbolen: Ordner und Dateien dürfen darüber liegen.
-    Grid {
-        id: stats
+    Rectangle {
+        id: marquee
+        z: 4
+        visible: backgroundMouse.selecting
+        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2)
+        border.color: Theme.accent
+    }
+
+    // Leistungsanzeige über dem Hintergrund und unter den Schreibtisch-Symbolen.
+    Rectangle {
         visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
         anchors.right: parent.right
         anchors.rightMargin: 18
         y: 16
-        columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
-        spacing: 6
-        opacity: 0.82
-        Repeater {
-            model: desktopStats.tiles
-            delegate: PerfTile {
-                plain: true
-                width: 196
-                height: 58
-                graphWidth: 64
-                title: modelData.title
-                value: modelData.value
-                sub: modelData.sub
-                history: modelData.history
-                color: modelData.color
-                onClicked: desktopStats.openTaskManager()
+        width: stats.implicitWidth + 24
+        height: stats.implicitHeight + 24
+        radius: 22
+        color: Theme.bar
+        border.width: 1
+        border.color: Theme.hairline
+
+        Grid {
+            id: stats
+            x: 12
+            y: 12
+            columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
+            spacing: 6
+            Repeater {
+                model: desktopStats.tiles
+                delegate: PerfTile {
+                    plain: true
+                    width: 196
+                    height: 58
+                    graphWidth: 64
+                    title: modelData.title
+                    value: modelData.value
+                    sub: modelData.sub
+                    history: modelData.history
+                    color: modelData.color
+                    onClicked: desktopStats.openTaskManager()
+                }
             }
         }
     }
@@ -494,18 +565,21 @@ Item {
             { label: "In Dateien zeigen", icon: "files", act: "files" },
             { label: "Zur Ablage hinzufügen", icon: "plus", act: "shelf" },
             { sep: true },
+            { label: "Kopieren", icon: "files", act: "copy" },
             { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
-        ]
+        ].concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
         onTriggered: (act) => {
             if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
             else if (act === "open") desktop.openSelected()
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()
+            else if (act === "copy") desktop.copySelected()
+            else if (act === "paste") desktop.paste()
         }
     }
     DesktopMenu {
         id: bgMenu
-        entries: [
+        entries: (desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : []).concat([
             { label: "Neuer Ordner", icon: "folder-plus", act: "new" },
             { label: "Schreibtisch in Dateien öffnen", icon: "files", act: "folder" },
             { sep: true },
@@ -515,9 +589,10 @@ Item {
             { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "Einstellungen", icon: "settings", act: "settings" }
-        ]
+        ])
         onTriggered: (act) => {
-            if (act === "new") desktop.newFolder()
+            if (act === "paste") desktop.paste()
+            else if (act === "new") desktop.newFolder()
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)

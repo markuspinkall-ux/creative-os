@@ -309,7 +309,7 @@ COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
 COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
 COPY drives/creative-automount /usr/bin/creative-automount
 RUN chmod 755 /usr/libexec/creative-drives-helper /usr/bin/creative-automount
-RUN dnf install -y rclone fuse3 && dnf clean all
+RUN dnf install -y rclone fuse3 accountsservice mariadb && dnf clean all
 COPY settings/creative-drive.service /usr/lib/systemd/user/creative-drive.service
 COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
 COPY settings/bin/creative-settings /usr/bin/creative-settings
