@@ -57,30 +57,39 @@ Item {
         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) tasks.showDesktop() }
     }
 
-    // ---- Leistungsanzeige oben rechts (wie im Taskmanager, ohne Hintergrund) ---------
-    // Liegt unter den Symbolen: Ordner und Dateien dürfen darüber liegen.
-    Grid {
-        id: stats
+    // Leistungsanzeige über dem Hintergrund und unter den Schreibtisch-Symbolen.
+    Rectangle {
         visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
         anchors.right: parent.right
         anchors.rightMargin: 18
         y: 16
-        columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
-        spacing: 6
-        opacity: 0.82
-        Repeater {
-            model: desktopStats.tiles
-            delegate: PerfTile {
-                plain: true
-                width: 196
-                height: 58
-                graphWidth: 64
-                title: modelData.title
-                value: modelData.value
-                sub: modelData.sub
-                history: modelData.history
-                color: modelData.color
-                onClicked: desktopStats.openTaskManager()
+        width: stats.implicitWidth + 24
+        height: stats.implicitHeight + 24
+        radius: 22
+        color: Theme.bar
+        border.width: 1
+        border.color: Theme.hairline
+
+        Grid {
+            id: stats
+            x: 12
+            y: 12
+            columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
+            spacing: 6
+            Repeater {
+                model: desktopStats.tiles
+                delegate: PerfTile {
+                    plain: true
+                    width: 196
+                    height: 58
+                    graphWidth: 64
+                    title: modelData.title
+                    value: modelData.value
+                    sub: modelData.sub
+                    history: modelData.history
+                    color: modelData.color
+                    onClicked: desktopStats.openTaskManager()
+                }
             }
         }
     }
