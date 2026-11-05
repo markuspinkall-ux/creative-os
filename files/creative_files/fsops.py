@@ -163,9 +163,28 @@ def trash_dir():
     return Path(base) / "Trash"
 
 
+def google_drive_path():
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    return Path(runtime) / "creative-drive" / "drive" if runtime else None
+
+
+def is_google_drive(path):
+    mount = google_drive_path()
+    return mount is not None and Path(os.path.abspath(path)).is_relative_to(mount)
+
+
 def move_to_trash(path):
     """Legt eine Datei in den Papierkorb. Gibt den Namen im Papierkorb zurück."""
     path = Path(path)
+    if is_google_drive(path):
+        mount = google_drive_path()
+        if path == mount or not mount.is_mount():
+            raise OSError("Google Drive ist nicht erreichbar.")
+        if path.is_dir():
+            path.rmdir()
+        else:
+            path.unlink()
+        return ""  # Wiederherstellung erfolgt im Google-Drive-Papierkorb.
     # gio kennt auch Papierkörbe auf anderen Laufwerken (USB-Stick usw.)
     if shutil.which("gio"):
         before = set(trash_items_raw())
