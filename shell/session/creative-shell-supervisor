@@ -20,7 +20,12 @@ sleep 0.3
 
 # Beim Abmelden alles wieder mitnehmen, was diese Sitzung gestartet hat
 children=""
+session_unit_started=false
 cleanup() {
+    if [ "$session_unit_started" = true ]; then
+        session_unit_started=false
+        systemctl --user stop creative-graphical-session.service
+    fi
     [ -n "$children" ] && kill $children 2>/dev/null
     pkill -u "$uid" -f creative-assistant 2>/dev/null
     pkill -u "$uid" -f creative-automount 2>/dev/null
@@ -33,6 +38,13 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'cleanup; exit 0' INT TERM HUP
+
+# KWin hat den Wayland-Socket angelegt. Portal-Dienste brauchen diese Sitzung
+# in der D-Bus- und systemd-Aktivierungsumgebung.
+if dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE &&
+   systemctl --user start creative-graphical-session.service; then
+    session_unit_started=true
+fi
 
 # Passwort-Abfrage für Systemänderungen (z. B. Gerätename, Drucker, Updates)
 for agent in /usr/libexec/kf6/polkit-kde-authentication-agent-1 \

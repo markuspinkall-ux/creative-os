@@ -1,0 +1,9 @@
+[Unit]
+Description=Creative OS graphical session
+Wants=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/true
+RemainAfterExit=yes
