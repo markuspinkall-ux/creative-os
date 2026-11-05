@@ -75,6 +75,16 @@ SettingsPage {
         }
     }
 
+    Card {
+        title: "Datenbanken"
+        SettingRow {
+            label: "MariaDB"
+            hint: "Lokalen Datenbankserver im Terminal verwalten"
+            last: true
+            CButton { text: "MariaDB öffnen"; onClicked: server.openDatabase() }
+        }
+    }
+
     // ---- Speicherort ------------------------------------------------------------------
     Card {
         title: "Speicherort"

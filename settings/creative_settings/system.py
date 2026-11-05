@@ -3,6 +3,7 @@
 import json
 import os
 import platform
+import pwd
 import re
 import shutil
 import socket
@@ -76,6 +77,7 @@ class SystemModel(QObject):
     changed = Signal()
     updatesChanged = Signal()
     messageChanged = Signal()
+    accountsChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -86,6 +88,7 @@ class SystemModel(QObject):
         }
         self._host = socket.gethostname()
         self._message = ""
+        self._accountBusy = False
         self._atomic = shutil.which("rpm-ostree") is not None and Path("/run/ostree-booted").exists()
         self._sb = {"secureboot": False, "enrolled": False, "pending": False}
         self._sb_msg = ""
@@ -94,6 +97,47 @@ class SystemModel(QObject):
                      "channel": "", "rolledBack": "", "channelBusy": False,
                      "pendingChannel": "", "wantChannel": "", "progress": -1, "progressText": ""}
         self.checkStatus()
+
+    def _localAccounts(self):
+        accounts = []
+        for line in _read("/etc/passwd").splitlines():
+            fields = line.split(":")
+            if len(fields) != 7 or not fields[2].isdigit():
+                continue
+            uid = int(fields[2])
+            if 1000 <= uid < 65534:
+                accounts.append({"uid": uid, "name": fields[0], "current": uid == os.getuid()})
+        return sorted(accounts, key=lambda account: account["name"].casefold())
+
+    accounts = Property("QVariantList", _localAccounts, notify=accountsChanged)
+    accountBusy = Property(bool, lambda self: self._accountBusy, notify=accountsChanged)
+
+    @Slot(int, str)
+    def deleteAccount(self, uid, name):
+        if self._accountBusy or uid == os.getuid():
+            return
+        if not any(account["uid"] == uid and account["name"] == name for account in self._localAccounts()):
+            self._set_message("Dieses lokale Konto ist nicht mehr verfügbar.")
+            self.accountsChanged.emit()
+            return
+        try:
+            if pwd.getpwuid(uid).pw_name != name:
+                return
+        except KeyError:
+            return
+        self._accountBusy = True
+        self.accountsChanged.emit()
+
+        def done(code, _out, _err):
+            self._accountBusy = False
+            self.accountsChanged.emit()
+            self._set_message("Das Konto wurde gelöscht. Der persönliche Ordner bleibt erhalten."
+                              if code == 0 else "Das Konto konnte nicht gelöscht werden. Prüfe, ob es noch angemeldet ist und ob du Administratorrechte hast.")
+
+        self._run.run(["busctl", "--allow-interactive-authorization=yes", "call",
+                       "org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                       "org.freedesktop.Accounts", "DeleteUser", "xb", str(uid), "false"],
+                      done, timeout_ms=0)
 
     # ---- Gerätename -------------------------------------------------------------
     @Slot(str, result=str)

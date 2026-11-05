@@ -7,13 +7,14 @@ Löschen geht immer in den Papierkorb, nichts wird überschrieben.
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
 from PySide6.QtCore import (
-    Property, QAbstractListModel, QByteArray, QFileSystemWatcher, QMimeDatabase,
+    Property, QAbstractListModel, QByteArray, QFileSystemWatcher, QMimeDatabase, QMimeData,
     QModelIndex, QObject, Qt, QTimer, QUrl, Signal, Slot,
 )
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QGuiApplication
 
 from .runner import spawn_detached
 
@@ -54,23 +55,28 @@ def file_color(mime):
 
 def unique_path(folder, name):
     candidate = folder / name
-    if not candidate.exists():
+    if not os.path.lexists(candidate):
         return candidate
     stem, suffix = name, ""
     if "." in name[1:]:
         stem, _, ext = name.rpartition(".")
         suffix = "." + ext
     n = 2
-    while (folder / f"{stem} ({n}){suffix}").exists():
+    while os.path.lexists(folder / f"{stem} ({n}){suffix}"):
         n += 1
     return folder / f"{stem} ({n}){suffix}"
 
 
 class DesktopModel(QAbstractListModel):
     selectionChanged = Signal()
+    clipboardChanged = Signal()
+    pasteFinished = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._pasting = False
+        QGuiApplication.clipboard().dataChanged.connect(self.clipboardChanged.emit)
+        self.pasteFinished.connect(self._finishPaste)
         self._dir = desktop_dir()
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
@@ -159,6 +165,69 @@ class DesktopModel(QAbstractListModel):
 
     def _selected(self):
         return [r for r in self._rows if r["selected"]]
+
+    @Slot("QVariantList")
+    def selectRows(self, rows):
+        selected = set(rows)
+        for index, row in enumerate(self._rows):
+            row["selected"] = index in selected
+        if self._rows:
+            self.dataChanged.emit(self.index(0), self.index(len(self._rows) - 1), [ROLE_IDS["selected"]])
+        self.selectionChanged.emit()
+
+    @Slot()
+    def copySelected(self):
+        urls = [QUrl.fromLocalFile(path) for path in self.selectedPaths()]
+        if urls:
+            data = QMimeData()
+            data.setText("\n".join(url.toString() for url in urls))
+            data.setUrls(urls)
+            QGuiApplication.clipboard().setMimeData(data)
+
+    def _clipboardPaths(self):
+        data = QGuiApplication.clipboard().mimeData()
+        if not data:
+            return []
+        urls = data.urls() if data.hasUrls() else [QUrl(line) for line in data.text().splitlines()]
+        return list(dict.fromkeys(url.toLocalFile() for url in urls if url.isLocalFile()))
+
+    canPaste = Property(bool, lambda self: not self._pasting and bool(self._clipboardPaths()),
+                        notify=clipboardChanged)
+
+    @Slot()
+    def paste(self):
+        sources = self._clipboardPaths()
+        if self._pasting or not sources:
+            return
+        self._pasting = True
+        self.clipboardChanged.emit()
+
+        def copy():
+            ok = True
+            try:
+                for path in sources:
+                    source = Path(path)
+                    if not source.name or source.resolve() in (self._dir.resolve(), *self._dir.resolve().parents):
+                        ok = False
+                        continue
+                    target = unique_path(self._dir, source.name)
+                    result = subprocess.run(["cp", "-a", "--update=none-fail", "-T", "--", path, str(target)],
+                                            capture_output=True)
+                    ok = result.returncode == 0 and ok
+            except (OSError, RuntimeError):
+                ok = False
+            finally:
+                self.pasteFinished.emit(ok)
+
+        threading.Thread(target=copy, daemon=True).start()
+
+    @Slot(bool)
+    def _finishPaste(self, ok):
+        self._pasting = False
+        self.clipboardChanged.emit()
+        self.refresh()
+        if not ok:
+            spawn_detached(["notify-send", "Schreibtisch", "Einige Dateien konnten nicht kopiert werden."])
 
     # ---- Aktionen -------------------------------------------------------------
     @Slot(int)

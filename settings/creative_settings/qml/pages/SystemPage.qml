@@ -69,6 +69,41 @@ SettingsPage {
         SettingRow { label: "Kernel"; last: true; Text { text: system.info.kernel; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 } }
     }
 
+    Card {
+        title: "Benutzerkonten"
+        Repeater {
+            model: system.accounts
+            delegate: SettingRow {
+                required property var modelData
+                label: modelData.name
+                hint: modelData.current ? "Aktuell angemeldet" : "Lokales Konto"
+                CButton {
+                    text: "Konto löschen"
+                    visible: !modelData.current
+                    enabled: !system.accountBusy
+                    onClicked: {
+                        deleteAccountDialog.account = modelData
+                        deleteAccountDialog.open()
+                    }
+                }
+            }
+        }
+    }
+
+    Dialog {
+        id: deleteAccountDialog
+        property var account
+        anchors.centerIn: Overlay.overlay
+        title: account ? "Konto „" + account.name + "“ löschen?" : "Konto löschen?"
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        Label {
+            text: "Der persönliche Ordner bleibt erhalten."
+            color: Theme.text
+        }
+        onAccepted: if (account) system.deleteAccount(account.uid, account.name)
+    }
+
     // ---- Danke: worauf Creative OS aufbaut --------------------------------------------------
     Card {
         title: "Über Creative OS"

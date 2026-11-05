@@ -222,6 +222,12 @@ class ServerModel(QObject):
         QDesktopServices.openUrl(QUrl("https://www.duckdns.org/"))
 
     @Slot()
+    def openDatabase(self):
+        command = 'read -r -p "MariaDB-Benutzer: " db_user && [[ -n "$db_user" ]] && exec mariadb --user="$db_user" --password'
+        if not shutil.which("mariadb") or not spawn_detached(["konsole", "--hold", "-e", "bash", "-c", command]):
+            self._set_message("Der MariaDB-Client konnte nicht geöffnet werden.")
+
+    @Slot()
     def openWebsite(self):
         QDesktopServices.openUrl(QUrl("http://localhost"))
 
