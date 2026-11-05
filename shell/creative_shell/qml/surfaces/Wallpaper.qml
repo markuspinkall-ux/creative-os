@@ -312,7 +312,8 @@ Item {
                             sourceSize.width: 76
                             sourceSize.height: 76
                             source: slot.modelData.kind === "app" ? "image://icon/" + slot.modelData.icon : ""
-                            asynchronous: true
+                            // The icon provider creates QPixmaps on the GUI thread.
+                            asynchronous: false
                             smooth: true
                         }
                         FileIcon {
