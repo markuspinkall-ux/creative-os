@@ -24,7 +24,7 @@ class DatabaseWindow(QMainWindow):
         content = QWidget()
         self.setCentralWidget(content)
         layout = QVBoxLayout(content)
-        layout.addWidget(QLabel(f"Angemeldet als {user} · Eigene Datenbanken: creative_{user}_…"))
+        layout.addWidget(QLabel(f"Angemeldet als {user} · Eigene Datenbanken: creative_{os.getuid()}_…"))
         toolbar = QHBoxLayout()
         layout.addLayout(toolbar)
         self.databases = QComboBox()

@@ -26,8 +26,8 @@ def main():
                 if auth.get("plugin") != "unix_socket" or auth.get("authentication_string") or auth.get("auth_or"):
                     raise ValueError("Ein gleichnamiges MariaDB-Konto mit anderer Anmeldung existiert bereits.")
             else:
-                cur.execute("CREATE USER IF NOT EXISTS %s@'localhost' IDENTIFIED VIA unix_socket", (name,))
-            namespace = "creative_" + name + "_"
+                cur.execute("CREATE USER %s@'localhost' IDENTIFIED VIA unix_socket", (name,))
+            namespace = f"creative_{uid}_"
             grant_pattern = namespace.replace("_", r"\_") + "%"
             cur.execute(f"GRANT ALL ON `{grant_pattern}`.* TO %s@'localhost'", (name,))
             cur.execute(f"CREATE DATABASE IF NOT EXISTS `{namespace}db`")
