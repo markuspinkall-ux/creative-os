@@ -142,6 +142,7 @@ class FileManager(QObject):
     busyChanged = Signal()
     workDone = Signal(object)   # aus Hintergrund-Threads
     propertiesReady = Signal(object)
+    cloudFolderReady = Signal(object)
 
     def __init__(self, start_path=None, parent=None):
         super().__init__(parent)
@@ -149,6 +150,7 @@ class FileManager(QObject):
         self._files = FileList(self)
         self._page = "pc"           # pc | folder | trash
         self._path = ""
+        self._folder_request = 0
         self._history, self._pos = [], -1
         self._anchor = -1
         self._clip, self._clip_cut = [], False
@@ -178,6 +180,7 @@ class FileManager(QObject):
         self._toast_timer.setInterval(8000)
         self._toast_timer.timeout.connect(self._clear_toast)
         self.workDone.connect(self._on_work_done)
+        self.cloudFolderReady.connect(self._show_cloud_folder)
 
         self._load_drives()
         if start_path and Path(start_path).is_dir():
@@ -193,7 +196,7 @@ class FileManager(QObject):
             self._pos = len(self._history) - 1
         for d in self._watcher.directories():
             self._watcher.removePath(d)
-        if page == "folder":
+        if page == "folder" and not fsops.is_google_drive(path):
             self._watcher.addPath(path)
         self._anchor = -1
         self.files.set_filter("")
@@ -203,7 +206,7 @@ class FileManager(QObject):
     @Slot(str)
     def navigate(self, path):
         p = Path(path).expanduser()
-        if not p.is_dir():
+        if not fsops.is_google_drive(p) and not p.is_dir():
             self._show_toast(f"„{p.name or path}“ ist nicht erreichbar.")
             return
         self._go("folder", str(p))
@@ -235,7 +238,11 @@ class FileManager(QObject):
 
     @Slot()
     def refresh(self):
-        if self._page == "folder":
+        self._folder_request += 1
+        if self._page == "folder" and fsops.is_google_drive(self._path):
+            self.files.set_items([])
+            self._load_cloud_folder(self._path, self._folder_request)
+        elif self._page == "folder":
             try:
                 entries = fsops.list_folder(self._path)
             except OSError as exc:
@@ -256,11 +263,36 @@ class FileManager(QObject):
         self.changed.emit()
         self.selectionChanged.emit()
 
-    def _decorate(self, e):
+    def _load_cloud_folder(self, path, request):
+        def read():
+            try:
+                mount = fsops.google_drive_path()
+                if not mount or not mount.is_mount():
+                    raise OSError("Google Drive ist nicht eingebunden.")
+                entries, error = fsops.list_folder(path), ""
+            except OSError as exc:
+                entries, error = [], exc.strerror or str(exc)
+            self.cloudFolderReady.emit((request, entries, error))
+
+        threading.Thread(target=read, daemon=True).start()
+
+    @Slot(object)
+    def _show_cloud_folder(self, result):
+        request, entries, error = result
+        if request != self._folder_request:
+            return
+        if error:
+            self._show_toast(f"Ordner kann nicht geöffnet werden: {error}")
+        self.files.set_items([self._decorate(entry, extension_only=True) for entry in entries])
+        self.changed.emit()
+        self.selectionChanged.emit()
+
+    def _decorate(self, e, extension_only=False):
         if e["isDir"]:
             type_name, color, ext = "Ordner", self._folder_color(e["path"]), ""
         else:
-            mime = self._mime.mimeTypeForFile(e["path"])
+            mime = (self._mime.mimeTypeForFile(e["path"], QMimeDatabase.MatchMode.MatchExtension)
+                    if extension_only else self._mime.mimeTypeForFile(e["path"]))
             type_name = mime.comment() or "Datei"
             color = file_color(mime.name())
             ext = Path(e["name"]).suffix[1:5].upper()

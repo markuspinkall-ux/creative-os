@@ -59,8 +59,9 @@ class TrayItems(QObject):
     changed = Signal()
     menuChanged = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, tasks, parent=None):
         super().__init__(parent)
+        self._tasks = tasks
         self._run = Runner(self, force_c_locale=True)
         self._items = {}            # eintrag → {key, service, path, id, title, icon, creative, menu}
         self._menu = []
@@ -147,8 +148,22 @@ class TrayItems(QObject):
     @Slot(str)
     def activate(self, key):
         it = self._items.get(key)
-        if it:
-            self._run.run(["busctl", "--user", "call", it["service"], it["path"], ITEM_IF, "Activate", "ii", "0", "0"])
+        if not it:
+            return
+
+        def done(code, out, _err):
+            if self._items.get(key) is not it:
+                return
+            try:
+                pid = int(_data(json.loads(out))) if code == 0 else 0
+            except (ValueError, TypeError):
+                pid = 0
+            if not self._tasks.toggle_tray_window(pid, it["id"]):
+                self._run.run(["busctl", "--user", "call", it["service"], it["path"],
+                               ITEM_IF, "Activate", "ii", "0", "0"])
+
+        self._busctl(["call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                      "org.freedesktop.DBus", "GetConnectionUnixProcessID", "s", it["service"]], done)
 
     @Slot(str)
     def loadMenu(self, key):
