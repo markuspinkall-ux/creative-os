@@ -81,6 +81,7 @@ SettingsPage {
             label: "MariaDB"
             hint: "Lokalen Datenbankserver im Terminal verwalten"
             last: true
+            CButton { text: "MariaDB starten"; enabled: !server.busy; onClicked: server.startDatabase() }
             CButton { text: "MariaDB öffnen"; onClicked: server.openDatabase() }
         }
     }
