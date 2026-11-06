@@ -14,6 +14,7 @@ Vorschau offen ist); sonst wird die echte Kamera freigegeben.
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -25,7 +26,7 @@ from pathlib import Path
 LADSPA = [Path("/usr/lib64/ladspa/libdeep_filter_ladspa.so"), Path("/usr/lib/ladspa/libdeep_filter_ladspa.so")]
 MODEL = Path("/usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx")
 VOICE_NODE = "creative_voice"
-DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "camera": False, "cameraDevice": "",
+DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "voiceInput": "", "camera": False, "cameraDevice": "",
             "effect": "blur", "background": "", "quality": "sparsam"}
 
 for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
@@ -117,6 +118,19 @@ STATUS = Status()
 
 
 # ---- Mikrofon ---------------------------------------------------------------------------------
+def list_microphones():
+    try:
+        result = subprocess.run(["pactl", "-f", "json", "list", "sources"],
+                                capture_output=True, text=True, timeout=3, check=True)
+        sources = json.loads(result.stdout)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    return [{"id": name, "label": source.get("description") or name}
+            for source in sources if (name := source.get("name", ""))
+            and name != VOICE_NODE and not name.endswith(".monitor")
+            and re.fullmatch(r"[A-Za-z0-9_.:-]+", name)]
+
+
 class Voice:
     def __init__(self):
         self.proc = None
@@ -181,19 +195,17 @@ context.modules = [
     def apply(self, cfg):
         want = bool(cfg["voice"])
         if not want:
-            self.stop(cfg)
+            self.stop()
             return
-        real = cfg.get("realMic") or ""
-        current = self._pactl("get-default-source")
-        if not real or real == VOICE_NODE:
-            real = current if current and current != VOICE_NODE else ""
-            if real:
-                cfg["realMic"] = real
-                save_config(cfg)
+        real = cfg.get("voiceInput") or ""
+        if not real or not any(source["id"] == real for source in list_microphones()):
+            self.stop(cfg)
+            STATUS.set(voice="Mikrofon wählen" if not real else "Mikrofon nicht verfügbar")
+            return
         key = (real, cfg["voiceStrength"])
         if self.proc and self.proc.poll() is None and key == self.key:
             return
-        self.stop(cfg, restore=False)
+        self.stop()
         conf, engine = self._conf(real, cfg["voiceStrength"])
         try:
             self.proc = subprocess.Popen(["pipewire", "-c", conf], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -201,15 +213,9 @@ context.modules = [
             STATUS.set(voice="fehlt")
             return
         self.key = key
-        # Neue Eingabe zum Standard machen (sobald sie da ist)
-        for _ in range(30):
-            time.sleep(0.2)
-            if VOICE_NODE in self._pactl("list", "short", "sources"):
-                self._pactl("set-default-source", VOICE_NODE)
-                break
         STATUS.set(voice="aktiv", engine=engine)
 
-    def stop(self, cfg=None, restore=True):
+    def stop(self):
         if self.proc:
             self.proc.terminate()
             try:
@@ -218,8 +224,6 @@ context.modules = [
                 self.proc.kill()
             self.proc = None
             self.key = None
-            if restore and cfg and cfg.get("realMic"):
-                self._pactl("set-default-source", cfg["realMic"])
         STATUS.set(voice="aus")
 
 
@@ -502,7 +506,7 @@ def main():
             last = None
         stop.wait(1.0)
     camera.stop()
-    voice.stop(load_config())
+    voice.stop()
     return 0
 
 

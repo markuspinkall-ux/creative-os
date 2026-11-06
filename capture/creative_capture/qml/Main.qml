@@ -161,7 +161,12 @@ Window {
         }
         recorder: MediaRecorder {
             id: rec
-            quality: MediaRecorder.HighQuality
+            quality: MediaRecorder.NormalQuality
+            videoFrameRate: cam.cameraFormat.maxFrameRate
+            mediaFormat {
+                fileFormat: MediaFormat.MPEG4
+                videoCodec: MediaFormat.VideoCodec.H264
+            }
             onRecorderStateChanged: if (recorderState === MediaRecorder.StoppedState && win.lastFile !== "") win.toast("Aufnahme gespeichert")
             onErrorOccurred: (err, text) => win.toast("Aufnahme nicht möglich: " + text)
         }

@@ -121,11 +121,23 @@ Item {
 
     // Leistungsanzeige über dem Hintergrund und unter den Schreibtisch-Symbolen.
     Rectangle {
+        id: statsBox
         visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
-        anchors.right: parent.right
-        anchors.rightMargin: 18
-        y: 16
-        width: stats.implicitWidth + 24
+        readonly property real maxX: Math.max(8, root.width - width - 8)
+        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        x: homeX()
+        y: homeY()
+        function homeX() {
+            return desktopStats.posX < 0 ? Math.max(8, maxX - 10) : 8 + desktopStats.posX * (maxX - 8)
+        }
+        function homeY() {
+            return desktopStats.posY < 0 ? Math.min(16, maxY) : 8 + desktopStats.posY * (maxY - 8)
+        }
+        function restoreBindings() {
+            x = Qt.binding(() => statsBox.homeX())
+            y = Qt.binding(() => statsBox.homeY())
+        }
+        width: stats.implicitWidth + 42
         height: stats.implicitHeight + 24
         radius: 22
         color: Theme.bar
@@ -133,8 +145,37 @@ Item {
         border.color: Theme.hairline
 
         Grid {
+            anchors.left: parent.left
+            anchors.leftMargin: 9
+            anchors.verticalCenter: parent.verticalCenter
+            columns: 2
+            spacing: 3
+            opacity: statsMove.containsMouse || statsMove.pressed ? 0.8 : 0.35
+            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+            MouseArea {
+                id: statsMove
+                anchors.fill: parent
+                anchors.margins: -7
+                hoverEnabled: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                drag.target: statsBox
+                drag.minimumX: 8
+                drag.maximumX: statsBox.maxX
+                drag.minimumY: 8
+                drag.maximumY: statsBox.maxY
+                onReleased: {
+                    if (drag.active)
+                        desktopStats.setPos(statsBox.maxX > 8 ? (statsBox.x - 8) / (statsBox.maxX - 8) : 0,
+                                            statsBox.maxY > 8 ? (statsBox.y - 8) / (statsBox.maxY - 8) : 0)
+                    statsBox.restoreBindings()
+                }
+                onCanceled: statsBox.restoreBindings()
+            }
+        }
+
+        Grid {
             id: stats
-            x: 12
+            x: 30
             y: 12
             columns: 2           // CPU | Arbeitsspeicher  –  Datenträger | Netzwerk  (–  GPU)
             spacing: 6

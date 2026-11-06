@@ -10,12 +10,18 @@ from . import config, sysstats
 class DesktopStats(QObject):
     changed = Signal()
     enabledChanged = Signal()
+    positionChanged = Signal()
     _sampled = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._tiles = []
-        self._enabled = bool(config.load().get("desktopStats", True))
+        cfg = config.load()
+        self._enabled = cfg["desktopStats"]
+        position = cfg["desktopStatsPosition"]
+        self._position = (tuple(position) if len(position) == 2
+                          and all(type(value) in (int, float) and 0 <= value <= 1 for value in position)
+                          else (-1.0, -1.0))
         self._sampler = None
         self._busy = False
         self._sampled.connect(self._apply)
@@ -72,6 +78,15 @@ class DesktopStats(QObject):
             self._tiles = []
             self.changed.emit()
         self.enabledChanged.emit()
+
+    @Slot(float, float)
+    def setPos(self, x, y):
+        self._position = (min(1.0, max(0.0, x)), min(1.0, max(0.0, y)))
+        config.set_value("desktopStatsPosition", list(self._position))
+        self.positionChanged.emit()
+
+    posX = Property(float, lambda self: self._position[0], notify=positionChanged)
+    posY = Property(float, lambda self: self._position[1], notify=positionChanged)
 
     @Slot()
     def openTaskManager(self):
