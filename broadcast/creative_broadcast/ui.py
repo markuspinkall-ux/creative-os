@@ -20,7 +20,7 @@ class Broadcast(QObject):
         self._cfg = daemon.load_config()
         self._status = {}
         self._cameras = daemon.list_cameras()
-        self._mic = ""
+        self._microphones = []
         self._preview_rev = 0
         self._preview_on = False
         self._preview_stamp = None
@@ -32,7 +32,7 @@ class Broadcast(QObject):
         self._timer.timeout.connect(self._tick)
         self._timer.start()
         self._ensure_daemon()
-        self._read_mic()
+        self.refreshMicrophones()
 
     def _ensure_daemon(self):
         """Läuft der Hintergrunddienst nicht (z. B. frisch installiert), starten."""
@@ -45,24 +45,15 @@ class Broadcast(QObject):
         except (OSError, subprocess.SubprocessError):
             pass
 
-    def _read_mic(self):
-        name = self._cfg.get("realMic") or ""
-        if not name:
-            try:
-                name = subprocess.run(["pactl", "get-default-source"], capture_output=True, text=True,
-                                      timeout=3).stdout.strip()
-            except (OSError, subprocess.SubprocessError):
-                name = ""
-        label = name
-        try:
-            data = json.loads(subprocess.run(["pactl", "-f", "json", "list", "sources"], capture_output=True,
-                                             text=True, timeout=3).stdout or "[]")
-            for s in data:
-                if s.get("name") == name:
-                    label = s.get("description") or name
-        except (OSError, ValueError, subprocess.SubprocessError):
-            pass
-        self._mic = "" if name == daemon.VOICE_NODE else label
+    @Slot()
+    def refreshMicrophones(self):
+        self._microphones = daemon.list_microphones()
+        self.changed.emit()
+
+    @Slot(str)
+    def setVoiceInput(self, source):
+        if any(mic["id"] == source for mic in self._microphones):
+            self._set(voiceInput=source)
 
     def _tick(self):
         try:
@@ -98,9 +89,6 @@ class Broadcast(QObject):
 
     @Slot(bool)
     def setVoice(self, on):
-        if on:
-            self._cfg["realMic"] = ""          # Daemon merkt sich das aktuelle Mikrofon
-            self._read_mic()
         self._set(voice=bool(on))
 
     @Slot(int)
@@ -165,7 +153,8 @@ class Broadcast(QObject):
                              if self._cfg["background"] else "", notify=changed)
     quality = Property(str, lambda self: self._cfg["quality"], notify=changed)
     cameras = Property("QVariantList", lambda self: self._cameras, notify=changed)
-    micName = Property(str, lambda self: self._mic, notify=changed)
+    microphones = Property("QVariantList", lambda self: self._microphones, notify=changed)
+    voiceInput = Property(str, lambda self: self._cfg.get("voiceInput", ""), notify=changed)
     voiceStatus = Property(str, lambda self: self._status.get("voice", "aus"), notify=statusChanged)
     cameraStatus = Property(str, lambda self: self._status.get("camera", "aus"), notify=statusChanged)
     fps = Property(int, lambda self: int(self._status.get("fps", 0) or 0), notify=statusChanged)

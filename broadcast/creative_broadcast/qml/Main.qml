@@ -76,16 +76,29 @@ Window {
                 Text { anchors.verticalCenter: parent.verticalCenter; text: Math.round(strength.value) + " %"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
             }
             Item { width: 1; height: 8 }
-            InfoRow { label: "Echtes Mikrofon"; value: bc.micName || "Standard-Mikrofon" }
+            Row {
+                width: parent.width
+                spacing: 6
+                ComboBox {
+                    width: parent.width - refreshMics.width - parent.spacing
+                    model: [{ id: "", label: "Echtes Mikrofon wählen" }].concat(bc.microphones)
+                    textRole: "label"
+                    valueRole: "id"
+                    currentIndex: Math.max(0, indexOfValue(bc.voiceInput))
+                    Accessible.name: "Echtes Mikrofon"
+                    onActivated: bc.setVoiceInput(currentValue)
+                }
+                CButton { id: refreshMics; text: "Aktualisieren"; onClicked: bc.refreshMicrophones() }
+            }
             InfoRow { label: "Neue Eingabe"; value: "Creative Mikrofon (rauschfrei)" }
             InfoRow { label: "Technik"; value: bc.deepFilter ? "DeepFilterNet (KI)" : "WebRTC (Ersatz)" }
-            InfoRow { label: "Zustand"; value: bc.voiceStatus === "aktiv" ? "Aktiv – ist jetzt Standard-Mikrofon" : (bc.voice ? "Wird gestartet …" : "Aus") }
+            InfoRow { label: "Zustand"; value: bc.voice ? bc.voiceStatus : "Aus" }
             Item { width: 1; height: 8 }
             Text {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 visible: bc.voice
-                text: "In Discord, Teams oder Zoom einfach „Standard“ oder „Creative Mikrofon (rauschfrei)“ als Mikrofon wählen."
+                text: "In Discord, Teams oder Zoom „Creative Mikrofon (rauschfrei)“ als Mikrofon wählen."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }
