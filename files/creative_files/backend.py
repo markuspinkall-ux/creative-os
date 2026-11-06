@@ -486,9 +486,13 @@ class FileManager(QObject):
 
     @Slot()
     def emptyTrash(self):
-        fsops.empty_trash()
+        try:
+            fsops.empty_trash()
+        except OSError as exc:
+            self._show_toast(f"Papierkorb konnte nicht vollständig geleert werden: {exc}")
+        else:
+            self._show_toast("Papierkorb geleert")
         self.refresh()
-        self._show_toast("Papierkorb geleert")
 
     # ---- Rückgängig -----------------------------------------------------------
     @Slot()

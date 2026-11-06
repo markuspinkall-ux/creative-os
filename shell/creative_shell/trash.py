@@ -5,12 +5,11 @@ Es ist derselbe Papierkorb wie im Dateimanager „Dateien“
 """
 
 import os
-import shutil
 from pathlib import Path
 
 from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
-from .runner import spawn_detached
+from .runner import Runner, spawn_detached
 
 
 def trash_dir():
@@ -24,6 +23,8 @@ class TrashModel(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._count = 0
+        self._run = Runner(self)
+        self._emptying = False
         files = trash_dir() / "files"
         try:
             files.mkdir(parents=True, exist_ok=True)
@@ -56,17 +57,17 @@ class TrashModel(QObject):
 
     @Slot()
     def empty(self):
-        if shutil.which("gio") and spawn_detached(["gio", "trash", "--empty"]):
-            QTimer.singleShot(800, self.refresh)
+        if self._emptying:
             return
-        td = trash_dir()
-        for sub in ("files", "info"):
-            d = td / sub
-            if d.is_dir():
-                shutil.rmtree(d, ignore_errors=True)
-                d.mkdir(exist_ok=True)
-        self._watcher.addPath(str(td / "files"))
-        self.refresh()
+        self._emptying = True
+
+        def done(code, _out, error):
+            self._emptying = False
+            self.refresh()
+            if code:
+                spawn_detached(["notify-send", "Papierkorb konnte nicht vollständig geleert werden", error.strip()])
+
+        self._run.run(["creative-files", "--empty-trash"], done, timeout_ms=0)
 
     count = Property(int, lambda self: self._count, notify=changed)
     full = Property(bool, lambda self: self._count > 0, notify=changed)
