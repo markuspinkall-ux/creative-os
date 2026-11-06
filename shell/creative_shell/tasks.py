@@ -69,6 +69,22 @@ class TaskModel(QObject):
     def request_snapshot(self):
         self._kwin.request_snapshot()
 
+    def toggle_tray_window(self, pid, item_id):
+        windows = [w for w in self._windows if pid > 0 and w.get("pid") == pid]
+        if not windows and item_id:
+            key = app_key(item_id)
+            key = WINDOW_ALIASES.get(key, key)
+            windows = [w for w in self._windows if self._window_key(w) == key]
+        if not windows:
+            return False
+        active = next((w for w in windows if w.get("active") and not w.get("minimized")), None)
+        if active:
+            self._kwin.minimize(active["id"])
+        else:
+            window = next((w for w in windows if not w.get("minimized")), windows[0])
+            self._kwin.activate(window["id"])
+        return True
+
     # ---- Für die Taskleiste ---------------------------------------------------
     def _window_key(self, w):
         key = app_key(w.get("app")) or (w.get("cls") or "").lower()

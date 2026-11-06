@@ -6,6 +6,6 @@ Type=notify
 RuntimeDirectory=creative-drive
 RuntimeDirectoryMode=0700
 ExecStartPre=/usr/bin/install -d -m 0700 %t/creative-drive/drive
-ExecStart=/usr/bin/rclone --config=%h/.config/creative-drive/rclone.conf mount creative-drive: %t/creative-drive/drive --devname=creative-drive --vfs-cache-mode=writes --drive-use-trash=true --umask=077 --contimeout=5s --timeout=30s
+ExecStart=/usr/bin/rclone --config=%h/.config/creative-drive/rclone.conf mount creative-drive: %t/creative-drive/drive --devname=creative-drive --vfs-cache-mode=writes --dir-cache-time=30m --poll-interval=1m --drive-use-trash=true --umask=077 --contimeout=5s --timeout=30s
 TimeoutStartSec=45s
 TimeoutStopSec=45s

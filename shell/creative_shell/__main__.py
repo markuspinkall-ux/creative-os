@@ -451,7 +451,7 @@ def main():
         "trash": TrashModel(),
         "desktop": DesktopModel(),
         "assistant": AssistantClient(),
-        "trayApps": TrayItems(),
+        "trayApps": TrayItems(tasks),
         "desktopStats": DesktopStats(),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
