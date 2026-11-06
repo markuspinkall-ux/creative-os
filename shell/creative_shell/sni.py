@@ -155,7 +155,8 @@ class TrayItems(QObject):
             if self._items.get(key) is not it:
                 return
             try:
-                pid = int(_data(json.loads(out))) if code == 0 else 0
+                result = _data(json.loads(out)) if code == 0 else 0
+                pid = int(result[0] if isinstance(result, list) and result else result)
             except (ValueError, TypeError):
                 pid = 0
             if not self._tasks.toggle_tray_window(pid, it["id"]):
