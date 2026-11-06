@@ -311,10 +311,11 @@ COPY drives/creative-drives-helper /usr/libexec/creative-drives-helper
 COPY drives/org.creativeos.drives.policy /usr/share/polkit-1/actions/org.creativeos.drives.policy
 COPY drives/creative-automount /usr/bin/creative-automount
 RUN chmod 755 /usr/libexec/creative-drives-helper /usr/bin/creative-automount
-RUN dnf install -y rclone fuse3 accountsservice mariadb mariadb-server && dnf clean all
+RUN dnf install -y rclone fuse3 accountsservice mariadb mariadb-server python3-PyMySQL && dnf clean all
 COPY settings/creative-drive.service /usr/lib/systemd/user/creative-drive.service
 COPY image/audio/51-live-gamer-mini.conf /usr/share/wireplumber/wireplumber.conf.d/51-live-gamer-mini.conf
 COPY settings/creative_settings /usr/lib/creative-settings/creative_settings
+COPY --chmod=755 settings/bin/creative-mariadb-setup /usr/libexec/creative-mariadb-setup
 COPY settings/bin/creative-settings /usr/bin/creative-settings
 COPY settings/bin/creative-backup /usr/bin/creative-backup
 RUN chmod 755 /usr/bin/creative-backup && (command -v rsync >/dev/null || dnf install -y rsync) && dnf clean all

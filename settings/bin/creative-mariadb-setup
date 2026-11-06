@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+"""Start MariaDB and authorize the calling local user for their own databases."""
+
+import json
+import os
+import pwd
+import re
+import subprocess
+import sys
+
+import pymysql
+
+
+def main():
+    uid = int(os.environ["PKEXEC_UID"])
+    name = pwd.getpwuid(uid).pw_name
+    if os.geteuid() != 0 or uid < 1000 or not re.fullmatch(r"[a-zA-Z0-9_-]{1,32}", name):
+        raise ValueError("Dieses Creative-OS-Konto kann nicht eingerichtet werden.")
+    subprocess.run(["/usr/bin/systemctl", "start", "mariadb.service"], check=True)
+    with pymysql.connect(user="root", unix_socket="/var/lib/mysql/mysql.sock", autocommit=True) as db:
+        with db.cursor() as cur:
+            cur.execute("SELECT Priv FROM mysql.global_priv WHERE User=%s AND Host='localhost'", (name,))
+            row = cur.fetchone()
+            if row:
+                auth = json.loads(row[0])
+                if auth.get("plugin") != "unix_socket" or auth.get("authentication_string") or auth.get("auth_or"):
+                    raise ValueError("Ein gleichnamiges MariaDB-Konto mit anderer Anmeldung existiert bereits.")
+            else:
+                cur.execute("CREATE USER IF NOT EXISTS %s@'localhost' IDENTIFIED VIA unix_socket", (name,))
+            namespace = "creative_" + name + "_"
+            grant_pattern = namespace.replace("_", r"\_") + "%"
+            cur.execute(f"GRANT ALL ON `{grant_pattern}`.* TO %s@'localhost'", (name,))
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{namespace}db`")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (KeyError, OSError, ValueError, subprocess.SubprocessError, pymysql.MySQLError) as exc:
+        sys.exit(str(exc))

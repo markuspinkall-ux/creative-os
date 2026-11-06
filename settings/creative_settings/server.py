@@ -239,14 +239,13 @@ class ServerModel(QObject):
             else:
                 self._set_message("MariaDB konnte nicht gestartet werden. " + err.strip())
 
-        self._run.run(["pkexec", "/usr/bin/systemctl", "start", "mariadb.service"],
+        self._run.run(["pkexec", "/usr/libexec/creative-mariadb-setup"],
                       done, timeout_ms=0)
 
     @Slot()
     def openDatabase(self):
-        command = 'read -r -p "MariaDB-Benutzer: " db_user && [[ -n "$db_user" ]] && exec mariadb --user="$db_user" --password'
-        if not shutil.which("mariadb") or not spawn_detached(["konsole", "--hold", "-e", "bash", "-c", command]):
-            self._set_message("Der MariaDB-Client konnte nicht geöffnet werden.")
+        if not spawn_detached(["/usr/bin/python3", "/usr/lib/creative-settings/creative_settings/database.py"]):
+            self._set_message("Die MariaDB-Verwaltung konnte nicht geöffnet werden.")
 
     @Slot()
     def openWebsite(self):
