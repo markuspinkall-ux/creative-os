@@ -123,6 +123,8 @@ COPY shell/bin/creative-shell /usr/bin/creative-shell
 COPY shell/session/creative-session /usr/bin/creative-session
 COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
 COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
+COPY shell/session/creative-graphical-session.service /usr/lib/systemd/user/creative-graphical-session.service
+COPY shell/session/kde-portal.conf /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service.d/50-creative-session.conf
 COPY shell/kwin/kwinrc /usr/share/creative-os/xdg/kwinrc
 COPY shell/kwin/kscreenlockerrc /usr/share/creative-os/xdg/kscreenlockerrc
 COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
