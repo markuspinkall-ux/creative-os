@@ -33,6 +33,7 @@ from .session import SessionModel
 from .sni import TrayItems
 from .trash import TrashModel
 from .desktopstats import DesktopStats
+from .desktopwidgets import DesktopWidget
 from .visualizer import Visualizer
 from .nowplaying import NowPlaying
 from .broadcasttray import BroadcastTray
@@ -453,6 +454,8 @@ def main():
         "assistant": AssistantClient(),
         "trayApps": TrayItems(),
         "desktopStats": DesktopStats(),
+        "rssWidget": DesktopWidget("RSS"),
+        "weatherWidget": DesktopWidget("Weather"),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
         "broadcast": BroadcastTray(),
