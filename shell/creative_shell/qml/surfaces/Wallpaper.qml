@@ -30,6 +30,46 @@ Item {
     readonly property bool showIcons: shell.primaryScreen === "" || shell.primaryScreen === screenName
     readonly property int barSpace: 74
 
+    // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.
+    property var fallbackPositions: ({})
+
+    function onFallback(key) {
+        const target = shell.widgetScreens[key]
+        return !!target && !shell.screenNames.includes(target)
+    }
+
+    function widgetOnScreen(key) {
+        const target = shell.widgetScreens[key]
+        const screens = shell.screenNames
+        if (target && screens.includes(target))
+            return root.screenName === target
+        const primary = shell.primaryScreen
+        return root.screenName === (screens.includes(primary) ? primary : screens[0])
+    }
+
+    function widgetPosition(key, source, axis) {
+        const fallback = onFallback(key) ? fallbackPositions[key] : undefined
+        return fallback ? fallback[axis] : (axis === "x" ? source.posX : source.posY)
+    }
+
+    function setFallbackPosition(key, x, y) {
+        fallbackPositions = Object.assign({}, fallbackPositions, { [key]: { x: x, y: y } })
+    }
+
+    function saveWidgetPosition(key, source, item) {
+        const x = item.maxX > 8 ? (item.x - 8) / (item.maxX - 8) : 0
+        const y = item.maxY > 8 ? (item.y - 8) / (item.maxY - 8) : 0
+        if (onFallback(key))
+            setFallbackPosition(key, x, y)
+        else
+            source.setPos(x, y)
+    }
+
+    function openMonitorMenu(key, x, y) {
+        monitorMenu.widgetKey = key
+        monitorMenu.openAt(x, y)
+    }
+
     // Ziehen: Schreibtisch-Symbol → Ablage, oder Ablage-Eintrag heraus (= entfernen)
     property string dragPath: ""
     property bool dragIsDir: false
@@ -134,8 +174,20 @@ Item {
         }
     }
 
+    component MonitorGripMenu: MouseArea {
+        required property string widgetKey
+        anchors.fill: parent
+        anchors.margins: -7
+        acceptedButtons: Qt.RightButton
+        onClicked: (mouse) => {
+            const p = mapToItem(root, mouse.x, mouse.y)
+            root.openMonitorMenu(widgetKey, p.x, p.y)
+        }
+    }
+
     DesktopFeed {
         source: rssWidget
+        widgetKey: "rss"
         title: "RSS-Nachrichten"
         hint: "Eine Feed-Adresse pro Zeile"
         defaultY: 230
@@ -143,6 +195,7 @@ Item {
 
     DesktopFeed {
         source: weatherWidget
+        widgetKey: "weather"
         title: "Wetter"
         hint: "Ort oder Postleitzahl"
         defaultY: 430
@@ -152,14 +205,21 @@ Item {
     component DesktopFeed: Rectangle {
         id: widget
         required property var source
+        required property string widgetKey
         required property string title
         required property string hint
         required property int defaultY
         property bool isWeather: false
         readonly property real maxX: Math.max(8, root.width - width - 8)
         readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
-        function homeX() { return source.posX < 0 ? maxX : 8 + source.posX * (maxX - 8) }
-        function homeY() { return source.posY < 0 ? Math.min(defaultY, maxY) : 8 + source.posY * (maxY - 8) }
+        function homeX() {
+            const pos = root.widgetPosition(widgetKey, source, "x")
+            return pos < 0 ? maxX : 8 + pos * (maxX - 8)
+        }
+        function homeY() {
+            const pos = root.widgetPosition(widgetKey, source, "y")
+            return pos < 0 ? Math.min(defaultY, maxY) : 8 + pos * (maxY - 8)
+        }
         function restorePosition() {
             x = Qt.binding(() => widget.homeX())
             y = Qt.binding(() => widget.homeY())
@@ -168,7 +228,7 @@ Item {
         y: homeY()
         width: 320
         height: content.implicitHeight + 24
-        visible: root.showIcons && source.enabled
+        visible: root.widgetOnScreen(widgetKey) && source.enabled
         radius: 22
         color: Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, Math.min(Theme.bar.a, 0.85))
         border.color: Theme.hairline
@@ -190,13 +250,12 @@ Item {
                 drag.maximumX: widget.maxX
                 drag.maximumY: widget.maxY
                 onReleased: {
-                    if (drag.active)
-                        widget.source.setPos(widget.maxX > 8 ? (widget.x - 8) / (widget.maxX - 8) : 0,
-                                             widget.maxY > 8 ? (widget.y - 8) / (widget.maxY - 8) : 0)
+                    if (drag.active) root.saveWidgetPosition(widget.widgetKey, widget.source, widget)
                     widget.restorePosition()
                 }
                 onCanceled: widget.restorePosition()
             }
+            MonitorGripMenu { widgetKey: widget.widgetKey }
         }
 
         Column {
@@ -254,6 +313,191 @@ Item {
                 }
             }
             Text { visible: widget.isWeather; text: "Wetterdaten: Open-Meteo"; color: Theme.textMuted }
+        }
+    }
+
+    component ExtraWidget: Rectangle {
+        id: extra
+        required property string key
+        required property real posX
+        required property real posY
+        required property real defaultX
+        required property real defaultY
+        required property Component body
+        readonly property real maxX: Math.max(8, root.width - width - 8)
+        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        function homeX() {
+            const pos = root.widgetPosition(key, extra, "x")
+            return pos < 0 ? Math.min(defaultX, maxX) : 8 + pos * (maxX - 8)
+        }
+        function homeY() {
+            const pos = root.widgetPosition(key, extra, "y")
+            return pos < 0 ? Math.min(defaultY, maxY) : 8 + pos * (maxY - 8)
+        }
+        function setPos(x, y) { widgetExtras.setPosition(key, x, y) }
+        function restorePosition() {
+            x = Qt.binding(() => extra.homeX())
+            y = Qt.binding(() => extra.homeY())
+        }
+        x: homeX()
+        y: homeY()
+        radius: 22
+        color: Theme.bar
+        border.color: Theme.hairline
+        Loader {
+            anchors.fill: parent
+            anchors.leftMargin: 30
+            anchors.rightMargin: 12
+            anchors.topMargin: 10
+            anchors.bottomMargin: 10
+            active: extra.visible
+            sourceComponent: extra.body
+        }
+        WidgetGrip {
+            anchors.left: parent.left
+            anchors.leftMargin: 9
+            anchors.verticalCenter: parent.verticalCenter
+            highlighted: extraGrip.containsMouse || extraGrip.pressed
+            MouseArea {
+                id: extraGrip
+                anchors.fill: parent
+                anchors.margins: -7
+                hoverEnabled: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                drag.target: extra
+                drag.minimumX: 8
+                drag.minimumY: 8
+                drag.maximumX: extra.maxX
+                drag.maximumY: extra.maxY
+                onReleased: {
+                    if (drag.active)
+                        root.saveWidgetPosition(extra.key, extra, extra)
+                    extra.restorePosition()
+                }
+                onCanceled: extra.restorePosition()
+            }
+            MonitorGripMenu { widgetKey: extra.key }
+        }
+    }
+
+    ExtraWidget {
+        key: "clock"
+        visible: root.widgetOnScreen("clock") && widgetExtras.clockEnabled
+        posX: widgetExtras.clockX
+        posY: widgetExtras.clockY
+        defaultX: Math.max(8, root.width - 570)
+        defaultY: 24
+        width: 190
+        height: 168
+        body: Canvas {
+            id: face
+            Accessible.name: "Analoge Uhr"
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: face.requestPaint() }
+            onPaint: {
+                const ctx = getContext("2d")
+                const time = new Date()
+                const r = Math.min(width, height) / 2 - 5
+                ctx.reset()
+                ctx.translate(width / 2, height / 2)
+                ctx.beginPath()
+                ctx.arc(0, 0, r, 0, Math.PI * 2)
+                ctx.fillStyle = Theme.ground.toString()
+                ctx.fill()
+                ctx.strokeStyle = Theme.track.toString()
+                ctx.lineWidth = 1
+                ctx.stroke()
+                function hand(turn, inner, outer, color, thickness) {
+                    const angle = turn * Math.PI * 2 - Math.PI / 2
+                    ctx.beginPath()
+                    ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner)
+                    ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer)
+                    ctx.strokeStyle = color
+                    ctx.lineWidth = thickness
+                    ctx.stroke()
+                }
+                for (let i = 0; i < 60; i++)
+                    hand(i / 60, r - (i % 5 === 0 ? 9 : 5), r - 3,
+                         i % 5 === 0 ? Theme.text.toString() : Theme.track.toString(), 1)
+                hand((time.getHours() + time.getMinutes() / 60) / 12, 0, r * 0.48, Theme.text.toString(), 4)
+                hand((time.getMinutes() + time.getSeconds() / 60) / 60, 0, r * 0.72, Theme.text.toString(), 3)
+                hand(time.getSeconds() / 60, -8, r * 0.79, Theme.accent.toString(), 1.5)
+                ctx.beginPath()
+                ctx.arc(0, 0, 3, 0, 2 * Math.PI)
+                ctx.fillStyle = Theme.accent.toString()
+                ctx.fill()
+            }
+        }
+    }
+
+    ExtraWidget {
+        key: "twitch"
+        visible: root.widgetOnScreen("twitch") && widgetExtras.twitchEnabled
+        posX: widgetExtras.twitchX
+        posY: widgetExtras.twitchY
+        defaultX: Math.max(8, root.width - 665)
+        defaultY: 230
+        width: 295
+        height: 66 + 27 * widgetExtras.twitchRows.length
+        body: Column {
+            spacing: 4
+            RowLayout {
+                width: parent.width
+                Text { Layout.fillWidth: true; text: "Twitch-Favoriten"; color: Theme.text; font.bold: true }
+                IconButton {
+                    icon: "refresh"; iconSize: 16; width: 28; height: 28
+                    label: "Twitch-Status aktualisieren"
+                    enabled: !widgetExtras.busy
+                    onClicked: widgetExtras.refresh()
+                }
+            }
+            Text {
+                visible: widgetExtras.twitchRows.length === 0
+                text: widgetExtras.busy ? "Status wird geprüft …" : "Kanäle in Creative Widgets hinzufügen."
+                color: Theme.textMuted
+                width: parent.width
+                elide: Text.ElideRight
+            }
+            Repeater {
+                model: widgetExtras.twitchRows
+                delegate: Item {
+                    id: streamRow
+                    required property var modelData
+                    width: parent.width
+                    height: 23
+                    readonly property bool live: modelData.status === "live"
+                    function openChannel() {
+                        if (live) Qt.openUrlExternally("https://www.twitch.tv/" + modelData.name)
+                    }
+                    Text {
+                        anchors.left: parent.left
+                        anchors.right: badge.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: streamRow.modelData.name
+                        textFormat: Text.PlainText
+                        color: streamRow.live ? Theme.accent : Theme.text
+                        font.underline: streamRow.live
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        id: badge
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: streamRow.live ? "● LIVE" : streamRow.modelData.status === "offline" ? "Offline" : "Unbekannt"
+                        color: streamRow.live ? Theme.ok : Theme.textMuted
+                        font.pixelSize: 11
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: streamRow.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: streamRow.openChannel()
+                    }
+                    Accessible.role: Accessible.Link
+                    Accessible.name: modelData.name + " – " + badge.text
+                    Accessible.onPressAction: streamRow.openChannel()
+                }
+            }
         }
     }
 
@@ -353,16 +597,18 @@ Item {
     // Leistungsanzeige über dem Hintergrund und unter den Schreibtisch-Symbolen.
     Rectangle {
         id: statsBox
-        visible: root.showIcons && desktopStats.enabled && desktopStats.tiles.length > 0
+        visible: root.widgetOnScreen("stats") && desktopStats.enabled && desktopStats.tiles.length > 0
         readonly property real maxX: Math.max(8, root.width - width - 8)
         readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
         x: homeX()
         y: homeY()
         function homeX() {
-            return desktopStats.posX < 0 ? Math.max(8, maxX - 10) : 8 + desktopStats.posX * (maxX - 8)
+            const pos = root.widgetPosition("stats", desktopStats, "x")
+            return pos < 0 ? Math.max(8, maxX - 10) : 8 + pos * (maxX - 8)
         }
         function homeY() {
-            return desktopStats.posY < 0 ? Math.min(16, maxY) : 8 + desktopStats.posY * (maxY - 8)
+            const pos = root.widgetPosition("stats", desktopStats, "y")
+            return pos < 0 ? Math.min(16, maxY) : 8 + pos * (maxY - 8)
         }
         function restoreBindings() {
             x = Qt.binding(() => statsBox.homeX())
@@ -392,13 +638,12 @@ Item {
                 drag.minimumY: 8
                 drag.maximumY: statsBox.maxY
                 onReleased: {
-                    if (drag.active)
-                        desktopStats.setPos(statsBox.maxX > 8 ? (statsBox.x - 8) / (statsBox.maxX - 8) : 0,
-                                            statsBox.maxY > 8 ? (statsBox.y - 8) / (statsBox.maxY - 8) : 0)
+                    if (drag.active) root.saveWidgetPosition("stats", desktopStats, statsBox)
                     statsBox.restoreBindings()
                 }
                 onCanceled: statsBox.restoreBindings()
             }
+            MonitorGripMenu { widgetKey: "stats" }
         }
 
         Grid {
@@ -526,15 +771,21 @@ Item {
     // ---- Ablage oben mittig (wie das Dock bei macOS) ------------------------------------
     Rectangle {
         id: shelfBox
-        visible: root.showIcons && shelf.enabled
+        visible: root.widgetOnScreen("shelf") && shelf.enabled
         readonly property bool dropHover: shelfDrop.containsDrag || (root.dragPath !== "" && ghost.y < y + height + 30
                                           && ghost.x + ghost.width > x && ghost.x < x + width)
         // frei verschiebbar (am Griff links oder an einer freien Stelle ziehen); Position bleibt gespeichert
-        readonly property real maxX: root.width - width - 8
-        readonly property real maxY: root.height - root.barSpace - height - 8
+        readonly property real maxX: Math.max(8, root.width - width - 8)
+        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
         property bool moving: false
-        function homeX() { return shelf.posX >= 0 ? 8 + shelf.posX * (maxX - 8) : (root.width - width) / 2 }
-        function homeY() { return shelf.posY >= 0 ? 8 + shelf.posY * (maxY - 8) : 12 }
+        function homeX() {
+            const pos = root.widgetPosition("shelf", shelf, "x")
+            return pos >= 0 ? 8 + pos * (maxX - 8) : Math.max(8, (root.width - width) / 2)
+        }
+        function homeY() {
+            const pos = root.widgetPosition("shelf", shelf, "y")
+            return pos >= 0 ? 8 + pos * (maxY - 8) : 12
+        }
         function rebind() {
             x = Qt.binding(() => shelfBox.homeX())
             y = Qt.binding(() => shelfBox.homeY())
@@ -577,11 +828,13 @@ Item {
             }
             onReleased: (mouse) => {
                 if (!shelfBox.moving) return
-                const fx = shelfBox.maxX > 8 ? (shelfBox.x - 8) / (shelfBox.maxX - 8) : 0
-                const fy = shelfBox.maxY > 8 ? (shelfBox.y - 8) / (shelfBox.maxY - 8) : 0
                 shelfBox.moving = false
                 if (Math.abs(shelfBox.x - origin.x) + Math.abs(shelfBox.y - origin.y) > 3)
-                    shelf.setPos(fx, fy)
+                    root.saveWidgetPosition("shelf", shelf, shelfBox)
+                shelfBox.rebind()
+            }
+            onCanceled: {
+                shelfBox.moving = false
                 shelfBox.rebind()
             }
             onClicked: (mouse) => {
@@ -816,12 +1069,36 @@ Item {
     DesktopMenu {
         id: shelfBgMenu
         entries: [
+            { label: "Auf Monitor verschieben", icon: "settings", act: "monitor" },
             { label: "Ablage oben mittig anordnen", icon: "restore", act: "center" },
             { label: "Ablage ausblenden", icon: "close", act: "hide" }
         ]
         onTriggered: (act) => {
-            if (act === "center") shelf.resetPos()
-            else if (act === "hide") shelf.setEnabled(false)
+            if (act === "monitor") root.openMonitorMenu("shelf", shelfBgMenu.x, shelfBgMenu.y)
+            else if (act === "center") {
+                if (root.onFallback("shelf")) root.setFallbackPosition("shelf", -1, -1)
+                else shelf.resetPos()
+            } else if (act === "hide") shelf.setEnabled(false)
+        }
+    }
+    DesktopMenu {
+        id: monitorMenu
+        property string widgetKey: ""
+        entries: {
+            const selected = shell.widgetScreens[widgetKey] || ""
+            const entries = [{ label: (selected ? "" : "✓  ") + "Hauptmonitor (automatisch)",
+                               icon: "settings", act: "" }]
+            for (const name of shell.screenNames)
+                entries.push({ label: (name === selected ? "✓  " : "") + name
+                                      + (name === shell.primaryScreen ? " (Hauptmonitor)" : ""),
+                               icon: "settings", act: name })
+            return entries
+        }
+        onTriggered: (name) => {
+            shell.setWidgetScreen(widgetKey, name)
+            const positions = Object.assign({}, root.fallbackPositions)
+            delete positions[widgetKey]
+            root.fallbackPositions = positions
         }
     }
     DesktopMenu {
@@ -856,6 +1133,7 @@ Item {
             { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
             { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
+            { label: "Creative Widgets öffnen", icon: "settings", act: "widgets" },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ])
         onTriggered: (act) => {
@@ -863,6 +1141,7 @@ Item {
             else if (act === "new") desktop.newFolder()
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
+            else if (act === "widgets") shell.openWidgetManager()
             else if (act === "rss") rssWidget.toggle()
             else if (act === "weather") weatherWidget.toggle()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)

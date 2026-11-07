@@ -19,6 +19,8 @@ DEFAULTS = {
     "desktopWidgetRSS": {},
     "desktopWidgetWeather": {},
     "desktopStatsPosition": [],
+    "desktopExtras": {},
+    "desktopWidgetScreens": {},
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
     "visualizerOpacity": 0.1,
@@ -132,5 +134,7 @@ def set_value(key, value):
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         tmp.replace(path)
+        return True
     except OSError as exc:
         print(f"creative-shell: {path} nicht gespeichert ({exc})")
+        return False
