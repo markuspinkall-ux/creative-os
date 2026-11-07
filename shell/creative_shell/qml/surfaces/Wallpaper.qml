@@ -257,6 +257,185 @@ Item {
         }
     }
 
+    component ExtraWidget: Rectangle {
+        id: extra
+        required property string key
+        required property real savedX
+        required property real savedY
+        required property real defaultX
+        required property real defaultY
+        required property Component body
+        readonly property real maxX: Math.max(8, root.width - width - 8)
+        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        function homeX() { return savedX < 0 ? Math.min(defaultX, maxX) : 8 + savedX * (maxX - 8) }
+        function homeY() { return savedY < 0 ? Math.min(defaultY, maxY) : 8 + savedY * (maxY - 8) }
+        function restorePosition() {
+            x = Qt.binding(() => extra.homeX())
+            y = Qt.binding(() => extra.homeY())
+        }
+        x: homeX()
+        y: homeY()
+        radius: 22
+        color: Theme.bar
+        border.color: Theme.hairline
+        Loader {
+            anchors.fill: parent
+            anchors.leftMargin: 30
+            anchors.rightMargin: 12
+            anchors.topMargin: 10
+            anchors.bottomMargin: 10
+            active: extra.visible
+            sourceComponent: extra.body
+        }
+        WidgetGrip {
+            anchors.left: parent.left
+            anchors.leftMargin: 9
+            anchors.verticalCenter: parent.verticalCenter
+            highlighted: extraGrip.containsMouse || extraGrip.pressed
+            MouseArea {
+                id: extraGrip
+                anchors.fill: parent
+                anchors.margins: -7
+                hoverEnabled: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                drag.target: extra
+                drag.minimumX: 8
+                drag.minimumY: 8
+                drag.maximumX: extra.maxX
+                drag.maximumY: extra.maxY
+                onReleased: {
+                    if (drag.active)
+                        widgetExtras.setPosition(extra.key,
+                            extra.maxX > 8 ? (extra.x - 8) / (extra.maxX - 8) : 0,
+                            extra.maxY > 8 ? (extra.y - 8) / (extra.maxY - 8) : 0)
+                    extra.restorePosition()
+                }
+                onCanceled: extra.restorePosition()
+            }
+        }
+    }
+
+    ExtraWidget {
+        key: "clock"
+        visible: root.showIcons && widgetExtras.clockEnabled
+        savedX: widgetExtras.clockX
+        savedY: widgetExtras.clockY
+        defaultX: Math.max(8, root.width - 570)
+        defaultY: 24
+        width: 190
+        height: 168
+        body: Canvas {
+            id: face
+            Accessible.name: "Analoge Uhr"
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: face.requestPaint() }
+            onPaint: {
+                const ctx = getContext("2d")
+                const time = new Date()
+                const r = Math.min(width, height) / 2 - 5
+                ctx.reset()
+                ctx.translate(width / 2, height / 2)
+                ctx.beginPath()
+                ctx.arc(0, 0, r, 0, Math.PI * 2)
+                ctx.fillStyle = Theme.ground.toString()
+                ctx.fill()
+                ctx.strokeStyle = Theme.track.toString()
+                ctx.lineWidth = 1
+                ctx.stroke()
+                function hand(turn, inner, outer, color, thickness) {
+                    const angle = turn * Math.PI * 2 - Math.PI / 2
+                    ctx.beginPath()
+                    ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner)
+                    ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer)
+                    ctx.strokeStyle = color
+                    ctx.lineWidth = thickness
+                    ctx.stroke()
+                }
+                for (let i = 0; i < 60; i++)
+                    hand(i / 60, r - (i % 5 === 0 ? 9 : 5), r - 3,
+                         i % 5 === 0 ? Theme.text.toString() : Theme.track.toString(), 1)
+                hand((time.getHours() + time.getMinutes() / 60) / 12, 0, r * 0.48, Theme.text.toString(), 4)
+                hand((time.getMinutes() + time.getSeconds() / 60) / 60, 0, r * 0.72, Theme.text.toString(), 3)
+                hand(time.getSeconds() / 60, -8, r * 0.79, Theme.accent.toString(), 1.5)
+                ctx.beginPath()
+                ctx.arc(0, 0, 3, 0, 2 * Math.PI)
+                ctx.fillStyle = Theme.accent.toString()
+                ctx.fill()
+            }
+        }
+    }
+
+    ExtraWidget {
+        key: "twitch"
+        visible: root.showIcons && widgetExtras.twitchEnabled
+        savedX: widgetExtras.twitchX
+        savedY: widgetExtras.twitchY
+        defaultX: Math.max(8, root.width - 665)
+        defaultY: 230
+        width: 295
+        height: 66 + 27 * widgetExtras.twitchRows.length
+        body: Column {
+            spacing: 4
+            RowLayout {
+                width: parent.width
+                Text { Layout.fillWidth: true; text: "Twitch-Favoriten"; color: Theme.text; font.bold: true }
+                IconButton {
+                    icon: "refresh"; iconSize: 16; width: 28; height: 28
+                    label: "Twitch-Status aktualisieren"
+                    enabled: !widgetExtras.busy
+                    onClicked: widgetExtras.refresh()
+                }
+            }
+            Text {
+                visible: widgetExtras.twitchRows.length === 0
+                text: widgetExtras.busy ? "Status wird geprüft …" : "Kanäle in Creative Widgets hinzufügen."
+                color: Theme.textMuted
+                width: parent.width
+                elide: Text.ElideRight
+            }
+            Repeater {
+                model: widgetExtras.twitchRows
+                delegate: Item {
+                    id: streamRow
+                    required property var modelData
+                    width: parent.width
+                    height: 23
+                    readonly property bool live: modelData.status === "live"
+                    function openChannel() {
+                        if (live) Qt.openUrlExternally("https://www.twitch.tv/" + modelData.name)
+                    }
+                    Text {
+                        anchors.left: parent.left
+                        anchors.right: badge.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: streamRow.modelData.name
+                        textFormat: Text.PlainText
+                        color: streamRow.live ? Theme.accent : Theme.text
+                        font.underline: streamRow.live
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        id: badge
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: streamRow.live ? "● LIVE" : streamRow.modelData.status === "offline" ? "Offline" : "Unbekannt"
+                        color: streamRow.live ? Theme.ok : Theme.textMuted
+                        font.pixelSize: 11
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: streamRow.live
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: streamRow.openChannel()
+                    }
+                    Accessible.role: Accessible.Link
+                    Accessible.name: modelData.name + " – " + badge.text
+                    Accessible.onPressAction: streamRow.openChannel()
+                }
+            }
+        }
+    }
+
     // Ein normales Fenster bekommt Tastaturfokus. Der Wayland-Hintergrund
     // selbst bleibt eine Layer-Shell-Fläche ohne Tastaturinteraktion.
     Window {
@@ -856,6 +1035,7 @@ Item {
             { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
             { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
+            { label: "Creative Widgets öffnen", icon: "settings", act: "widgets" },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ])
         onTriggered: (act) => {
@@ -863,6 +1043,7 @@ Item {
             else if (act === "new") desktop.newFolder()
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
+            else if (act === "widgets") shell.openWidgetManager()
             else if (act === "rss") rssWidget.toggle()
             else if (act === "weather") weatherWidget.toggle()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)

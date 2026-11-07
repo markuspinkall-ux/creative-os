@@ -35,6 +35,7 @@ from .sni import TrayItems
 from .trash import TrashModel
 from .desktopstats import DesktopStats
 from .desktopwidgets import DesktopWidget
+from .widget_extras import WidgetExtras
 from .visualizer import Visualizer
 from .nowplaying import NowPlaying
 from .broadcasttray import BroadcastTray
@@ -150,6 +151,11 @@ class ShellController(QObject):
 
         p.finished.connect(done)
         p.start("kscreen-doctor", ["-j"])
+
+    @Slot()
+    def openWidgetManager(self):
+        from .runner import spawn_detached
+        spawn_detached(["creative-widgets"])
 
     @Slot()
     def refreshPrimary(self):
@@ -457,6 +463,7 @@ def main():
         "trayApps": TrayItems(),
         "desktopStats": DesktopStats(),
         "rssWidget": DesktopWidget("RSS"),
+        "widgetExtras": WidgetExtras(),
         "weatherWidget": DesktopWidget("Weather"),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
@@ -490,7 +497,11 @@ def main():
         lambda: shell.hideBubble() if models["assistant"].muted else None)
 
     # Fensterliste von KWin und Windows-Tastenkürzel über D-Bus
-    bus = ShellBus(shell, tasks, apps, models["session"])
+    bus = ShellBus(shell, tasks, apps, models["session"], {
+        "shelf": models["shelf"], "stats": models["desktopStats"],
+        "rss": models["rssWidget"], "weather": models["weatherWidget"],
+        "extras": models["widgetExtras"],
+    })
     bus.register()
 
     # Strg+C / systemd-Stopp sauber beenden

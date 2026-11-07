@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Widgets
+GenericName=Desktop-Widgets verwalten
+Comment=Desktop-Widgets, die Ablage und den Widget-Katalog verwalten
+Exec=creative-widgets
+Icon=creative-widgets
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=Widget;Desktop;Ablage;Uhr;Twitch;

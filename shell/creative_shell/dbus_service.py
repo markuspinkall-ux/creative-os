@@ -4,6 +4,8 @@ Hierüber meldet das KWin-Skript die offenen Fenster, und die
 Windows-Tastenkürzel (Win-Taste, Win+E …) erreichen die Shell.
 """
 
+import json
+
 from PySide6.QtCore import ClassInfo, QObject, SLOT, Slot
 
 from .runner import spawn_detached
@@ -19,12 +21,13 @@ PATH = "/Shell"
 
 @ClassInfo({"D-Bus Interface": "org.creativeos.Shell"})
 class ShellBus(QObject):
-    def __init__(self, shell, tasks, apps, session, parent=None):
+    def __init__(self, shell, tasks, apps, session, widgets, parent=None):
         super().__init__(parent)
         self._shell = shell
         self._tasks = tasks
         self._apps = apps
         self._session = session
+        self._widgets = widgets
 
     def register(self):
         if QDBusConnection is None:
@@ -69,6 +72,46 @@ class ShellBus(QObject):
             tmp.replace(d / "windows.json")
         except OSError:
             pass
+
+    @Slot(result=str)
+    def widgetState(self):
+        extras = self._widgets["extras"]
+        return json.dumps({
+            **{name: self._widgets[name].enabled for name in ("shelf", "stats", "rss", "weather")},
+            "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
+            "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
+        })
+
+    @Slot(str, bool, result=str)
+    def setWidgetEnabled(self, name, enabled):
+        try:
+            if name in ("shelf", "stats", "rss", "weather"):
+                self._widgets[name].setEnabled(enabled)
+            else:
+                self._widgets["extras"].setEnabled(name, enabled)
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
+    @Slot(str, result=str)
+    def installClockWidget(self, payload):
+        if len(payload) > 4096:
+            return "Widget-Paket ist zu groß."
+        try:
+            self._widgets["extras"].installClock(payload)
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
+    @Slot(str, result=str)
+    def setTwitchChannels(self, text):
+        if len(text) > 2048:
+            return "Die Kanalliste ist zu lang."
+        try:
+            self._widgets["extras"].saveChannels(text)
+        except ValueError as exc:
+            return str(exc)
+        return ""
 
     # ---- Tastenkürzel -------------------------------------------------------------
     @Slot()

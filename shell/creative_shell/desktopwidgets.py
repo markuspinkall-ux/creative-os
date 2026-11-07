@@ -103,8 +103,13 @@ class DesktopWidget(QObject):
 
     @Slot()
     def toggle(self):
-        self._save(enabled=not self.enabled)
-        self.refresh()
+        self.setEnabled(not self.enabled)
+
+    @Slot(bool)
+    def setEnabled(self, enabled):
+        if self.enabled != enabled:
+            self._save(enabled=enabled)
+            self.refresh()
 
     @Slot(float, float)
     def setPos(self, x, y):

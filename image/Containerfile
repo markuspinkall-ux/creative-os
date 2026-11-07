@@ -120,6 +120,9 @@ RUN dnf install -y python3-pyside6 qt6-qtsvg qt6-qtwayland layer-shell-qt \
 
 COPY shell/creative_shell /usr/lib/creative-shell/creative_shell
 COPY shell/bin/creative-shell /usr/bin/creative-shell
+COPY --chmod=755 shell/bin/creative-widgets /usr/bin/creative-widgets
+COPY widgets/creative-widgets.desktop /usr/share/applications/creative-widgets.desktop
+COPY widgets/creative-widgets.svg /usr/share/icons/hicolor/scalable/apps/creative-widgets.svg
 COPY shell/session/creative-session /usr/bin/creative-session
 COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
 COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
