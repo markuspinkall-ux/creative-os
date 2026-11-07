@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Writer
+GenericName=Textverarbeitung
+Comment=Formatierte Dokumente schreiben, drucken und als PDF speichern
+Exec=creative-writer %f
+Icon=creative-writer
+Terminal=false
+Categories=Office;WordProcessor;
+Keywords=Text;Dokument;PDF;Drucken;Schreiben;

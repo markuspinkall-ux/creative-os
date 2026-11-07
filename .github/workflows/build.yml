@@ -73,7 +73,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Creative Art im fertigen Abbild prüfen
+      - name: Creative Art und Creative Writer im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -83,12 +83,14 @@ jobs:
               XDG_RUNTIME_DIR="$(mktemp -d)"
               export XDG_RUNTIME_DIR HOME="$XDG_RUNTIME_DIR"
               echo "Starte Creative-Art-Selbsttest"
-              exec /usr/bin/creative-art --selftest
+              /usr/bin/creative-art --selftest
+              echo "Starte Creative-Writer-Selbsttest"
+              exec /usr/bin/creative-writer --selftest
             '; then
-            echo "Creative-Art-Selbsttest bestanden"
+            echo "Creative-Art- und Creative-Writer-Selbsttests bestanden"
           else
             code=$?
-            echo "::error::Creative-Art-Selbsttest oder Podman-Start fehlgeschlagen (Exit-Code $code)."
+            echo "::error::App-Selbsttest oder Podman-Start fehlgeschlagen (Exit-Code $code)."
             df -h / /var/lib/containers
             df -i / /var/lib/containers
             exit "$code"

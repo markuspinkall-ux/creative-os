@@ -169,6 +169,12 @@ COPY art/creative-art.desktop /usr/share/applications/creative-art.desktop
 COPY art/creative-art.svg /usr/share/icons/hicolor/scalable/apps/creative-art.svg
 RUN chmod 755 /usr/bin/creative-art
 
+# Creative Writer – formatierte Dokumente, Druckvorschau und PDF.
+COPY writer/creative-writer /usr/bin/creative-writer
+COPY writer/creative-writer.desktop /usr/share/applications/creative-writer.desktop
+COPY writer/creative-writer.svg /usr/share/icons/hicolor/scalable/apps/creative-writer.svg
+RUN chmod 755 /usr/bin/creative-writer
+
 # ---------------------------------------------------------------------------
 # 8a1) Creative Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
 # ---------------------------------------------------------------------------
