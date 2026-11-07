@@ -11,6 +11,7 @@ Item {
     function opened() {
         passwordBox.visible = false
         password.text = ""
+        audioOutput.refresh()
         network.rescan()
         brightness.refresh()
         printers.refresh()
@@ -76,6 +77,44 @@ Item {
                 id: content
                 width: flick.width
                 spacing: 12
+
+                SectionTitle { text: "Systemlautstärke" }
+                Item {
+                    width: parent.width
+                    height: 32
+                    visible: audioOutput.available
+
+                    IconButton {
+                        id: muteOutput
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 30; height: 30; iconSize: 17
+                        icon: audioOutput.muted || audioOutput.value === 0 ? "volume-off" : "volume"
+                        label: audioOutput.muted ? "Ton einschalten" : "Ton stummschalten"
+                        onClicked: audioOutput.toggleMute()
+                    }
+                    CSlider {
+                        anchors.left: muteOutput.right
+                        anchors.right: volumeText.left
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        value: audioOutput.value
+                        Accessible.name: "Systemlautstärke"
+                        onMoved: audioOutput.setVolume(Math.round(value))
+                    }
+                    BodyText {
+                        id: volumeText
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: audioOutput.value + " %"
+                    }
+                }
+                BodyText {
+                    visible: !audioOutput.available
+                    text: "Kein Audioausgang verfügbar."
+                }
+                Divider { width: parent.width }
 
                 // ---------- WLAN ----------
                 Item {

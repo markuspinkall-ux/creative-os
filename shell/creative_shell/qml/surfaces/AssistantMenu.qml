@@ -153,7 +153,7 @@ Item {
                         Text {
                             width: parent.width
                             wrapMode: Text.WordWrap
-                            text: assistant.wakeAvailable ? "Alles wird auf diesem PC erkannt – nichts geht ins Internet." : "Nicht verfügbar – nur per Klick"
+                            text: assistant.wakeAvailable ? "Das Aktivierungswort wird lokal erkannt. Bei einer Wikipedia-Suche wird der Suchbegriff übertragen." : "Nicht verfügbar – nur per Klick"
                             color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                         }
                     }

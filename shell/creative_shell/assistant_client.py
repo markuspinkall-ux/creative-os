@@ -64,7 +64,8 @@ class AssistantClient(QObject):
             except (ValueError, UnicodeDecodeError):
                 continue
             if msg.get("type") == "chat":
-                self._history.append({"who": msg.get("who", "assistant"), "text": msg.get("text", "")})
+                self._history.append({"who": msg.get("who", "assistant"), "text": msg.get("text", ""),
+                                      "source": msg.get("source", "")})
                 self._history = self._history[-60:]
                 self.historyChanged.emit()
             elif msg.get("type") == "level":

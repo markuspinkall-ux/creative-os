@@ -278,7 +278,7 @@ Item {
                     SvgIcon {
                         anchors.centerIn: parent
                         visible: !assistantBtn.active
-                        name: assistant.muted ? "volume-off" : "mic"
+                        name: assistant.muted ? "assistant-muted" : "mic"
                         size: 17
                         opacity: assistant.music ? 1 : 0.95
                     }
@@ -408,6 +408,13 @@ Item {
                     opacity: bluetooth.powered ? 1 : 0.5
                     onClicked: shell.toggleBluetooth(root.screenName)
                 }
+                IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30; height: 30; iconSize: 17
+                    icon: audioOutput.muted || audioOutput.value === 0 ? "volume-off" : "volume"
+                    label: "Systemlautstärke"
+                    onClicked: shell.toggleQuickPanel(root.screenName)
+                }
                 // Uhr und Datum – Klick öffnet den Kalender
                 Item {
                     anchors.verticalCenter: parent.verticalCenter
@@ -450,7 +457,7 @@ Item {
             }
 
             Accessible.role: Accessible.Button
-            Accessible.name: "Schnellzugriff: Helligkeit, Drucker, WLAN – " + clock.text
+            Accessible.name: "Schnellzugriff: Lautstärke, Helligkeit, Drucker, WLAN – " + clock.text
             Accessible.onPressAction: shell.toggleQuickPanel(root.screenName)
         }
     }

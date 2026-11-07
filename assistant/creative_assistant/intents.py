@@ -108,11 +108,27 @@ def music_query(t):
 
 
 
+def wikipedia_query(text):
+    text = " ".join(unicodedata.normalize("NFC", text).split()).strip(" .,!?:")
+    for pattern in (
+        r"(?:(?:bitte|kannst du) )?(?:(?:such(?:e)?|schau) (?:bitte )?)?(?:(?:auf|bei|in) )?wikipedia(?: (?:nach|über))?\b[ :]*(.*)",
+        r"(?:(?:bitte|kannst du) )?such(?:e)? (?:bitte )?(?:nach )?(.+?) (?:auf|bei|in) wikipedia(?: suchen)?",
+    ):
+        match = re.fullmatch(pattern, text, flags=re.I)
+        if match:
+            return re.sub(r" suchen$", "", match[1], flags=re.I).strip(" .,!?:")[:200]
+    return None
+
+
 def parse(text):
     """Gibt (absicht, werte) zurück."""
     t = clean(text)
     if not t:
         return ("nothing", {})
+
+    wiki = wikipedia_query(text)
+    if wiki is not None:
+        return ("wikipedia", {"query": wiki})
 
     # --- Musik steuern (kurze Befehle zuerst) ---
     if re.fullmatch(r"(stopp?|stop|halt|aus|ruhe|sei still|musik (aus|stopp?|stoppen|beenden)|stopp? die musik|beende die musik|aufhören|hör auf)", t):

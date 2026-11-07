@@ -123,8 +123,8 @@ Item {
                     id: bubble
                     anchors.right: parent.mine ? parent.right : undefined
                     anchors.left: parent.mine ? undefined : parent.left
-                    width: Math.min(list.width * 0.82, msg.implicitWidth + 24)
-                    height: msg.implicitHeight + 16
+                    width: Math.min(list.width * 0.82, Math.max(msg.implicitWidth, sourceLink.visible ? sourceLink.implicitWidth : 0) + 24)
+                    height: msg.implicitHeight + (sourceLink.visible ? sourceLink.implicitHeight + 5 : 0) + 16
                     radius: 14
                     color: parent.mine ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2) : Theme.raised
                     Text {
@@ -138,6 +138,26 @@ Item {
                         font.family: Theme.fontFamily
                         font.pixelSize: 13
                         textFormat: Text.PlainText
+                    }
+                    Text {
+                        id: sourceLink
+                        x: 12
+                        y: msg.y + msg.implicitHeight + 5
+                        visible: typeof modelData.source === "string"
+                                 && /^https:\/\/de\.wikipedia\.org\/\?curid=\d+$/.test(modelData.source)
+                        text: "Artikel auf Wikipedia öffnen"
+                        color: Theme.accent
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        font.underline: true
+                        Accessible.role: Accessible.Link
+                        Accessible.name: text
+                        Accessible.onPressAction: if (visible) Qt.openUrlExternally(modelData.source)
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Qt.openUrlExternally(modelData.source)
+                        }
                     }
                 }
             }
