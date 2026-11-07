@@ -49,6 +49,7 @@ ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
 POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth")
 SURFACES = POPUPS + ("bubble",)
+DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf")
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
@@ -102,6 +103,8 @@ def layer_shell_available(engine):
 
 class ShellController(QObject):
     openChanged = Signal()
+    screensChanged = Signal()
+    widgetScreensChanged = Signal()
 
     def __init__(self, app, engine, use_layer_shell):
         super().__init__()
@@ -116,6 +119,10 @@ class ShellController(QObject):
         self._primary_name = ""      # Hauptbildschirm laut KWin
         self._primary_proc = None
         self._last_auto_close = ("", 0.0)
+        self._widget_screens = {
+            key: name for key, name in config.load()["desktopWidgetScreens"].items()
+            if key in DESKTOP_WIDGETS and isinstance(name, str) and name
+        }
         host = "HostLayer.qml" if use_layer_shell else "HostPlain.qml"
         self._component = QQmlComponent(engine, QUrl.fromLocalFile(str(QML_DIR / host)))
         if self._component.isError():
@@ -170,6 +177,7 @@ class ShellController(QObject):
         self._primary_poll.timeout.connect(self._read_primary)
         self._primary_poll.start()
         self._read_primary()
+        self._app.primaryScreenChanged.connect(lambda _s: self.openChanged.emit())
         self._app.primaryScreenChanged.connect(lambda _s: self.refreshPrimary())
         self._app.screenAdded.connect(lambda _s: self.refreshPrimary())
         self._app.screenRemoved.connect(lambda _s: self.refreshPrimary())
@@ -194,6 +202,7 @@ class ShellController(QObject):
         _win_show(entry["bar"])
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
         screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
+        self.screensChanged.emit()
 
     def _remove_screen(self, screen):
         entry = self._surfaces.pop(screen.name(), None)
@@ -206,7 +215,8 @@ class ShellController(QObject):
                 win.deleteLater()
         if screen.name() in self._open.values():
             self._open = {key: "" for key in POPUPS}
-            self.openChanged.emit()
+        self.screensChanged.emit()
+        self.openChanged.emit()
 
     def _relayout(self, name):
         entry = self._surfaces.get(name)
@@ -417,6 +427,22 @@ class ShellController(QObject):
     assistantMenuOpenOn = Property(str, lambda self: self._open["assistant"], notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
     chatOpenOn = Property(str, lambda self: self._open["chat"], notify=openChanged)
+    screenNames = Property("QStringList", lambda self: list(self._surfaces), notify=screensChanged)
+    widgetScreens = Property("QVariantMap", lambda self: self._widget_screens, notify=widgetScreensChanged)
+
+    @Slot(str, str)
+    def setWidgetScreen(self, widget, name):
+        if widget not in DESKTOP_WIDGETS or (name and name not in self._surfaces):
+            return
+        if self._widget_screens.get(widget, "") == name:
+            return
+        if name:
+            self._widget_screens[widget] = name
+        else:
+            self._widget_screens.pop(widget, None)
+        config.set_value("desktopWidgetScreens", self._widget_screens)
+        self.widgetScreensChanged.emit()
+
     # Schreibtisch-Symbole erscheinen nur auf dem Hauptbildschirm
     primaryScreen = Property(str, lambda self: self._primary(), notify=openChanged)
 
