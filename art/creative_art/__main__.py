@@ -7,8 +7,8 @@ from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QImageReader, QKeySequence, QPainter, QPainterPath, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QColorDialog, QDialog, QDialogButtonBox, QDockWidget, QFileDialog,
-    QFormLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow,
-    QMessageBox, QScrollArea, QSpinBox, QToolBar, QToolButton, QVBoxLayout, QWidget,
+    QFormLayout, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow,
+    QMessageBox, QScrollArea, QSlider, QSpinBox, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
 from .canvas import Canvas
@@ -122,17 +122,17 @@ class Window(QMainWindow):
         options.addWidget(self.tool_name)
         self.color_button = QToolButton()
         self.color_button.setText("Farbe …")
+        self.color_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.color_button.clicked.connect(self.choose_color)
         options.addWidget(self.color_button)
         self.update_color()
-        for label, field, maximum in (("Größe", "diameter", 512), ("Deckkraft", "opacity", 100)):
-            options.addWidget(QLabel(f"  {label} "))
-            spin = QSpinBox()
-            spin.setRange(1, maximum)
-            spin.setSuffix(" px" if field == "diameter" else " %")
-            spin.setValue(getattr(self.canvas, field))
-            spin.valueChanged.connect(lambda value, prop=field: setattr(self.canvas, prop, value))
-            options.addWidget(spin)
+        options.addWidget(QLabel("  Größe "))
+        size = QSpinBox()
+        size.setRange(1, 512)
+        size.setSuffix(" px")
+        size.setValue(self.canvas.diameter)
+        size.valueChanged.connect(lambda value: setattr(self.canvas, "diameter", value))
+        options.addWidget(size)
         options.addSeparator()
         self.action("Auswahl zuschneiden", self.crop, toolbar=options)
         self.action("Einpassen", self.fit, toolbar=options)
@@ -147,14 +147,17 @@ class Window(QMainWindow):
         self.layers.itemChanged.connect(self.toggle_visibility)
         self.layers.itemDoubleClicked.connect(self.rename_layer)
         layout.addWidget(self.layers)
-        self.layer_opacity = QSpinBox()
-        self.layer_opacity.setRange(0, 100)
-        self.layer_opacity.setSuffix(" %")
-        self.layer_opacity.setKeyboardTracking(False)
+        layout.addWidget(QLabel("Werkzeugdeckkraft"))
+        self.tool_opacity, _ = self.opacity_row(layout, "Werkzeugdeckkraft", self.canvas.opacity)
+        self.tool_opacity.valueChanged.connect(lambda value: setattr(self.canvas, "opacity", value))
+
+        layout.addWidget(QLabel("Ebenendeckkraft"))
+        self.layer_opacity, self.layer_opacity_label = self.opacity_row(
+            layout, "Ebenendeckkraft", self.doc.layer.opacity
+        )
+        # A drag is one undoable change, committed when the handle is released.
+        self.layer_opacity.setTracking(False)
         self.layer_opacity.valueChanged.connect(self.set_layer_opacity)
-        form = QFormLayout()
-        form.addRow("Ebenendeckkraft", self.layer_opacity)
-        layout.addLayout(form)
         toolbar = QToolBar()
         self.action("+", self.add_layer, toolbar=toolbar).setToolTip("Neue Ebene")
         self.action("Bild", self.import_layer, toolbar=toolbar).setToolTip("Bild als Ebene öffnen")
@@ -165,6 +168,22 @@ class Window(QMainWindow):
         dock.setWidget(panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.menuBar().actions()[2].menu().addAction(dock.toggleViewAction())
+
+    def opacity_row(self, layout, name, value):
+        row = QHBoxLayout()
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setAccessibleName(name)
+        slider.setRange(0, 100)
+        slider.setValue(value)
+        label = QLabel(f"{value} %")
+        label.setMinimumWidth(label.fontMetrics().horizontalAdvance("100 %"))
+        label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        slider.valueChanged.connect(lambda value: label.setText(f"{value} %"))
+        slider.sliderMoved.connect(lambda value: label.setText(f"{value} %"))
+        row.addWidget(slider, 1)
+        row.addWidget(label)
+        layout.addLayout(row)
+        return slider, label
 
     def refresh(self):
         self.canvas.update()
@@ -181,6 +200,7 @@ class Window(QMainWindow):
             self.layers.setCurrentRow(len(self.doc.layers) - 1 - self.doc.active)
         with QSignalBlocker(self.layer_opacity):
             self.layer_opacity.setValue(self.doc.layer.opacity)
+        self.layer_opacity_label.setText(f"{self.doc.layer.opacity} %")
         self.undo_action.setEnabled(bool(self.doc.undo))
         self.redo_action.setEnabled(bool(self.doc.redo))
         has_selection = not self.doc.selection_bounds().isEmpty()
@@ -205,8 +225,12 @@ class Window(QMainWindow):
             self.statusBar().showMessage("Rahmen ziehen und Eingabetaste drücken.", 5000)
 
     def update_color(self):
-        color = self.canvas.color.name()
-        self.color_button.setStyleSheet(f"border-left: 15px solid {color}; padding: 4px 8px;")
+        swatch = QPixmap(18, 18)
+        swatch.fill(QColor("#8993a6"))
+        with QPainter(swatch) as painter:
+            painter.fillRect(1, 1, 16, 16, self.canvas.color)
+        self.color_button.setIcon(QIcon(swatch))
+        self.color_button.setToolTip(f"Vordergrundfarbe wählen ({self.canvas.color.name()})")
 
     def choose_color(self):
         color = QColorDialog.getColor(self.canvas.color, self, "Vordergrundfarbe")
