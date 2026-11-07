@@ -1,5 +1,6 @@
 """Creative Art desktop application."""
 
+import math
 import sys
 from pathlib import Path
 
@@ -34,7 +35,7 @@ class Window(QMainWindow):
         self.make_actions()
         self.make_layers()
         self.canvas.changed.connect(self.refresh)
-        self.canvas.zoomChanged.connect(self.update_status)
+        self.canvas.zoomChanged.connect(self.sync_zoom)
         self.canvas.colorChanged.connect(self.update_color)
         self.canvas.hint.connect(lambda text: self.statusBar().showMessage(text, 5000))
         self.refresh()
@@ -147,12 +148,18 @@ class Window(QMainWindow):
         self.layers.itemChanged.connect(self.toggle_visibility)
         self.layers.itemDoubleClicked.connect(self.rename_layer)
         layout.addWidget(self.layers)
-        layout.addWidget(QLabel("Werkzeugdeckkraft"))
-        self.tool_opacity, _ = self.opacity_row(layout, "Werkzeugdeckkraft", self.canvas.opacity)
+        self.zoom_slider, self.zoom_label = self.slider_row(
+            layout, "Zoom", round(100 * math.log2(self.canvas.zoom)),
+            -400, 300, lambda value: f"{2 ** (value / 100):.0%}"
+        )
+        self.zoom_slider.setSingleStep(5)
+        self.zoom_slider.setPageStep(25)
+        self.zoom_slider.valueChanged.connect(lambda value: self.canvas.set_zoom(2 ** (value / 100)))
+
+        self.tool_opacity, _ = self.slider_row(layout, "Werkzeugdeckkraft", self.canvas.opacity)
         self.tool_opacity.valueChanged.connect(lambda value: setattr(self.canvas, "opacity", value))
 
-        layout.addWidget(QLabel("Ebenendeckkraft"))
-        self.layer_opacity, self.layer_opacity_label = self.opacity_row(
+        self.layer_opacity, self.layer_opacity_label = self.slider_row(
             layout, "Ebenendeckkraft", self.doc.layer.opacity
         )
         # A drag is one undoable change, committed when the handle is released.
@@ -169,17 +176,19 @@ class Window(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.menuBar().actions()[2].menu().addAction(dock.toggleViewAction())
 
-    def opacity_row(self, layout, name, value):
+    def slider_row(self, layout, name, value, minimum=0, maximum=100,
+                   format_value=lambda value: f"{value} %"):
+        layout.addWidget(QLabel(name))
         row = QHBoxLayout()
         slider = QSlider(Qt.Orientation.Horizontal)
         slider.setAccessibleName(name)
-        slider.setRange(0, 100)
+        slider.setRange(minimum, maximum)
         slider.setValue(value)
-        label = QLabel(f"{value} %")
-        label.setMinimumWidth(label.fontMetrics().horizontalAdvance("100 %"))
+        label = QLabel(format_value(value))
+        label.setMinimumWidth(label.fontMetrics().horizontalAdvance(format_value(maximum)))
         label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        slider.valueChanged.connect(lambda value: label.setText(f"{value} %"))
-        slider.sliderMoved.connect(lambda value: label.setText(f"{value} %"))
+        slider.valueChanged.connect(lambda value: label.setText(format_value(value)))
+        slider.sliderMoved.connect(lambda value: label.setText(format_value(value)))
         row.addWidget(slider, 1)
         row.addWidget(label)
         layout.addLayout(row)
@@ -212,7 +221,13 @@ class Window(QMainWindow):
         self.setWindowModified(self.doc.modified)
         self.update_status()
 
-    def update_status(self, *_):
+    def sync_zoom(self, zoom):
+        with QSignalBlocker(self.zoom_slider):
+            self.zoom_slider.setValue(round(100 * math.log2(zoom)))
+        self.zoom_label.setText(f"{zoom:.0%}")
+        self.update_status()
+
+    def update_status(self):
         self.statusBar().showMessage(f"{self.doc.size.width()} × {self.doc.size.height()} px  ·  {self.canvas.zoom:.0%}")
 
     def select_tool(self, tool, name=""):
