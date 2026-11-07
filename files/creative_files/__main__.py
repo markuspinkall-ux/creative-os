@@ -39,6 +39,16 @@ def start_folder(args):
 
 
 def main():
+    if sys.argv[1:] == ["--empty-trash"]:
+        from .fsops import empty_trash
+
+        try:
+            empty_trash()
+        except OSError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        return 0
+
     # Eigener Look nur für dieses Programm (nicht an gestartete Apps vererben)
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)

@@ -264,15 +264,26 @@ def restore_from_trash(trash_name):
 
 
 def empty_trash():
+    """Empty mounted trash via GIO and remove remaining local entries."""
     if shutil.which("gio"):
         subprocess.run(["gio", "trash", "--empty"], capture_output=True)
-        return
-    td = trash_dir()
+    root = trash_dir()
     for sub in ("files", "info"):
-        d = td / sub
-        if d.is_dir():
-            shutil.rmtree(d, ignore_errors=True)
-            d.mkdir(exist_ok=True)
+        folder = root / sub
+        if root.is_symlink() or folder.is_symlink():
+            raise OSError("Der Papierkorbordner ist eine symbolische Verknüpfung.")
+        try:
+            entries = list(folder.iterdir())
+        except FileNotFoundError:
+            continue
+        for entry in entries:
+            try:
+                if not entry.is_symlink() and entry.is_dir():
+                    shutil.rmtree(entry)
+                else:
+                    entry.unlink()
+            except FileNotFoundError:
+                continue
 
 
 # ---------------------------------------------------------------------------
