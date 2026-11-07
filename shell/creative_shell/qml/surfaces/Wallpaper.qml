@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Layouts
+import QtQuick.Window
 import Creative
 
 // Hintergrundbild – liegt hinter allen Fenstern, auf jedem Monitor.
@@ -119,6 +121,235 @@ Item {
         border.color: Theme.accent
     }
 
+    component WidgetGrip: Item {
+        property bool highlighted: false
+        implicitWidth: dots.implicitWidth
+        implicitHeight: dots.implicitHeight
+        opacity: highlighted ? 0.8 : 0.35
+        Grid {
+            id: dots
+            columns: 2
+            spacing: 3
+            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+        }
+    }
+
+    DesktopFeed {
+        source: rssWidget
+        title: "RSS-Nachrichten"
+        hint: "Eine Feed-Adresse pro Zeile"
+        defaultY: 230
+    }
+
+    DesktopFeed {
+        source: weatherWidget
+        title: "Wetter"
+        hint: "Ort oder Postleitzahl"
+        defaultY: 430
+        isWeather: true
+    }
+
+    component DesktopFeed: Rectangle {
+        id: widget
+        required property var source
+        required property string title
+        required property string hint
+        required property int defaultY
+        property bool isWeather: false
+        readonly property real maxX: Math.max(8, root.width - width - 8)
+        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        function homeX() { return source.posX < 0 ? maxX : 8 + source.posX * (maxX - 8) }
+        function homeY() { return source.posY < 0 ? Math.min(defaultY, maxY) : 8 + source.posY * (maxY - 8) }
+        function restorePosition() {
+            x = Qt.binding(() => widget.homeX())
+            y = Qt.binding(() => widget.homeY())
+        }
+        x: homeX()
+        y: homeY()
+        width: 320
+        height: content.implicitHeight + 24
+        visible: root.showIcons && source.enabled
+        radius: 22
+        color: Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, Math.min(Theme.bar.a, 0.85))
+        border.color: Theme.hairline
+
+        WidgetGrip {
+            anchors.left: parent.left
+            anchors.leftMargin: 9
+            anchors.verticalCenter: parent.verticalCenter
+            highlighted: handle.containsMouse || handle.pressed
+            MouseArea {
+                id: handle
+                anchors.fill: parent
+                anchors.margins: -7
+                hoverEnabled: true
+                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                drag.target: widget
+                drag.minimumX: 8
+                drag.minimumY: 8
+                drag.maximumX: widget.maxX
+                drag.maximumY: widget.maxY
+                onReleased: {
+                    if (drag.active)
+                        widget.source.setPos(widget.maxX > 8 ? (widget.x - 8) / (widget.maxX - 8) : 0,
+                                             widget.maxY > 8 ? (widget.y - 8) / (widget.maxY - 8) : 0)
+                    widget.restorePosition()
+                }
+                onCanceled: widget.restorePosition()
+            }
+        }
+
+        Column {
+            id: content
+            x: 30
+            y: 12
+            width: parent.width - x - 12
+            spacing: 5
+            RowLayout {
+                width: parent.width
+                spacing: 6
+                Text {
+                    Layout.fillWidth: true
+                    text: widget.title
+                    color: Theme.text
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+                CButton {
+                    text: "Einstellen"
+                    onClicked: widgetEditor.edit(widget.source, widget.title, widget.hint, widget.isWeather)
+                }
+                IconButton {
+                    icon: "refresh"
+                    label: "Aktualisieren"
+                    iconSize: 18
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 36
+                    onClicked: widget.source.refresh()
+                }
+            }
+            Text {
+                width: parent.width
+                visible: text.length > 0
+                text: widget.source.message || (widget.source.value ? "" : widget.hint)
+                textFormat: Text.PlainText
+                color: Theme.textMuted
+                wrapMode: Text.Wrap
+            }
+            Repeater {
+                model: widget.source.rows
+                delegate: Text {
+                    required property var modelData
+                    width: content.width
+                    text: modelData.title
+                    textFormat: Text.PlainText
+                    color: modelData.url ? Theme.accent : Theme.text
+                    elide: Text.ElideRight
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !!parent.modelData.url
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: Qt.openUrlExternally(parent.modelData.url)
+                    }
+                }
+            }
+            Text { visible: widget.isWeather; text: "Wetterdaten: Open-Meteo"; color: Theme.textMuted }
+        }
+    }
+
+    // Ein normales Fenster bekommt Tastaturfokus. Der Wayland-Hintergrund
+    // selbst bleibt eine Layer-Shell-Fläche ohne Tastaturinteraktion.
+    Window {
+        id: widgetEditor
+        transientParent: null
+        visible: false
+        flags: Qt.Dialog
+        width: 440
+        height: 250
+        minimumWidth: 320
+        minimumHeight: 230
+        color: Theme.surface
+
+        property var source
+        property bool isWeather: false
+
+        function edit(model, heading, hint, weather) {
+            source = model
+            title = heading + " einstellen"
+            isWeather = weather
+            field.placeholderText = hint
+            field.text = model.value
+            error.text = ""
+            show()
+            requestActivate()
+            field.forceActiveFocus()
+        }
+
+        function save() {
+            error.text = source.saveInput(field.text)
+            if (!error.text)
+                close()
+        }
+
+        Shortcut { sequence: "Escape"; onActivated: widgetEditor.close() }
+        Shortcut { sequence: "Ctrl+Return"; onActivated: widgetEditor.save() }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 10
+
+            Label {
+                Layout.fillWidth: true
+                text: widgetEditor.title
+                color: Theme.text
+                font.bold: true
+            }
+
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                TextArea {
+                    id: field
+                    selectByMouse: true
+                    color: Theme.text
+                    placeholderTextColor: Theme.textMuted
+                    wrapMode: TextEdit.WrapAnywhere
+                    Accessible.name: placeholderText
+                    Keys.onReturnPressed: (event) => {
+                        if (widgetEditor.isWeather) widgetEditor.save()
+                        else event.accepted = false
+                    }
+                    background: Rectangle {
+                        color: Theme.ground
+                        radius: 8
+                        border.color: field.activeFocus ? Theme.accent : Theme.hairline
+                    }
+                }
+            }
+
+            Label {
+                id: error
+                Layout.fillWidth: true
+                visible: text.length > 0
+                color: Theme.flame
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                CButton { text: "Einfügen"; enabled: field.canPaste; onClicked: { field.paste(); field.forceActiveFocus() } }
+                Item { Layout.fillWidth: true }
+                CButton { text: "Abbrechen"; onClicked: widgetEditor.close() }
+                CButton { text: "Speichern"; primary: true; onClicked: widgetEditor.save() }
+            }
+        }
+    }
+
     // Leistungsanzeige über dem Hintergrund und unter den Schreibtisch-Symbolen.
     Rectangle {
         id: statsBox
@@ -140,18 +371,15 @@ Item {
         width: stats.implicitWidth + 42
         height: stats.implicitHeight + 24
         radius: 22
-        color: Theme.bar
+        color: Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, Math.min(Theme.bar.a, 0.85))
         border.width: 1
         border.color: Theme.hairline
 
-        Grid {
+        WidgetGrip {
             anchors.left: parent.left
             anchors.leftMargin: 9
             anchors.verticalCenter: parent.verticalCenter
-            columns: 2
-            spacing: 3
-            opacity: statsMove.containsMouse || statsMove.pressed ? 0.8 : 0.35
-            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+            highlighted: statsMove.containsMouse || statsMove.pressed
             MouseArea {
                 id: statsMove
                 anchors.fill: parent
@@ -364,14 +592,11 @@ Item {
             }
         }
         // Griff links (zeigt, dass man die Ablage verschieben kann)
-        Grid {
+        WidgetGrip {
             anchors.left: parent.left
             anchors.leftMargin: 9
             anchors.verticalCenter: parent.verticalCenter
-            columns: 2
-            spacing: 3
-            opacity: shelfMove.containsMouse || shelfMove.pressed ? 0.8 : 0.35
-            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+            highlighted: shelfMove.containsMouse || shelfMove.pressed
         }
 
         // leer: Hinweis
@@ -624,6 +849,8 @@ Item {
             { label: "Neuer Ordner", icon: "folder-plus", act: "new" },
             { label: "Schreibtisch in Dateien öffnen", icon: "files", act: "folder" },
             { sep: true },
+            { label: rssWidget.enabled ? "RSS-Gadget ausblenden" : "RSS-Gadget einblenden", icon: "plus", act: "rss" },
+            { label: weatherWidget.enabled ? "Wetter-Gadget ausblenden" : "Wetter-Gadget einblenden", icon: "plus", act: "weather" },
             { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
             { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
@@ -636,6 +863,8 @@ Item {
             else if (act === "new") desktop.newFolder()
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
+            else if (act === "rss") rssWidget.toggle()
+            else if (act === "weather") weatherWidget.toggle()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
             else if (act === "taskmanager") desktopStats.openTaskManager()
             else if (act === "viz") visualizer.setEnabled(!visualizer.enabled)

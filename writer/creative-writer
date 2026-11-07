@@ -1,0 +1,489 @@
+#!/usr/bin/python3
+"""Creative Writer, a rich-text editor for Creative OS."""
+
+import sys
+from pathlib import Path
+
+from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QSaveFile, Qt, QTemporaryFile
+from PySide6.QtGui import (
+    QAction, QColor, QFont, QIcon, QImageReader, QKeySequence, QPageSize, QPalette, QPixmap,
+    QTextBlockFormat, QTextCharFormat, QTextCursor, QTextImageFormat, QTextListFormat, QTextTableFormat,
+)
+from PySide6.QtPrintSupport import QPrintDialog, QPrinter, QPrintPreviewDialog
+from PySide6.QtWidgets import (
+    QApplication, QColorDialog, QComboBox, QFileDialog, QFontComboBox, QHBoxLayout,
+    QInputDialog, QMainWindow, QMessageBox, QTextEdit, QWidget,
+)
+
+OPEN_FILTER = "Dokumente (*.html *.htm *.txt);;HTML-Dokument (*.html *.htm);;Textdatei (*.txt)"
+HTML_FILTER = "HTML-Dokument (*.html *.htm)"
+PAPER_WIDTH = 794
+PAPER_MARGIN = 65
+
+
+def save_bytes(path, data):
+    target = QSaveFile(str(path))
+    if not target.open(QIODevice.OpenModeFlag.WriteOnly):
+        raise OSError(target.errorString())
+    if target.write(data) != len(data) or not target.commit():
+        raise OSError(target.errorString())
+
+
+def make_printer():
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+    return printer
+
+
+def export_pdf(document, path):
+    # Write beside the destination so replacing it is atomic and existing PDFs
+    # survive a failed export.
+    temporary = QTemporaryFile(str(path.parent / ".creative-writer-XXXXXX"))
+    if not temporary.open():
+        raise OSError(temporary.errorString())
+    filename = Path(temporary.fileName())
+    temporary.close()
+    printer = make_printer()
+    printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+    printer.setOutputFileName(str(filename))
+    document.print_(printer)
+    with filename.open("rb") as handle:
+        if handle.read(5) != b"%PDF-" or printer.printerState() == QPrinter.PrinterState.Error:
+            raise OSError("Qt konnte die PDF-Datei nicht erstellen.")
+    filename.replace(path)
+
+
+class Editor(QTextEdit):
+    def canInsertFromMimeData(self, source):
+        return source.hasImage() or super().canInsertFromMimeData(source)
+
+    def insertFromMimeData(self, source):
+        if source.hasImage():
+            image = source.imageData()
+            self.insert_image(image.toImage() if isinstance(image, QPixmap) else image)
+        else:
+            super().insertFromMimeData(source)
+
+    def insert_image(self, image):
+        if image.isNull():
+            return False
+        width = min(image.width(), PAPER_WIDTH - 2 * PAPER_MARGIN)
+        if width < image.width():
+            image = image.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
+        data = QByteArray()
+        buffer = QBuffer(data)
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        if not image.save(buffer, "PNG"):
+            return False
+        fmt = QTextImageFormat()
+        fmt.setName("data:image/png;base64," + bytes(data.toBase64()).decode("ascii"))
+        fmt.setWidth(image.width())
+        fmt.setHeight(image.height())
+        self.textCursor().insertImage(fmt)
+        return True
+
+
+class Writer(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.path = None
+        self.find_term = ""
+        self.resize(1060, 760)
+        self.editor = Editor()
+        self.editor.setMaximumWidth(PAPER_WIDTH)
+        self.editor.setFrameShape(QTextEdit.Shape.NoFrame)
+        self.editor.document().setDefaultFont(QFont("Liberation Sans", 12))
+        self.editor.document().setDocumentMargin(PAPER_MARGIN)
+        paper = self.editor.palette()
+        paper.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
+        paper.setColor(QPalette.ColorRole.Text, QColor("#20232c"))
+        self.editor.setPalette(paper)
+        workspace = QWidget()
+        layout = QHBoxLayout(workspace)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.addStretch(1)
+        layout.addWidget(self.editor, 100)
+        layout.addStretch(1)
+        self.setCentralWidget(workspace)
+
+        self.menus()
+        self.editor.currentCharFormatChanged.connect(self.update_format_controls)
+        self.editor.cursorPositionChanged.connect(self.update_format_controls)
+        self.editor.document().modificationChanged.connect(self.setWindowModified)
+        self.editor.textChanged.connect(self.update_status)
+        self.update_title()
+        self.update_format_controls(self.editor.currentCharFormat())
+        self.update_status()
+        self.editor.document().setModified(False)
+        self.editor.setFocus()
+
+    def action(self, menu, name, slot, shortcut=None, toolbar=None, checkable=False):
+        action = QAction(name, self, checkable=checkable)
+        action.triggered.connect(slot)
+        if shortcut:
+            action.setShortcut(shortcut)
+        menu.addAction(action)
+        if toolbar:
+            toolbar.addAction(action)
+        return action
+
+    def menus(self):
+        file = self.menuBar().addMenu("&Datei")
+        edit = self.menuBar().addMenu("&Bearbeiten")
+        format_menu = self.menuBar().addMenu("F&ormat")
+        insert = self.menuBar().addMenu("&Einfügen")
+        toolbar = self.addToolBar("Formatierung")
+        toolbar.setMovable(False)
+        standard = QKeySequence.StandardKey
+        self.action(file, "Neu", self.new, standard.New)
+        self.action(file, "Öffnen …", self.open_dialog, standard.Open)
+        self.action(file, "Speichern", self.save, standard.Save)
+        self.action(file, "Speichern unter …", self.save_as, standard.SaveAs)
+        file.addSeparator()
+        self.action(file, "Druckvorschau …", self.preview)
+        self.action(file, "Drucken …", self.print_document, standard.Print)
+        self.action(file, "Als PDF speichern …", self.pdf_dialog, "Ctrl+Shift+P")
+
+        for label, slot, shortcut in (
+            ("Rückgängig", self.editor.undo, standard.Undo),
+            ("Wiederholen", self.editor.redo, standard.Redo),
+            ("Ausschneiden", self.editor.cut, standard.Cut),
+            ("Kopieren", self.editor.copy, standard.Copy),
+            ("Einfügen", self.editor.paste, standard.Paste),
+            ("Alles auswählen", self.editor.selectAll, standard.SelectAll),
+            ("Suchen …", self.find_dialog, standard.Find),
+            ("Weitersuchen", self.find_next, standard.FindNext),
+            ("Ersetzen …", self.replace_dialog, "Ctrl+H"),
+        ):
+            self.action(edit, label, slot, shortcut)
+
+        self.family = QFontComboBox()
+        self.family.setToolTip("Schriftart")
+        self.family.currentFontChanged.connect(lambda font: self.apply_text(fontFamilies=[font.family()]))
+        toolbar.addWidget(self.family)
+        self.size = QComboBox(editable=True)
+        self.size.setToolTip("Schriftgröße in Punkt")
+        self.size.addItems([str(size) for size in (8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72)])
+        self.size.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.size.activated.connect(lambda: self.apply_size())
+        self.size.lineEdit().returnPressed.connect(self.apply_size)
+        toolbar.addWidget(self.size)
+        toolbar.addSeparator()
+
+        self.bold = self.action(format_menu, "Fett", lambda on: self.apply_text(
+            fontWeight=QFont.Weight.Bold if on else QFont.Weight.Normal), standard.Bold, toolbar, True)
+        self.italic = self.action(format_menu, "Kursiv", lambda on: self.apply_text(
+            fontItalic=on), standard.Italic, toolbar, True)
+        self.underline = self.action(format_menu, "Unterstrichen", lambda on: self.apply_text(
+            fontUnderline=on), standard.Underline, toolbar, True)
+        self.action(format_menu, "Textfarbe …", self.text_color)
+        self.action(format_menu, "Markierung …", self.highlight)
+        format_menu.addSeparator()
+        for label, alignment, shortcut in (
+            ("Linksbündig", Qt.AlignmentFlag.AlignLeft, "Ctrl+L"),
+            ("Zentriert", Qt.AlignmentFlag.AlignHCenter, "Ctrl+E"),
+            ("Rechtsbündig", Qt.AlignmentFlag.AlignRight, "Ctrl+R"),
+            ("Blocksatz", Qt.AlignmentFlag.AlignJustify, "Ctrl+J"),
+        ):
+            self.action(format_menu, label, lambda checked, value=alignment:
+                        self.editor.setAlignment(value), shortcut)
+        toolbar.addSeparator()
+        self.action(insert, "Aufzählung", lambda: self.toggle_list(QTextListFormat.Style.ListDisc), toolbar=toolbar)
+        self.action(insert, "Nummerierung", lambda: self.toggle_list(QTextListFormat.Style.ListDecimal), toolbar=toolbar)
+        self.action(insert, "Tabelle …", self.insert_table)
+        self.action(insert, "Bild …", self.insert_picture)
+        self.action(insert, "Seitenumbruch", self.page_break, "Ctrl+Return")
+
+    def apply_text(self, **properties):
+        fmt = QTextCharFormat()
+        for name, value in properties.items():
+            setter = getattr(fmt, "set" + name[0].upper() + name[1:])
+            setter(value)
+        self.editor.mergeCurrentCharFormat(fmt)
+        self.editor.setFocus()
+
+    def apply_size(self):
+        try:
+            size = float(self.size.currentText().replace(",", "."))
+        except ValueError:
+            size = 0
+        if 1 <= size <= 144:
+            if size != self.editor.currentCharFormat().fontPointSize():
+                self.apply_text(fontPointSize=size)
+        else:
+            self.update_format_controls(self.editor.currentCharFormat())
+
+    def update_format_controls(self, fmt=None):
+        fmt = fmt if fmt is not None else self.editor.currentCharFormat()
+        font = fmt.font().resolve(self.editor.document().defaultFont())
+        for widget, value in ((self.family, font), (self.size, f"{font.pointSizeF():g}")):
+            previous = widget.blockSignals(True)
+            if widget is self.family:
+                widget.setCurrentFont(value)
+            else:
+                widget.setCurrentText(value)
+            widget.blockSignals(previous)
+        self.bold.setChecked(font.bold())
+        self.italic.setChecked(font.italic())
+        self.underline.setChecked(font.underline())
+
+    def text_color(self):
+        color = QColorDialog.getColor(self.editor.textColor(), self, "Textfarbe")
+        if color.isValid():
+            self.apply_text(foreground=color)
+
+    def highlight(self):
+        color = QColorDialog.getColor(QColor("#ffe38a"), self, "Markierung")
+        if color.isValid():
+            self.apply_text(background=color)
+
+    def toggle_list(self, style):
+        cursor = self.editor.textCursor()
+        current = cursor.currentList()
+        if current and current.format().style() == style:
+            first = cursor.selectionStart()
+            last = cursor.selectionEnd()
+            block = self.editor.document().findBlock(first)
+            cursor.beginEditBlock()
+            while block.isValid():
+                block_cursor = QTextCursor(block)
+                item_list = block_cursor.currentList()
+                if item_list:
+                    item_list.remove(block)
+                    fmt = block_cursor.blockFormat()
+                    fmt.setIndent(0)
+                    block_cursor.setBlockFormat(fmt)
+                block = block.next()
+                if block.position() >= last:
+                    break
+            cursor.endEditBlock()
+        else:
+            cursor.createList(style)
+
+    def insert_table(self):
+        rows, ok = QInputDialog.getInt(self, "Tabelle", "Zeilen", 3, 1, 50)
+        if not ok:
+            return
+        columns, ok = QInputDialog.getInt(self, "Tabelle", "Spalten", 3, 1, 10)
+        if ok:
+            fmt = QTextTableFormat()
+            fmt.setBorder(1)
+            fmt.setCellPadding(6)
+            fmt.setCellSpacing(0)
+            cursor = self.editor.textCursor()
+            cursor.insertTable(rows, columns, fmt)
+            self.editor.setTextCursor(cursor)
+
+    def insert_picture(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Bild einfügen", "", "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)")
+        if filename:
+            reader = QImageReader(filename)
+            reader.setAutoTransform(True)
+            if not self.editor.insert_image(reader.read()):
+                self.error("Bild konnte nicht geladen werden.")
+
+    def page_break(self):
+        cursor = self.editor.textCursor()
+        cursor.beginEditBlock()
+        cursor.removeSelectedText()
+        paragraph = cursor.blockFormat()
+        boundary = QTextBlockFormat(paragraph)
+        boundary.setPageBreakPolicy(paragraph.pageBreakPolicy() | paragraph.PageBreakFlag.PageBreak_AlwaysAfter)
+        cursor.setBlockFormat(boundary)
+        paragraph.setPageBreakPolicy(paragraph.PageBreakFlag.PageBreak_Auto)
+        cursor.insertBlock(paragraph)
+        cursor.endEditBlock()
+        self.editor.setTextCursor(cursor)
+
+    def update_status(self):
+        content = self.editor.toPlainText()
+        self.statusBar().showMessage(f"{len(content.split())} Wörter  ·  {len(content)} Zeichen")
+
+    def update_title(self):
+        name = self.path.name if self.path else "Unbenannt"
+        self.setWindowTitle(f"{name}[*] – Creative Writer")
+
+    def error(self, message):
+        QMessageBox.warning(self, "Creative Writer", str(message))
+
+    def can_discard(self):
+        if not self.editor.document().isModified():
+            return True
+        buttons = QMessageBox.StandardButton
+        reply = QMessageBox.question(self, "Änderungen speichern?",
+                                     "Das Dokument enthält ungespeicherte Änderungen.",
+                                     buttons.Save | buttons.Discard | buttons.Cancel, buttons.Save)
+        return reply == buttons.Discard or (reply == buttons.Save and self.save())
+
+    def new(self):
+        if self.can_discard():
+            self.editor.clear()
+            self.path = None
+            self.editor.document().setModified(False)
+            self.update_title()
+
+    def open_dialog(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Dokument öffnen", "", OPEN_FILTER)
+        if filename and self.can_discard():
+            self.open_document(Path(filename))
+
+    def open_document(self, path):
+        try:
+            if path.suffix.lower() not in (".html", ".htm", ".txt"):
+                raise ValueError("Bitte ein HTML- oder Textdokument auswählen.")
+            content = path.read_text(encoding="utf-8-sig")
+        except (ValueError, OSError) as error:
+            self.error(error)
+            return
+        if path.suffix.lower() == ".txt":
+            self.editor.setPlainText(content)
+            self.path = None
+        else:
+            self.editor.setHtml(content)
+            self.path = path
+        self.editor.document().setModified(False)
+        self.update_title()
+
+    def save(self):
+        if self.path is None:
+            return self.save_as()
+        return self.save_document(self.path)
+
+    def save_as(self):
+        filename, _ = QFileDialog.getSaveFileName(self, "Dokument speichern",
+                                                 str(self.path or Path("Dokument.html")), HTML_FILTER)
+        if not filename:
+            return False
+        path = Path(filename)
+        if path.suffix.lower() not in (".html", ".htm"):
+            path = path.with_name(path.name + ".html")
+            if not self.confirm_overwrite(path):
+                return False
+        return self.save_document(path)
+
+    def confirm_overwrite(self, path):
+        if not path.exists():
+            return True
+        return QMessageBox.question(self, "Datei ersetzen?", f"„{path.name}“ existiert bereits. Ersetzen?") == QMessageBox.StandardButton.Yes
+
+    def save_document(self, path):
+        try:
+            save_bytes(path, self.editor.toHtml().encode("utf-8"))
+        except OSError as error:
+            self.error(error)
+            return False
+        self.path = path
+        self.editor.document().setModified(False)
+        self.update_title()
+        return True
+
+    def find_dialog(self):
+        term, ok = QInputDialog.getText(self, "Suchen", "Suchbegriff", text=self.find_term)
+        if ok and term:
+            self.find_term = term
+            self.find_next()
+
+    def find_next(self):
+        if not self.find_term:
+            return self.find_dialog()
+        if self.editor.find(self.find_term):
+            return
+        previous = self.editor.textCursor()
+        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
+        if not self.editor.find(self.find_term):
+            self.editor.setTextCursor(previous)
+            self.statusBar().showMessage("Kein Treffer.", 3000)
+
+    def replace_dialog(self):
+        term, ok = QInputDialog.getText(self, "Alle Treffer ersetzen", "Suchbegriff", text=self.find_term)
+        if not ok or not term:
+            return
+        replacement, ok = QInputDialog.getText(self, "Alle Treffer ersetzen", "Ersetzen durch")
+        if not ok:
+            return
+        self.find_term = term
+        document = self.editor.document()
+        group = self.editor.textCursor()
+        group.beginEditBlock()
+        count = 0
+        cursor = document.find(term, 0)
+        while not cursor.isNull():
+            cursor.insertText(replacement)
+            count += 1
+            cursor = document.find(term, cursor)
+        group.endEditBlock()
+        self.statusBar().showMessage(f"{count} Treffer ersetzt.", 3000)
+
+    def print_copy(self):
+        document = self.editor.document().clone()
+        document.setDocumentMargin(4)
+        return document
+
+    def preview(self):
+        printer = make_printer()
+        document = self.print_copy()
+        dialog = QPrintPreviewDialog(printer, self)
+        dialog.paintRequested.connect(document.print_)
+        dialog.exec()
+
+    def print_document(self):
+        printer = make_printer()
+        if QPrintDialog(printer, self).exec():
+            self.print_copy().print_(printer)
+
+    def pdf_dialog(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Als PDF speichern", str((self.path or Path("Dokument")).with_suffix(".pdf")), "PDF (*.pdf)"
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        if path.suffix.lower() != ".pdf":
+            path = path.with_name(path.name + ".pdf")
+            if not self.confirm_overwrite(path):
+                return
+        try:
+            export_pdf(self.print_copy(), path)
+        except OSError as error:
+            self.error(error)
+        else:
+            self.statusBar().showMessage("PDF gespeichert.", 3000)
+
+    def closeEvent(self, event):
+        event.setAccepted(self.can_discard())
+
+
+def main():
+    arguments = sys.argv[1:]
+    app = QApplication(sys.argv[:1])
+    app.setApplicationName("Creative Writer")
+    app.setDesktopFileName("creative-writer")
+    app.setWindowIcon(QIcon.fromTheme("creative-writer"))
+    app.setStyle("Fusion")
+    palette = app.palette()
+    for role, color in {
+        QPalette.ColorRole.Window: "#12151b",
+        QPalette.ColorRole.WindowText: "#dce6ff",
+        QPalette.ColorRole.Base: "#1c2029",
+        QPalette.ColorRole.AlternateBase: "#232836",
+        QPalette.ColorRole.Text: "#dce6ff",
+        QPalette.ColorRole.Button: "#232836",
+        QPalette.ColorRole.ButtonText: "#dce6ff",
+        QPalette.ColorRole.Highlight: "#8fb3ff",
+        QPalette.ColorRole.HighlightedText: "#12151b",
+    }.items():
+        palette.setColor(role, QColor(color))
+    app.setPalette(palette)
+    window = Writer()
+    if arguments == ["--selftest"]:
+        window.show()
+        app.processEvents()
+        return 0
+    if arguments:
+        window.open_document(Path(arguments[0]))
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

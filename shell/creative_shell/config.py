@@ -16,6 +16,8 @@ DEFAULTS = {
     "wallpaper": "",
     # Leistungsanzeige (CPU, Speicher …) oben rechts auf dem Schreibtisch
     "desktopStats": True,
+    "desktopWidgetRSS": {},
+    "desktopWidgetWeather": {},
     "desktopStatsPosition": [],
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
