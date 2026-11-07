@@ -20,7 +20,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import intents, weather
+from . import intents, weather, wikipedia
 from .music import MusicPlayer
 from .speech import RATE, Speaker, Transcriber, WakeWord, list_voices
 
@@ -136,13 +136,13 @@ class Assistant:
         self.push()
 
     # ---- Sprechen ------------------------------------------------------------------
-    def chat(self, who, text):
+    def chat(self, who, text, source=""):
         """Eintrag für das Chat-Fenster in der Taskleiste (who: user | assistant)."""
         if text:
-            self.send({"type": "chat", "who": who, "text": text})
+            self.send({"type": "chat", "who": who, "text": text, "source": source})
 
-    def say(self, text):
-        self.chat("assistant", text)
+    def say(self, text, source=""):
+        self.chat("assistant", text, source)
         self.answer = text
         if self.cfg["muted"]:
             self.set_state("idle")
@@ -349,6 +349,20 @@ class Assistant:
             self.set_state("idle")
 
     def act(self, intent, v):
+        if intent == "wikipedia":
+            query = v["query"]
+            if not query:
+                return "Wonach soll ich suchen? Sag zum Beispiel: Wikipedia Würzburg."
+            self.set_state("thinking")
+            try:
+                result = wikipedia.lookup(query)
+            except (OSError, ValueError, KeyError, TypeError):
+                return "Wikipedia ist gerade nicht erreichbar. Versuch es bitte später noch einmal."
+            if not result:
+                return "Dazu habe ich auf Wikipedia keinen Artikel gefunden."
+            title, extract, source = result
+            self.say(f"Wikipedia · {title}\n{extract}" if extract else f"Wikipedia hat den Artikel „{title}“ gefunden.", source)
+            return None
         if intent == "weather":
             self.set_state("thinking")
             return weather.report(v.get("city") or self.cfg["city"], v.get("day", 0))
@@ -412,7 +426,8 @@ class Assistant:
             return f"Heute ist {WEEKDAYS[d.weekday()]}, der {d.day}. {MONTHS[d.month - 1]} {d.year}."
         if intent == "help":
             return ("Frag mich nach dem Wetter, stell einen Timer, oder sag zum Beispiel: "
-                    "Spiele Musik von Queen. Mit Stopp beende ich die Musik.")
+                    "Spiele Musik von Queen. Mit Stopp beende ich die Musik. "
+                    "Mit Wikipedia Würzburg suchst du einen Artikel.")
         if intent == "thanks":
             return "Gern geschehen!"
         return "Das kann ich leider noch nicht. Frag mich nach dem Wetter, stell einen Timer oder lass Musik spielen."

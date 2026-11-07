@@ -20,6 +20,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 from . import config
 from .apps import AppModel
 from .brightness import BrightnessModel
+from .volume import VolumeModel
 from .dbus_service import ShellBus
 from .kwin import KWinBridge
 from .desktop import DesktopModel
@@ -447,6 +448,7 @@ def main():
         "network": NetworkModel(),
         "bluetooth": BluetoothModel(),
         "brightness": BrightnessModel(),
+        "audioOutput": VolumeModel(),
         "printers": PrinterModel(),
         "session": SessionModel(),
         "trash": TrashModel(),
