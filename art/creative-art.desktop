@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Art
+GenericName=Bildbearbeitung
+Comment=Bilder zeichnen, retuschieren und mit Transparenz exportieren
+Exec=creative-art %f
+Icon=creative-art
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=Bild;Zeichnen;Retusche;Ebenen;PNG;
