@@ -74,15 +74,16 @@ jobs:
             .
 
       - name: Creative Art im fertigen Abbild prüfen
+        timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
-          if sudo podman run --rm --network none --entrypoint /bin/sh \
-            -e QT_QPA_PLATFORM=offscreen -e QT_QUICK_BACKEND=software \
+          if sudo podman run --rm --network none --timeout 45 --entrypoint /bin/sh \
+            -e QT_QPA_PLATFORM=offscreen -e QT_QUICK_BACKEND=software -e PYTHONFAULTHANDLER=1 \
             "localhost/creative-os:${{ matrix.variant }}-build" -ec '
-              export XDG_RUNTIME_DIR="$(mktemp -d)"
-              export HOME="$XDG_RUNTIME_DIR"
+              XDG_RUNTIME_DIR="$(mktemp -d)"
+              export XDG_RUNTIME_DIR HOME="$XDG_RUNTIME_DIR"
               echo "Starte Creative-Art-Selbsttest"
-              exec timeout --verbose 30s /usr/bin/creative-art --selftest
+              exec /usr/bin/creative-art --selftest
             '; then
             echo "Creative-Art-Selbsttest bestanden"
           else
