@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Layouts
+import QtQuick.Window
 import Creative
 
 // Hintergrundbild – liegt hinter allen Fenstern, auf jedem Monitor.
@@ -119,12 +121,17 @@ Item {
         border.color: Theme.accent
     }
 
-    component WidgetGrip: Grid {
+    component WidgetGrip: Item {
         property bool highlighted: false
-        columns: 2
-        spacing: 3
+        implicitWidth: dots.implicitWidth
+        implicitHeight: dots.implicitHeight
         opacity: highlighted ? 0.8 : 0.35
-        Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+        Grid {
+            id: dots
+            columns: 2
+            spacing: 3
+            Repeater { model: 6; Rectangle { width: 3; height: 3; radius: 1.5; color: Theme.text } }
+        }
     }
 
     DesktopFeed {
@@ -149,7 +156,6 @@ Item {
         required property string hint
         required property int defaultY
         property bool isWeather: false
-        property bool editing: false
         readonly property real maxX: Math.max(8, root.width - width - 8)
         readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
         function homeX() { return source.posX < 0 ? maxX : 8 + source.posX * (maxX - 8) }
@@ -199,37 +205,34 @@ Item {
             y: 12
             width: parent.width - x - 12
             spacing: 5
-            Row {
-                spacing: 8
-                Text { text: widget.title; color: Theme.text; font.bold: true }
-                Button {
-                    text: "Einstellen"
-                    onClicked: {
-                        widget.editing = !widget.editing
-                        if (widget.editing) field.text = widget.source.value
-                    }
-                }
-                Button { text: "↻"; Accessible.name: "Aktualisieren"; onClicked: widget.source.refresh() }
-            }
-            TextArea {
-                id: field
+            RowLayout {
                 width: parent.width
-                height: widget.isWeather ? 36 : 85
-                visible: widget.editing
-                placeholderText: widget.hint
-                color: Theme.text
-                wrapMode: TextEdit.WrapAnywhere
-                background: Rectangle { color: Theme.ground; radius: 8; border.color: Theme.hairline }
-            }
-            Button {
-                text: "Speichern"
-                visible: widget.editing
-                onClicked: { widget.source.saveInput(field.text); widget.editing = false }
+                spacing: 6
+                Text {
+                    Layout.fillWidth: true
+                    text: widget.title
+                    color: Theme.text
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+                CButton {
+                    text: "Einstellen"
+                    onClicked: widgetEditor.edit(widget.source, widget.title, widget.hint, widget.isWeather)
+                }
+                IconButton {
+                    icon: "refresh"
+                    label: "Aktualisieren"
+                    iconSize: 18
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 36
+                    onClicked: widget.source.refresh()
+                }
             }
             Text {
                 width: parent.width
                 visible: text.length > 0
                 text: widget.source.message || (widget.source.value ? "" : widget.hint)
+                textFormat: Text.PlainText
                 color: Theme.textMuted
                 wrapMode: Text.Wrap
             }
@@ -251,6 +254,99 @@ Item {
                 }
             }
             Text { visible: widget.isWeather; text: "Wetterdaten: Open-Meteo"; color: Theme.textMuted }
+        }
+    }
+
+    // Ein normales Fenster bekommt Tastaturfokus. Der Wayland-Hintergrund
+    // selbst bleibt eine Layer-Shell-Fläche ohne Tastaturinteraktion.
+    Window {
+        id: widgetEditor
+        transientParent: null
+        visible: false
+        flags: Qt.Dialog
+        width: 440
+        height: 250
+        minimumWidth: 320
+        minimumHeight: 230
+        color: Theme.surface
+
+        property var source
+        property bool isWeather: false
+
+        function edit(model, heading, hint, weather) {
+            source = model
+            title = heading + " einstellen"
+            isWeather = weather
+            field.placeholderText = hint
+            field.text = model.value
+            error.text = ""
+            show()
+            requestActivate()
+            field.forceActiveFocus()
+        }
+
+        function save() {
+            error.text = source.saveInput(field.text)
+            if (!error.text)
+                close()
+        }
+
+        Shortcut { sequence: "Escape"; onActivated: widgetEditor.close() }
+        Shortcut { sequence: "Ctrl+Return"; onActivated: widgetEditor.save() }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 10
+
+            Label {
+                Layout.fillWidth: true
+                text: widgetEditor.title
+                color: Theme.text
+                font.bold: true
+            }
+
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                TextArea {
+                    id: field
+                    selectByMouse: true
+                    color: Theme.text
+                    placeholderTextColor: Theme.textMuted
+                    wrapMode: TextEdit.WrapAnywhere
+                    Accessible.name: placeholderText
+                    Keys.onReturnPressed: (event) => {
+                        if (widgetEditor.isWeather) widgetEditor.save()
+                        else event.accepted = false
+                    }
+                    background: Rectangle {
+                        color: Theme.ground
+                        radius: 8
+                        border.color: field.activeFocus ? Theme.accent : Theme.hairline
+                    }
+                }
+            }
+
+            Label {
+                id: error
+                Layout.fillWidth: true
+                visible: text.length > 0
+                color: Theme.flame
+                wrapMode: Text.Wrap
+                textFormat: Text.PlainText
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                CButton { text: "Einfügen"; enabled: field.canPaste; onClicked: { field.paste(); field.forceActiveFocus() } }
+                Item { Layout.fillWidth: true }
+                CButton { text: "Abbrechen"; onClicked: widgetEditor.close() }
+                CButton { text: "Speichern"; primary: true; onClicked: widgetEditor.save() }
+            }
         }
     }
 

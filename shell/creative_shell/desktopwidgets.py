@@ -110,19 +110,19 @@ class DesktopWidget(QObject):
     def setPos(self, x, y):
         self._save(x=x, y=y)
 
-    @Slot(str)
+    @Slot(str, result=str)
     def saveInput(self, value):
         value = value.strip()
         if not self._weather:
             urls = list(dict.fromkeys(value.split()))
             if len(urls) > 5 or any(not u.startswith(("https://", "http://")) for u in urls):
-                self._message = "Bis zu fünf HTTP- oder HTTPS-Feed-Adressen eingeben."
-                self.changed.emit()
-                return
+                return "Bis zu fünf HTTP- oder HTTPS-Feed-Adressen eingeben."
             value = "\n".join(urls)
         self._rows = []
+        self._message = ""
         self._save(value=value)
         self.refresh()
+        return ""
 
     @Slot()
     def refresh(self):

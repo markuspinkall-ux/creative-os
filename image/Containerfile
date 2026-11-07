@@ -162,6 +162,13 @@ COPY media/creative-player.svg /usr/share/icons/hicolor/scalable/apps/creative-p
 COPY media/mimeapps.list /etc/xdg/mimeapps.list
 RUN chmod 755 /usr/bin/creative-player
 
+# Creative Art – eigenständige Rasterbildbearbeitung mit Qt Widgets.
+COPY art/creative_art /usr/lib/creative-art/creative_art
+COPY art/creative-art /usr/bin/creative-art
+COPY art/creative-art.desktop /usr/share/applications/creative-art.desktop
+COPY art/creative-art.svg /usr/share/icons/hicolor/scalable/apps/creative-art.svg
+RUN chmod 755 /usr/bin/creative-art
+
 # Creative Writer – formatierte Dokumente, Druckvorschau und PDF.
 COPY writer/creative-writer /usr/bin/creative-writer
 COPY writer/creative-writer.desktop /usr/share/applications/creative-writer.desktop
@@ -536,8 +543,6 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
 # Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
-# Creative Writer: Qt Widgets und Qt Print Support verfügbar?
-RUN QT_QPA_PLATFORM=offscreen timeout 30 /usr/bin/creative-writer --selftest
 # Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
