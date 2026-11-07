@@ -73,6 +73,26 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
+      - name: Creative Art im fertigen Abbild prüfen
+        run: |
+          # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
+          if sudo podman run --rm --network none --entrypoint /bin/sh \
+            -e QT_QPA_PLATFORM=offscreen -e QT_QUICK_BACKEND=software \
+            "localhost/creative-os:${{ matrix.variant }}-build" -ec '
+              export XDG_RUNTIME_DIR="$(mktemp -d)"
+              export HOME="$XDG_RUNTIME_DIR"
+              echo "Starte Creative-Art-Selbsttest"
+              exec timeout --verbose 30s /usr/bin/creative-art --selftest
+            '; then
+            echo "Creative-Art-Selbsttest bestanden"
+          else
+            code=$?
+            echo "::error::Creative-Art-Selbsttest oder Podman-Start fehlgeschlagen (Exit-Code $code)."
+            df -h / /var/lib/containers
+            df -i / /var/lib/containers
+            exit "$code"
+          fi
+
       - name: Abbild in wiederverwendbare Schichten aufteilen
         run: |
           image="${{ steps.names.outputs.image }}"
