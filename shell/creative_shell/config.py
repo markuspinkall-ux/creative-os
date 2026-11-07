@@ -19,6 +19,7 @@ DEFAULTS = {
     "desktopWidgetRSS": {},
     "desktopWidgetWeather": {},
     "desktopStatsPosition": [],
+    "desktopWidgetScreens": {},
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
     "visualizerOpacity": 0.1,
