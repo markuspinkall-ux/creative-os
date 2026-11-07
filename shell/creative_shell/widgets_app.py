@@ -8,7 +8,7 @@ from PySide6.QtCore import QSignalBlocker, QTimer, Qt, Signal
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 from PySide6.QtGui import QColor, QFont, QIcon, QPalette
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QFrame, QHBoxLayout, QLabel, QMainWindow,
+    QApplication, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QMainWindow,
     QPlainTextEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
@@ -30,6 +30,8 @@ class WidgetWindow(QMainWindow):
         self.available = False
         self.last_channels = None
         self.switches = {}
+        self.monitors = {}
+        self.monitor_options = {}
         self.downloaded.connect(self.finish_download)
         page = QWidget()
         self.setCentralWidget(page)
@@ -48,8 +50,17 @@ class WidgetWindow(QMainWindow):
         ):
             switch = QCheckBox(label)
             switch.toggled.connect(lambda enabled, key=name: self.set_enabled(key, enabled))
-            desktop.addWidget(switch)
+            row = QHBoxLayout()
+            row.addWidget(switch, 1)
+            monitor = QComboBox()
+            monitor.setAccessibleName(f"Zielmonitor für {label}")
+            monitor.setMinimumWidth(190)
+            monitor.activated.connect(lambda index, key=name, combo=monitor:
+                                      self.apply("setWidgetMonitor", key, combo.itemData(index)))
+            row.addWidget(monitor)
+            desktop.addLayout(row)
             self.switches[name] = switch
+            self.monitors[name] = monitor
 
         twitch = self.section(layout, "Twitch-Favoriten")
         twitch.addWidget(QLabel("Bis zu acht Benutzernamen oder Kanal-Links, je einer pro Zeile."))
@@ -118,10 +129,14 @@ class WidgetWindow(QMainWindow):
             self.available = True
         self.installed = state.get("clockInstalled", False)
         for name, switch in self.switches.items():
-            switch.setEnabled(self.available and (name != "clock" or self.installed))
+            enabled = self.available and (name != "clock" or self.installed)
+            switch.setEnabled(enabled)
+            monitor = self.monitors[name]
+            monitor.setEnabled(enabled)
             if self.available:
                 with QSignalBlocker(switch):
                     switch.setChecked(state[name])
+                self.update_monitors(name, state["screens"], state["targets"].get(name, ""))
         if self.available:
             channels = "\n".join(state["channels"])
             current = self.channels.toPlainText()
@@ -130,6 +145,19 @@ class WidgetWindow(QMainWindow):
             self.last_channels = channels
         self.save_button.setEnabled(self.available)
         self.update_download_button()
+
+    def update_monitors(self, name, screens, target):
+        monitor = self.monitors[name]
+        options = (("Hauptmonitor (automatisch)", ""),) + tuple((screen, screen) for screen in screens)
+        if target and target not in screens:
+            options += ((f"{target} (getrennt)", target),)
+        with QSignalBlocker(monitor):
+            if self.monitor_options.get(name) != options:
+                monitor.clear()
+                for label, screen in options:
+                    monitor.addItem(label, screen)
+                self.monitor_options[name] = options
+            monitor.setCurrentIndex(monitor.findData(target))
 
     def set_enabled(self, name, enabled):
         self.apply("setWidgetEnabled", name, enabled)

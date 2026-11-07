@@ -80,6 +80,7 @@ class ShellBus(QObject):
             **{name: self._widgets[name].enabled for name in ("shelf", "stats", "rss", "weather")},
             "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
             "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
+            "screens": self._shell.screenNames, "targets": self._shell.widgetScreens,
         })
 
     @Slot(str, bool, result=str)
@@ -92,6 +93,10 @@ class ShellBus(QObject):
         except ValueError as exc:
             return str(exc)
         return ""
+
+    @Slot(str, str, result=str)
+    def setWidgetMonitor(self, name, monitor):
+        return self._shell.setWidgetScreen(name, monitor)
 
     @Slot(str, result=str)
     def installClockWidget(self, payload):
