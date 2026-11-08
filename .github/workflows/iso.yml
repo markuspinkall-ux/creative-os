@@ -1,0 +1,141 @@
+name: Installations-ISO erstellen
+
+on:
+  workflow_dispatch:
+    inputs:
+      format:
+        description: "Netinstall lädt bei der Installation den aktuellen Stable-Stand"
+        type: choice
+        options: [netinstall, offline, beide]
+        default: netinstall
+      build:
+        description: "Für Offline-ISOs: veröffentlichte Build-ID (YYYYMMDD-RunID)"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  offline:
+    name: Offline-ISO (${{ matrix.variant }})
+    if: inputs.format == 'offline' || inputs.format == 'beide'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [amd, nvidia]
+    env:
+      BUILD: ${{ inputs.build }}
+      VARIANT: ${{ matrix.variant }}
+    steps:
+      - name: Platz für das Offline-Abbild schaffen
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift /usr/local/lib/jvm
+          sudo docker image prune --all --force
+      - name: Installations-ISO erzeugen
+        run: |
+          [[ "$BUILD" =~ ^[0-9]{8}-[0-9]+$ ]] || { echo "Build-ID muss YYYYMMDD-RunID sein"; exit 1; }
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/$owner/creative-os"
+          source="$image:$VARIANT-$BUILD"
+          sudo podman pull "$source"
+          # Der Installer soll nach der Installation dem stabilen Update-Kanal folgen.
+          sudo podman tag "$source" "$image:$VARIANT"
+          mkdir -p output
+          cat > output/config.toml <<'TOML'
+          [customizations.installer.kickstart]
+          contents = '''
+          lang de_DE.UTF-8
+          keyboard de
+          timezone Europe/Berlin
+          network --hostname=creative-os
+
+          %post
+          # --- Creative OS: Nacharbeiten nach der Installation (Kickstart %post) ---
+          # 1) Secure Boot: Schlüssel der Creative-OS-Treiber zur Freischaltung vormerken.
+          #    Beim nächsten Start fragt ein blauer Bildschirm danach – Passwort: creative
+          if [ -d /sys/firmware/efi ] && mokutil --sb-state 2>/dev/null | grep -qi enabled; then
+              printf 'creative\ncreative\n' | mokutil --import /usr/share/creative-os/secureboot/creative-os-mok.der || true
+          fi
+          # 2) Eintrag im Startmenü des PCs (UEFI): „Creative OS“ statt „Fedora“
+          if [ -d /sys/firmware/efi ] && command -v efibootmgr >/dev/null 2>&1; then
+              num=$(efibootmgr 2>/dev/null | grep -E '^Boot[0-9A-F]{4}\*? +Fedora' | head -1 | sed -E 's/^Boot([0-9A-F]{4}).*/\1/')
+              esp=$(findmnt -n -o SOURCE /boot/efi 2>/dev/null)
+              [ -n "$esp" ] || esp=$(lsblk -lnpo NAME,PARTTYPE | awk 'tolower($2)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1; exit}')
+              if [ -n "$num" ] && [ -n "$esp" ]; then
+                  disk="/dev/$(lsblk -no PKNAME "$esp" | head -1)"
+                  part=$(cat "/sys/class/block/$(basename "$esp")/partition" 2>/dev/null)
+                  loader='\EFI\fedora\shimx64.efi'
+                  if [ -b "$disk" ] && [ -n "$part" ] && efibootmgr -q -c -d "$disk" -p "$part" -L "Creative OS" -l "$loader"; then
+                      efibootmgr -q -b "$num" -B || true
+                  fi
+              fi
+          fi
+          %end
+          '''
+          TOML
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            -v ./output/config.toml:/config.toml:ro \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso --rootfs btrfs \
+            --target-arch amd64 \
+            "$image:$VARIANT"
+          sudo mv output/bootiso/install.iso "creative-os-$VARIANT-$BUILD.iso"
+          ls -lh *.iso
+
+      - name: ISO zum Herunterladen bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-os-${{ matrix.variant }}-${{ inputs.build }}-iso
+          path: creative-os-*.iso
+          retention-days: 7
+          compression-level: 0
+
+
+  netinstall:
+    name: Kleine Installations-ISO
+    if: inputs.format == 'netinstall' || inputs.format == 'beide'
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ISOs bauen
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          date="$(date +%Y%m%d)"
+          mkdir -p out
+          for v in amd nvidia; do
+            sed "s|@IMAGE@|ghcr.io/${owner}/creative-os:${v}|" image/netinstall/creative.ks.in > "out/creative-${v}.ks"
+          done
+          sudo podman run --rm --privileged -v "$PWD/out:/out" -v "$PWD:/src:ro" registry.fedoraproject.org/fedora:44 bash -euxc '
+            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl cpio gzip mtools >/dev/null
+            base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
+            iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
+            curl -fsSL -o /tmp/netinst.iso "$base/$iso"
+            for v in amd nvidia; do
+              bash /src/image/netinstall/brand-iso.sh /tmp/netinst.iso "/out/creative-$v.ks" "/out/creative-os-$v-netinstall.iso" \
+                || mkksiso --ks "/out/creative-$v.ks" /tmp/netinst.iso "/out/creative-os-$v-netinstall.iso"
+            done
+          '
+          sudo chown -R "$USER" out
+          for v in amd nvidia; do mv "out/creative-os-$v-netinstall.iso" "creative-os-$v-netinstall-$date.iso"; done
+          ls -lh *.iso
+          echo "DATE=$date" >> "$GITHUB_ENV"
+      - name: Als Download veröffentlichen (Releases)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="iso-${DATE}-${{ github.run_number }}"
+          gh release create "$tag" creative-os-*-netinstall-*.iso \
+            --repo "${{ github.repository }}" \
+            --title "Creative OS – Installation ${DATE}" \
+            --notes "Kleine Installations-ISOs. Während der Installation wird Creative OS aus dem Internet geladen – eine Internetverbindung ist nötig.
+          - **creative-os-amd-netinstall** – für AMD- oder Intel-Grafik (und für VirtualBox)
+          - **creative-os-nvidia-netinstall** – für NVIDIA-Grafikkarten"
+
