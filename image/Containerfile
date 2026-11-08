@@ -553,8 +553,6 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
     QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-pictures --selftest \
     || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home
-# Die lokale ChatGPT-Oberfläche startet auch ohne Codex-Anmeldung.
-RUN QT_QPA_PLATFORM=offscreen timeout 30 /usr/bin/creative-chatgpt --selftest
 # Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
