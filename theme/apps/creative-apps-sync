@@ -25,6 +25,10 @@ SOURCES = [Path("/usr/local/share/applications"), Path("/usr/share/applications"
 VISIBLE = {
     "creative-files.desktop": ("Dateien", "creative-files"),
     "creative-player.desktop": ("Creative Player", "creative-player"),
+    "creative-art.desktop": (None, None),
+    "creative-writer.desktop": (None, None),
+    "creative-podcast.desktop": (None, None),
+    "creative-widgets.desktop": (None, None),
     "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),
     "systemsettings.desktop": ("Systemsteuerung", "creative-settings"),
     "brave-browser.desktop": ("Brave", "creative-browser"),

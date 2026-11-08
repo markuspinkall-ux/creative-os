@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Podcast
+GenericName=Podcast-Player
+Comment=Podcasts finden, abonnieren und online oder offline hören
+Keywords=Podcast;RSS;Audio;Stream;Download;
+Exec=creative-podcast
+Icon=creative-podcast
+Terminal=false
+Categories=AudioVideo;Audio;Player;

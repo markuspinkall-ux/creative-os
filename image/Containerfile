@@ -178,6 +178,13 @@ COPY writer/creative-writer.desktop /usr/share/applications/creative-writer.desk
 COPY writer/creative-writer.svg /usr/share/icons/hicolor/scalable/apps/creative-writer.svg
 RUN chmod 755 /usr/bin/creative-writer
 
+# Creative Podcast nutzt dieselbe Qt-Multimedia-Laufzeit wie Creative Player.
+COPY podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
+COPY podcast/bin/creative-podcast /usr/bin/creative-podcast
+COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.desktop
+COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
+RUN chmod 755 /usr/bin/creative-podcast
+
 # ---------------------------------------------------------------------------
 # 8a1) Creative Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
 # ---------------------------------------------------------------------------
@@ -547,6 +554,9 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
 # Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
+# Creative Podcast: QML-Oberfläche und Multimedia-Laufzeit laden.
+RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio HOME=/tmp/podcast-home timeout 30 /usr/bin/creative-podcast --selftest \
+ && rm -rf /tmp/podcast-home
 # Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
