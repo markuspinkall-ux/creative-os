@@ -89,7 +89,7 @@ class TaskModel(QObject):
     def _window_key(self, w):
         key = app_key(w.get("app")) or (w.get("cls") or "").lower()
         key = WINDOW_ALIASES.get(key, key)
-        # Web-Apps (Claude, Gemini, ChatGPT …) haben eigene Fensternamen –
+        # Web-Apps (Claude, ChatGPT …) haben eigene Fensternamen –
         # die werden der angehefteten Verknüpfung zugeordnet.
         names = {key, (w.get("cls") or "").lower()} - {""}
         for pin in self._apps.pinned:

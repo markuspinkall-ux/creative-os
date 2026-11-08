@@ -34,9 +34,9 @@ rm -rf /usr/share/kwin/scripts/creative-tasks
 mkdir -p /usr/share/kwin/scripts
 cp -r kwin/creative-tasks /usr/share/kwin/scripts/
 
-# Web-Apps als eigene Fenster (Claude, Gemini, ChatGPT, YouTube, Twitch)
+# Web-Apps als eigene Fenster (Claude, ChatGPT, YouTube, Twitch)
 install -Dm755 webapps/creative-webapp /usr/bin/creative-webapp
-for app in claude gemini chatgpt youtube twitch; do
+for app in claude chatgpt youtube twitch; do
     install -Dm644 "webapps/creative-$app.desktop" "/usr/share/applications/creative-$app.desktop"
     install -Dm644 "creative_shell/qml/Creative/icons/$app.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$app.svg"
 done

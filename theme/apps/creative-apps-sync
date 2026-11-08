@@ -36,7 +36,6 @@ VISIBLE = {
     "org.mozilla.firefox.desktop": ("Firefox", "creative-browser"),
     "org.gnome.Ptyxis.desktop": ("Terminal", "creative-terminal"),
     "creative-claude.desktop": (None, None),
-    "creative-gemini.desktop": (None, None),
     "creative-chatgpt.desktop": (None, None),
     "creative-youtube.desktop": (None, None),
     "creative-twitch.desktop": (None, None),
