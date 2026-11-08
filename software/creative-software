@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 """Creative OS software center backed by Flatpak."""
 
+import configparser
 import gzip
 import os
 import platform
 import re
 import sys
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -27,6 +29,9 @@ DEMO = [
     ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", "#8fc6af"),
 ]
 FEATURED = {row[0]: row for row in DEMO}
+CRAFT_ID = "org.creativecraft.CreativeCraft"
+CRAFT = (CRAFT_ID, "CreativeCraft", "Voxel-Sandbox mit Bauen, Crafting und Erkundung")
+CRAFT_URL = "https://github.com/markuspinkall-ux/voxelklon/releases/download/latest/CreativeCraft.flatpak"
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """
@@ -61,6 +66,22 @@ def catalog_rows(output):
             description = fields[2] if len(fields) > 2 else ""
             rows[app_id] = (app_id, name or app_id, description)
     return rows
+
+
+def system_apps(directory=Path("/usr/share/applications")):
+    apps = {}
+    for path in directory.glob("creative-*.desktop"):
+        config = configparser.ConfigParser(interpolation=None, strict=False)
+        try:
+            config.read(path, encoding="utf-8")
+            entry = config["Desktop Entry"]
+            if (entry.get("Type") != "Application" or not entry.get("Exec")
+                    or entry.getboolean("Hidden", False) or entry.getboolean("NoDisplay", False)):
+                continue
+            apps[path.stem] = (path.stem, entry["Name"], entry.get("Comment", "Creative OS"))
+        except (OSError, ValueError, KeyError, configparser.Error):
+            continue
+    return apps
 
 
 def appstream_paths(scope):
@@ -241,6 +262,7 @@ class Store(QWidget):
         self.cache = Path(cache) / "flathub.tsv"
         self.catalog = {r[0]: r[:3] for r in DEMO} if preview else self.read_cache()
         self.own_catalog = {}
+        self.bundled = {} if preview else system_apps()
         self.own_remote = False
         self.installed = {}
         self.updates = set()
@@ -325,7 +347,7 @@ class Store(QWidget):
         except OSError:
             return {}
 
-    def command(self, args, done, progress=None):
+    def command(self, args, done, progress=None, program="flatpak"):
         proc = QProcess(self)
         self.processes.add(proc)
         proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
@@ -351,7 +373,7 @@ class Store(QWidget):
         proc.errorOccurred.connect(
             lambda error: finish(127) if error == QProcess.ProcessError.FailedToStart else None
         )
-        proc.start("flatpak", args)
+        proc.start(program, args)
 
     def scan(self):
         if self.preview or self.operation or not self.refresh.isEnabled():
@@ -448,13 +470,17 @@ class Store(QWidget):
         if self.section == "Entdecken":
             entries = [(self.remote_scope, row) for row in self.catalog.values()]
         elif self.section == "Eigene Apps":
-            entries = [("user", row) for row in self.own_catalog.values()]
+            own_catalog = {**self.own_catalog, CRAFT_ID: CRAFT}
+            entries = [("user", row) for row in own_catalog.values()]
+            entries += [("image", row) for row in self.bundled.values()]
         else:
             entries = [(key[0], row) for key, row in self.installed.items()
                        if self.section != "Updates" or key in self.updates]
+        if self.section == "Installiert":
+            entries += [("image", row) for row in self.bundled.values()]
         query = self.search.text().casefold().strip()
         entries = [(scope, row) for scope, row in entries if query in " ".join(row).casefold()]
-        entries.sort(key=lambda entry: (entry[1][0] not in FEATURED, entry[1][1].casefold()))
+        entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
         for scope, row in entries[:150]:
             self.add_row(scope, row)
         if not entries:
@@ -482,24 +508,72 @@ class Store(QWidget):
             label.setTextFormat(Qt.TextFormat.PlainText)
             labels.addWidget(label)
         layout.addLayout(labels, 1)
-        installed = any(key[1] == app_id for key in self.installed)
-        details = QPushButton("Screenshots")
-        details.clicked.connect(lambda: self.details(scope, row))
-        layout.addWidget(details)
-        if self.section in ("Entdecken", "Eigene Apps"):
-            if installed:
-                layout.addWidget(QLabel("Installiert", objectName="muted"))
-            else:
-                self.action(layout, "Installieren", "install", scope, app_id, name)
-        elif self.section == "Updates":
-            self.action(layout, "Update", "update", scope, app_id, name)
+        installed_scope = next((candidate for candidate in ("user", "system")
+                                if (candidate, app_id) in self.installed), None)
+        if scope == "image":
+            layout.addWidget(QLabel("Teil von Creative OS", objectName="muted"))
+            button = QPushButton("Öffnen")
+            button.clicked.connect(lambda: self.open_system_app(app_id))
+            layout.addWidget(button)
         else:
-            self.action(layout, "Öffnen", "run", scope, app_id, name)
-            self.action(layout, "Entfernen", "uninstall", scope, app_id, name)
+            if app_id != CRAFT_ID:
+                details = QPushButton("Screenshots")
+                details.clicked.connect(lambda: self.details(scope, row))
+                layout.addWidget(details)
+            if self.section == "Eigene Apps" and installed_scope:
+                self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
+                self.action(layout, "Entfernen", "uninstall", installed_scope, app_id, name)
+            elif self.section in ("Entdecken", "Eigene Apps"):
+                if installed_scope:
+                    layout.addWidget(QLabel("Installiert", objectName="muted"))
+                else:
+                    self.action(layout, "Installieren", "install", scope, app_id, name)
+            elif self.section == "Updates":
+                self.action(layout, "Update", "update", scope, app_id, name)
+            else:
+                self.action(layout, "Öffnen", "run", scope, app_id, name)
+                self.action(layout, "Entfernen", "uninstall", scope, app_id, name)
         item = QListWidgetItem()
         item.setSizeHint(card.sizeHint())
         self.list.addItem(item)
         self.list.setItemWidget(item, card)
+
+    def open_system_app(self, app_id):
+        path = Path("/usr/share/applications") / f"{app_id}.desktop"
+        ok, _ = QProcess.startDetached("gio", ["launch", str(path)])
+        if not ok:
+            self.status.setText("Die System-App konnte nicht geöffnet werden.")
+
+    def download_craft(self, name):
+        try:
+            temp = tempfile.TemporaryDirectory(prefix="creative-craft-")
+        except OSError:
+            self.status.setText("Der temporäre Downloadordner konnte nicht erstellt werden.")
+            return
+        target = Path(temp.name) / "CreativeCraft.flatpak"
+        self.operation = "download"
+        self.status.setText("CreativeCraft · Download von GitHub …")
+        self.log.clear()
+        self.log.show()
+        self.render()
+
+        def done(code, _):
+            self.operation = None
+            if code == 0 and target.is_file() and target.stat().st_size:
+                self.transact(["install", "--user", "--noninteractive", "--assumeyes",
+                               "--bundle", str(target)], name, cleanup=temp.cleanup)
+            else:
+                temp.cleanup()
+                self.status.setText(f"CreativeCraft · Download fehlgeschlagen (Code {code})")
+                self.render()
+
+        self.command(["--fail", "--location", "--show-error", "--proto", "=https",
+                      "--proto-redir", "=https", "--connect-timeout", "15", "--output",
+                      str(target), CRAFT_URL], done, self.write_progress, program="curl")
+
+    def write_progress(self, output):
+        self.log.moveCursor(QTextCursor.MoveOperation.End)
+        self.log.insertPlainText(output.replace("\r", "\n"))
 
     def details(self, scope, row):
         dialog = AppDetails(self, row, scope)
@@ -585,13 +659,16 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
         message = f"{name} {target} {labels[verb]}?"
         if QMessageBox.question(self, "Creative Software", message) != QMessageBox.StandardButton.Yes:
             return
+        if verb == "install" and app_id == CRAFT_ID and self.section == "Eigene Apps":
+            self.download_craft(name)
+            return
         args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
         if verb == "install":
             args.append(OWN_REMOTE if self.section == "Eigene Apps" else "flathub")
         args.append(app_id)
         self.transact(args, name)
 
-    def transact(self, args, name):
+    def transact(self, args, name, cleanup=None):
         if self.operation:
             return
         self.operation = args[0]
@@ -600,11 +677,9 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
         self.log.show()
         self.render()
 
-        def progress(output):
-            self.log.moveCursor(QTextCursor.MoveOperation.End)
-            self.log.insertPlainText(output.replace("\r", "\n"))
-
         def done(code, _):
+            if cleanup:
+                cleanup()
             self.operation = None
             self.status.setText(f"{name} · " + ("Abgeschlossen" if code == 0 else f"Fehlgeschlagen (Code {code})"))
             self.render()
@@ -614,7 +689,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
                 else:
                     self.rescan = True
 
-        self.command(args, done, progress)
+        self.command(args, done, self.write_progress)
 
 
 def main():
