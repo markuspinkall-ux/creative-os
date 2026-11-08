@@ -139,6 +139,9 @@ COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
 COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
+# ChatGPT bündelt Web-Chat und die lokale Codex-Diagnose.
+RUN dnf install -y npm && dnf clean all
+COPY --chmod=755 chatgpt/creative-chatgpt /usr/bin/creative-chatgpt
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-gemini.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/gemini.svg /usr/share/icons/hicolor/scalable/apps/creative-gemini.svg
@@ -551,6 +554,8 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
     QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-pictures --selftest \
     || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home
+# Die lokale ChatGPT-Oberfläche startet auch ohne Codex-Anmeldung.
+RUN QT_QPA_PLATFORM=offscreen timeout 30 /usr/bin/creative-chatgpt --selftest
 # Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
