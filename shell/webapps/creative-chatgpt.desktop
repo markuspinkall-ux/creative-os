@@ -2,10 +2,10 @@
 Type=Application
 Name=ChatGPT
 GenericName=KI-Assistent
-Comment=ChatGPT als eigenes Fenster
+Comment=ChatGPT und lokale Systemdiagnose mit Codex
 Keywords=KI;AI;Assistent;Chat;OpenAI;
-Exec=creative-webapp https://chatgpt.com/
+Exec=creative-chatgpt
 Icon=creative-chatgpt
 Terminal=false
-Categories=Network;Office;
-StartupWMClass=brave-chatgpt.com__-Default
+Categories=Network;
+StartupWMClass=creative-chatgpt
