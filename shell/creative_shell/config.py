@@ -69,11 +69,6 @@ DEFAULTS = {
             "match": ["brave-claude.ai", "creative-claude"],
         },
         {
-            "icon": "gemini",
-            "candidates": ["creative-gemini.desktop"],
-            "match": ["brave-gemini.google.com", "creative-gemini"],
-        },
-        {
             "icon": "chatgpt",
             "candidates": ["creative-chatgpt.desktop"],
             "match": ["brave-chatgpt.com", "creative-chatgpt"],

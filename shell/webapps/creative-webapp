@@ -1,6 +1,6 @@
 #!/bin/sh
 # Öffnet eine Webseite als eigenes Fenster (ohne Adressleiste und Tabs),
-# z. B. Claude, Gemini oder ChatGPT. Anmeldungen bleiben im Brave-Profil
+# z. B. Claude oder ChatGPT. Anmeldungen bleiben im Brave-Profil
 # gespeichert, man ist also beim nächsten Öffnen noch angemeldet.
 url="$1"
 [ -n "$url" ] || exit 1

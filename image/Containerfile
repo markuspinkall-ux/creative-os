@@ -142,9 +142,8 @@ COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
 # ChatGPT bündelt Web-Chat und die lokale Codex-Diagnose.
 RUN dnf install -y npm && dnf clean all
 COPY --chmod=755 chatgpt/creative-chatgpt /usr/bin/creative-chatgpt
-COPY shell/webapps/creative-claude.desktop shell/webapps/creative-gemini.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
+COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
-COPY shell/creative_shell/qml/Creative/icons/gemini.svg /usr/share/icons/hicolor/scalable/apps/creative-gemini.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
 COPY shell/creative_shell/qml/Creative/icons/youtube.svg /usr/share/icons/hicolor/scalable/apps/creative-youtube.svg
 COPY shell/creative_shell/qml/Creative/icons/twitch.svg /usr/share/icons/hicolor/scalable/apps/creative-twitch.svg
