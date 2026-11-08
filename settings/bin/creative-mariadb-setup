@@ -28,7 +28,8 @@ def main():
             else:
                 cur.execute("CREATE USER %s@'localhost' IDENTIFIED VIA unix_socket", (name,))
             namespace = f"creative_{uid}_"
-            grant_pattern = namespace.replace("_", r"\_") + "%"
+            # PyMySQL reduces %% to a literal SQL wildcard when binding the username.
+            grant_pattern = namespace.replace("_", r"\_") + "%%"
             cur.execute(f"GRANT ALL ON `{grant_pattern}`.* TO %s@'localhost'", (name,))
             cur.execute(f"CREATE DATABASE IF NOT EXISTS `{namespace}db`")
 

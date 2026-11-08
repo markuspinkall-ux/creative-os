@@ -80,7 +80,9 @@ jobs:
           git diff --name-only -z "$revision" HEAD > "$RUNNER_TEMP/app-update-paths"
           while IFS= read -r -d '' path; do
             case "$path" in
-              art/*|writer/*|podcast/*|settings/creative_settings/*|theme/apps/creative-apps-sync) ;;
+              # Diese beiden Build-Dateien ändern das Grundsystem nicht.
+              .github/workflows/build.yml|image/install-app-update.sh) ;;
+              art/*|writer/*|podcast/*|settings/creative_settings/*|settings/bin/creative-mariadb-setup|theme/apps/creative-apps-sync) ;;
               *) echo "$path erfordert einen vollständigen Build."; exit 0 ;;
             esac
           done < "$RUNNER_TEMP/app-update-paths"
