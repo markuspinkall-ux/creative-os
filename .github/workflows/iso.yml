@@ -138,4 +138,21 @@ jobs:
             --notes "Kleine Installations-ISOs. Während der Installation wird Creative OS aus dem Internet geladen – eine Internetverbindung ist nötig.
           - **creative-os-amd-netinstall** – für AMD- oder Intel-Grafik (und für VirtualBox)
           - **creative-os-nvidia-netinstall** – für NVIDIA-Grafikkarten"
+      # Feste Links für die Webseite: Das Release „installer“ enthält immer die neueste ISO
+      # unter gleichbleibendem Namen (…/releases/download/installer/creative-os-<variante>.iso).
+      # --latest=false: Die normalen Freigaben bleiben „Latest“ – Updates sind davon nicht betroffen.
+      - name: Feste Download-Links für die Webseite aktualisieren
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for v in amd nvidia; do cp "creative-os-$v-netinstall-$DATE.iso" "creative-os-$v.iso"; done
+          if ! gh release view installer --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create installer --repo "${{ github.repository }}" --latest=false \
+              --title "Creative OS – Installation (immer aktuell)" \
+              --notes "Feste Download-Links für die Webseite. Die ISOs werden bei jedem Lauf von „Installations-ISO erstellen“ automatisch ersetzt.
+          - **creative-os-amd.iso** – für AMD- oder Intel-Grafik (und für VirtualBox)
+          - **creative-os-nvidia.iso** – für NVIDIA-Grafikkarten"
+          fi
+          gh release upload installer creative-os-amd.iso creative-os-nvidia.iso \
+            --clobber --repo "${{ github.repository }}"
 
