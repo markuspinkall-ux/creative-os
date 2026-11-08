@@ -490,7 +490,7 @@ def main():
         "trash": TrashModel(),
         "desktop": DesktopModel(),
         "assistant": AssistantClient(),
-        "trayApps": TrayItems(),
+        "trayApps": TrayItems(tasks),
         "desktopStats": DesktopStats(),
         "rssWidget": DesktopWidget("RSS"),
         "widgetExtras": WidgetExtras(),
