@@ -1,0 +1,6 @@
+ARG BASE
+FROM ${BASE}
+
+# Der feste Systemstand bleibt erhalten. Dieser Schritt erzeugt die App-Schicht.
+RUN --mount=type=bind,source=.,target=/src \
+    sh -eu /src/image/install-app-update.sh
