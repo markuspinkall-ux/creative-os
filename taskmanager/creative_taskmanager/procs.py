@@ -67,8 +67,6 @@ FRIENDLY = {
     "abrtd": "Fehlerberichte",
     "packagekitd": "Software-Dienst",
     "gnome-software": "Software (Hintergrund)",
-    "plasma-discover": "Software",
-    "DiscoverNotifier": "Update-Hinweise",
     "sshd": "Fernzugriff (SSH)",
     "flatpak-session-helper": "Flatpak",
 }

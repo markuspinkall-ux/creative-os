@@ -9,7 +9,7 @@ settings     preferences-system systemsettings org.kde.systemsettings creative-s
 browser      brave-browser com.brave.Browser firefox org.mozilla.firefox web-browser internet-web-browser
 games        steam steamwebhelper steam_icon_steam com.valvesoftware.Steam
 chat         discord com.discordapp.Discord
-store        org.gnome.Software gnome-software system-software-install plasmadiscover org.kde.discover
+store        system-software-install
 files        system-file-manager org.kde.dolphin creative-files
 player       multimedia-player creative-player
 archive      ark org.kde.ark utilities-file-archiver

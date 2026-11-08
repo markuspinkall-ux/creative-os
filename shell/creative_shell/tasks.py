@@ -29,7 +29,6 @@ WINDOW_ALIASES = {
     "brave-browser-stable": "brave-browser",
     "discord": "discord",
     "org.kde.kwrite": "org.kde.kwrite",
-    "plasma-discover": "org.kde.discover",
     "obs": "com.obsproject.studio",
     "brave-web.whatsapp.com__-default": "creative-whatsapp",
 }

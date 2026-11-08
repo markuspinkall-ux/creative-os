@@ -25,7 +25,6 @@ REBRAND = {
     "org.kde.ark": ("Entpacken", "creative-archive", "ZIP- und andere Archive öffnen und entpacken"),
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
     "org.kde.partitionmanager": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
-    "org.kde.discover": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),
     "org.gnome.Software": ("Software", "creative-store", "Programme installieren, aktualisieren und entfernen"),
     "org.kde.kwrite": ("Creative Notes", "creative-notes", "Texte und Code bearbeiten"),
     "org.kde.kate": ("Creative Notes", "creative-notes", "Texte und Code bearbeiten"),
