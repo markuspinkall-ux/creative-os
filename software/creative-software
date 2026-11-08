@@ -1,15 +1,22 @@
 #!/usr/bin/python3
 """Creative OS software center backed by Flatpak."""
 
+import gzip
+import os
+import platform
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
+from urllib.request import urlopen
+from xml.etree import ElementTree
 
-from PySide6.QtCore import QProcess, QStandardPaths, Qt
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import QProcess, QStandardPaths, Qt, QTimer
+from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QApplication, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout, QWidget,
 )
 
 DEMO = [
@@ -23,8 +30,11 @@ FEATURED = {row[0]: row for row in DEMO}
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """
 QWidget { background:#141720; color:#eaf0ff; font-size:14px; }
-QFrame#hero { background:#212638; border:1px solid #343c53; border-radius:16px; }
+QFrame#hero { background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #252643,stop:0.64 #243451,stop:1 #174249); border:1px solid #475576; border-radius:16px; }
 QFrame#hero QLabel, QFrame#card QLabel { background:transparent; }
+QFrame#spotlight { background:#252842; border:1px solid #404774; border-radius:12px; }
+QFrame#spotlight QLabel { background:transparent; }
+QLabel#gallery { background:#10131d; border:1px solid #30384a; border-radius:10px; }
 QFrame#card { background:#1d2230; border:1px solid #30384a; border-radius:11px; }
 QLabel#headline { font-size:30px; font-weight:700; }
 QLabel#eyebrow { color:#acafff; font-weight:700; }
@@ -52,12 +62,165 @@ def catalog_rows(output):
     return rows
 
 
+def appstream_paths(scope):
+    user_data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    roots = {"user": user_data / "flatpak", "system": Path("/var/lib/flatpak")}
+    for filename in ("appstream.xml", "appstream.xml.gz"):
+        yield roots[scope] / "appstream/flathub" / platform.machine() / "active" / filename
+
+
+def screenshot_urls(app_id, scope):
+    scopes = (scope, "system" if scope == "user" else "user")
+    for source in scopes:
+        for path in appstream_paths(source):
+            try:
+                opener = gzip.open if path.suffix == ".gz" else open
+                with opener(path, "rb") as stream:
+                    base = ""
+                    for event, node in ElementTree.iterparse(stream, events=("start", "end")):
+                        if event == "start" and node.tag == "components":
+                            base = node.get("media_baseurl", "")
+                        if event != "end" or node.tag != "component":
+                            continue
+                        if node.findtext("id") not in (app_id, app_id + ".desktop"):
+                            node.clear()
+                            continue
+                        shots = node.findall("./screenshots/screenshot")
+                        shots.sort(key=lambda shot: shot.get("type") != "default")
+                        urls = []
+                        for shot in shots:
+                            images = shot.findall("image")
+                            images.sort(key=lambda img: img.get("type") != "source")
+                            for img in images:
+                                url = urljoin(base.rstrip("/") + "/", (img.text or "").strip())
+                                parts = urlsplit(url)
+                                if parts.scheme == "https" and parts.hostname == "dl.flathub.org":
+                                    urls.append(url)
+                                    break
+                        if urls:
+                            return list(dict.fromkeys(urls))[:8]
+                        break
+            except (OSError, ValueError, ElementTree.ParseError):
+                continue
+    return []
+
+
+def download_screenshot(url):
+    limit = 8 * 1024 * 1024
+    with urlopen(url, timeout=7) as response:
+        payload = response.read(limit + 1)
+    if len(payload) > limit:
+        raise ValueError("Screenshot zu groß")
+    return payload
+
+
+class AppDetails(QDialog):
+    def __init__(self, parent, row, scope):
+        super().__init__(parent)
+        app_id, name, description = row
+        self.setWindowTitle(name)
+        self.resize(740, 540)
+        self.setMinimumSize(510, 410)
+        self.pool = ThreadPoolExecutor(max_workers=1)
+        self.urls = []
+        self.index = 0
+        self.original = QPixmap()
+        layout = QVBoxLayout(self)
+        heading = QLabel(name, objectName="headline")
+        heading.setTextFormat(Qt.TextFormat.PlainText)
+        layout.addWidget(heading)
+        info = QLabel(description or app_id, objectName="muted")
+        info.setTextFormat(Qt.TextFormat.PlainText)
+        info.setWordWrap(True)
+        layout.addWidget(info)
+        self.image = QLabel("Screenshots werden gesucht …", objectName="gallery")
+        self.image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image.setMinimumSize(460, 260)
+        self.image.setScaledContents(False)
+        self.image.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        layout.addWidget(self.image, 1)
+        controls = QHBoxLayout()
+        self.previous = QPushButton("‹ Zurück")
+        self.next = QPushButton("Weiter ›")
+        self.counter = QLabel("Screenshots · Flathub", objectName="muted")
+        controls.addWidget(self.previous)
+        controls.addWidget(self.counter)
+        controls.addWidget(self.next)
+        controls.addStretch()
+        close = QPushButton("Schließen")
+        close.clicked.connect(self.accept)
+        controls.addWidget(close)
+        layout.addLayout(controls)
+        self.previous.clicked.connect(lambda: self.show_shot(self.index - 1))
+        self.next.clicked.connect(lambda: self.show_shot(self.index + 1))
+        self.previous.setEnabled(False)
+        self.next.setEnabled(False)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.poll)
+        self.finished.connect(self.stop)
+        self.future = self.pool.submit(screenshot_urls, app_id, scope or "system")
+        self.callback = self.load_gallery
+        self.timer.start(50)
+
+    def stop(self):
+        self.timer.stop()
+        self.pool.shutdown(wait=False, cancel_futures=True)
+
+    def poll(self):
+        if not self.future.done():
+            return
+        self.timer.stop()
+        try:
+            value = self.future.result()
+        except (OSError, ValueError):
+            value = None
+        self.callback(value)
+
+    def load_gallery(self, urls):
+        self.urls = urls or []
+        if self.urls:
+            self.show_shot(0)
+        else:
+            self.image.setText("Für diese App sind keine Screenshots im lokalen Katalog verfügbar.")
+
+    def show_shot(self, index):
+        self.index = index
+        self.previous.setEnabled(False)
+        self.next.setEnabled(False)
+        self.counter.setText(f"{index + 1} / {len(self.urls)} · Flathub")
+        self.original = QPixmap()
+        self.image.setText("Screenshot wird geladen …")
+        self.future = self.pool.submit(download_screenshot, self.urls[index])
+        self.callback = self.image_loaded
+        self.timer.start(50)
+
+    def image_loaded(self, payload):
+        if payload and self.original.loadFromData(payload):
+            self.scale_image()
+        else:
+            self.image.setText("Screenshot konnte nicht geladen werden.")
+        self.previous.setEnabled(self.index > 0)
+        self.next.setEnabled(self.index + 1 < len(self.urls))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "image"):
+            self.scale_image()
+
+    def scale_image(self):
+        if not self.original.isNull():
+            self.image.setPixmap(self.original.scaled(
+                self.image.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            ))
+
+
 class Store(QWidget):
     def __init__(self, preview=False):
         super().__init__()
         self.preview = preview
         self.setWindowTitle("Creative Software")
-        self.resize(980, 620)
+        self.resize(980, 690)
         self.setMinimumSize(630, 480)
         self.setStyleSheet(STYLE)
         cache = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
@@ -98,6 +261,19 @@ class Store(QWidget):
         self.refresh.clicked.connect(self.scan)
         controls.addWidget(self.refresh)
         layout.addLayout(controls)
+
+        self.spotlight = QFrame(objectName="spotlight")
+        spotlight_layout = QHBoxLayout(self.spotlight)
+        spotlight_layout.setContentsMargins(16, 12, 16, 12)
+        spotlight_text = QVBoxLayout()
+        spotlight_text.addWidget(QLabel("IM FOKUS  ·  KREATIVITÄT", objectName="eyebrow"))
+        spotlight_text.addWidget(QLabel("Blender", objectName="appName"))
+        spotlight_text.addWidget(QLabel("Vom ersten Modell bis zum fertigen Rendering.", objectName="muted"))
+        spotlight_layout.addLayout(spotlight_text, 1)
+        spotlight_button = QPushButton("Screenshots ansehen")
+        spotlight_button.clicked.connect(lambda: self.details(self.remote_scope, FEATURED["org.blender.Blender"][:3]))
+        spotlight_layout.addWidget(spotlight_button)
+        layout.addWidget(self.spotlight)
 
         self.heading = QLabel()
         self.heading.setObjectName("eyebrow")
@@ -182,6 +358,8 @@ class Store(QWidget):
         if code == 0 and "flathub" in data.splitlines():
             self.remote_scope = scope
             self.render()
+            if not any(path.is_file() for path in appstream_paths(scope)):
+                self.command(["update", f"--{scope}", "--appstream", "flathub"], lambda *_: None)
             self.command(["remote-ls", f"--{scope}", "--app",
                           "--columns=application,name,description", "flathub"], self.catalog_loaded)
         elif scope == "user":
@@ -226,6 +404,8 @@ class Store(QWidget):
 
     def render(self):
         self.list.clear()
+        self.spotlight.setVisible(self.section == "Entdecken" and not self.search.text().strip()
+                                  and "org.blender.Blender" in self.catalog)
         self.heading.setText("ENTDECKEN   ·   FLATHUB" if self.section == "Entdecken" else self.section.upper())
         if self.section == "Entdecken":
             entries = [(self.remote_scope, row) for row in self.catalog.values()]
@@ -260,6 +440,9 @@ class Store(QWidget):
             labels.addWidget(label)
         layout.addLayout(labels, 1)
         installed = any(key[1] == app_id for key in self.installed)
+        details = QPushButton("Screenshots")
+        details.clicked.connect(lambda: self.details(scope, row))
+        layout.addWidget(details)
         if self.section == "Entdecken":
             if installed:
                 layout.addWidget(QLabel("Installiert", objectName="muted"))
@@ -274,6 +457,10 @@ class Store(QWidget):
         item.setSizeHint(card.sizeHint())
         self.list.addItem(item)
         self.list.setItemWidget(item, card)
+
+    def details(self, scope, row):
+        dialog = AppDetails(self, row, scope)
+        dialog.exec()
 
     def action(self, layout, label, verb, scope, app_id, name):
         button = QPushButton(label, objectName="primary" if verb in ("install", "update") else "")
