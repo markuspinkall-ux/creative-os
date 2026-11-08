@@ -98,6 +98,7 @@ RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc \
  && dnf clean all
 # Startseite und Graphit-Farbe, ohne Werbe-Extras (Rewards, Wallet, VPN …)
 COPY browser/startpage /usr/share/creative-os/startpage
+COPY browser/youtube-desktop-video /usr/share/creative-os/brave-extensions/youtube-desktop-video
 COPY browser/brave-policies.json /etc/brave/policies/managed/creative-os.json
 
 # ---------------------------------------------------------------------------

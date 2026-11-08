@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Creative OS – YouTube auf dem Desktop",
+  "version": "1.0.0",
+  "description": "Schickt das laufende YouTube-Video in ein verschiebbares Bild-in-Bild-Fenster.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["player.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
