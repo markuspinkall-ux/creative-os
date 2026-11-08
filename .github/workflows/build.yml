@@ -197,8 +197,8 @@ jobs:
           published="$image:$variant-${{ steps.names.outputs.date }}"
           sudo podman push "$published"
           if [ -n "$APP_BASE" ]; then
-            skopeo inspect --raw "docker://$APP_BASE" > "$RUNNER_TEMP/base.json"
-            skopeo inspect --raw "docker://$published" > "$RUNNER_TEMP/app-update.json"
+            sudo skopeo inspect --raw "docker://$APP_BASE" > "$RUNNER_TEMP/base.json"
+            sudo skopeo inspect --raw "docker://$published" > "$RUNNER_TEMP/app-update.json"
             python3 - "$RUNNER_TEMP" <<'PYTHON'
           import json
           import sys
@@ -229,7 +229,7 @@ jobs:
         run: |
           image="${{ steps.names.outputs.image }}"
           variant="${{ matrix.variant }}"
-          skopeo inspect --raw "docker://${image}:${variant}-${{ steps.names.outputs.date }}" > "$RUNNER_TEMP/current.json"
+          sudo skopeo inspect --raw "docker://${image}:${variant}-${{ steps.names.outputs.date }}" > "$RUNNER_TEMP/current.json"
           python3 - "$RUNNER_TEMP" "$variant" >> "$GITHUB_STEP_SUMMARY" <<'PY'
           import json
           import sys
