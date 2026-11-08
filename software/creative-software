@@ -29,7 +29,8 @@ DEMO = [
 ]
 FEATURED = {row[0]: row for row in DEMO}
 CRAFT_ID = "org.creativecraft.CreativeCraft"
-CRAFT = (CRAFT_ID, "CreativeCraft", "Voxel-Sandbox mit Bauen, Crafting und Erkundung")
+CRAFT = (CRAFT_ID, "CreativeCraft", "Sandbox-Survival in einer Blockwelt: erkunden, Ressourcen sammeln, craften und bauen.")
+CRAFT_SCREENSHOT = Path("/usr/share/creative-os/software/creativecraft-screenshot.jpg")
 CRAFT_URL = "https://github.com/markuspinkall-ux/voxelklon/releases/download/latest/CreativeCraft.flatpak"
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
@@ -156,19 +157,6 @@ class AppDetails(QDialog):
         close.clicked.connect(self.accept)
         controls.addWidget(close)
         layout.addLayout(controls)
-        imports = QHBoxLayout()
-        for label, handler in (
-            ("Paket öffnen", self.open_package),
-            ("Flatpak-Link öffnen", self.open_ref),
-        ):
-            button = QPushButton(label)
-            button.clicked.connect(handler)
-            imports.addWidget(button)
-        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
-        self.add_source.clicked.connect(self.add_catalog)
-        imports.addWidget(self.add_source)
-        imports.addStretch()
-        layout.addLayout(imports)
         self.previous.clicked.connect(lambda: self.show_shot(self.index - 1))
         self.next.clicked.connect(lambda: self.show_shot(self.index + 1))
         self.previous.setEnabled(False)
@@ -176,6 +164,19 @@ class AppDetails(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.finished.connect(self.stop)
+        if app_id == CRAFT_ID:
+            self.previous.hide()
+            self.next.hide()
+            self.counter.setText("1 / 1 · Gameplay")
+            screenshot = CRAFT_SCREENSHOT
+            if not screenshot.is_file():
+                screenshot = Path(__file__).with_name(screenshot.name)
+            self.original.load(str(screenshot))
+            if self.original.isNull():
+                self.image.setText("Screenshot konnte nicht geladen werden.")
+            else:
+                self.scale_image()
+            return
         self.future = self.pool.submit(screenshot_urls, app_id, scope or "system")
         self.callback = self.load_gallery
         self.timer.start(50)
@@ -282,6 +283,20 @@ class Store(QWidget):
         self.refresh.clicked.connect(self.scan)
         controls.addWidget(self.refresh)
         layout.addLayout(controls)
+
+        imports = QHBoxLayout()
+        for label, handler in (
+            ("Paket öffnen", self.open_package),
+            ("Flatpak-Link öffnen", self.open_ref),
+        ):
+            button = QPushButton(label)
+            button.clicked.connect(handler)
+            imports.addWidget(button)
+        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
+        self.add_source.clicked.connect(self.add_catalog)
+        imports.addWidget(self.add_source)
+        imports.addStretch()
+        layout.addLayout(imports)
 
         self.spotlight = QFrame(objectName="spotlight")
         spotlight_layout = QHBoxLayout(self.spotlight)
@@ -489,10 +504,9 @@ class Store(QWidget):
         layout.addLayout(labels, 1)
         installed_scope = next((candidate for candidate in ("user", "system")
                                 if (candidate, app_id) in self.installed), None)
-        if app_id != CRAFT_ID:
-            details = QPushButton("Screenshots")
-            details.clicked.connect(lambda: self.details(scope, row))
-            layout.addWidget(details)
+        details = QPushButton("Screenshot" if app_id == CRAFT_ID else "Screenshots")
+        details.clicked.connect(lambda: self.details(scope, row))
+        layout.addWidget(details)
         if self.section == "Eigene Apps" and installed_scope:
             self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
             if app_id == CRAFT_ID or (installed_scope, app_id) in self.updates:
@@ -669,6 +683,9 @@ def main():
     window = Store(preview or "--selftest" in sys.argv)
     if "--selftest" in sys.argv:
         assert window.list.count() == len(DEMO)
+        details = AppDetails(window, CRAFT, "user")
+        assert not details.original.isNull()
+        details.accept()
         return 0
     if "--updates" in sys.argv:
         window.select("Updates")
