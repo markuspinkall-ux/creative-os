@@ -1,6 +1,6 @@
 [Unit]
 Description=Creative OS graphical session
-Wants=graphical-session.target
+Wants=graphical-session.target creative-drive.service
 After=graphical-session.target
 
 [Service]
