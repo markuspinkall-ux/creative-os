@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 """Creative OS software center backed by Flatpak."""
 
+import configparser
 import gzip
 import os
 import platform
 import re
 import sys
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -15,7 +17,7 @@ from xml.etree import ElementTree
 from PySide6.QtCore import QProcess, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -27,6 +29,10 @@ DEMO = [
     ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", "#8fc6af"),
 ]
 FEATURED = {row[0]: row for row in DEMO}
+CRAFT_ID = "org.creativecraft.CreativeCraft"
+CRAFT = (CRAFT_ID, "CreativeCraft", "Voxel-Sandbox mit Bauen, Crafting und Erkundung")
+CRAFT_URL = "https://github.com/markuspinkall-ux/voxelklon/releases/download/latest/CreativeCraft.flatpak"
+OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """
 QWidget { background:#141720; color:#eaf0ff; font-size:14px; }
@@ -60,6 +66,22 @@ def catalog_rows(output):
             description = fields[2] if len(fields) > 2 else ""
             rows[app_id] = (app_id, name or app_id, description)
     return rows
+
+
+def system_apps(directory=Path("/usr/share/applications")):
+    apps = {}
+    for path in directory.glob("creative-*.desktop"):
+        config = configparser.ConfigParser(interpolation=None, strict=False)
+        try:
+            config.read(path, encoding="utf-8")
+            entry = config["Desktop Entry"]
+            if (entry.get("Type") != "Application" or not entry.get("Exec")
+                    or entry.getboolean("Hidden", False) or entry.getboolean("NoDisplay", False)):
+                continue
+            apps[path.stem] = (path.stem, entry["Name"], entry.get("Comment", "Creative OS"))
+        except (OSError, ValueError, KeyError, configparser.Error):
+            continue
+    return apps
 
 
 def appstream_paths(scope):
@@ -151,6 +173,19 @@ class AppDetails(QDialog):
         close.clicked.connect(self.accept)
         controls.addWidget(close)
         layout.addLayout(controls)
+        imports = QHBoxLayout()
+        for label, handler in (
+            ("Paket öffnen", self.open_package),
+            ("Flatpak-Link öffnen", self.open_ref),
+        ):
+            button = QPushButton(label)
+            button.clicked.connect(handler)
+            imports.addWidget(button)
+        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
+        self.add_source.clicked.connect(self.add_catalog)
+        imports.addWidget(self.add_source)
+        imports.addStretch()
+        layout.addLayout(imports)
         self.previous.clicked.connect(lambda: self.show_shot(self.index - 1))
         self.next.clicked.connect(lambda: self.show_shot(self.index + 1))
         self.previous.setEnabled(False)
@@ -226,11 +261,15 @@ class Store(QWidget):
         cache = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
         self.cache = Path(cache) / "flathub.tsv"
         self.catalog = {r[0]: r[:3] for r in DEMO} if preview else self.read_cache()
+        self.own_catalog = {}
+        self.bundled = {} if preview else system_apps()
+        self.own_remote = False
         self.installed = {}
         self.updates = set()
         self.remote_scope = None
         self.section = "Entdecken"
         self.operation = None
+        self.rescan = False
         self.processes = set()
         self.loaded_scopes = set()
 
@@ -247,7 +286,7 @@ class Store(QWidget):
         layout.addWidget(hero)
         controls = QHBoxLayout()
         self.tabs = {}
-        for section in ("Entdecken", "Installiert", "Updates"):
+        for section in ("Entdecken", "Eigene Apps", "Installiert", "Updates"):
             button = QPushButton(section, checkable=True)
             button.clicked.connect(lambda _, value=section: self.select(value))
             controls.addWidget(button)
@@ -308,7 +347,7 @@ class Store(QWidget):
         except OSError:
             return {}
 
-    def command(self, args, done, progress=None):
+    def command(self, args, done, progress=None, program="flatpak"):
         proc = QProcess(self)
         self.processes.add(proc)
         proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
@@ -334,7 +373,7 @@ class Store(QWidget):
         proc.errorOccurred.connect(
             lambda error: finish(127) if error == QProcess.ProcessError.FailedToStart else None
         )
-        proc.start("flatpak", args)
+        proc.start(program, args)
 
     def scan(self):
         if self.preview or self.operation or not self.refresh.isEnabled():
@@ -344,8 +383,26 @@ class Store(QWidget):
         for scope in ("user", "system"):
             self.command(["list", f"--{scope}", "--app", "--columns=application,name,origin"],
                          lambda code, data, s=scope: self.installed_loaded(s, code, data))
-        self.command(["remotes", "--user", "--columns=name"],
-                     lambda code, data: self.find_remote("user", code, data))
+        for scope in ("user", "system"):
+            self.command(["remote-ls", f"--{scope}", "--updates", "--app", "--columns=application"],
+                         lambda result, rows, s=scope: self.updates_loaded(s, result, rows))
+        self.command(["remotes", "--user", "--columns=name"], self.user_remotes_loaded)
+
+    def user_remotes_loaded(self, code, data):
+        self.find_remote("user", code, data)
+        self.own_remote = code == 0 and OWN_REMOTE in data.splitlines()
+        self.add_source.setEnabled(not self.own_remote)
+        if self.own_remote:
+            self.command(["remote-ls", "--user", "--app", "--columns=application,name,description",
+                          OWN_REMOTE], self.own_catalog_loaded)
+        elif code == 0:
+            self.own_catalog = {}
+        self.render()
+
+    def own_catalog_loaded(self, code, data):
+        if code == 0:
+            self.own_catalog = catalog_rows(data)
+        self.render()
 
     def installed_loaded(self, scope, code, data):
         if code == 0:
@@ -368,7 +425,7 @@ class Store(QWidget):
         else:
             self.remote_scope = None
             self.status.setText("Flathub ist nicht erreichbar oder in Flatpak nicht eingerichtet.")
-            self.refresh.setEnabled(True)
+            self.scan_finished()
             self.render()
 
     def catalog_loaded(self, code, data):
@@ -384,10 +441,13 @@ class Store(QWidget):
         if not self.operation:
             self.status.setText("Flathub · Katalog bereit" if code == 0 else "Flathub · Gespeicherter Katalog")
         self.render()
-        for scope in ("user", "system"):
-            self.command(["remote-ls", f"--{scope}", "--updates", "--app", "--columns=application"],
-                         lambda result, rows, s=scope: self.updates_loaded(s, result, rows))
+        self.scan_finished()
+
+    def scan_finished(self):
         self.refresh.setEnabled(True)
+        if self.rescan and not self.operation:
+            self.rescan = False
+            self.scan()
 
     def updates_loaded(self, scope, code, data):
         if code == 0:
@@ -409,16 +469,25 @@ class Store(QWidget):
         self.heading.setText("ENTDECKEN   ·   FLATHUB" if self.section == "Entdecken" else self.section.upper())
         if self.section == "Entdecken":
             entries = [(self.remote_scope, row) for row in self.catalog.values()]
+        elif self.section == "Eigene Apps":
+            own_catalog = {**self.own_catalog, CRAFT_ID: CRAFT}
+            entries = [("user", row) for row in own_catalog.values()]
+            entries += [("image", row) for row in self.bundled.values()]
         else:
             entries = [(key[0], row) for key, row in self.installed.items()
                        if self.section != "Updates" or key in self.updates]
+        if self.section == "Installiert":
+            entries += [("image", row) for row in self.bundled.values()]
         query = self.search.text().casefold().strip()
         entries = [(scope, row) for scope, row in entries if query in " ".join(row).casefold()]
-        entries.sort(key=lambda entry: (entry[1][0] not in FEATURED, entry[1][1].casefold()))
+        entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
         for scope, row in entries[:150]:
             self.add_row(scope, row)
         if not entries:
-            self.list.addItem("Keine passenden Apps. Verwende die Suche oder aktualisiere den Katalog.")
+            if self.section == "Eigene Apps" and not self.own_remote:
+                self.list.addItem("Füge einen signierten Flatpak-Katalog hinzu, um deine Apps hier anzubieten.")
+            else:
+                self.list.addItem("Keine passenden Apps. Verwende die Suche oder aktualisiere den Katalog.")
 
     def add_row(self, scope, row):
         app_id, name, description = row
@@ -439,24 +508,72 @@ class Store(QWidget):
             label.setTextFormat(Qt.TextFormat.PlainText)
             labels.addWidget(label)
         layout.addLayout(labels, 1)
-        installed = any(key[1] == app_id for key in self.installed)
-        details = QPushButton("Screenshots")
-        details.clicked.connect(lambda: self.details(scope, row))
-        layout.addWidget(details)
-        if self.section == "Entdecken":
-            if installed:
-                layout.addWidget(QLabel("Installiert", objectName="muted"))
-            else:
-                self.action(layout, "Installieren", "install", scope, app_id, name)
-        elif self.section == "Updates":
-            self.action(layout, "Update", "update", scope, app_id, name)
+        installed_scope = next((candidate for candidate in ("user", "system")
+                                if (candidate, app_id) in self.installed), None)
+        if scope == "image":
+            layout.addWidget(QLabel("Teil von Creative OS", objectName="muted"))
+            button = QPushButton("Öffnen")
+            button.clicked.connect(lambda: self.open_system_app(app_id))
+            layout.addWidget(button)
         else:
-            self.action(layout, "Öffnen", "run", scope, app_id, name)
-            self.action(layout, "Entfernen", "uninstall", scope, app_id, name)
+            if app_id != CRAFT_ID:
+                details = QPushButton("Screenshots")
+                details.clicked.connect(lambda: self.details(scope, row))
+                layout.addWidget(details)
+            if self.section == "Eigene Apps" and installed_scope:
+                self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
+                self.action(layout, "Entfernen", "uninstall", installed_scope, app_id, name)
+            elif self.section in ("Entdecken", "Eigene Apps"):
+                if installed_scope:
+                    layout.addWidget(QLabel("Installiert", objectName="muted"))
+                else:
+                    self.action(layout, "Installieren", "install", scope, app_id, name)
+            elif self.section == "Updates":
+                self.action(layout, "Update", "update", scope, app_id, name)
+            else:
+                self.action(layout, "Öffnen", "run", scope, app_id, name)
+                self.action(layout, "Entfernen", "uninstall", scope, app_id, name)
         item = QListWidgetItem()
         item.setSizeHint(card.sizeHint())
         self.list.addItem(item)
         self.list.setItemWidget(item, card)
+
+    def open_system_app(self, app_id):
+        path = Path("/usr/share/applications") / f"{app_id}.desktop"
+        ok, _ = QProcess.startDetached("gio", ["launch", str(path)])
+        if not ok:
+            self.status.setText("Die System-App konnte nicht geöffnet werden.")
+
+    def download_craft(self, name):
+        try:
+            temp = tempfile.TemporaryDirectory(prefix="creative-craft-")
+        except OSError:
+            self.status.setText("Der temporäre Downloadordner konnte nicht erstellt werden.")
+            return
+        target = Path(temp.name) / "CreativeCraft.flatpak"
+        self.operation = "download"
+        self.status.setText("CreativeCraft · Download von GitHub …")
+        self.log.clear()
+        self.log.show()
+        self.render()
+
+        def done(code, _):
+            self.operation = None
+            if code == 0 and target.is_file() and target.stat().st_size:
+                self.transact(["install", "--user", "--noninteractive", "--assumeyes",
+                               "--bundle", str(target)], name, cleanup=temp.cleanup)
+            else:
+                temp.cleanup()
+                self.status.setText(f"CreativeCraft · Download fehlgeschlagen (Code {code})")
+                self.render()
+
+        self.command(["--fail", "--location", "--show-error", "--proto", "=https",
+                      "--proto-redir", "=https", "--connect-timeout", "15", "--output",
+                      str(target), CRAFT_URL], done, self.write_progress, program="curl")
+
+    def write_progress(self, output):
+        self.log.moveCursor(QTextCursor.MoveOperation.End)
+        self.log.insertPlainText(output.replace("\r", "\n"))
 
     def details(self, scope, row):
         dialog = AppDetails(self, row, scope)
@@ -471,6 +588,64 @@ class Store(QWidget):
         button.clicked.connect(lambda: self.apply(verb, scope, app_id, name))
         layout.addWidget(button)
 
+    def open_package(self):
+        if self.preview or self.operation:
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Flatpak-Paket öffnen", "", "Flatpak-Dateien (*.flatpak *.flatpakref)"
+        )
+        if not path:
+            return
+        flag = {"flatpak": "--bundle", "flatpakref": "--from"}.get(Path(path).suffix.lstrip(".").lower())
+        if flag:
+            self.import_package(path, flag, Path(path).name)
+
+    def open_ref(self):
+        if self.preview or self.operation:
+            return
+        url = self.ask_url("Flatpak-Link öffnen", ".flatpakref")
+        if url:
+            self.import_package(url, "--from", url)
+
+    def ask_url(self, title, suffix):
+        value, accepted = QInputDialog.getText(self, title, f"HTTPS-Link zu einer {suffix}-Datei:")
+        if not accepted:
+            return None
+        url = value.strip()
+        try:
+            parts = urlsplit(url)
+            if (parts.scheme == "https" and parts.hostname and not parts.username
+                    and not parts.password and parts.path.lower().endswith(suffix)):
+                return url
+        except ValueError:
+            pass
+        QMessageBox.warning(self, title, f"Bitte gib einen gültigen HTTPS-Link zu einer {suffix}-Datei ein.")
+        return None
+
+    def import_package(self, source, flag, name):
+        question = f"""Dieses Paket für dein Benutzerkonto installieren?
+
+{name}
+
+Verwende nur Quellen, denen du vertraust."""
+        if QMessageBox.question(self, "Paket installieren", question) == QMessageBox.StandardButton.Yes:
+            self.transact(["install", "--user", "--noninteractive", "--assumeyes", flag, source], name)
+
+    def add_catalog(self):
+        if self.preview or self.operation or self.own_remote:
+            return
+        url = self.ask_url("Eigenen Katalog hinzufügen", ".flatpakrepo")
+        if not url:
+            return
+        question = f"""Diese Quelle als eigenen Katalog hinzufügen?
+
+{url}
+
+Vertraue der Quelle nur, wenn du den Betreiber kennst."""
+        if QMessageBox.question(self, "Eigene Apps", question) == QMessageBox.StandardButton.Yes:
+            self.transact(["remote-add", "--user", "--if-not-exists", OWN_REMOTE, url], "Eigene Apps")
+            self.select("Eigene Apps")
+
     def apply(self, verb, scope, app_id, name):
         if self.preview or self.operation or scope not in ("user", "system"):
             return
@@ -484,28 +659,37 @@ class Store(QWidget):
         message = f"{name} {target} {labels[verb]}?"
         if QMessageBox.question(self, "Creative Software", message) != QMessageBox.StandardButton.Yes:
             return
-        self.operation = verb
+        if verb == "install" and app_id == CRAFT_ID and self.section == "Eigene Apps":
+            self.download_craft(name)
+            return
+        args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
+        if verb == "install":
+            args.append(OWN_REMOTE if self.section == "Eigene Apps" else "flathub")
+        args.append(app_id)
+        self.transact(args, name)
+
+    def transact(self, args, name, cleanup=None):
+        if self.operation:
+            return
+        self.operation = args[0]
         self.status.setText(f"{name} · Flatpak-Auftrag gestartet …")
         self.log.clear()
         self.log.show()
         self.render()
-        args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
-        if verb == "install":
-            args.append("flathub")
-        args.append(app_id)
-
-        def progress(output):
-            self.log.moveCursor(QTextCursor.MoveOperation.End)
-            self.log.insertPlainText(output.replace("\r", "\n"))
 
         def done(code, _):
+            if cleanup:
+                cleanup()
             self.operation = None
             self.status.setText(f"{name} · " + ("Abgeschlossen" if code == 0 else f"Fehlgeschlagen (Code {code})"))
             self.render()
             if code == 0:
-                self.scan()
+                if self.refresh.isEnabled():
+                    self.scan()
+                else:
+                    self.rescan = True
 
-        self.command(args, done, progress)
+        self.command(args, done, self.write_progress)
 
 
 def main():
