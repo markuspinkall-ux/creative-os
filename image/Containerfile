@@ -102,12 +102,11 @@ COPY browser/youtube-desktop-video /usr/share/creative-os/brave-extensions/youtu
 COPY browser/brave-policies.json /etc/brave/policies/managed/creative-os.json
 
 # ---------------------------------------------------------------------------
-# 6) App-Shop „Software“: KDE Discover (Qt → gleiche Titelleiste wie alle Fenster),
-#    mit Updates für Creative OS (rpm-ostree) und Flathub ab Werk
+# 6) Creative Software: Flatpak und Flathub ab Werk
 # ---------------------------------------------------------------------------
-RUN dnf install -y --skip-unavailable plasma-discover plasma-discover-flatpak plasma-discover-rpm-ostree \
-        plasma-discover-notifier \
- && (rpm -q gnome-software >/dev/null 2>&1 && dnf remove -y gnome-software gnome-software-rpm-ostree >/dev/null 2>&1 || true) \
+RUN dnf install -y flatpak \
+ && shops="$(rpm -qa --qf '%{NAME}\n' | awk '/^(plasma-discover|gnome-software)(-|$)/')" \
+ && if [ -n "$shops" ]; then dnf remove -y --setopt=clean_requirements_on_remove=False $shops; fi \
  && mkdir -p /etc/flatpak/remotes.d \
  && curl -fsSLo /etc/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo \
  && dnf clean all

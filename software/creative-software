@@ -517,6 +517,8 @@ def main():
     if "--selftest" in sys.argv:
         assert window.list.count() == len(DEMO)
         return 0
+    if "--updates" in sys.argv:
+        window.select("Updates")
     window.show()
     if preview:
         app.processEvents()

@@ -114,7 +114,7 @@ SettingsPage {
                 { app: "Unterbau", base: "Fedora Kinoite (Fedora-Projekt)" },
                 { app: "Fenster, Anmeldung, Sitzung", base: "KDE Plasma: KWin, SDDM, KDE Frameworks" },
                 { app: "Oberflächen der Creative-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
-                { app: "Software", base: "Discover (KDE) und Flathub" },
+                { app: "Creative Software", base: "Flatpak und Flathub" },
                 { app: "Terminal", base: "Konsole (KDE)" },
                 { app: "Entpacken", base: "Ark (KDE)" },
                 { app: "Laufwerke", base: "UDisks, exfatprogs, ntfsprogs" },
