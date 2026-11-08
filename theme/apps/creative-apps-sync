@@ -43,6 +43,7 @@ VISIBLE = {
     "steam.desktop": ("Steam", "creative-games"),
     "discord.desktop": ("Discord", "creative-chat"),
     "org.kde.discover.desktop": ("Software", "creative-store"),
+    "creative-software.desktop": (None, None),
     "org.gnome.Software.desktop": ("Software", "creative-store"),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
     "creative-notes.desktop": ("Creative Notes", "creative-notes"),

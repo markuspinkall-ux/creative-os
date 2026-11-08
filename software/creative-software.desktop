@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Software
+GenericName=Softwareverwaltung
+Comment=Apps von Flathub suchen, installieren und aktualisieren
+Exec=creative-software
+Icon=creative-store
+Terminal=false
+Categories=Settings;PackageManager;

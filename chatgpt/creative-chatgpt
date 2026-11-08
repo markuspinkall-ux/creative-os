@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative OS entry point for ChatGPT and local Codex diagnostics."""
+"""Creative OS entry point for web chat and local diagnostics."""
 
 import shutil
 import sys
@@ -11,8 +11,15 @@ from PySide6.QtWidgets import (
     QApplication, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
 )
 
-DOCS = "https://developers.openai.com/codex/cli"
-PREFIX = Path.home() / ".local/share/creative-chatgpt"
+CLAUDE = Path(sys.argv[0]).name == "creative-claude"
+APP_NAME = "Claude" if CLAUDE else "ChatGPT"
+CLI_NAME = "Claude Code" if CLAUDE else "Codex"
+COMMAND = "claude" if CLAUDE else "codex"
+PACKAGE = "@anthropic-ai/claude-code" if CLAUDE else "@openai/codex"
+DESKTOP_ID = "creative-claude" if CLAUDE else "creative-chatgpt"
+WEB = "https://claude.ai/" if CLAUDE else "https://chatgpt.com/"
+DOCS = "https://code.claude.com/docs/en/setup" if CLAUDE else "https://developers.openai.com/codex/cli"
+PREFIX = Path.home() / ".local/share" / DESKTOP_ID
 PROMPT = (
     "Hilf mir bei der Fehlersuche auf diesem Creative-OS-Rechner. "
     "Frag zuerst nach dem Problem. Prüfe danach bei Bedarf lokale Dienste, "
@@ -21,18 +28,18 @@ PROMPT = (
 )
 
 
-class ChatGPTWindow(QWidget):
+class AssistantWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ChatGPT")
+        self.setWindowTitle(APP_NAME)
         self.setMinimumWidth(520)
         layout = QVBoxLayout(self)
-        title = QLabel("<h2>ChatGPT für Creative OS</h2>")
+        title = QLabel(f"<h2>{APP_NAME} für Creative OS</h2>")
         layout.addWidget(title)
         intro = QLabel(
-            "Öffne deinen ChatGPT-Verlauf oder starte eine lokale Codex-Sitzung "
-            "zur Fehlersuche. Beim ersten Start von Codex kannst du dich mit "
-            "deinem ChatGPT-Konto anmelden."
+            f"Öffne den {APP_NAME}-Webchat oder starte {CLI_NAME} lokal "
+            "zur Fehlersuche. Beim ersten Start kannst du dich mit "
+            f"deinem {APP_NAME}-Konto anmelden."
         )
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -41,12 +48,12 @@ class ChatGPTWindow(QWidget):
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
 
-        self.add_button(layout, "ChatGPT öffnen", self.open_chat)
+        self.add_button(layout, f"{APP_NAME} öffnen", self.open_chat)
         self.add_button(layout, "Lokale Systemdiagnose starten", self.diagnose)
-        self.add_button(layout, "Codex mit vollem Benutzerzugriff starten", self.full_access)
-        self.add_button(layout, "Codex installieren", self.install)
+        self.add_button(layout, f"{CLI_NAME} mit vollem Benutzerzugriff starten", self.full_access)
+        self.add_button(layout, f"{CLI_NAME} installieren", self.install)
         self.add_button(
-            layout, "Codex-Dokumentation öffnen",
+            layout, f"{CLI_NAME}-Dokumentation öffnen",
             lambda: QDesktopServices.openUrl(QUrl(DOCS)),
         )
 
@@ -66,18 +73,18 @@ class ChatGPTWindow(QWidget):
             self.refresh_status()
 
     @staticmethod
-    def codex():
-        for candidate in (PREFIX / "bin/codex", Path.home() / ".local/bin/codex"):
+    def executable():
+        for candidate in (PREFIX / "bin" / COMMAND, Path.home() / ".local/bin" / COMMAND):
             if candidate.is_file():
                 executable = shutil.which(str(candidate))
                 if executable:
                     return executable
-        return shutil.which("codex")
+        return shutil.which(COMMAND)
 
     def refresh_status(self):
         self.status.setText(
-            "Codex ist installiert." if self.codex()
-            else "Für die lokale Diagnose muss Codex zuerst installiert werden."
+            f"{CLI_NAME} ist installiert." if self.executable()
+            else f"Für die lokale Diagnose muss {CLI_NAME} zuerst installiert werden."
         )
 
     def terminal(self, command):
@@ -85,53 +92,60 @@ class ChatGPTWindow(QWidget):
             "konsole", ["--hold", "-e", *command], str(Path.home())
         )
         if not started:
-            QMessageBox.warning(self, "ChatGPT", "Konsole konnte nicht geöffnet werden.")
+            QMessageBox.warning(self, APP_NAME, "Konsole konnte nicht geöffnet werden.")
 
     def open_chat(self):
-        started, _ = QProcess.startDetached("creative-webapp", ["https://chatgpt.com/"])
+        started, _ = QProcess.startDetached("creative-webapp", [WEB])
         if not started:
-            QDesktopServices.openUrl(QUrl("https://chatgpt.com/"))
+            QDesktopServices.openUrl(QUrl(WEB))
 
     def install(self):
-        if self.codex():
+        if self.executable():
             self.refresh_status()
             return
         if not shutil.which("npm"):
-            QMessageBox.warning(self, "ChatGPT", "npm fehlt. Siehe Codex-Dokumentation zur Installation.")
+            QMessageBox.warning(self, APP_NAME, f"npm fehlt. Siehe {CLI_NAME}-Dokumentation zur Installation.")
             return
-        self.terminal(["npm", "install", "--global", "--prefix", str(PREFIX), "@openai/codex"])
+        self.terminal(["npm", "install", "--global", "--prefix", str(PREFIX), PACKAGE])
 
-    def launch_codex(self, mode):
-        executable = self.codex()
+    def launch_local(self, full_access=False):
+        executable = self.executable()
         if not executable:
             self.refresh_status()
-            QMessageBox.information(self, "ChatGPT", "Klicke zuerst auf „Codex installieren“.")
+            QMessageBox.information(self, APP_NAME, f"Klicke zuerst auf „{CLI_NAME} installieren“.")
             return
-        self.terminal([executable, "--sandbox", mode, "--ask-for-approval", "on-request", PROMPT])
+        if CLAUDE:
+            mode = "bypassPermissions" if full_access else "default"
+            flags = ["--permission-mode", mode]
+        else:
+            mode = "danger-full-access" if full_access else "read-only"
+            flags = ["--sandbox", mode, "--ask-for-approval", "on-request"]
+        self.terminal([executable, *flags, PROMPT])
 
     def diagnose(self):
-        self.launch_codex("read-only")
+        self.launch_local()
 
     def full_access(self):
         answer = QMessageBox.question(
             self, "Vollen Benutzerzugriff erlauben?",
-            "Codex kann in dieser Sitzung alle Dateien lesen und ändern, auf die dein "
+            f"{CLI_NAME} kann in dieser Sitzung alle Dateien lesen und ändern, auf die dein "
             "Benutzerkonto Zugriff hat, und lokale Befehle ausführen. "
-            "Administratorrechte erfordern eine separate Freigabe durch das System.",
+            "Administratorrechte erfordern eine separate Freigabe durch das System."
+            + (" Claude fragt in diesem Modus nicht vor Werkzeugaufrufen." if CLAUDE else ""),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
         if answer == QMessageBox.StandardButton.Yes:
-            self.launch_codex("danger-full-access")
+            self.launch_local(full_access=True)
 
 
 def main():
     app = QApplication(sys.argv)
-    app.setDesktopFileName("creative-chatgpt")
-    app.setWindowIcon(QIcon.fromTheme("creative-chatgpt"))
-    window = ChatGPTWindow()
+    app.setDesktopFileName(DESKTOP_ID)
+    app.setWindowIcon(QIcon.fromTheme(DESKTOP_ID))
+    window = AssistantWindow()
     if "--selftest" in sys.argv:
-        assert window.windowTitle() == "ChatGPT"
+        assert window.windowTitle() == APP_NAME
         return 0
     window.show()
     return app.exec()

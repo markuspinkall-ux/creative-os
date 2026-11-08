@@ -143,6 +143,9 @@ COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
 # ChatGPT bündelt Web-Chat und die lokale Codex-Diagnose.
 RUN dnf install -y npm && dnf clean all
 COPY --chmod=755 chatgpt/creative-chatgpt /usr/bin/creative-chatgpt
+RUN ln -s creative-chatgpt /usr/bin/creative-claude
+COPY --chmod=755 software/creative-software /usr/bin/creative-software
+COPY software/creative-software.desktop /usr/share/applications/creative-software.desktop
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
