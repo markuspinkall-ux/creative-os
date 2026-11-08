@@ -115,7 +115,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Creative Art, Writer und Podcast im fertigen Abbild prüfen
+      - name: Creative Art, Writer, ChatGPT und Podcast im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -128,6 +128,8 @@ jobs:
               /usr/bin/creative-art --selftest
               echo "Starte Creative-Writer-Selbsttest"
               /usr/bin/creative-writer --selftest
+              echo "Starte Creative-ChatGPT-Selbsttest"
+              /usr/bin/creative-chatgpt --selftest
               exec /usr/bin/creative-podcast --selftest
             '; then
             echo "App-Selbsttests bestanden"
