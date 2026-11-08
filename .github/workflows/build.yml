@@ -132,6 +132,8 @@ jobs:
               /usr/bin/creative-writer --selftest
               echo "Starte Creative-ChatGPT-Selbsttest"
               /usr/bin/creative-chatgpt --selftest
+              /usr/bin/creative-claude --selftest
+              /usr/bin/creative-software --selftest
               exec /usr/bin/creative-podcast --selftest
             '; then
             echo "App-Selbsttests bestanden"
