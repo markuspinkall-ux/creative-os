@@ -19,5 +19,6 @@ install_launcher /src/writer/creative-writer creative-writer /src/writer/creativ
 install_package /src/podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
 install_launcher /src/podcast/bin/creative-podcast creative-podcast /src/podcast/creative-podcast.desktop /src/podcast/creative-podcast.svg
 install_package /src/settings/creative_settings /usr/lib/creative-settings/creative_settings
+install -Dm755 /src/settings/bin/creative-mariadb-setup /usr/libexec/creative-mariadb-setup
 install -Dm755 /src/theme/apps/creative-apps-sync /usr/bin/creative-apps-sync
 creative-apps-sync
