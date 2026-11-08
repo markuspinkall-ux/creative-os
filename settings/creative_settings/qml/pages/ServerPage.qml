@@ -81,8 +81,11 @@ SettingsPage {
             label: "MariaDB"
             hint: "Lokalen Datenbankserver starten und grafisch verwalten"
             last: true
-            CButton { text: "MariaDB starten"; enabled: !server.busy; onClicked: server.startDatabase() }
-            CButton { text: "MariaDB öffnen"; onClicked: server.openDatabase() }
+            Row {
+                spacing: 8
+                CButton { text: "MariaDB starten"; enabled: !server.busy; onClicked: server.startDatabase() }
+                CButton { text: "MariaDB öffnen"; onClicked: server.openDatabase() }
+            }
         }
     }
 
