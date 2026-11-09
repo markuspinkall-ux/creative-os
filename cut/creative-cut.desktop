@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Cut
+GenericName=Videoschnitt
+Comment=Videos schneiden, arrangieren und als MP4 exportieren
+Exec=creative-cut
+Icon=applications-multimedia
+Terminal=false
+Categories=AudioVideo;AudioVideoEditing;
+Keywords=Video;Schnitt;Timeline;MP4;
