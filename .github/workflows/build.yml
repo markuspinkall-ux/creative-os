@@ -52,6 +52,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Creative Magazin – Feeds und Artikeltext prüfen
+        run: python3 -m unittest tests/test_magazin.py
+
       - name: Namen festlegen
         id: names
         run: |
@@ -82,7 +85,7 @@ jobs:
             case "$path" in
               # Diese beiden Build-Dateien ändern das Grundsystem nicht.
               .github/workflows/build.yml|image/install-app-update.sh) ;;
-              art/*|writer/*|podcast/*|settings/creative_settings/*|settings/bin/creative-mariadb-setup|theme/apps/creative-apps-sync) ;;
+              art/*|writer/*|podcast/*|magazin/*|tests/test_magazin.py|settings/creative_settings/*|settings/bin/creative-mariadb-setup|theme/apps/creative-apps-sync) ;;
               *) echo "$path erfordert einen vollständigen Build."; exit 0 ;;
             esac
           done < "$RUNNER_TEMP/app-update-paths"
@@ -117,7 +120,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Creative Art, Writer, ChatGPT und Podcast im fertigen Abbild prüfen
+      - name: Creative Art, Writer, ChatGPT, Podcast und Magazin im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -134,6 +137,8 @@ jobs:
               /usr/bin/creative-chatgpt --selftest
               /usr/bin/creative-claude --selftest
               /usr/bin/creative-software --selftest
+              echo "Starte Creative-Magazin-Selbsttest"
+              /usr/bin/creative-magazin --selftest
               exec /usr/bin/creative-podcast --selftest
             '; then
             echo "App-Selbsttests bestanden"

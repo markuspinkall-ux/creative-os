@@ -18,6 +18,8 @@ install_launcher /src/art/creative-art creative-art /src/art/creative-art.deskto
 install_launcher /src/writer/creative-writer creative-writer /src/writer/creative-writer.desktop /src/writer/creative-writer.svg
 install_package /src/podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
 install_launcher /src/podcast/bin/creative-podcast creative-podcast /src/podcast/creative-podcast.desktop /src/podcast/creative-podcast.svg
+install_package /src/magazin/creative_magazin /usr/lib/creative-magazin/creative_magazin
+install_launcher /src/magazin/bin/creative-magazin creative-magazin /src/magazin/creative-magazin.desktop /src/magazin/creative-magazin.svg
 install_package /src/settings/creative_settings /usr/lib/creative-settings/creative_settings
 install -Dm755 /src/settings/bin/creative-mariadb-setup /usr/libexec/creative-mariadb-setup
 install -Dm755 /src/theme/apps/creative-apps-sync /usr/bin/creative-apps-sync
