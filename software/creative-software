@@ -17,7 +17,7 @@ from PySide6.QtCore import QProcess, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtWidgets import (
     QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout, QWidget,
+    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 DEMO = [
@@ -29,7 +29,8 @@ DEMO = [
 ]
 FEATURED = {row[0]: row for row in DEMO}
 CRAFT_ID = "org.creativecraft.CreativeCraft"
-CRAFT = (CRAFT_ID, "CreativeCraft", "Voxel-Sandbox mit Bauen, Crafting und Erkundung")
+CRAFT = (CRAFT_ID, "CreativeCraft", "Sandbox-Survival in einer Blockwelt: erkunden, Ressourcen sammeln, craften und bauen.")
+CRAFT_SCREENSHOT = Path("/usr/share/creative-os/software/creativecraft-screenshot.jpg")
 CRAFT_URL = "https://github.com/markuspinkall-ux/voxelklon/releases/download/latest/CreativeCraft.flatpak"
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
@@ -156,19 +157,6 @@ class AppDetails(QDialog):
         close.clicked.connect(self.accept)
         controls.addWidget(close)
         layout.addLayout(controls)
-        imports = QHBoxLayout()
-        for label, handler in (
-            ("Paket öffnen", self.open_package),
-            ("Flatpak-Link öffnen", self.open_ref),
-        ):
-            button = QPushButton(label)
-            button.clicked.connect(handler)
-            imports.addWidget(button)
-        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
-        self.add_source.clicked.connect(self.add_catalog)
-        imports.addWidget(self.add_source)
-        imports.addStretch()
-        layout.addLayout(imports)
         self.previous.clicked.connect(lambda: self.show_shot(self.index - 1))
         self.next.clicked.connect(lambda: self.show_shot(self.index + 1))
         self.previous.setEnabled(False)
@@ -176,6 +164,19 @@ class AppDetails(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.finished.connect(self.stop)
+        if app_id == CRAFT_ID:
+            self.previous.hide()
+            self.next.hide()
+            self.counter.setText("1 / 1 · Gameplay")
+            screenshot = CRAFT_SCREENSHOT
+            if not screenshot.is_file():
+                screenshot = Path(__file__).with_name(screenshot.name)
+            self.original.load(str(screenshot))
+            if self.original.isNull():
+                self.image.setText("Screenshot konnte nicht geladen werden.")
+            else:
+                self.scale_image()
+            return
         self.future = self.pool.submit(screenshot_urls, app_id, scope or "system")
         self.callback = self.load_gallery
         self.timer.start(50)
@@ -276,12 +277,26 @@ class Store(QWidget):
         controls.addStretch()
         self.search = QLineEdit(placeholderText="Apps suchen …")
         self.search.setMinimumWidth(180)
-        self.search.textChanged.connect(self.render)
+        self.search.textChanged.connect(self.reset_page)
         controls.addWidget(self.search)
         self.refresh = QPushButton("Aktualisieren")
         self.refresh.clicked.connect(self.scan)
         controls.addWidget(self.refresh)
         layout.addLayout(controls)
+
+        imports = QHBoxLayout()
+        for label, handler in (
+            ("Paket öffnen", self.open_package),
+            ("Flatpak-Link öffnen", self.open_ref),
+        ):
+            button = QPushButton(label)
+            button.clicked.connect(handler)
+            imports.addWidget(button)
+        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
+        self.add_source.clicked.connect(self.add_catalog)
+        imports.addWidget(self.add_source)
+        imports.addStretch()
+        layout.addLayout(imports)
 
         self.spotlight = QFrame(objectName="spotlight")
         spotlight_layout = QHBoxLayout(self.spotlight)
@@ -303,6 +318,22 @@ class Store(QWidget):
         self.list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.list.setSpacing(4)
         layout.addWidget(self.list, 1)
+        self.pagination = QWidget()
+        pages = QHBoxLayout(self.pagination)
+        pages.setContentsMargins(0, 0, 0, 0)
+        pages.addStretch()
+        self.previous_page = QPushButton("‹ Zurück")
+        self.previous_page.clicked.connect(lambda: self.page.stepDown())
+        pages.addWidget(self.previous_page)
+        self.page = QSpinBox(prefix="Seite ")
+        self.page.setAccessibleName("Katalogseite")
+        self.page.setKeyboardTracking(False)
+        self.page.valueChanged.connect(self.render)
+        pages.addWidget(self.page)
+        self.next_page = QPushButton("Weiter ›")
+        self.next_page.clicked.connect(lambda: self.page.stepUp())
+        pages.addWidget(self.next_page)
+        layout.addWidget(self.pagination)
         self.status = QLabel("Flathub · Beispielansicht" if preview else "Lokaler Katalog · Flathub wird geprüft …")
         self.status.setObjectName("muted")
         self.status.setWordWrap(True)
@@ -438,11 +469,17 @@ class Store(QWidget):
         if self.section in ("Updates", "Eigene Apps"):
             self.render()
 
+    def reset_page(self):
+        self.page.blockSignals(True)
+        self.page.setValue(1)
+        self.page.blockSignals(False)
+        self.render()
+
     def select(self, section):
         self.section = section
         for name, button in self.tabs.items():
             button.setChecked(name == section)
-        self.render()
+        self.reset_page()
 
     def render(self):
         self.list.clear()
@@ -459,8 +496,22 @@ class Store(QWidget):
                        if self.section != "Updates" or key in self.updates]
         query = self.search.text().casefold().strip()
         entries = [(scope, row) for scope, row in entries if query in " ".join(row).casefold()]
-        entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
-        for scope, row in entries[:150]:
+        discover = self.section == "Entdecken"
+        self.pagination.setVisible(discover and bool(entries))
+        if discover:
+            entries.sort(key=lambda entry: (entry[1][1].casefold(), entry[1][0]))
+            pages = max(1, (len(entries) + 9) // 10)
+            self.page.blockSignals(True)
+            self.page.setRange(1, pages)
+            self.page.setSuffix(f" / {pages}")
+            self.page.blockSignals(False)
+            current = self.page.value()
+            self.previous_page.setEnabled(current > 1)
+            self.next_page.setEnabled(current < pages)
+            entries = entries[(current - 1) * 10:current * 10]
+        else:
+            entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
+        for scope, row in entries:
             self.add_row(scope, row)
         if not entries:
             if self.section == "Eigene Apps" and not self.own_remote:
@@ -489,10 +540,9 @@ class Store(QWidget):
         layout.addLayout(labels, 1)
         installed_scope = next((candidate for candidate in ("user", "system")
                                 if (candidate, app_id) in self.installed), None)
-        if app_id != CRAFT_ID:
-            details = QPushButton("Screenshots")
-            details.clicked.connect(lambda: self.details(scope, row))
-            layout.addWidget(details)
+        details = QPushButton("Screenshot" if app_id == CRAFT_ID else "Screenshots")
+        details.clicked.connect(lambda: self.details(scope, row))
+        layout.addWidget(details)
         if self.section == "Eigene Apps" and installed_scope:
             self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
             if app_id == CRAFT_ID or (installed_scope, app_id) in self.updates:
@@ -669,6 +719,9 @@ def main():
     window = Store(preview or "--selftest" in sys.argv)
     if "--selftest" in sys.argv:
         assert window.list.count() == len(DEMO)
+        details = AppDetails(window, CRAFT, "user")
+        assert not details.original.isNull()
+        details.accept()
         return 0
     if "--updates" in sys.argv:
         window.select("Updates")

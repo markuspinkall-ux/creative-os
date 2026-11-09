@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative FTP
+GenericName=Dateiübertragung
+Comment=Dateien über SFTP, FTPS und FTP übertragen
+Exec=creative-ftp
+Icon=folder-remote
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=FTP;FTPS;SFTP;Server;Upload;Download;

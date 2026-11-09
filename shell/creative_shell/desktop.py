@@ -12,10 +12,11 @@ from pathlib import Path
 
 from PySide6.QtCore import (
     Property, QAbstractListModel, QByteArray, QFileSystemWatcher, QMimeDatabase, QMimeData,
-    QModelIndex, QObject, Qt, QTimer, QUrl, Signal, Slot,
+    QModelIndex, QObject, QSortFilterProxyModel, Qt, QTimer, QUrl, Signal, Slot,
 )
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 
+from . import config
 from .runner import spawn_detached
 
 ROLES = ["name", "path", "isDir", "tint", "ext", "selected"]
@@ -67,6 +68,31 @@ def unique_path(folder, name):
     return folder / f"{stem} ({n}){suffix}"
 
 
+class ScreenIcons(QSortFilterProxyModel):
+    def __init__(self, desktop, screen):
+        super().__init__(desktop)
+        self.screen = screen
+        self.available = set()
+        self.primary = ""
+        self.setSourceModel(desktop)
+
+    def set_screens(self, available, primary):
+        available = set(available)
+        if available != self.available or primary != self.primary:
+            self.available, self.primary = available, primary
+            self.invalidateFilter()
+
+    def filterAcceptsRow(self, row, parent):
+        source = self.sourceModel()
+        path = source.data(source.index(row, 0, parent), ROLE_IDS["path"])
+        target = source.screen_assignments.get(path)
+        return self.screen == (target if target in self.available else self.primary)
+
+    @Slot(int, result=int)
+    def sourceRow(self, row):
+        return self.mapToSource(self.index(row, 0)).row()
+
+
 class DesktopModel(QAbstractListModel):
     selectionChanged = Signal()
     clipboardChanged = Signal()
@@ -84,6 +110,11 @@ class DesktopModel(QAbstractListModel):
             pass
         self._mime = QMimeDatabase()
         self._rows = []
+        self.screen_assignments = {
+            path: screen for path, screen in config.load()["desktopIconScreens"].items()
+            if isinstance(screen, str)
+        }
+        self._screen_models = {}
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(self._dir))
         self._watcher.directoryChanged.connect(lambda _p: self._timer.start())
@@ -140,6 +171,26 @@ class DesktopModel(QAbstractListModel):
         if str(self._dir) not in self._watcher.directories() and self._dir.is_dir():
             self._watcher.addPath(str(self._dir))
         self.selectionChanged.emit()
+
+    @Slot(str, "QStringList", str, result=QObject)
+    def screenModel(self, screen, available, primary):
+        model = self._screen_models.get(screen)
+        if model is None:
+            model = self._screen_models[screen] = ScreenIcons(self, screen)
+        model.set_screens(available, primary if primary in available else next(iter(available), screen))
+        return model
+
+    @Slot("QStringList", str)
+    def moveToScreen(self, paths, screen):
+        present = {row["path"] for row in self._rows}
+        assignments = dict(self.screen_assignments)
+        for path in paths:
+            if path in present:
+                assignments[path] = screen
+        if assignments != self.screen_assignments and config.set_value("desktopIconScreens", assignments):
+            self.screen_assignments = assignments
+            for model in self._screen_models.values():
+                model.invalidateFilter()
 
     # ---- Auswahl --------------------------------------------------------------
     @Slot(int, bool)

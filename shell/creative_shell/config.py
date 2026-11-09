@@ -21,6 +21,7 @@ DEFAULTS = {
     "desktopStatsPosition": [],
     "desktopExtras": {},
     "desktopWidgetScreens": {},
+    "desktopIconScreens": {},
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
     "visualizerOpacity": 0.1,

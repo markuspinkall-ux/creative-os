@@ -465,15 +465,29 @@ class LookModel(QObject):
                 images.append({"path": "", "url": QUrl.fromLocalFile(str(f)).toString(),
                                "label": "Graphit" if f.stem == "graphit" else f.stem.capitalize()})
                 break
-        pics = None
-        for name in ("Bilder", "Pictures"):
-            if (Path.home() / name).is_dir():
-                pics = Path.home() / name
-                break
-        if pics:
-            files = [f for f in pics.rglob("*") if f.is_file() and f.suffix.lower() in IMAGE_EXT]
-            files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
-            for f in files[:40]:
+        home = Path.home()
+        pics = home / "Bilder"
+        if not pics.exists() and not pics.is_symlink():
+            legacy = home / "Pictures"
+            if legacy.is_dir() and not legacy.is_symlink():
+                pics = legacy
+            else:
+                try:
+                    pics.mkdir(exist_ok=True)
+                except OSError:
+                    pass
+        if pics.is_dir() and not pics.is_symlink():
+            files = []
+            for f in pics.rglob("*"):
+                if f.suffix.lower() not in IMAGE_EXT or f.is_symlink():
+                    continue
+                try:
+                    if f.is_file():
+                        files.append((f.stat().st_mtime, f))
+                except OSError:
+                    continue
+            files.sort(reverse=True)
+            for _, f in files[:40]:
                 images.append({"path": str(f), "url": QUrl.fromLocalFile(str(f)).toString(), "label": f.stem})
         self._images = images
         self.changed.emit()
@@ -505,18 +519,10 @@ class LookModel(QObject):
 
     @Slot(str)
     def setWallpaper(self, path):
-        cfg_path = shell_config.config_dir() / "shell.json"
-        try:
-            data = json.loads(cfg_path.read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                data = {}
-        except (OSError, ValueError):
-            data = {}
-        data["wallpaper"] = path
-        cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = cfg_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(cfg_path)
+        if path and not any(image["path"] == path for image in self._images):
+            return
+        if not shell_config.set_value("wallpaper", path):
+            return
         self._current = path
         self.changed.emit()
 
