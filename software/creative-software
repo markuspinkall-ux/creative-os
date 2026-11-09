@@ -17,7 +17,7 @@ from PySide6.QtCore import QProcess, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QPixmap, QTextCursor
 from PySide6.QtWidgets import (
     QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QTextEdit, QVBoxLayout, QWidget,
+    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 DEMO = [
@@ -276,7 +276,7 @@ class Store(QWidget):
         controls.addStretch()
         self.search = QLineEdit(placeholderText="Apps suchen …")
         self.search.setMinimumWidth(180)
-        self.search.textChanged.connect(self.render)
+        self.search.textChanged.connect(self.reset_page)
         controls.addWidget(self.search)
         self.refresh = QPushButton("Aktualisieren")
         self.refresh.clicked.connect(self.scan)
@@ -303,6 +303,22 @@ class Store(QWidget):
         self.list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.list.setSpacing(4)
         layout.addWidget(self.list, 1)
+        self.pagination = QWidget()
+        pages = QHBoxLayout(self.pagination)
+        pages.setContentsMargins(0, 0, 0, 0)
+        pages.addStretch()
+        self.previous_page = QPushButton("‹ Zurück")
+        self.previous_page.clicked.connect(lambda: self.page.stepDown())
+        pages.addWidget(self.previous_page)
+        self.page = QSpinBox(prefix="Seite ")
+        self.page.setAccessibleName("Katalogseite")
+        self.page.setKeyboardTracking(False)
+        self.page.valueChanged.connect(self.render)
+        pages.addWidget(self.page)
+        self.next_page = QPushButton("Weiter ›")
+        self.next_page.clicked.connect(lambda: self.page.stepUp())
+        pages.addWidget(self.next_page)
+        layout.addWidget(self.pagination)
         self.status = QLabel("Flathub · Beispielansicht" if preview else "Lokaler Katalog · Flathub wird geprüft …")
         self.status.setObjectName("muted")
         self.status.setWordWrap(True)
@@ -438,11 +454,17 @@ class Store(QWidget):
         if self.section in ("Updates", "Eigene Apps"):
             self.render()
 
+    def reset_page(self):
+        self.page.blockSignals(True)
+        self.page.setValue(1)
+        self.page.blockSignals(False)
+        self.render()
+
     def select(self, section):
         self.section = section
         for name, button in self.tabs.items():
             button.setChecked(name == section)
-        self.render()
+        self.reset_page()
 
     def render(self):
         self.list.clear()
@@ -459,8 +481,22 @@ class Store(QWidget):
                        if self.section != "Updates" or key in self.updates]
         query = self.search.text().casefold().strip()
         entries = [(scope, row) for scope, row in entries if query in " ".join(row).casefold()]
-        entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
-        for scope, row in entries[:150]:
+        discover = self.section == "Entdecken"
+        self.pagination.setVisible(discover and bool(entries))
+        if discover:
+            entries.sort(key=lambda entry: (entry[1][1].casefold(), entry[1][0]))
+            pages = max(1, (len(entries) + 9) // 10)
+            self.page.blockSignals(True)
+            self.page.setRange(1, pages)
+            self.page.setSuffix(f" / {pages}")
+            self.page.blockSignals(False)
+            current = self.page.value()
+            self.previous_page.setEnabled(current > 1)
+            self.next_page.setEnabled(current < pages)
+            entries = entries[(current - 1) * 10:current * 10]
+        else:
+            entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
+        for scope, row in entries:
             self.add_row(scope, row)
         if not entries:
             if self.section == "Eigene Apps" and not self.own_remote:
