@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Creative FlatRules
+GenericName=Flatpak-Ordnerfreigaben
+Comment=Lese- und Schreibzugriff für einzelne Ordner pro Flatpak-App einstellen
+Exec=creative-flatrules
+Icon=folder-locked
+Terminal=false
+Categories=Settings;
+Keywords=Flatpak;Berechtigungen;Ordner;Dateisystem;
