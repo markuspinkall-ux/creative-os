@@ -7,8 +7,10 @@ import zipfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QRect, QSaveFile, QSize, Qt
-from PySide6.QtGui import QImage, QImageReader, QPainter, QPainterPath
+from PIL import Image, ImageFilter
+
+from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QPointF, QRect, QSaveFile, QSize, Qt
+from PySide6.QtGui import QImage, QImageReader, QPainter, QPainterPath, QTransform
 
 MAX_SIDE = 8192
 MAX_LAYER_BYTES = 256 * 1024 * 1024
@@ -17,9 +19,9 @@ HISTORY_BYTES = 128 * 1024 * 1024
 FORMAT = QImage.Format.Format_ARGB32_Premultiplied
 
 
-def check_size(size, count=1):
+def check_size(size, count=1, max_layers=MAX_LAYERS):
     if (not 1 <= size.width() <= MAX_SIDE or not 1 <= size.height() <= MAX_SIDE
-            or not 1 <= count <= MAX_LAYERS
+            or not 1 <= count <= max_layers
             or size.width() * size.height() * count * 4 > MAX_LAYER_BYTES):
         raise ValueError("Bild oder Ebenenstapel ist zu groß.")
 
@@ -48,6 +50,52 @@ class Layer:
     image: QImage
     visible: bool = True
     opacity: int = 100
+    mask: QImage | None = None
+
+    def rendered(self):
+        if self.mask is None:
+            return self.image
+        result = self.image.copy()
+        apply_alpha(result, self.mask)
+        return result
+
+    def transformed(self, matrix):
+        def raster(source):
+            result = transparent(source.size())
+            with QPainter(result) as painter:
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+                painter.setTransform(matrix)
+                painter.drawImage(0, 0, source)
+            return result
+
+        return replace(self, image=raster(self.image), mask=raster(self.mask) if self.mask is not None else None)
+
+
+def apply_alpha(image, mask, remove=False, offset=QPointF()):
+    with QPainter(image) as painter:
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOut if remove
+                                   else QPainter.CompositionMode.CompositionMode_DestinationIn)
+        painter.drawImage(offset, mask)
+
+
+def layer_bounds(image):
+    alpha = image.convertToFormat(QImage.Format.Format_Alpha8)
+    values = Image.frombytes("L", (alpha.width(), alpha.height()), bytes(alpha.constBits()),
+                             "raw", "L", alpha.bytesPerLine(), 1)
+    box = values.getbbox()
+    if box is None:
+        return image.rect()
+    x, y, right, bottom = box
+    return QRect(x, y, right - x, bottom - y)
+
+
+def layer_matrix(center, offset, width, height, angle, flip_x=False, flip_y=False):
+    matrix = QTransform()
+    matrix.translate(center.x() + offset.x(), center.y() + offset.y())
+    matrix.rotate(angle)
+    matrix.scale(-width if flip_x else width, -height if flip_y else height)
+    matrix.translate(-center.x(), -center.y())
+    return matrix
 
 
 class Document:
@@ -56,6 +104,7 @@ class Document:
         self.layers = [Layer(name, image)]
         self.active = 0
         self.selection = QPainterPath()
+        self.feather = 0
         self.undo = []
         self.redo = []
         self.version = self.saved_version = self.next_version = 0
@@ -73,7 +122,8 @@ class Document:
         return self.version != self.saved_version
 
     def snapshot(self):
-        return ([replace(layer, image=QImage(layer.image)) for layer in self.layers],
+        return ([replace(layer, image=QImage(layer.image),
+                         mask=QImage(layer.mask) if layer.mask is not None else None) for layer in self.layers],
                 self.active, QPainterPath(self.selection), self.version)
 
     def restore(self, state):
@@ -85,14 +135,14 @@ class Document:
         self.next_version += 1
         self.version = self.next_version
         # Count each shared Qt raster only once across the retained snapshots.
-        images = {}
-        for layers, *_ in reversed(self.undo):
-            for layer in layers:
-                images[layer.image.cacheKey()] = layer.image.sizeInBytes()
-        while len(self.undo) > 1 and (len(self.undo) > 24 or sum(images.values()) > HISTORY_BYTES):
+        def retained_bytes():
+            rasters = {image.cacheKey(): image.sizeInBytes()
+                       for layers, *_ in self.undo for layer in layers
+                       for image in (layer.image, layer.mask) if image is not None}
+            return sum(rasters.values())
+
+        while len(self.undo) > 1 and (len(self.undo) > 24 or retained_bytes() > HISTORY_BYTES):
             self.undo.pop(0)
-            retained = {layer.image.cacheKey() for layers, *_ in self.undo for layer in layers}
-            images = {key: size for key, size in images.items() if key in retained}
 
     def step(self, backwards):
         source, target = (self.undo, self.redo) if backwards else (self.redo, self.undo)
@@ -105,26 +155,63 @@ class Document:
         result = transparent(bounds.size())
         with QPainter(result) as painter:
             painter.translate(-bounds.x(), -bounds.y())
-            if selection and not self.selection.isEmpty():
-                painter.setClipPath(self.selection)
             for layer in self.layers:
                 if layer.visible:
                     painter.setOpacity(layer.opacity / 100)
-                    painter.drawImage(0, 0, layer.image)
+                    painter.drawImage(0, 0, layer.rendered())
+        if selection and not self.selection.isEmpty():
+            apply_alpha(result, self.selection_mask(bounds))
         return result
 
-    def selection_bounds(self):
-        canvas = QRect(0, 0, self.size.width(), self.size.height())
-        return self.selection.boundingRect().toAlignedRect().intersected(canvas)
+    def selection_bounds(self, feathered=False):
+        canvas = self.layer.image.rect()
+        if self.selection.isEmpty():
+            return QRect()
+        margin = 3 * self.feather if feathered else 0
+        return self.selection.boundingRect().toAlignedRect().adjusted(
+            -margin, -margin, margin, margin).intersected(canvas)
+
+    def selection_mask(self, bounds):
+        mask = transparent(bounds.size())
+        if self.selection.isEmpty():
+            mask.fill(Qt.GlobalColor.white)
+            return mask
+        with QPainter(mask) as painter:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.translate(-bounds.x(), -bounds.y())
+            painter.fillPath(self.selection, Qt.GlobalColor.white)
+        if not self.feather:
+            return mask
+        alpha = mask.convertToFormat(QImage.Format.Format_Alpha8)
+        values = Image.frombytes("L", (alpha.width(), alpha.height()), bytes(alpha.constBits()),
+                                 "raw", "L", alpha.bytesPerLine(), 1)
+        data = values.filter(ImageFilter.GaussianBlur(self.feather)).tobytes()
+        return QImage(data, alpha.width(), alpha.height(), alpha.width(),
+                      QImage.Format.Format_Alpha8).convertToFormat(FORMAT)
+
+    def add_mask(self):
+        if self.layer.mask is not None:
+            return False
+        check_size(self.size, len(self.layers) + sum(layer.mask is not None for layer in self.layers) + 1,
+                   max_layers=MAX_LAYERS * 2)
+        mask = self.selection_mask(self.layer.image.rect())
+        self.checkpoint()
+        self.layer.mask = mask
+        self.selection = QPainterPath()
+        return True
+
+    def remove_mask(self):
+        if self.layer.mask is not None:
+            self.checkpoint()
+            self.layer.mask = None
 
     def clear_selection_pixels(self):
-        if self.selection_bounds().isEmpty() or not self.layer.visible:
+        bounds = self.selection_bounds(feathered=True)
+        if bounds.isEmpty() or not self.layer.visible:
             return False
+        mask = self.selection_mask(bounds)
         self.checkpoint()
-        with QPainter(self.layer.image) as painter:
-            painter.setClipPath(self.selection)
-            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-            painter.fillRect(self.layer.image.rect(), Qt.GlobalColor.black)
+        apply_alpha(self.layer.image, mask, remove=True, offset=QPointF(bounds.topLeft()))
         return True
 
     def crop(self):
@@ -132,12 +219,16 @@ class Document:
         if bounds.isEmpty() or bounds == self.layer.image.rect():
             return False
         self.checkpoint()
-        self.layers = [replace(layer, image=layer.image.copy(bounds)) for layer in self.layers]
+        self.layers = [replace(layer, image=layer.image.copy(bounds),
+                               mask=layer.mask.copy(bounds) if layer.mask is not None else None)
+                       for layer in self.layers]
         self.selection = QPainterPath()
         return True
 
     def add_layer(self, name, image=None):
         check_size(self.size, len(self.layers) + 1)
+        check_size(self.size, len(self.layers) + 1 + sum(layer.mask is not None for layer in self.layers),
+                   max_layers=MAX_LAYERS * 2)
         layer_image = transparent(self.size)
         if image is not None:
             with QPainter(layer_image) as painter:
@@ -159,19 +250,23 @@ class Document:
         try:
             with zipfile.ZipFile(temporary, "w") as archive:
                 archive.writestr("project.json", json.dumps({
-                    "version": 1, "width": self.size.width(), "height": self.size.height(),
+                    "version": 2, "width": self.size.width(), "height": self.size.height(),
                     "active": self.active, "layers": [
-                        {"name": layer.name, "visible": layer.visible, "opacity": layer.opacity}
+                        {"name": layer.name, "visible": layer.visible, "opacity": layer.opacity,
+                         "mask": layer.mask is not None}
                         for layer in self.layers
                     ],
                 }, ensure_ascii=False))
                 for index, layer in enumerate(self.layers):
-                    data = QByteArray()
-                    buffer = QBuffer(data)
-                    if not buffer.open(QIODevice.OpenModeFlag.WriteOnly) or not layer.image.save(buffer, "PNG"):
-                        raise OSError("Eine Ebene konnte nicht gespeichert werden.")
-                    buffer.close()
-                    archive.writestr(f"layers/{index}.png", bytes(data))
+                    for folder, image in (("layers", layer.image), ("masks", layer.mask)):
+                        if image is None:
+                            continue
+                        data = QByteArray()
+                        buffer = QBuffer(data)
+                        if not buffer.open(QIODevice.OpenModeFlag.WriteOnly) or not image.save(buffer, "PNG"):
+                            raise OSError("Eine Ebene oder Maske konnte nicht gespeichert werden.")
+                        buffer.close()
+                        archive.writestr(f"{folder}/{index}.png", bytes(data))
             os.replace(temporary, path)
         finally:
             temporary.unlink(missing_ok=True)
@@ -184,13 +279,15 @@ class Document:
                 if archive.getinfo("project.json").file_size > 64 * 1024:
                     raise ValueError("Projektinformationen sind zu groß.")
                 meta = json.loads(archive.read("project.json"))
-                if meta["version"] != 1:
+                if meta["version"] not in (1, 2):
                     raise ValueError("Unbekannte Creative-Art-Projektversion.")
                 size = QSize(meta["width"], meta["height"])
                 check_size(size, len(meta["layers"]))
-                layers = []
-                for index, entry in enumerate(meta["layers"]):
-                    filename = f"layers/{index}.png"
+                check_size(size, len(meta["layers"]) + sum(
+                    meta["version"] == 2 and entry.get("mask") is True for entry in meta["layers"]
+                ), max_layers=MAX_LAYERS * 2)
+
+                def read_raster(filename):
                     if archive.getinfo(filename).file_size > size.width() * size.height() * 5 + 1024 * 1024:
                         raise ValueError("Ebenendatei ist zu groß.")
                     data = QByteArray(archive.read(filename))
@@ -204,11 +301,18 @@ class Document:
                     if image.size() != size:
                         raise ValueError("Eine Ebene hat ungültige Abmessungen.")
                     buffer.close()
+                    return image
+
+                layers = []
+                for index, entry in enumerate(meta["layers"]):
+                    image = read_raster(f"layers/{index}.png")
+                    mask = (read_raster(f"masks/{index}.png")
+                            if meta["version"] == 2 and entry.get("mask") is True else None)
                     layers.append(Layer(str(entry["name"])[:120], image, bool(entry["visible"]),
-                                        min(100, max(0, int(entry["opacity"])))))
+                                        min(100, max(0, int(entry["opacity"]))), mask))
                 document = cls(layers[0].image)
                 document.layers = layers
                 document.active = min(len(layers) - 1, max(0, int(meta["active"])))
                 return document
-        except (KeyError, TypeError, OverflowError, zipfile.BadZipFile) as error:
+        except (AttributeError, KeyError, TypeError, OverflowError, zipfile.BadZipFile) as error:
             raise ValueError("Ungültiges Creative-Art-Projekt.") from error

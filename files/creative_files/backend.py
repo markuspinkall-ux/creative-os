@@ -16,6 +16,7 @@ from PySide6.QtCore import (
     QAbstractListModel,
     QByteArray,
     QFileSystemWatcher,
+    QMimeData,
     QMimeDatabase,
     QModelIndex,
     QObject,
@@ -43,6 +44,7 @@ QUICK = [
 
 
 FOLDER_DEFAULT = "#5a6b8c"
+CUT_MIME = "application/x-kde-cutselection"
 
 
 def file_color(mime):
@@ -153,7 +155,10 @@ class FileManager(QObject):
         self._folder_request = 0
         self._history, self._pos = [], -1
         self._anchor = -1
-        self._clip, self._clip_cut = [], False
+        self._clipboard = QGuiApplication.clipboard()
+        self._clipboard_revision = 0
+        self._move_clipboard_revision = None
+        self._clipboard.dataChanged.connect(self._clipboard_changed)
         self._undo = None
         self._toast, self._toast_undo = "", False
         self._busy, self._busy_text = False, ""
@@ -463,24 +468,44 @@ class FileManager(QObject):
     def _set_clip(self, paths, cut):
         if not paths:
             return
-        self._clip, self._clip_cut = paths, cut
-        # Auch für andere Programme (z. B. Bild in Discord einfügen)
-        QGuiApplication.clipboard().setText("\n".join(QUrl.fromLocalFile(p).toString() for p in paths))
+        urls = [QUrl.fromLocalFile(path) for path in paths]
+        data = QMimeData()
+        data.setUrls(urls)
+        data.setText("\n".join(url.toString() for url in urls))
+        data.setData(CUT_MIME, QByteArray(b"1" if cut else b"0"))
+        self._clipboard.setMimeData(data)
         n = len(paths)
         what = f"„{Path(paths[0]).name}“" if n == 1 else f"{n} Elemente"
         self._show_toast(f"{what} {'ausgeschnitten' if cut else 'kopiert'} – mit Einfügen ablegen")
+
+    def _clipboard_changed(self):
+        self._clipboard_revision += 1
         self.changed.emit()
+
+    def _clipboard_files(self):
+        data = self._clipboard.mimeData()
+        if data is None:
+            return [], False
+        urls = data.urls() if data.hasUrls() else [QUrl(line) for line in data.text().splitlines()]
+        sources = list(dict.fromkeys(
+            url.toLocalFile() for url in urls
+            if url.isLocalFile() and url.host() in ("", "localhost") and os.path.isabs(url.toLocalFile())
+        ))
+        return sources, data.data(CUT_MIME) == b"1"
 
     @Slot()
     def paste(self):
-        if self._page != "folder" or not self._clip or self._busy:
+        if self._page != "folder" or self._busy:
             return
-        sources, cut, target = list(self._clip), self._clip_cut, self._path
+        sources, cut = self._clipboard_files()
+        if not sources:
+            return
+        target = self._path
         if cut and any(fsops.is_google_drive(p) for p in [target, *sources]):
             self._show_toast("Für Google Drive bitte Kopieren statt Ausschneiden verwenden.")
             return
         if cut:
-            self._clip = []
+            self._move_clipboard_revision = self._clipboard_revision
         self._run_bg("Verschiebe …" if cut else "Kopiere …",
                      lambda: ("move" if cut else "copy", (fsops.move_into if cut else fsops.copy_into)(sources, target)))
 
@@ -576,11 +601,14 @@ class FileManager(QObject):
         self._busy = False
         self.busyChanged.emit()
         status, value = result
+        revision, self._move_clipboard_revision = self._move_clipboard_revision, None
         if status == "error":
             self._show_toast(self._friendly(value))
             self.refresh()
             return
         kind, pairs = value
+        if kind == "move" and revision == self._clipboard_revision:
+            self._clipboard.clear()
         self._undo = (kind, pairs)
         self.refresh()
         n = len(pairs)
@@ -783,7 +811,7 @@ class FileManager(QObject):
     canBack = Property(bool, lambda self: self._pos > 0, notify=changed)
     canForward = Property(bool, lambda self: self._pos < len(self._history) - 1, notify=changed)
     canUp = Property(bool, lambda self: self._page == "folder", notify=changed)
-    canPaste = Property(bool, lambda self: self._page == "folder" and bool(self._clip), notify=changed)
+    canPaste = Property(bool, lambda self: self._page == "folder" and bool(self._clipboard_files()[0]), notify=changed)
     view = Property(str, lambda self: self._view, _set_view, notify=changed)
     quickPlaces = Property("QVariantList", lambda self: self._quick, constant=True)
     drives = Property("QVariantList", lambda self: self._drives, notify=drivesChanged)

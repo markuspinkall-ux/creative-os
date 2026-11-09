@@ -5,7 +5,7 @@ import QtQuick.Window
 import Creative
 
 // Hintergrundbild – liegt hinter allen Fenstern, auf jedem Monitor.
-// Auf dem Hauptbildschirm zeigt es die Dateien vom Schreibtisch (wie bei Windows).
+// Die Schreibtisch-Symbole werden nach ihrem Zielmonitor gefiltert.
 Item {
     id: root
     focus: true
@@ -16,7 +16,6 @@ Item {
     Keys.onEnterPressed: desktop.openSelected()
     Keys.onEscapePressed: desktop.clearSelection()
     Keys.onPressed: (event) => {
-        if (!root.showIcons) return
         if (event.matches(StandardKey.Copy)) {
             desktop.copySelected()
             event.accepted = true
@@ -27,7 +26,7 @@ Item {
     }
 
     property string screenName
-    readonly property bool showIcons: shell.primaryScreen === "" || shell.primaryScreen === screenName
+    readonly property string iconDragFormat: "application/x-creative-desktop-icon"
     readonly property int barSpace: 74
 
     // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.
@@ -101,13 +100,13 @@ Item {
         property bool selecting: false
         anchors.fill: parent
         onPressed: (mouse) => {
-            if (mouse.button !== Qt.LeftButton || !root.showIcons) return
+            if (mouse.button !== Qt.LeftButton) return
             marquee.width = 0
             marquee.height = 0
             origin = Qt.point(mouse.x, mouse.y)
         }
         onPositionChanged: (mouse) => {
-            if (!(mouse.buttons & Qt.LeftButton) || !root.showIcons) return
+            if (!(mouse.buttons & Qt.LeftButton)) return
             if (!selecting && Math.abs(mouse.x - origin.x) + Math.abs(mouse.y - origin.y) < 6) return
             if (!selecting) {
                 root.forceActiveFocus()
@@ -125,7 +124,7 @@ Item {
                 const p = item.mapToItem(root, 3, 3)
                 if (p.x < marquee.x + marquee.width && p.x + item.width - 6 > marquee.x
                         && p.y < marquee.y + marquee.height && p.y + item.height - 6 > marquee.y)
-                    rows.push(i)
+                    rows.push(icons.model.sourceRow(i))
             }
             desktop.selectRows(rows)
         }
@@ -142,7 +141,7 @@ Item {
             }
             root.forceActiveFocus()
             shell.closePopups()
-            if (mouse.button === Qt.RightButton && root.showIcons) {
+            if (mouse.button === Qt.RightButton) {
                 if (desktop.selectedCount > 0) itemMenu.openAt(mouse.x, mouse.y)
                 else bgMenu.openAt(mouse.x, mouse.y)
             } else {
@@ -151,6 +150,16 @@ Item {
         }
         // Doppelklick auf den freien Schreibtisch: alle Fenster minimieren (nochmal: zurückholen)
         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) tasks.showDesktop() }
+    }
+
+    DropArea {
+        anchors.fill: parent
+        onEntered: (drag) => { drag.accepted = drag.formats.includes(root.iconDragFormat) }
+        onDropped: (drop) => {
+            if (!drop.formats.includes(root.iconDragFormat)) return
+            desktop.moveToScreen([drop.getDataAsString(root.iconDragFormat)], root.screenName)
+            drop.acceptProposedAction()
+        }
     }
 
     Rectangle {
@@ -673,7 +682,6 @@ Item {
     // ---- Schreibtisch-Symbole ------------------------------------------------------
     GridView {
         id: icons
-        visible: root.showIcons
         x: 12
         y: 12
         width: parent.width - 24
@@ -682,7 +690,7 @@ Item {
         cellWidth: 104
         cellHeight: 108
         interactive: false
-        model: root.showIcons ? desktop : null
+        model: desktop.screenModel(root.screenName, shell.screenNames, shell.primaryScreen)
 
         delegate: Item {
             id: cell
@@ -727,41 +735,31 @@ Item {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 property point pressPos
                 onPositionChanged: (mouse) => {
-                    if (!(mouse.buttons & Qt.LeftButton))
+                    if (!(mouse.buttons & Qt.LeftButton) || root.dragPath !== ""
+                            || Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) <= 12)
                         return
-                    if (root.dragPath === "" && Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) > 12) {
-                        root.dragPath = model.path
-                        root.dragIsDir = model.isDir
-                        root.dragTint = model.tint
-                        root.dragExt = model.ext
-                    }
-                    if (root.dragPath !== "") {
-                        const p = cell.mapToItem(root, mouse.x, mouse.y)
-                        ghost.x = p.x - ghost.width / 2
-                        ghost.y = p.y - ghost.height / 2
-                    }
-                }
-                onReleased: (mouse) => {
-                    if (root.dragPath === "")
-                        return
-                    const p = cell.mapToItem(shelfBox, mouse.x, mouse.y)
-                    if (shelfBox.visible && p.x >= 0 && p.y >= 0 && p.x <= shelfBox.width && p.y <= shelfBox.height + 20)
-                        shelf.addPath(root.dragPath)
-                    root.dragPath = ""
+                    root.dragPath = model.path
+                    root.dragIsDir = model.isDir
+                    root.dragTint = model.tint
+                    root.dragExt = model.ext
+                    const p = cell.mapToItem(root, mouse.x, mouse.y)
+                    ghost.x = p.x - ghost.width / 2
+                    ghost.y = p.y - ghost.height / 2
+                    ghost.Drag.startDrag()
                 }
                 onPressed: (mouse) => {
                     pressPos = Qt.point(mouse.x, mouse.y)
                     root.forceActiveFocus()
                     shell.closePopups()
                     if (mouse.button === Qt.RightButton) {
-                        desktop.selectKeep(index)
+                        desktop.selectKeep(icons.model.sourceRow(index))
                         const p = cell.mapToItem(root, mouse.x, mouse.y)
                         itemMenu.openAt(p.x, p.y)
                     } else {
-                        desktop.select(index, (mouse.modifiers & Qt.ControlModifier) !== 0)
+                        desktop.select(icons.model.sourceRow(index), (mouse.modifiers & Qt.ControlModifier) !== 0)
                     }
                 }
-                onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) desktop.open(index) }
+                onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) desktop.open(icons.model.sourceRow(index)) }
             }
             Accessible.role: Accessible.ListItem
             Accessible.name: model.name
@@ -1013,7 +1011,10 @@ Item {
             anchors.fill: parent
             anchors.margins: -12
             onDropped: (drop) => {
-                if (drop.hasUrls) {
+                if (drop.formats.includes(root.iconDragFormat)) {
+                    shelf.addPath(drop.getDataAsString(root.iconDragFormat))
+                    drop.acceptProposedAction()
+                } else if (drop.hasUrls) {
                     shelf.addUrls(drop.urls)
                     drop.acceptProposedAction()
                 }
@@ -1024,6 +1025,9 @@ Item {
     // Was gerade gezogen wird
     Item {
         id: ghost
+        Drag.mimeData: ({ [root.iconDragFormat]: root.dragPath })
+        Drag.supportedActions: Qt.MoveAction
+        Drag.onDragFinished: root.dragPath = ""
         visible: root.dragPath !== "" || root.dragShelfKey !== ""
         z: 20
         width: 52; height: 52
@@ -1110,9 +1114,12 @@ Item {
             { sep: true },
             { label: "Kopieren", icon: "files", act: "copy" },
             { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
-        ].concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
+        ].concat(shell.screenNames.filter(name => name !== root.screenName).map(name => ({
+            label: "Auf " + name + " verschieben", icon: "settings", act: "screen:" + name
+        }))).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
         onTriggered: (act) => {
-            if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
+            if (act.startsWith("screen:")) desktop.moveToScreen(desktop.selectedPaths(), act.slice(7))
+            else if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
             else if (act === "open") desktop.openSelected()
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()

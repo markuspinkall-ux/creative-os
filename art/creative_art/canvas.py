@@ -3,10 +3,9 @@
 import math
 
 from PySide6.QtCore import QPointF, QRect, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPolygonF
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPolygonF, QTransform
 from PySide6.QtWidgets import QWidget
 
-from .document import transparent
 
 
 class Canvas(QWidget):
@@ -16,6 +15,7 @@ class Canvas(QWidget):
     colorChanged = Signal()
     tools_select = {"rectangle", "ellipse", "lasso", "crop"}
     tools_shape = {"line", "box", "oval"}
+    tools_mask = {"mask_hide", "mask_show"}
 
     def __init__(self, document):
         super().__init__()
@@ -69,7 +69,7 @@ class Canvas(QWidget):
                 if layer.visible:
                     painter.setOpacity(layer.opacity / 100)
                     offset = self.move_offset if layer is self.document.layer else QPointF()
-                    painter.drawImage(offset, layer.image)
+                    painter.drawImage(offset, layer.rendered())
             painter.setOpacity(1)
             path = self.document.selection
             if not path.isEmpty():
@@ -127,6 +127,9 @@ class Canvas(QWidget):
         if self.tool in self.tools_shape or self.tool == "move":
             self.origin = point
             return
+        if self.tool in self.tools_mask and self.document.layer.mask is None:
+            self.hint.emit("Lege zuerst eine Ebenenmaske an.")
+            return
         if self.tool == "clone":
             if self.clone_source is None:
                 self.hint.emit("Mit Alt oder Umschalt + Klick zuerst eine Kopierquelle wählen.")
@@ -161,11 +164,9 @@ class Canvas(QWidget):
         elif self.tool == "move":
             offset = (point - self.origin).toPoint()
             if not offset.isNull():
-                moved = transparent(self.document.size)
-                with QPainter(moved) as painter:
-                    painter.drawImage(offset, self.document.layer.image)
+                moved = self.document.layer.transformed(QTransform.fromTranslate(offset.x(), offset.y()))
                 self.document.checkpoint()
-                self.document.layer.image = moved
+                self.document.layers[self.document.active] = moved
             self.move_offset = QPointF()
         elif self.tool in self.tools_shape:
             path = self.shape(point)
@@ -222,7 +223,8 @@ class Canvas(QWidget):
                     Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
 
     def stroke(self, point):
-        layer = self.document.layer.image
+        active = self.document.layer
+        layer = active.mask if self.tool in self.tools_mask else active.image
         with QPainter(layer) as painter:
             self.configure_brush(painter)
             if self.tool == "clone":
@@ -242,9 +244,10 @@ class Canvas(QWidget):
                     painter.restore()
                 painter.restore()
             else:
-                if self.tool == "eraser":
+                if self.tool in {"eraser", "mask_hide"}:
                     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationOut)
-                color = Qt.GlobalColor.black if self.tool == "eraser" else self.color
+                color = (Qt.GlobalColor.white if self.tool in self.tools_mask else
+                         Qt.GlobalColor.black if self.tool == "eraser" else self.color)
                 painter.setPen(self.brush_pen(color))
                 if self.last == point:
                     painter.drawPoint(point)

@@ -1,5 +1,8 @@
 [Unit]
 Description=Creative OS Google Drive
+ConditionFileNotEmpty=%h/.config/creative-drive/rclone.conf
+After=creative-graphical-session.service
+PartOf=creative-graphical-session.service
 
 [Service]
 Type=notify
@@ -9,3 +12,5 @@ ExecStartPre=/usr/bin/install -d -m 0700 %t/creative-drive/drive
 ExecStart=/usr/bin/rclone --config=%h/.config/creative-drive/rclone.conf mount creative-drive: %t/creative-drive/drive --devname=creative-drive --vfs-cache-mode=writes --dir-cache-time=30m --poll-interval=1m --drive-use-trash=true --umask=077 --contimeout=5s --timeout=30s
 TimeoutStartSec=45s
 TimeoutStopSec=45s
+Restart=on-failure
+RestartSec=30s

@@ -53,6 +53,7 @@ RUN mkdir -p /var/opt \
     fi \
  && dnf clean all
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
+RUN mkdir -p /etc/skel/Bilder
 
 # Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
@@ -114,7 +115,7 @@ RUN dnf install -y flatpak \
 # ---------------------------------------------------------------------------
 # 7) Creative Shell (Taskleiste, Startmenü, Schnellzugriff)
 # ---------------------------------------------------------------------------
-RUN dnf install -y python3-pyside6 qt6-qtsvg qt6-qtwayland layer-shell-qt \
+RUN dnf install -y python3-pyside6 python3-paramiko qt6-qtsvg qt6-qtwayland layer-shell-qt \
                    brightnessctl ddcutil liberation-sans-fonts \
  && dnf clean all
 
@@ -147,6 +148,16 @@ COPY --chmod=755 software/creative-software /usr/bin/creative-software
 COPY software/creative-software.desktop /usr/share/applications/creative-software.desktop
 COPY --chmod=755 flatrules/creative-flatrules /usr/bin/creative-flatrules
 COPY flatrules/creative-flatrules.desktop /usr/share/applications/creative-flatrules.desktop
+COPY software/creativecraft-screenshot.jpg /usr/share/creative-os/software/creativecraft-screenshot.jpg
+COPY --chmod=755 ftp/creative-ftp /usr/lib/creative-ftp/creative-ftp
+COPY ftp/ftp_session.py /usr/lib/creative-ftp/ftp_session.py
+COPY ftp/creative-ftp.desktop /usr/share/applications/creative-ftp.desktop
+RUN ln -s /usr/lib/creative-ftp/creative-ftp /usr/bin/creative-ftp \
+ && QT_QPA_PLATFORM=offscreen /usr/bin/creative-ftp --selftest
+COPY --chmod=755 cut/creative-cut /usr/lib/creative-cut/creative-cut
+COPY cut/cut_project.py /usr/lib/creative-cut/cut_project.py
+COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
+RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
@@ -562,6 +573,7 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
 # Creative Podcast: QML-Oberfläche und Multimedia-Laufzeit laden.
+RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio /usr/bin/creative-cut --selftest
 RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio HOME=/tmp/podcast-home timeout 30 /usr/bin/creative-podcast --selftest \
  && rm -rf /tmp/podcast-home
 # Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?

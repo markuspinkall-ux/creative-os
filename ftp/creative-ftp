@@ -1,0 +1,584 @@
+#!/usr/bin/python3
+"""Creative FTP desktop client."""
+
+import json
+import os
+import posixpath
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import paramiko
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QApplication, QComboBox, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+    QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+)
+
+from ftp_session import Session, UnknownHostKey, safe_name
+
+
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os/ftp"
+PORTS = {"SFTP": 22, "FTPS": 21, "FTP": 21}
+
+
+@dataclass
+class Transfer:
+    direction: str
+    source: str
+    target: str
+    size: int | None
+    item: QTreeWidgetItem
+    directory: bool
+    completed: set[str] = field(default_factory=set)
+    created: set[str] = field(default_factory=set)
+    status: str = "Wartet"
+
+
+class FilePane(QWidget):
+    def __init__(self, title, actions):
+        super().__init__()
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(QLabel(title, objectName="section"))
+        header = QHBoxLayout()
+        self.path = QLineEdit()
+        self.path.setAccessibleName(title + " – Pfad")
+        header.addWidget(self.path, 1)
+        for label, callback in actions:
+            button = QPushButton(label)
+            button.clicked.connect(callback)
+            header.addWidget(button)
+        self.layout.addLayout(header)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels(["Name", "Größe"])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setUniformRowHeights(True)
+        self.tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
+        self.layout.addWidget(self.tree)
+        self.tree.setColumnWidth(0, 245)
+
+    def show_entries(self, path, entries):
+        self.path.setText(str(path))
+        self.tree.clear()
+        for name, directory, size in entries:
+            item = QTreeWidgetItem([("▸  " if directory else "") + name,
+                                    "" if directory or size is None else f"{size:,} B".replace(",", ".")])
+            item.setData(0, Qt.ItemDataRole.UserRole, (name, directory, size))
+            self.tree.addTopLevelItem(item)
+
+
+class CreativeFTP(QMainWindow):
+    done = Signal(object, object, object)
+    progress = Signal(object, object)
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Creative FTP")
+        self.resize(1200, 780)
+        self.setStyleSheet("""
+            QWidget { background: #161925; color: #eaf0ff; font-size: 14px; }
+            QLabel#section { color: #b8b3ff; font-weight: 700; }
+            QLineEdit, QSpinBox, QComboBox, QTreeWidget, QPlainTextEdit, QPushButton {
+                background: #252b3e; border: 1px solid #414969; border-radius: 7px; padding: 6px;
+            }
+            QPushButton:hover { background: #373d59; }
+            QPushButton#primary { background: #a8a1ff; color: #1b1931; font-weight: 700; }
+            QPushButton:disabled, QPushButton#primary:disabled { background: #252b3e; color: #929ab5; }
+            QHeaderView::section { background: #303650; color: #eaf0ff; padding: 5px; border: 0; }
+            QTreeWidget::item:selected { background: #514a85; color: white; }
+        """)
+        self.pool = ThreadPoolExecutor(max_workers=1)
+        self.done.connect(self.finished, Qt.ConnectionType.QueuedConnection)
+        self.progress.connect(self.show_progress)
+        self.session = None
+        self.profile = None
+        self.secret = ""
+        self.keyfile = ""
+        self.local_dir = Path.home()
+        self.remote_dir = ""
+        self.jobs = []
+        self.active = None
+        self.busy = False
+        self.running = False
+        self.cancel = threading.Event()
+        self.sites = self.read_sites()
+
+        central = QWidget()
+        layout = QVBoxLayout(central)
+        self.setCentralWidget(central)
+        connection = QHBoxLayout()
+        self.protocol = QComboBox()
+        self.protocol.addItems(PORTS)
+        self.port = QSpinBox()
+        self.port.setRange(1, 65535)
+        self.port.setValue(22)
+        self.protocol.currentTextChanged.connect(lambda protocol: self.port.setValue(PORTS[protocol]))
+        self.host = QLineEdit(placeholderText="Server")
+        self.user = QLineEdit(placeholderText="Benutzer")
+        self.password = QLineEdit(placeholderText="Passwort / Schlüssel-Passphrase")
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password.returnPressed.connect(self.connect_server)
+        for title, widget, stretch in (
+            ("Protokoll", self.protocol, 0), ("Server", self.host, 2), ("Port", self.port, 0),
+            ("Benutzer", self.user, 1), ("Passwort", self.password, 2),
+        ):
+            widget.setAccessibleName(title)
+            connection.addWidget(widget, stretch)
+        self.connect_button = QPushButton("Verbinden", objectName="primary")
+        self.connect_button.clicked.connect(self.connect_server)
+        connection.addWidget(self.connect_button)
+        self.disconnect_button = QPushButton("Trennen")
+        self.disconnect_button.clicked.connect(self.disconnect)
+        connection.addWidget(self.disconnect_button)
+        layout.addLayout(connection)
+
+        sites = QHBoxLayout()
+        self.site_picker = QComboBox()
+        self.site_picker.setAccessibleName("Gespeicherte Server")
+        self.site_picker.activated.connect(self.load_site)
+        self.refresh_sites()
+        sites.addWidget(self.site_picker, 1)
+        for label, callback in (("Server speichern", self.save_site), ("Server entfernen", self.remove_site),
+                                ("SSH-Schlüssel wählen …", self.choose_key)):
+            button = QPushButton(label)
+            button.clicked.connect(callback)
+            sites.addWidget(button)
+        layout.addLayout(sites)
+
+        vertical = QSplitter(Qt.Orientation.Vertical)
+        self.log = QPlainTextEdit(readOnly=True)
+        self.log.setAccessibleName("Verbindungsprotokoll")
+        self.log.setPlaceholderText("Verbindungsprotokoll")
+        self.log.setMaximumBlockCount(500)
+        vertical.addWidget(self.log)
+
+        panes = QSplitter()
+        self.local = FilePane("Lokal", [("↑", self.local_up), ("Ordner …", self.choose_local)])
+        self.remote = FilePane("Server", [("↑", self.remote_up), ("Neu laden", self.refresh_remote)])
+        self.local.path.returnPressed.connect(lambda: self.show_local(Path(self.local.path.text()).expanduser()))
+        self.remote.path.returnPressed.connect(lambda: self.show_remote(self.remote.path.text()))
+        self.local.tree.itemDoubleClicked.connect(self.open_local)
+        self.remote.tree.itemDoubleClicked.connect(self.open_remote)
+        self.upload_button = QPushButton("Auswahl hochladen →")
+        self.upload_button.clicked.connect(lambda: self.enqueue("Upload"))
+        self.local.layout.addWidget(self.upload_button)
+        remote_actions = QHBoxLayout()
+        self.download_button = QPushButton("← Auswahl herunterladen")
+        self.download_button.clicked.connect(lambda: self.enqueue("Download"))
+        remote_actions.addWidget(self.download_button)
+        self.remote_buttons = [self.download_button]
+        for label, callback in (("Neuer Ordner", self.new_folder), ("Umbenennen", self.rename), ("Löschen", self.delete)):
+            button = QPushButton(label)
+            button.clicked.connect(callback)
+            self.remote_buttons.append(button)
+            remote_actions.addWidget(button)
+        self.remote.layout.addLayout(remote_actions)
+        panes.addWidget(self.local)
+        panes.addWidget(self.remote)
+        vertical.addWidget(panes)
+
+        transfers = QWidget()
+        transfer_layout = QVBoxLayout(transfers)
+        transfer_layout.addWidget(QLabel("Transferwarteschlange", objectName="section"))
+        self.queue = QTreeWidget()
+        self.queue.setRootIsDecorated(False)
+        self.queue.setHeaderLabels(["Richtung", "Quelle", "Ziel", "Status"])
+        self.queue.setColumnWidth(1, 320)
+        self.queue.setColumnWidth(2, 320)
+        transfer_layout.addWidget(self.queue)
+        controls = QHBoxLayout()
+        self.start_button = QPushButton("Warteschlange starten", objectName="primary")
+        self.start_button.clicked.connect(self.start_queue)
+        self.stop_button = QPushButton("Transfer abbrechen")
+        self.stop_button.clicked.connect(self.stop_transfer)
+        controls.addWidget(self.start_button)
+        controls.addWidget(self.stop_button)
+        for label, callback in (("Fehlgeschlagene erneut versuchen", self.retry), ("Eintrag entfernen", self.remove_job)):
+            button = QPushButton(label)
+            button.clicked.connect(callback)
+            controls.addWidget(button)
+        controls.addStretch()
+        transfer_layout.addLayout(controls)
+        vertical.addWidget(transfers)
+        vertical.setSizes([115, 430, 180])
+        layout.addWidget(vertical)
+        self.show_local(self.local_dir)
+        self.update_controls()
+
+    def read_sites(self):
+        try:
+            entries = json.loads((CONFIG / "servers.json").read_text())
+            return {name: entry for name, entry in entries.items()
+                    if isinstance(entry, dict) and entry.get("protocol") in PORTS
+                    and isinstance(entry.get("host"), str) and isinstance(entry.get("user"), str)
+                    and isinstance(entry.get("port"), int) and isinstance(entry.get("key", ""), str)}
+        except (OSError, ValueError, AttributeError):
+            return {}
+
+    def refresh_sites(self):
+        self.site_picker.clear()
+        self.site_picker.addItem("Gespeicherte Server …")
+        self.site_picker.addItems(sorted(self.sites, key=str.casefold))
+
+    def fields(self):
+        host = self.host.text().strip()
+        if not host or any(char.isspace() for char in host) or "/" in host:
+            raise ValueError("Gib einen Servernamen oder eine IP-Adresse ohne Protokoll ein.")
+        return dict(protocol=self.protocol.currentText(), host=host, port=self.port.value(),
+                    user=self.user.text().strip(), key=self.keyfile)
+
+    def save_site(self):
+        try:
+            profile = self.fields()
+            name, ok = QInputDialog.getText(self, "Server speichern", "Name:", text=profile["host"])
+            if ok and name.strip():
+                self.write_sites({**self.sites, name.strip(): profile})
+        except (ValueError, OSError) as error:
+            self.log.appendPlainText(str(error))
+
+    def write_sites(self, sites):
+        CONFIG.mkdir(parents=True, exist_ok=True)
+        path = CONFIG / "servers.json"
+        temp = path.with_suffix(".tmp")
+        temp.write_text(json.dumps(sites, indent=2, ensure_ascii=False), encoding="utf-8")
+        temp.replace(path)
+        self.sites = sites
+        self.refresh_sites()
+
+    def remove_site(self):
+        name = self.site_picker.currentText()
+        if name in self.sites:
+            try:
+                self.write_sites({key: profile for key, profile in self.sites.items() if key != name})
+            except OSError as error:
+                self.log.appendPlainText(str(error))
+
+    def load_site(self, _index):
+        profile = self.sites.get(self.site_picker.currentText())
+        if profile:
+            self.protocol.setCurrentText(profile["protocol"])
+            self.host.setText(profile["host"])
+            self.port.setValue(profile["port"])
+            self.user.setText(profile["user"])
+            self.password.clear()
+            self.keyfile = profile.get("key", "")
+            self.log.appendPlainText(f"Serverprofil geladen: {self.site_picker.currentText()}")
+
+    def choose_key(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Privaten SSH-Schlüssel wählen", str(Path.home() / ".ssh"))
+        if path:
+            self.keyfile = path
+            self.log.appendPlainText(f"SSH-Schlüssel gewählt: {Path(path).name}")
+
+    def run(self, work, callback):
+        if self.busy:
+            return
+        self.busy = True
+        self.update_controls()
+        future = self.pool.submit(work)
+
+        def completed(task):
+            try:
+                result = task.result()
+            except Exception as error:
+                self.done.emit(callback, None, error)
+            else:
+                self.done.emit(callback, result, None)
+        future.add_done_callback(completed)
+
+    def finished(self, callback, result, error):
+        self.busy = False
+        if error:
+            self.log.appendPlainText(str(error))
+        callback(result, error)
+        self.update_controls()
+
+    def connect_server(self):
+        if self.busy or self.session:
+            return
+        try:
+            profile = self.fields()
+        except ValueError as error:
+            self.log.appendPlainText(str(error))
+            return
+        if profile["protocol"] == "FTP" and QMessageBox.question(
+            self, "Unverschlüsseltes FTP", "Bei FTP werden Passwort und Dateien unverschlüsselt übertragen. Verbinden?"
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        self.open_connection(profile, self.password.text())
+
+    def open_connection(self, profile, secret):
+        known = CONFIG / "known_hosts"
+        self.log.appendPlainText(f"Verbinde per {profile['protocol']} mit {profile['host']}:{profile['port']} …")
+
+        def work():
+            session = Session(profile, secret, known)
+            try:
+                folder = session.home()
+                return session, folder, session.list(folder)
+            except Exception:
+                session.close()
+                raise
+
+        def opened(result, error):
+            if isinstance(error, UnknownHostKey):
+                message = (f"{error.host}\n{error.key.get_name()}\n{error.fingerprint}\n\n"
+                           "Vergleiche den Fingerabdruck mit dem deines Servers. Diesem Schlüssel vertrauen?")
+                if QMessageBox.question(self, "SSH-Server überprüfen", message) == QMessageBox.StandardButton.Yes:
+                    try:
+                        keys = paramiko.HostKeys(str(known)) if known.exists() else paramiko.HostKeys()
+                        keys.add(error.host, error.key.get_name(), error.key)
+                        CONFIG.mkdir(parents=True, exist_ok=True)
+                        temp = known.with_suffix(".tmp")
+                        keys.save(str(temp))
+                        temp.replace(known)
+                    except OSError as save_error:
+                        self.log.appendPlainText(str(save_error))
+                    else:
+                        self.open_connection(profile, secret)
+            elif result:
+                self.session, self.remote_dir, entries = result
+                self.profile, self.secret = profile, secret
+                self.password.clear()
+                self.remote.show_entries(self.remote_dir, entries)
+                self.log.appendPlainText("Verbunden.")
+        self.run(work, opened)
+
+    def disconnect(self):
+        if self.busy or not self.session:
+            return
+        if any(job.status in ("Wartet", "Fehlgeschlagen", "Abgebrochen") for job in self.jobs):
+            if QMessageBox.question(self, "Verbindung trennen", "Ausstehende Transfers verwerfen und Verbindung trennen?") != QMessageBox.StandardButton.Yes:
+                return
+        self.session.close()
+        self.session = self.profile = None
+        self.secret = ""
+        self.jobs.clear()
+        self.queue.clear()
+        self.remote_dir = ""
+        self.remote.show_entries("", [])
+        self.log.appendPlainText("Verbindung getrennt.")
+        self.update_controls()
+
+    def show_local(self, path):
+        try:
+            path = path.resolve()
+            entries = []
+            with os.scandir(path) as listing:
+                for item in listing:
+                    try:
+                        directory = item.is_dir()
+                        entries.append((item.name, directory, None if directory else item.stat().st_size))
+                    except OSError:
+                        continue
+        except (OSError, RuntimeError) as error:
+            self.log.appendPlainText(str(error))
+            self.local.path.setText(str(self.local_dir))
+            return
+        self.local_dir = path
+        self.local.show_entries(path, sorted(entries, key=lambda row: (not row[1], row[0].casefold())))
+
+    def local_up(self):
+        self.show_local(self.local_dir.parent)
+
+    def choose_local(self):
+        folder = QFileDialog.getExistingDirectory(self, "Lokaler Ordner", str(self.local_dir))
+        if folder:
+            self.show_local(Path(folder))
+
+    def open_local(self, item, _column):
+        name, directory, _size = item.data(0, Qt.ItemDataRole.UserRole)
+        if directory:
+            self.show_local(self.local_dir / name)
+
+    def open_remote(self, item, _column):
+        name, directory, _size = item.data(0, Qt.ItemDataRole.UserRole)
+        if directory:
+            self.show_remote(posixpath.join(self.remote_dir, name))
+
+    def show_remote(self, path):
+        if not self.session or self.busy or not path or any(c in path for c in "\r\n\0"):
+            return
+        path = posixpath.normpath(posixpath.join(self.remote_dir, path))
+
+        def listed(entries, error):
+            if error:
+                self.remote.path.setText(self.remote_dir)
+            else:
+                self.remote_dir = path
+                self.remote.show_entries(path, entries)
+        self.run(lambda: self.session.list(path), listed)
+
+    def remote_up(self):
+        self.show_remote(posixpath.dirname(self.remote_dir))
+
+    def refresh_remote(self):
+        self.show_remote(self.remote_dir)
+
+    def remote_action(self, operation):
+        if self.session and not self.busy:
+            self.run(operation, lambda _result, _error: self.refresh_remote())
+
+    def new_folder(self):
+        name, ok = QInputDialog.getText(self, "Serverordner erstellen", "Name:")
+        if ok and safe_name(name):
+            self.remote_action(lambda: self.session.mkdir(posixpath.join(self.remote_dir, name)))
+
+    def rename(self):
+        items = self.remote.tree.selectedItems()
+        if len(items) != 1:
+            return
+        old, _dir, _size = items[0].data(0, Qt.ItemDataRole.UserRole)
+        name, ok = QInputDialog.getText(self, "Serverdatei umbenennen", "Neuer Name:", text=old)
+        if not ok or not safe_name(name) or name == old:
+            return
+
+        def work():
+            if any(entry[0] == name for entry in self.session.list(self.remote_dir)):
+                raise FileExistsError(f"Der Name {name} ist bereits vergeben.")
+            self.session.rename(posixpath.join(self.remote_dir, old), posixpath.join(self.remote_dir, name))
+        self.remote_action(work)
+
+    def delete(self):
+        entries = [item.data(0, Qt.ItemDataRole.UserRole) for item in self.remote.tree.selectedItems()]
+        if not entries or QMessageBox.question(self, "Auf Server löschen",
+                                               f"{len(entries)} Einträge endgültig löschen?") != QMessageBox.StandardButton.Yes:
+            return
+
+        def work():
+            for name, directory, _size in entries:
+                self.session.remove(posixpath.join(self.remote_dir, name), directory)
+        self.remote_action(work)
+
+    def enqueue(self, direction):
+        pane = self.local if direction == "Upload" else self.remote
+        for item in pane.tree.selectedItems():
+            name, directory, size = item.data(0, Qt.ItemDataRole.UserRole)
+            if not safe_name(name):
+                self.log.appendPlainText(f"Nicht übertragbarer Dateiname: {name!r}")
+                continue
+            local = str(self.local_dir / name)
+            remote = posixpath.join(self.remote_dir, name)
+            source, target = (local, remote) if direction == "Upload" else (remote, local)
+            row = QTreeWidgetItem([direction, source, target, "Wartet"])
+            self.queue.addTopLevelItem(row)
+            self.jobs.append(Transfer(direction, source, target, size, row, directory))
+        self.update_controls()
+
+    def start_queue(self):
+        if not self.session or self.busy:
+            return
+        self.running = True
+        self.next_transfer()
+
+    def next_transfer(self):
+        job = next((job for job in self.jobs if job.status == "Wartet"), None)
+        if not self.running or job is None:
+            self.running = False
+            self.refresh_remote()
+            self.update_controls()
+            return
+        self.active = job
+        self.cancel.clear()
+        self.set_status(job, "Läuft …")
+        profile, secret = self.profile, self.secret
+
+        def work():
+            last = 0.0
+
+            def report(done):
+                nonlocal last
+                if self.cancel.is_set():
+                    raise InterruptedError("Transfer abgebrochen.")
+                now = time.monotonic()
+                if now - last >= 0.15:
+                    self.progress.emit(job, done)
+                    last = now
+
+            report(0)
+            session = Session(profile, secret, CONFIG / "known_hosts")
+            try:
+                report(0)
+                session.transfer(job.direction == "Upload", job.source, job.target, job.directory,
+                                 report, job.created, job.completed)
+            finally:
+                session.close()
+
+        def transferred(_result, error):
+            self.active = None
+            self.set_status(job, "Abgebrochen" if isinstance(error, InterruptedError)
+                            else "Fehlgeschlagen" if error else "Fertig")
+            if not error and job.direction == "Download":
+                self.show_local(self.local_dir)
+            self.next_transfer()
+        self.run(work, transferred)
+
+    def set_status(self, job, status):
+        job.status = status
+        job.item.setText(3, status)
+
+    def show_progress(self, job, size):
+        if self.active is job:
+            percent = f"{min(100, size * 100 // job.size)} % · " if job.size else ""
+            job.item.setText(3, f"{percent}{size:,} B".replace(",", "."))
+
+    def stop_transfer(self):
+        self.running = False
+        self.cancel.set()
+        self.stop_button.setEnabled(False)
+
+    def retry(self):
+        for job in self.jobs:
+            if job.status in ("Fehlgeschlagen", "Abgebrochen"):
+                self.set_status(job, "Wartet")
+        self.update_controls()
+
+    def remove_job(self):
+        item = self.queue.currentItem()
+        for job in self.jobs:
+            if job.item is item and job is not self.active:
+                self.jobs.remove(job)
+                self.queue.takeTopLevelItem(self.queue.indexOfTopLevelItem(item))
+                break
+        self.update_controls()
+
+    def update_controls(self):
+        connected = self.session is not None
+        self.connect_button.setEnabled(not connected and not self.busy)
+        self.disconnect_button.setEnabled(connected and not self.busy)
+        self.upload_button.setEnabled(connected)
+        for button in self.remote_buttons:
+            button.setEnabled(connected and not self.busy)
+        self.start_button.setEnabled(connected and not self.busy and any(job.status == "Wartet" for job in self.jobs))
+        self.stop_button.setEnabled(self.active is not None and not self.cancel.is_set())
+
+    def closeEvent(self, event):
+        if self.busy:
+            self.stop_transfer()
+            self.log.appendPlainText("Warte, bis der laufende Vorgang beendet ist.")
+            event.ignore()
+            return
+        if self.session:
+            self.session.close()
+        self.pool.shutdown(wait=False)
+        super().closeEvent(event)
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setDesktopFileName("creative-ftp")
+    window = CreativeFTP()
+    if "--selftest" in sys.argv:
+        assert window.protocol.count() == 3 and not window.start_button.isEnabled()
+        window.close()
+        return 0
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
