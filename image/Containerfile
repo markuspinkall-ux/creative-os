@@ -53,6 +53,7 @@ RUN mkdir -p /var/opt \
     fi \
  && dnf clean all
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
+RUN mkdir -p /etc/skel/Bilder
 
 # Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
