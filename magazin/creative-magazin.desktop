@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Magazin
+GenericName=Zeitschrift
+Comment=Tests, Reviews, News und Artikel deiner Lieblingsseiten als tägliche Zeitschrift lesen
+Keywords=Magazin;Zeitschrift;RSS;News;Nachrichten;Artikel;Tests;Reviews;Feed;
+Exec=creative-magazin
+Icon=creative-magazin
+Terminal=false
+Categories=Network;News;
+StartupWMClass=creative-magazin

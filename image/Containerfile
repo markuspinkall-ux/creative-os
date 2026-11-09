@@ -203,6 +203,13 @@ COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.d
 COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
 RUN chmod 755 /usr/bin/creative-podcast
 
+# Creative Magazin – Lieblingsseiten per RSS als tägliche Zeitschrift lesen.
+COPY magazin/creative_magazin /usr/lib/creative-magazin/creative_magazin
+COPY magazin/bin/creative-magazin /usr/bin/creative-magazin
+COPY magazin/creative-magazin.desktop /usr/share/applications/creative-magazin.desktop
+COPY magazin/creative-magazin.svg /usr/share/icons/hicolor/scalable/apps/creative-magazin.svg
+RUN chmod 755 /usr/bin/creative-magazin
+
 # ---------------------------------------------------------------------------
 # 8a1) Creative Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
 # ---------------------------------------------------------------------------
@@ -560,6 +567,10 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/AssistantMenu.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/BluetoothMenu.qml \
+        /usr/lib/creative-magazin/creative_magazin/qml/Main.qml \
+        /usr/lib/creative-magazin/creative_magazin/qml/MagazinePage.qml \
+        /usr/lib/creative-magazin/creative_magazin/qml/Reader.qml \
+        /usr/lib/creative-magazin/creative_magazin/qml/Sources.qml \
  && rm -f /tmp/qml-check.py
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
