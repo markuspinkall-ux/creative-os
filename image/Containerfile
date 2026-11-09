@@ -140,10 +140,22 @@ COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
 COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
-# ChatGPT bündelt Web-Chat und die lokale Codex-Diagnose.
+# Claude bündelt Web-Chat und die lokale Diagnose mit Claude Code (npm).
 RUN dnf install -y npm && dnf clean all
-COPY --chmod=755 chatgpt/creative-chatgpt /usr/bin/creative-chatgpt
-RUN ln -s creative-chatgpt /usr/bin/creative-claude
+COPY --chmod=755 claude/creative-claude /usr/bin/creative-claude
+# ChatGPT: offizielle App von OpenAI (RPM, enthält auch Codex). Jeder Systembau
+# holt die neueste Version – Updates kommen also mit dem System.
+# Liegt etwas unter /opt, wird es wie bei Discord nach /usr/lib verschoben
+# (/opt ist auf Atomic-Systemen beschreibbar und beim Bauen leer).
+RUN mkdir -p /var/opt \
+ && dnf install -y "https://persistent.oaistatic.com/codex-app-prod/linux/rpm/latest/chatgpt.$(uname -m).rpm" \
+ && rpm -q chatgpt && ls -l /usr/bin/chatgpt \
+ && rpm -ql chatgpt | sed -n 's#^/opt/\([^/]*\).*#\1#p' | sort -u | while IFS= read -r name; do \
+        mv "/var/opt/$name" "/usr/lib/$name" \
+     && printf 'L+ "/var/opt/%s" - - - - "/usr/lib/%s"\n' "$name" "$name" >> /usr/lib/tmpfiles.d/creative-chatgpt.conf; \
+    done \
+ && test -z "$(ls -A /var/opt)" \
+ && dnf clean all
 COPY --chmod=755 software/creative-software /usr/bin/creative-software
 COPY software/creative-software.desktop /usr/share/applications/creative-software.desktop
 COPY --chmod=755 flatrules/creative-flatrules /usr/bin/creative-flatrules

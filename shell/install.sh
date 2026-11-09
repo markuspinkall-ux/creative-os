@@ -34,7 +34,7 @@ rm -rf /usr/share/kwin/scripts/creative-tasks
 mkdir -p /usr/share/kwin/scripts
 cp -r kwin/creative-tasks /usr/share/kwin/scripts/
 
-# Web-Apps als eigene Fenster (Claude, ChatGPT, YouTube, Twitch)
+# Web-Apps als eigene Fenster (Claude, YouTube, Twitch); ChatGPT startet die offizielle App von OpenAI
 install -Dm755 webapps/creative-webapp /usr/bin/creative-webapp
 for app in claude chatgpt youtube twitch; do
     install -Dm644 "webapps/creative-$app.desktop" "/usr/share/applications/creative-$app.desktop"
