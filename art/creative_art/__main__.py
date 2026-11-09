@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from .canvas import Canvas
-from .document import Document, MAX_SIDE, check_size, read_image, transparent
+from .document import Document, MAX_SIDE, apply_alpha, check_size, read_image, transparent
+from .transform import TransformDialog
 
 PROJECT = "Creative Art (*.cart)"
 IMAGES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff *.gif)"
@@ -79,6 +80,10 @@ class Window(QMainWindow):
         self.action("Auswahl aufheben", self.deselect, "Escape")
         self.crop_action = self.action("Auf Auswahl zuschneiden", self.crop, "Return", edit)
         self.action("Mit Vordergrundfarbe füllen", self.fill, "Alt+Backspace", edit)
+        self.transform_action = self.action("Ebene frei transformieren …", self.transform_layer, "Ctrl+T", edit)
+        edit.addSeparator()
+        self.add_mask_action = self.action("Ebenenmaske hinzufügen", self.add_mask, menu=edit)
+        self.remove_mask_action = self.action("Ebenenmaske entfernen", self.remove_mask, menu=edit)
         self.action("Einpassen", self.fit, "Ctrl+0", view)
         self.action("100 %", lambda: self.canvas.set_zoom(1), "Ctrl+1", view)
         self.action("Vergrößern", lambda: self.canvas.set_zoom(self.canvas.zoom * 1.25), "Ctrl++", view)
@@ -91,6 +96,8 @@ class Window(QMainWindow):
         for key, label, shortcut, shape in (
             ("move", "Ebene verschieben", "V", '<path d="M12 3v18M3 12h18m-12-6 3-3 3 3m-9 3-3 3 3 3m3 3 3 3 3-3m3-9 3 3-3 3"/>'),
             ("brush", "Pinsel", "B", '<path d="m10 14 8-10q3-2 2 2l-6 11m-4-3c-4 0-2 5-6 6 4 2 9 0 10-3z"/>'),
+            ("mask_hide", "Maske: ausblenden", None, '<rect x="4" y="5" width="16" height="14"/><path d="M8 12h8"/>'),
+            ("mask_show", "Maske: einblenden", None, '<rect x="4" y="5" width="16" height="14"/><path d="M8 12h8m-4-4v8"/>'),
             ("eraser", "Radierer", "E", '<path d="m4 14 9-10 7 6-8 10H9zm3-4 8 7m-4 3h10"/>'),
             ("clone", "Kopierstempel", "S", '<path d="M5 18h14v3H5zm1-3c0-3 4-2 4-5L9 6a3 3 0 0 1 6 0l-1 4c0 3 4 2 4 5z"/>'),
             ("rectangle", "Rechteckauswahl", "M", '<rect x="4" y="5" width="16" height="14" stroke-dasharray="2 3"/>'),
@@ -110,7 +117,7 @@ class Window(QMainWindow):
             icon = QPixmap()
             icon.loadFromData(svg.encode(), "SVG")
             action.setIcon(QIcon(icon))
-            action.setToolTip(f"{label} ({shortcut})")
+            action.setToolTip(f"{label} ({shortcut})" if shortcut else label)
             action.setCheckable(True)
             group.addAction(action)
             action.setChecked(key == self.canvas.tool)
@@ -152,6 +159,10 @@ class Window(QMainWindow):
             layout, "Zoom", round(100 * math.log2(self.canvas.zoom)),
             -400, 300, lambda value: f"{2 ** (value / 100):.0%}"
         )
+        self.feather_slider, self.feather_label = self.slider_row(
+            layout, "Weiche Auswahlkante", self.doc.feather, 0, 100, lambda value: f"{value} px"
+        )
+        self.feather_slider.valueChanged.connect(self.set_feather)
         self.zoom_slider.setSingleStep(5)
         self.zoom_slider.setPageStep(25)
         self.zoom_slider.valueChanged.connect(lambda value: self.canvas.set_zoom(2 ** (value / 100)))
@@ -172,6 +183,10 @@ class Window(QMainWindow):
         self.action("↓", lambda: self.move_layer(-1), toolbar=toolbar).setToolTip("Ebene nach unten")
         self.action("−", self.remove_layer, toolbar=toolbar).setToolTip("Aktive Ebene entfernen")
         layout.addWidget(toolbar)
+        masks = QToolBar()
+        masks.addAction(self.add_mask_action)
+        masks.addAction(self.remove_mask_action)
+        layout.addWidget(masks)
         dock.setWidget(panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.menuBar().actions()[2].menu().addAction(dock.toggleViewAction())
@@ -202,13 +217,19 @@ class Window(QMainWindow):
             self.layers.clear()
             for index in reversed(range(len(self.doc.layers))):
                 layer = self.doc.layers[index]
-                item = QListWidgetItem(layer.name)
+                item = QListWidgetItem(layer.name + ("  ·  Maske" if layer.mask is not None else ""))
                 item.setData(Qt.ItemDataRole.UserRole, index)
                 item.setCheckState(Qt.CheckState.Checked if layer.visible else Qt.CheckState.Unchecked)
                 self.layers.addItem(item)
             self.layers.setCurrentRow(len(self.doc.layers) - 1 - self.doc.active)
         with QSignalBlocker(self.layer_opacity):
             self.layer_opacity.setValue(self.doc.layer.opacity)
+        with QSignalBlocker(self.feather_slider):
+            self.feather_slider.setValue(self.doc.feather)
+        self.feather_label.setText(f"{self.doc.feather} px")
+        self.add_mask_action.setEnabled(self.doc.layer.mask is None)
+        self.remove_mask_action.setEnabled(self.doc.layer.mask is not None)
+        self.transform_action.setEnabled(self.doc.layer.visible)
         self.layer_opacity_label.setText(f"{self.doc.layer.opacity} %")
         self.undo_action.setEnabled(bool(self.doc.undo))
         self.redo_action.setEnabled(bool(self.doc.redo))
@@ -281,6 +302,37 @@ class Window(QMainWindow):
             self.doc.layer.opacity = value
             self.refresh()
 
+    def set_feather(self, value):
+        self.doc.feather = value
+
+    def add_mask(self):
+        try:
+            self.doc.add_mask()
+        except HANDLED_ERRORS as error:
+            self.error(error)
+            return
+        self.refresh()
+
+    def remove_mask(self):
+        self.doc.remove_mask()
+        self.refresh()
+
+    def transform_layer(self):
+        if not self.doc.layer.visible:
+            return
+        try:
+            dialog = TransformDialog(self, self.doc)
+            if dialog.exec() != QDialog.DialogCode.Accepted or dialog.matrix().isIdentity():
+                return
+            transformed = self.doc.layer.transformed(dialog.matrix())
+        except HANDLED_ERRORS as error:
+            self.error(error)
+            return
+        self.doc.checkpoint()
+        self.doc.layers[self.doc.active] = transformed
+        self.canvas.clone_source = None
+        self.refresh()
+
     def add_layer(self, name=None, image=None):
         try:
             self.doc.add_layer(name or f"Ebene {len(self.doc.layers) + 1}", image)
@@ -335,23 +387,32 @@ class Window(QMainWindow):
     def fill(self):
         if not self.doc.layer.visible:
             return
-        self.doc.checkpoint()
-        with QPainter(self.doc.layer.image) as painter:
-            if not self.doc.selection.isEmpty():
-                painter.setClipPath(self.doc.selection)
-            painter.fillRect(self.doc.layer.image.rect(), self.canvas.color)
+        layer = self.doc.layer.image
+        if self.doc.selection.isEmpty():
+            self.doc.checkpoint()
+            with QPainter(layer) as painter:
+                painter.fillRect(layer.rect(), self.canvas.color)
+        else:
+            bounds = self.doc.selection_bounds(feathered=True)
+            if bounds.isEmpty():
+                return
+            color = transparent(bounds.size())
+            color.fill(self.canvas.color)
+            apply_alpha(color, self.doc.selection_mask(bounds))
+            self.doc.checkpoint()
+            with QPainter(layer) as painter:
+                painter.drawImage(bounds.topLeft(), color)
         self.refresh()
 
     def copy(self):
-        QApplication.clipboard().setImage(self.doc.render(self.doc.selection_bounds(), selection=True))
+        QApplication.clipboard().setImage(self.doc.render(self.doc.selection_bounds(feathered=True), selection=True))
 
     def cut(self):
-        bounds = self.doc.selection_bounds()
-        image = transparent(bounds.size())
-        with QPainter(image) as painter:
-            painter.translate(-bounds.x(), -bounds.y())
-            painter.setClipPath(self.doc.selection)
-            painter.drawImage(0, 0, self.doc.layer.image)
+        bounds = self.doc.selection_bounds(feathered=True)
+        if bounds.isEmpty():
+            return
+        image = self.doc.layer.rendered().copy(bounds)
+        apply_alpha(image, self.doc.selection_mask(bounds))
         QApplication.clipboard().setImage(image)
         self.delete_selection()
 
