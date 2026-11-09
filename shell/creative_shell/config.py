@@ -72,7 +72,8 @@ DEFAULTS = {
         {
             "icon": "chatgpt",
             "candidates": ["creative-chatgpt.desktop"],
-            "match": ["brave-chatgpt.com", "creative-chatgpt"],
+            # Offizielle OpenAI-App (Electron); Fensterkennung je nach Version.
+            "match": ["chatgpt", "com.openai", "openai", "codex", "creative-chatgpt"],
         },
         {
             "icon": "youtube",

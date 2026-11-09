@@ -2,10 +2,9 @@
 Type=Application
 Name=ChatGPT
 GenericName=KI-Assistent
-Comment=ChatGPT und lokale Systemdiagnose mit Codex
-Keywords=KI;AI;Assistent;Chat;OpenAI;
-Exec=creative-chatgpt
+Comment=Offizielle ChatGPT-App von OpenAI mit ChatGPT Work und Codex
+Keywords=KI;AI;Assistent;Chat;OpenAI;Codex;
+Exec=chatgpt %U
 Icon=creative-chatgpt
 Terminal=false
 Categories=Network;
-StartupWMClass=creative-chatgpt

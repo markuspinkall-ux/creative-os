@@ -133,8 +133,8 @@ jobs:
               /usr/bin/creative-art --selftest
               echo "Starte Creative-Writer-Selbsttest"
               /usr/bin/creative-writer --selftest
-              echo "Starte Creative-ChatGPT-Selbsttest"
-              /usr/bin/creative-chatgpt --selftest
+              echo "Prüfe offizielle ChatGPT-App"
+              rpm -q chatgpt
               /usr/bin/creative-claude --selftest
               /usr/bin/creative-software --selftest
               echo "Starte Creative-Magazin-Selbsttest"

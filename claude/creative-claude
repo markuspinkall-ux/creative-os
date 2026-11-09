@@ -1,5 +1,8 @@
 #!/usr/bin/python3
-"""Creative OS entry point for web chat and local diagnostics."""
+"""Claude für Creative OS: Webchat und lokale Systemdiagnose mit Claude Code.
+
+ChatGPT ist die offizielle App von OpenAI (RPM im Abbild) und nutzt dieses Skript nicht mehr.
+"""
 
 import shutil
 import sys
@@ -11,14 +14,13 @@ from PySide6.QtWidgets import (
     QApplication, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
 )
 
-CLAUDE = Path(sys.argv[0]).name == "creative-claude"
-APP_NAME = "Claude" if CLAUDE else "ChatGPT"
-CLI_NAME = "Claude Code" if CLAUDE else "Codex"
-COMMAND = "claude" if CLAUDE else "codex"
-PACKAGE = "@anthropic-ai/claude-code" if CLAUDE else "@openai/codex"
-DESKTOP_ID = "creative-claude" if CLAUDE else "creative-chatgpt"
-WEB = "https://claude.ai/" if CLAUDE else "https://chatgpt.com/"
-DOCS = "https://code.claude.com/docs/en/setup" if CLAUDE else "https://developers.openai.com/codex/cli"
+APP_NAME = "Claude"
+CLI_NAME = "Claude Code"
+COMMAND = "claude"
+PACKAGE = "@anthropic-ai/claude-code"
+DESKTOP_ID = "creative-claude"
+WEB = "https://claude.ai/"
+DOCS = "https://code.claude.com/docs/en/setup"
 PREFIX = Path.home() / ".local/share" / DESKTOP_ID
 PROMPT = (
     "Hilf mir bei der Fehlersuche auf diesem Creative-OS-Rechner. "
@@ -114,13 +116,8 @@ class AssistantWindow(QWidget):
             self.refresh_status()
             QMessageBox.information(self, APP_NAME, f"Klicke zuerst auf „{CLI_NAME} installieren“.")
             return
-        if CLAUDE:
-            mode = "bypassPermissions" if full_access else "default"
-            flags = ["--permission-mode", mode]
-        else:
-            mode = "danger-full-access" if full_access else "read-only"
-            flags = ["--sandbox", mode, "--ask-for-approval", "on-request"]
-        self.terminal([executable, *flags, PROMPT])
+        mode = "bypassPermissions" if full_access else "default"
+        self.terminal([executable, "--permission-mode", mode, PROMPT])
 
     def diagnose(self):
         self.launch_local()
@@ -131,7 +128,7 @@ class AssistantWindow(QWidget):
             f"{CLI_NAME} kann in dieser Sitzung alle Dateien lesen und ändern, auf die dein "
             "Benutzerkonto Zugriff hat, und lokale Befehle ausführen. "
             "Administratorrechte erfordern eine separate Freigabe durch das System."
-            + (" Claude fragt in diesem Modus nicht vor Werkzeugaufrufen." if CLAUDE else ""),
+            + " Claude fragt in diesem Modus nicht vor Werkzeugaufrufen.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
