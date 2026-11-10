@@ -130,16 +130,24 @@ def network_check(domain):
     Läuft in einem Hintergrund-Thread. Rückgabe: dict mit Werten und Befunden."""
     import ipaddress
     import time
-    res = {"local": "", "ipv4": "", "ipv6": "", "dns": "", "last": "", "issues": []}
+    res = {"local": "", "gateway": "", "ipv4": "", "ipv6": "", "dns": "", "last": "", "issues": []}
 
     def add(level, text):          # level: ok | warn | error
         res["issues"].append({"level": level, "text": text})
 
-    local = next((u[7:] for u in addresses()[1:]), "")
+    local = local_ipv4()
     res["local"] = local or "–"
     if not local:
         add("error", "Dieser PC hat keine Heimnetz-Adresse. Netzwerkkabel bzw. WLAN prüfen.")
         return res
+    _ip, dev, gateway = route_source()
+    res["gateway"] = gateway or "–"
+    lan = lan_addresses()
+    others = [f"{ip} ({name})" for name, ip in lan if ip != local]
+    if others:
+        add("warn", f"Dieser PC hat mehrere Adressen im Heimnetz: {local} ({dev}) und {', '.join(others)} – "
+                    f"z. B. Kabel und WLAN gleichzeitig. Die Portfreigabe im Router muss auf {local} zeigen, "
+                    "oder du trennst einen der Anschlüsse.")
 
     v4, v6 = _fetch_ip(IPV4_SERVICES), _fetch_ip(IPV6_SERVICES)
     res["ipv4"], res["ipv6"] = v4 or "–", v6 or "–"
@@ -194,19 +202,61 @@ def network_check(domain):
     if out == "no":
         add("error", "Die Firewall blockiert HTTPS (Port 443). „Jetzt aktualisieren“ öffnet ihn wieder.")
 
-    add("info", f"Bitte prüfen: Im Router müssen die Ports 80 und 443 an {local} weitergeleitet sein. Von außen "
-        f"testen: am Handy WLAN aus, dann https://{domain} öffnen.")
+    add("info", f"Bitte prüfen: Im Router müssen die Ports 80 und 443 an {local} weitergeleitet sein "
+        f"(Router: {gateway or 'unbekannt'}). Damit sich die Adresse nicht ändert, im Router für diesen PC "
+        f"„immer dieselbe IP vergeben“ einstellen. Von außen testen: am Handy WLAN aus, dann https://{domain} öffnen.")
     return res
+
+
+VIRTUAL = ("lo", "docker", "podman", "cni-", "virbr", "veth", "br-", "tun", "tap", "wg", "tailscale",
+           "zt", "waydroid", "lxc", "vnet", "incus")
+
+
+def lan_addresses():
+    """Echte Heimnetz-Adressen dieses PCs: [(Schnittstelle, IPv4)] – ohne virtuelle Netze
+    (Podman, VMs, VPN, Waydroid …), deren Adressen der Router nie vergeben hat."""
+    try:
+        out = subprocess.run(["ip", "-j", "-4", "addr", "show", "scope", "global"],
+                             capture_output=True, text=True, timeout=3).stdout
+        links = json.loads(out or "[]")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    found = []
+    for link in links:
+        name = link.get("ifname", "")
+        if name.startswith(VIRTUAL) or "UP" not in link.get("flags", []):
+            continue
+        found += [(name, a["local"]) for a in link.get("addr_info", []) if a.get("local")]
+    return found
+
+
+def route_source():
+    """Die Adresse, mit der dieser PC ins Internet geht – also die, an die der Router
+    weiterleiten muss. → (IPv4, Schnittstelle, Router-Adresse) oder ("", "", "")."""
+    try:
+        out = subprocess.run(["ip", "-4", "route", "get", "1.1.1.1"], capture_output=True, text=True,
+                             timeout=3).stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        return "", "", ""
+    def after(word):
+        return out[out.index(word) + 1] if word in out[:-1] else ""
+    return after("src"), after("dev"), after("via")
+
+
+def local_ipv4():
+    ip, dev, _gw = route_source()
+    if ip and not dev.startswith(VIRTUAL):
+        return ip
+    lan = lan_addresses()
+    return lan[0][1] if lan else ""
 
 
 def addresses():
     host = socket.gethostname()
     urls = [f"http://{host}.local"]
-    try:
-        out = subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=3).stdout.split()
-        urls += [f"http://{ip}" for ip in out if ":" not in ip][:2]
-    except (OSError, subprocess.SubprocessError):
-        pass
+    ip = local_ipv4()
+    if ip:
+        urls.append(f"http://{ip}")
     return urls
 
 
