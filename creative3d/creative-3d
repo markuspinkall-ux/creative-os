@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 LIB = Path("/usr/lib/creative-3d")
 if not (LIB / "creative3d_worker.py").is_file():
     LIB = Path(__file__).resolve().parent                     # aus dem Quellordner gestartet
+sys.path.insert(0, str(LIB))
 DATA = Path(os.environ.get("CREATIVE3D_HOME") or Path.home() / ".local/share/creative-3d")
 SETUP = LIB / "creative3d-setup"
 OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-3d"
@@ -169,6 +170,9 @@ class Creative3D(QMainWindow):
         self.proc.finished.connect(self.finished)
         self.mode = None                                       # "setup" | "generate"
         self.error = ""
+        self.joints = None                                     # Skelett (Name → Position) oder None
+        self.rigged = None                                     # GLB mit Skelett
+        self.probe = True
 
         root = QWidget()
         self.setCentralWidget(root)
@@ -217,6 +221,16 @@ class Creative3D(QMainWindow):
         row.addWidget(self.fill, 1)
         row.addWidget(self.fill_label)
         lv.addLayout(row)
+        lv.addWidget(QLabel("SKELETT", objectName="section"))
+        self.skeleton = QComboBox()
+        self.skeleton.addItem("Kein Skelett (Objekt)", "")
+        self.skeleton.addItem("Mensch / Figur – mit Gelenken", "human")
+        self.skeleton.setToolTip("Mit Skelett lässt sich die GLB in Animations-KIs und Engines bewegen")
+        self.skeleton.currentIndexChanged.connect(self.skeleton_changed)
+        lv.addWidget(self.skeleton)
+        self.rig_button = QPushButton("Gelenke anpassen …")
+        self.rig_button.clicked.connect(self.edit_joints)
+        lv.addWidget(self.rig_button)
         self.generate = QPushButton("3D-Figur erstellen", objectName="primary")
         self.generate.clicked.connect(self.start_generate)
         lv.addWidget(self.generate)
@@ -323,6 +337,10 @@ class Creative3D(QMainWindow):
         self.setup_button.setEnabled(not busy)
         for b in self.export_buttons + [self.folder_button]:
             b.setEnabled(bool(self.result) and not busy)
+        can_rig = bool(self.result and "npz" in self.result.get("files", {})) and not busy
+        self.rig_button.setVisible(self.skeleton.currentData() == "human")
+        self.rig_button.setEnabled(can_rig)
+        self.export_buttons[0].setText("GLB mit Skelett …" if self.rigged else "GLB …")
         self.rotate.setEnabled(bool(self.result))
 
     def js(self, code):
@@ -421,9 +439,8 @@ class Creative3D(QMainWindow):
 
     def show_result(self, result):
         self.result = result
-        if self.scheme:
-            self.scheme.model = result["files"]["glb"]
-            self.js(f"show('c3d:///model/{self.counter}.glb')")
+        self.joints = self.rigged = None
+        self.preview(result["files"]["glb"])
         faces = f"{result.get('faces', 0):,}".replace(",", ".")
         self.info.setText(f"{faces} Dreiecke · {result.get('seconds', 0)} s")
 
@@ -442,13 +459,77 @@ class Creative3D(QMainWindow):
                 self.status.setText("Fehler: " + (self.error or getattr(self, "last", "") or f"Code {code}"))
             elif self.result:
                 self.status.setText("Fertig. Ziehen dreht die Figur, unten speichern.")
+                if self.skeleton.currentData() == "human":
+                    self.refresh()
+                    self.edit_joints()
         self.refresh()
+
+    # ---- Skelett ------------------------------------------------------------------
+    def mesh_data(self):
+        import numpy as np
+        data = np.load(self.result["files"]["npz"])
+        colors = data["colors"] if len(data["colors"]) else None
+        return data["vertices"], data["faces"], data["normals"], colors
+
+    def skeleton_changed(self):
+        if self.skeleton.currentData() != "human":
+            self.joints = self.rigged = None
+            self.preview(self.result["files"]["glb"] if self.result else None)
+            self.refresh()
+        elif self.result and "npz" in self.result.get("files", {}):
+            self.refresh()
+            self.edit_joints()
+        else:
+            self.refresh()
+
+    def edit_joints(self):
+        if not (self.result and "npz" in self.result.get("files", {})):
+            return
+        from creative3d_rigeditor import RigDialog
+        vertices, faces, normals, colors = self.mesh_data()
+        dialog = RigDialog(self, vertices, self.joints, self.probe)
+        dialog.setStyleSheet(STYLE)
+        if dialog.exec() != RigDialog.DialogCode.Accepted:
+            if self.joints is None:
+                self.skeleton.blockSignals(True)
+                self.skeleton.setCurrentIndex(0)
+                self.skeleton.blockSignals(False)
+                self.refresh()
+            return
+        self.joints, self.probe = dialog.joints, dialog.probe.isChecked()
+        self.write_rig(vertices, faces, normals, colors)
+
+    def write_rig(self, vertices, faces, normals, colors):
+        import creative3d_rig as rig
+        base = Path(self.result["files"]["glb"])
+        self.rigged = str(base.with_name(base.stem + "-skelett.glb"))
+        try:
+            rig.write_glb(self.rigged, vertices, faces, colors, normals, self.joints)
+            shown = self.rigged
+            if self.probe:
+                shown = str(base.with_name(base.stem + "-probe.glb"))
+                rig.write_glb(shown, vertices, faces, colors, normals, self.joints, rig.probe_animation())
+        except (OSError, ValueError) as error:
+            self.rigged = None
+            self.status.setText(f"Skelett konnte nicht gespeichert werden: {error}")
+            self.refresh()
+            return
+        self.preview(shown)
+        self.status.setText("Skelett gesetzt – „GLB mit Skelett“ speichert es mit."
+                            + (" Die Vorschau zeigt eine Probe-Bewegung." if self.probe else ""))
+        self.refresh()
+
+    def preview(self, path):
+        if self.scheme and path:
+            self.counter += 1
+            self.scheme.model = path
+            self.js(f"show('c3d:///model/{self.counter}.glb')")
 
     # ---- Export -------------------------------------------------------------------
     def save(self, fmt):
         if not self.result:
             return
-        source = Path(self.result["files"][fmt])
+        source = Path(self.rigged if fmt == "glb" and self.rigged else self.result["files"][fmt])
         target, _ = QFileDialog.getSaveFileName(self, f"Als {fmt.upper()} speichern",
                                                 str(Path.home() / source.name), f"{fmt.upper()} (*.{fmt})")
         if not target:

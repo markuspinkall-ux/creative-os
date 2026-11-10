@@ -123,6 +123,12 @@ def main(argv=None):
     trimesh.repair.fix_normals(mesh)
     progress(88, "Speichere GLB, OBJ, STL und PLY …")
     files = export_all(mesh, out, name)
+    # Rohdaten für das Skelett (Creative 3D rechnet die Gelenke im System-Python)
+    colors = np.asarray(mesh.visual.vertex_colors, dtype=np.uint8) if mesh.visual.kind == "vertex" else None
+    np.savez_compressed(out / "netz.npz", vertices=np.asarray(mesh.vertices, np.float32),
+                        faces=np.asarray(mesh.faces, np.uint32), normals=np.asarray(mesh.vertex_normals, np.float32),
+                        colors=colors if colors is not None else np.zeros((0, 4), np.uint8))
+    files["npz"] = str(out / "netz.npz")
     seconds = round(time.time() - started)
     progress(100, f"Fertig in {seconds} s")
     say("OK", json.dumps({"files": files, "input": str(prepared), "faces": int(len(mesh.faces)),
