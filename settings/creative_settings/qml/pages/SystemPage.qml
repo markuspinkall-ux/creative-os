@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Dialogs
 import Creative
 import ".."
 
@@ -13,6 +14,87 @@ SettingsPage {
     }
 
     Message { text: system.message }
+
+    // ---- Dein Konto: Profilbild mit Vorschau --------------------------------------------
+    Card {
+        id: accountCard
+        title: "Dein Konto"
+        subtitle: "Das Profilbild erscheint im Startmenü, auf dem Sperr- und dem Anmeldebildschirm."
+        property string error: ""
+        readonly property bool previewing: session.avatarPreview.length > 0
+
+        Row {
+            width: parent.width
+            spacing: 22
+            topPadding: 4
+            bottomPadding: 10
+
+            Item {
+                width: 112
+                height: 112
+                Avatar {
+                    anchors.centerIn: parent
+                    size: 104
+                    source: accountCard.previewing ? session.avatarPreview : session.avatar
+                    initials: session.initials
+                }
+                // Ring zeigt: das ist erst eine Vorschau
+                Rectangle {
+                    anchors.fill: parent
+                    radius: width / 2
+                    color: "transparent"
+                    border.width: 3
+                    border.color: accountCard.previewing ? Theme.accent : "transparent"
+                }
+            }
+
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 6
+                Text { text: session.fullName; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true }
+                Text {
+                    text: accountCard.previewing ? "Vorschau – so sieht dein neues Profilbild aus."
+                          : session.avatar ? "Eigenes Profilbild" : "Kein Bild – es wird dein Kürzel „" + session.initials + "“ gezeigt."
+                    color: accountCard.previewing ? Theme.accent : Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                Item { width: 1; height: 6 }
+                Row {
+                    spacing: 8
+                    visible: !accountCard.previewing
+                    CButton { text: session.avatar ? "Bild ändern …" : "Bild wählen …"; primary: !session.avatar; onClicked: avatarDialog.open() }
+                    CButton { text: "Bild entfernen"; visible: session.avatar.length > 0; onClicked: session.removeAvatar() }
+                }
+                Row {
+                    spacing: 8
+                    visible: accountCard.previewing
+                    CButton {
+                        text: "Übernehmen"
+                        primary: true
+                        onClicked: accountCard.error = session.applyAvatar()
+                    }
+                    CButton { text: "Anderes Bild …"; onClicked: avatarDialog.open() }
+                    CButton { text: "Verwerfen"; onClicked: { session.discardAvatar(); accountCard.error = "" } }
+                }
+                Text {
+                    visible: accountCard.error.length > 0
+                    text: accountCard.error
+                    color: Theme.flame
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                }
+            }
+        }
+    }
+
+    FileDialog {
+        id: avatarDialog
+        title: "Profilbild wählen"
+        fileMode: FileDialog.OpenFile
+        nameFilters: ["Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "Alle Dateien (*)"]
+        onAccepted: accountCard.error = session.previewAvatar(selectedFile.toString())
+    }
 
     Card {
         title: "Gerätename"

@@ -477,9 +477,11 @@ class LookModel(QObject):
                 except OSError:
                     pass
         if pics.is_dir() and not pics.is_symlink():
+            # Nur Bilder direkt im Ordner „Bilder“ – keine Unterordner
+            # (Bildschirmfotos, Fotoimporte usw. bleiben außen vor)
             files = []
-            for f in pics.rglob("*"):
-                if f.suffix.lower() not in IMAGE_EXT or f.is_symlink():
+            for f in pics.iterdir():
+                if f.suffix.lower() not in IMAGE_EXT or f.is_symlink() or f.name.startswith("."):
                     continue
                 try:
                     if f.is_file():
@@ -487,7 +489,7 @@ class LookModel(QObject):
                 except OSError:
                     continue
             files.sort(reverse=True)
-            for _, f in files[:40]:
+            for _, f in files[:100]:
                 images.append({"path": str(f), "url": QUrl.fromLocalFile(str(f)).toString(), "label": f.stem})
         self._images = images
         self.changed.emit()

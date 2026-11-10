@@ -11,7 +11,7 @@ SettingsPage {
 
     Card {
         title: "Hintergrundbild"
-        subtitle: "Eigene Bilder: einfach in den Ordner „Bilder“ legen – sie erscheinen hier."
+        subtitle: "Eigene Bilder: direkt in den Ordner „Bilder“ legen – nur die erscheinen hier, Unterordner nicht."
         Flow {
             id: flow
             width: parent.width
