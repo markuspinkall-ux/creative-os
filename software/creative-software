@@ -6,7 +6,6 @@ import os
 import platform
 import re
 import sys
-import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -28,10 +27,6 @@ DEMO = [
     ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", "#8fc6af"),
 ]
 FEATURED = {row[0]: row for row in DEMO}
-CRAFT_ID = "org.creativecraft.CreativeCraft"
-CRAFT = (CRAFT_ID, "CreativeCraft", "Sandbox-Survival in einer Blockwelt: erkunden, Ressourcen sammeln, craften und bauen.")
-CRAFT_SCREENSHOT = Path("/usr/share/creative-os/software/creativecraft-screenshot.jpg")
-CRAFT_URL = "https://github.com/markuspinkall-ux/voxelklon/releases/download/latest/CreativeCraft.flatpak"
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """
@@ -164,19 +159,6 @@ class AppDetails(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.finished.connect(self.stop)
-        if app_id == CRAFT_ID:
-            self.previous.hide()
-            self.next.hide()
-            self.counter.setText("1 / 1 · Gameplay")
-            screenshot = CRAFT_SCREENSHOT
-            if not screenshot.is_file():
-                screenshot = Path(__file__).with_name(screenshot.name)
-            self.original.load(str(screenshot))
-            if self.original.isNull():
-                self.image.setText("Screenshot konnte nicht geladen werden.")
-            else:
-                self.scale_image()
-            return
         self.future = self.pool.submit(screenshot_urls, app_id, scope or "system")
         self.callback = self.load_gallery
         self.timer.start(50)
@@ -489,8 +471,7 @@ class Store(QWidget):
         if self.section == "Entdecken":
             entries = [(self.remote_scope, row) for row in self.catalog.values()]
         elif self.section == "Eigene Apps":
-            own_catalog = {**self.own_catalog, CRAFT_ID: CRAFT}
-            entries = [("user", row) for row in own_catalog.values()]
+            entries = [("user", row) for row in self.own_catalog.values()]
         else:
             entries = [(key[0], row) for key, row in self.installed.items()
                        if self.section != "Updates" or key in self.updates]
@@ -510,7 +491,7 @@ class Store(QWidget):
             self.next_page.setEnabled(current < pages)
             entries = entries[(current - 1) * 10:current * 10]
         else:
-            entries.sort(key=lambda entry: (entry[1][0] != CRAFT_ID, entry[1][0] not in FEATURED, entry[1][1].casefold()))
+            entries.sort(key=lambda entry: (entry[1][0] not in FEATURED, entry[1][1].casefold()))
         for scope, row in entries:
             self.add_row(scope, row)
         if not entries:
@@ -540,12 +521,12 @@ class Store(QWidget):
         layout.addLayout(labels, 1)
         installed_scope = next((candidate for candidate in ("user", "system")
                                 if (candidate, app_id) in self.installed), None)
-        details = QPushButton("Screenshot" if app_id == CRAFT_ID else "Screenshots")
+        details = QPushButton("Screenshots")
         details.clicked.connect(lambda: self.details(scope, row))
         layout.addWidget(details)
         if self.section == "Eigene Apps" and installed_scope:
             self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
-            if app_id == CRAFT_ID or (installed_scope, app_id) in self.updates:
+            if (installed_scope, app_id) in self.updates:
                 self.action(layout, "Aktualisieren", "update", installed_scope, app_id, name)
             self.action(layout, "Deinstallieren", "uninstall", installed_scope, app_id, name)
         elif self.section in ("Entdecken", "Eigene Apps"):
@@ -562,33 +543,6 @@ class Store(QWidget):
         item.setSizeHint(card.sizeHint())
         self.list.addItem(item)
         self.list.setItemWidget(item, card)
-
-    def download_craft(self, scope, name):
-        try:
-            temp = tempfile.TemporaryDirectory(prefix="creative-craft-")
-        except OSError:
-            self.status.setText("Der temporäre Downloadordner konnte nicht erstellt werden.")
-            return
-        target = Path(temp.name) / "CreativeCraft.flatpak"
-        self.operation = "download"
-        self.status.setText("CreativeCraft · Download von GitHub …")
-        self.log.clear()
-        self.log.show()
-        self.render()
-
-        def done(code, _):
-            self.operation = None
-            if code == 0 and target.is_file() and target.stat().st_size:
-                self.transact(["install", f"--{scope}", "--noninteractive", "--assumeyes",
-                               "--bundle", str(target)], name, cleanup=temp.cleanup)
-            else:
-                temp.cleanup()
-                self.status.setText(f"CreativeCraft · Download fehlgeschlagen (Code {code})")
-                self.render()
-
-        self.command(["--fail", "--location", "--show-error", "--proto", "=https",
-                      "--proto-redir", "=https", "--connect-timeout", "15", "--output",
-                      str(target), CRAFT_URL], done, self.write_progress, program="curl")
 
     def write_progress(self, output):
         self.log.moveCursor(QTextCursor.MoveOperation.End)
@@ -678,9 +632,6 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
         message = f"{name} {target} {labels[verb]}?"
         if QMessageBox.question(self, "Creative Software", message) != QMessageBox.StandardButton.Yes:
             return
-        if verb in ("install", "update") and app_id == CRAFT_ID and self.section == "Eigene Apps":
-            self.download_craft(scope, name)
-            return
         args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
         if verb == "install":
             args.append(OWN_REMOTE if self.section == "Eigene Apps" else "flathub")
@@ -719,9 +670,6 @@ def main():
     window = Store(preview or "--selftest" in sys.argv)
     if "--selftest" in sys.argv:
         assert window.list.count() == len(DEMO)
-        details = AppDetails(window, CRAFT, "user")
-        assert not details.original.isNull()
-        details.accept()
         return 0
     if "--updates" in sys.argv:
         window.select("Updates")
