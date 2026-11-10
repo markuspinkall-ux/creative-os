@@ -167,7 +167,7 @@ COPY ftp/creative-ftp.desktop /usr/share/applications/creative-ftp.desktop
 RUN ln -s /usr/lib/creative-ftp/creative-ftp /usr/bin/creative-ftp \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-ftp --selftest
 COPY --chmod=755 cut/creative-cut /usr/lib/creative-cut/creative-cut
-COPY cut/cut_project.py /usr/lib/creative-cut/cut_project.py
+COPY cut/cut_project.py cut/cut_timeline.py /usr/lib/creative-cut/
 COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
 RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
