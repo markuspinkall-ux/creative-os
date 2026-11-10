@@ -25,6 +25,10 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QListWidget, QMainWindow, QMessageBox, QProgressBar, QPushButton,
     QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox
+except ImportError:
+    pass
 
 from cut_project import (
     KENBURNS, LOOKS, SPEEDS, TITLE_STYLES, TRANSITIONS, Clip, Media, Music, Title, finish_args, join_args,

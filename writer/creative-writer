@@ -14,6 +14,10 @@ from PySide6.QtWidgets import (
     QApplication, QColorDialog, QComboBox, QFileDialog, QFontComboBox, QHBoxLayout,
     QInputDialog, QMainWindow, QMessageBox, QTextEdit, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox
+except ImportError:
+    pass
 
 OPEN_FILTER = "Dokumente (*.html *.htm *.txt);;HTML-Dokument (*.html *.htm);;Textdatei (*.txt)"
 HTML_FILTER = "HTML-Dokument (*.html *.htm)"

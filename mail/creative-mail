@@ -12,6 +12,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox
+except ImportError:
+    pass
 
 from gmail import Gmail
 

@@ -11,6 +11,10 @@ from PySide6.QtWidgets import (
     QFormLayout, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QScrollArea, QSlider, QSpinBox, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox
+except ImportError:
+    pass
 
 from .canvas import Canvas
 from .document import Document, MAX_SIDE, apply_alpha, check_size, read_image, transparent
