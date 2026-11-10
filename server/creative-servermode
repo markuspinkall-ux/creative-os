@@ -1,0 +1,183 @@
+#!/usr/bin/python3
+"""Server-Modus – nur noch „Mein Server“ läuft, alles andere ruht.
+
+Befehle (über pkexec, ohne Passwort für die angemeldete Person):
+  on <sitzung>   Server-Modus einschalten und die Sitzung <sitzung> beenden.
+                 Danach zeigt der Anmeldebildschirm die Server-Maske.
+  off            Zurück in den normalen Modus (läuft automatisch beim Anmelden).
+  run            Nur für creative-servermode.service: hält Bereitschaft und
+                 Ruhezustand fern und schreibt alle 30 s den Status für die Maske.
+
+Der Modus übersteht einen Neustart: Der Dienst ist dann aktiviert und der
+Anmeldebildschirm zeigt wieder die Maske.
+"""
+
+import json
+import os
+import pwd
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+STATE_DIR = Path("/var/lib/creative-servermode")
+STATE = STATE_DIR / "state.json"              # für den Anmeldebildschirm lesbar (0644)
+SERVER_STATE = Path("/var/lib/creative-server/state.json")
+SERVICE = "creative-servermode.service"
+SERVER = "creative-server.service"
+# Wird im Server-Modus nicht gebraucht und kostet Strom; nur was vorher lief,
+# wird beim Zurückwechseln wieder gestartet.
+PAUSE = ["bluetooth.service", "cups.service", "cups.socket", "cups.path", "ModemManager.service"]
+
+
+def run(*args):
+    return subprocess.run(list(args), capture_output=True, text=True)
+
+
+def reply(ok, **extra):
+    print(json.dumps({"ok": ok, **extra}, ensure_ascii=False))
+    sys.exit(0 if ok else 1)
+
+
+def load():
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def save(state):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(STATE_DIR, 0o755)
+    tmp = STATE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+
+
+def is_active(unit):
+    return run("systemctl", "is-active", "--quiet", unit).returncode == 0
+
+
+def server_ready():
+    return run("systemctl", "is-enabled", "--quiet", SERVER).returncode == 0
+
+
+def addresses():
+    """Heimnetz-IPv4-Adressen (ohne localhost/Container-Brücken)."""
+    out = run("ip", "-j", "-4", "addr", "show", "scope", "global").stdout
+    ips = []
+    try:
+        for link in json.loads(out or "[]"):
+            name = link.get("ifname", "")
+            if name.startswith(("docker", "virbr", "veth", "podman", "br-")):
+                continue
+            ips += [a["local"] for a in link.get("addr_info", []) if a.get("local")]
+    except (ValueError, KeyError, TypeError):
+        pass
+    return ips
+
+
+def apply(state):
+    """Energie sparen und Unnötiges pausieren. Mehrfach aufrufbar (auch nach Neustart)."""
+    if shutil.which("powerprofilesctl"):
+        current = run("powerprofilesctl", "get").stdout.strip()
+        if current and current != "power-saver":
+            state.setdefault("profile", current)
+            run("powerprofilesctl", "set", "power-saver")
+    paused = state.setdefault("paused", [])
+    for unit in PAUSE:
+        if is_active(unit):
+            run("systemctl", "stop", unit)
+            if unit not in paused:
+                paused.append(unit)
+    if not is_active(SERVER):
+        run("systemctl", "start", SERVER)
+
+
+def status(state):
+    server = load_server()
+    state.update({
+        "active": True,
+        "server": is_active(SERVER),
+        "host": socket.gethostname().split(".")[0],
+        "ips": addresses(),
+        "domain": server.get("domain", ""),
+        "updated": int(time.time()),
+    })
+    return state
+
+
+def load_server():
+    try:
+        return json.loads(SERVER_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def session_owner_ok(session):
+    uid = os.environ.get("PKEXEC_UID", "")
+    user = run("loginctl", "show-session", session, "-p", "User", "--value").stdout.strip()
+    return bool(uid) and user == uid
+
+
+def on(session):
+    if not server_ready():
+        reply(False, error="„Mein Server“ ist nicht eingeschaltet. Zuerst in der Systemsteuerung einrichten.")
+    if not session.isalnum():
+        reply(False, error="Unbekannte Sitzung.")
+    if not session_owner_ok(session):
+        reply(False, error="Diese Sitzung gehört nicht dir.")
+    state = load()
+    state["since"] = state.get("since") if state.get("active") else int(time.time())
+    try:
+        state["user"] = pwd.getpwuid(int(os.environ.get("PKEXEC_UID", "0"))).pw_name
+    except (KeyError, ValueError):
+        pass
+    apply(state)
+    save(status(state))
+    run("systemctl", "enable", "--now", SERVICE)
+    # Zuletzt: Sitzung beenden – damit endet auch dieses Programm.
+    print(json.dumps({"ok": True}), flush=True)
+    run("loginctl", "terminate-session", session)
+    sys.exit(0)
+
+
+def off():
+    state = load()
+    run("systemctl", "disable", "--now", SERVICE)
+    if not state.get("active"):
+        reply(True, changed=False)
+    for unit in state.get("paused", []):
+        run("systemctl", "start", unit)
+    if state.get("profile") and shutil.which("powerprofilesctl"):
+        run("powerprofilesctl", "set", state["profile"])
+    save({"active": False, "ended": int(time.time())})
+    reply(True, changed=True)
+
+
+def loop():
+    state = load()
+    if not state.get("active"):
+        return
+    state.setdefault("since", int(time.time()))
+    apply(state)
+    while True:
+        save(status(state))
+        time.sleep(30)
+
+
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        reply(False, error="Bitte über das Ein/Aus-Menü starten.")
+    args = sys.argv[1:]
+    if len(args) == 2 and args[0] == "on":
+        on(args[1])
+    elif args == ["off"]:
+        off()
+    elif args == ["run"]:
+        loop()
+    else:
+        reply(False, error="Unbekannter Befehl.")

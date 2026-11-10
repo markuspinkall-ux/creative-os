@@ -13,6 +13,8 @@ Item {
     function opened() {
         search.text = ""
         powerMenu.visible = false
+        powerMenu.confirmServer = false
+        session.refreshServer()
         appMenu.visible = false
         list.currentIndex = -1
         list.positionViewAtBeginning()
@@ -252,13 +254,16 @@ Item {
         // Ein/Aus-Menü
         Rectangle {
             id: powerMenu
+            // Server-Modus fragt erst nach, weil dabei alle Programme schließen
+            property bool confirmServer: false
             visible: false
+            onVisibleChanged: if (!visible) confirmServer = false
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.bottom: footer.top
             anchors.bottomMargin: 8
-            width: 200
-            height: powerColumn.implicitHeight + 12
+            width: confirmServer ? 300 : 200
+            height: confirmServer ? serverConfirm.implicitHeight + 28 : powerColumn.implicitHeight + 12
             radius: 14
             color: Theme.raised
             border.color: Theme.hairline
@@ -267,6 +272,7 @@ Item {
 
             Column {
                 id: powerColumn
+                visible: !powerMenu.confirmServer
                 anchors.fill: parent
                 anchors.margins: 6
                 spacing: 2
@@ -277,13 +283,22 @@ Item {
                         { label: "Neu starten", action: "reboot" },
                         { label: "Ausschalten", action: "poweroff" },
                         { label: "Abmelden", action: "logout" }
-                    ]
+                    ].concat(session.serverModeAvailable
+                             ? [{ label: "Server-Modus", action: "serverMode", icon: "server" }] : [])
                     delegate: Rectangle {
                         required property var modelData
                         width: powerColumn.width
                         height: 40
                         radius: 10
                         color: pm.containsMouse ? Theme.hover : "transparent"
+                        SvgIcon {
+                            visible: !!parent.modelData.icon
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: parent.modelData.icon || "server"
+                            size: 15
+                        }
                         Text {
                             x: 14
                             anchors.verticalCenter: parent.verticalCenter
@@ -298,12 +313,65 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
+                                if (parent.modelData.action === "serverMode") {
+                                    powerMenu.confirmServer = true
+                                    return
+                                }
                                 shell.closePopups()
                                 session[parent.modelData.action]()
                             }
                         }
                         Accessible.role: Accessible.MenuItem
                         Accessible.name: modelData.label
+                    }
+                }
+            }
+
+            // Rückfrage für den Server-Modus
+            Column {
+                id: serverConfirm
+                visible: powerMenu.confirmServer
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 14
+                spacing: 10
+
+                Row {
+                    spacing: 10
+                    SvgIcon { name: "server"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Server-Modus starten?"
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 15
+                        font.bold: true
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    text: "Alle Programme werden geschlossen – speichere vorher deine Arbeit. "
+                          + "Nur „Mein Server“ bleibt online, der PC geht nicht in Bereitschaft. "
+                          + "Zurück geht es über den Anmeldebildschirm."
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    lineHeight: 1.25
+                }
+                Row {
+                    anchors.right: parent.right
+                    spacing: 8
+                    bottomPadding: 2
+                    CButton { text: "Abbrechen"; onClicked: powerMenu.confirmServer = false }
+                    CButton {
+                        text: "Starten"
+                        primary: true
+                        onClicked: {
+                            shell.closePopups()
+                            session.serverMode()
+                        }
                     }
                 }
             }

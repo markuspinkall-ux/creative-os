@@ -1,0 +1,19 @@
+[Unit]
+Description=Creative OS – Server-Modus (nur Mein Server bleibt online)
+Documentation=file:///usr/share/doc/creative-server/README.md
+After=network-online.target creative-server.service
+Wants=network-online.target creative-server.service
+ConditionPathExists=/var/lib/creative-servermode/state.json
+
+[Service]
+Type=simple
+# Bereitschaft, Ruhezustand und Deckel/Standby-Taste sperren, solange der Modus läuft
+ExecStart=/usr/bin/systemd-inhibit --mode=block \
+    --what=sleep:idle:handle-lid-switch:handle-suspend-key:handle-hibernate-key \
+    --who="Creative OS Server-Modus" --why="Mein Server bleibt online" \
+    /usr/libexec/creative-servermode run
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
