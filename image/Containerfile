@@ -645,4 +645,8 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/iso-home timeout 60
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home
 
+# Graphit-Bausteine (Datei-/Bildauswahl, Rückfrage) einmal wirklich erzeugen – sonst Abbruch
+COPY image/qml-bausteine.py /tmp/qml-bausteine.py
+RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/qml-home python3 /tmp/qml-bausteine.py && rm -rf /tmp/qml-bausteine.py /tmp/qml-home
+
 RUN bootc container lint

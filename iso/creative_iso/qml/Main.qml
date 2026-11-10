@@ -1,7 +1,7 @@
+import QtCore
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls.Basic
-import QtQuick.Dialogs
 import Creative
 
 // Creative Iso – Netzinstallations-ISOs und bootfähige USB-Sticks erstellen.
@@ -318,24 +318,26 @@ Window {
         }
     }
 
-    FileDialog {
+    FilePicker {
         id: sourceDialog
         title: "Fedora-Netzinstallation wählen"
-        nameFilters: ["ISO-Dateien (*.iso)"]
-        onAccepted: iso.setSource(selectedFile.toString())
+        nameFilters: ["*.iso"]
+        startFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+        onAccepted: (url) => iso.setSource(url.toString())
     }
-    FileDialog {
+    FilePicker {
         id: usbIsoDialog
         title: "ISO für den USB-Stick wählen"
-        nameFilters: ["ISO-Dateien (*.iso)"]
-        currentFolder: iso.outdirUrl
-        onAccepted: iso.setUsbIso(selectedFile.toString())
+        nameFilters: ["*.iso"]
+        startFolder: iso.outdirUrl
+        onAccepted: (url) => iso.setUsbIso(url.toString())
     }
-    FolderDialog {
+    FilePicker {
         id: folderDialog
+        mode: "folder"
         title: "Speicherort für die ISO"
-        currentFolder: iso.outdirUrl
-        onAccepted: iso.setOutdir(selectedFolder.toString())
+        startFolder: iso.outdirUrl
+        onAccepted: (url) => iso.setOutdir(url.toString())
     }
 
     // ---- Bausteine -------------------------------------------------------------------------

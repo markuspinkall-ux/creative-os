@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls.Basic
-import QtQuick.Dialogs
 import Creative
 
 // Creative Broadcast – rauschfreies Mikrofon und virtueller Greenscreen.
@@ -240,11 +239,11 @@ Window {
         }
     }
 
-    FileDialog {
+    ImagePicker {
         id: imageDialog
         title: "Hintergrundbild wählen"
-        nameFilters: ["Bilder (*.jpg *.jpeg *.png *.webp *.bmp)"]
-        onAccepted: bc.setBackground(selectedFile.toString())
+        acceptText: "Als Hintergrund nehmen"
+        onAccepted: (url) => bc.setBackground(url.toString())
     }
 
     // ---- Bausteine ----------------------------------------------------------------------------------

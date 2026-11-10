@@ -1,7 +1,7 @@
+import QtCore
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls.Basic
-import QtQuick.Dialogs
 import Creative
 
 // Creative Shots – wie das Snipping Tool von Windows 11, im Graphit-Look.
@@ -494,13 +494,15 @@ Window {
         Text { id: msg; anchors.centerIn: parent; width: parent.width - 24; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; text: shots.message; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
     }
 
-    FileDialog {
+    FilePicker {
         id: saveDialog
-        title: "Speichern unter"
-        fileMode: FileDialog.SaveFile
-        nameFilters: ["PNG-Bild (*.png)", "JPEG-Bild (*.jpg *.jpeg)"]
+        mode: "save"
+        title: "Bildschirmfoto speichern unter"
+        nameFilters: ["*.png", "*.jpg", "*.jpeg"]
         defaultSuffix: "png"
-        onAccepted: shots.saveAs(win.strokes, selectedFile.toString())
+        fileName: shots.savedName || ("Bildschirmfoto " + Qt.formatDateTime(new Date(), "yyyy-MM-dd HH.mm") + ".png")
+        startFolder: StandardPaths.writableLocation(StandardPaths.PicturesLocation)
+        onAccepted: (url) => shots.saveAs(win.strokes, url.toString())
     }
 
     Shortcut { sequence: "Ctrl+N"; onActivated: shots.newCapture() }
