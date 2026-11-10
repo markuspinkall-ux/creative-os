@@ -11,8 +11,17 @@ Klickverhalten wie bei Windows:
 """
 
 import json
+import os
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
+from PySide6.QtGui import QIcon
+
+
+def tile_available(name):
+    """Gibt es das Symbol im Thema (bzw. als Datei)? Sonst bleibt das Strich-Symbol."""
+    if name.startswith("/"):
+        return os.path.exists(name)
+    return QIcon.hasThemeIcon(name)
 
 
 def app_key(desktop_id_or_app):
@@ -107,8 +116,11 @@ class TaskModel(QObject):
         for pin in self._apps.pinned:
             key = app_key(pin["desktopId"])
             index[key] = len(items)
+            # Graphit-Kachel wie im Startmenü; das Strich-Symbol nur, falls das Thema keine hat
+            info = self._apps.lookup(pin["desktopId"])
+            theme = info["icon"] if info and info["icon"] and tile_available(info["icon"]) else ""
             items.append({"key": key, "desktopId": pin["desktopId"], "name": pin["name"],
-                          "icon": pin.get("icon", ""), "themeIcon": "", "windows": []})
+                          "icon": "" if theme else pin.get("icon", ""), "themeIcon": theme, "windows": []})
         for w in on_screen:
             key = self._window_key(w)
             if not key:
