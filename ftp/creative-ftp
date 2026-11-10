@@ -46,7 +46,7 @@ class FilePane(QWidget):
         self.layout.addWidget(QLabel(title, objectName="section"))
         header = QHBoxLayout()
         self.path = QLineEdit()
-        self.path.setAccessibleName(title + " – Pfad")
+        self.path.setAccessibleName(title.capitalize() + " – Pfad")
         header.addWidget(self.path, 1)
         for label, callback in actions:
             button = QPushButton(label)
@@ -80,16 +80,34 @@ class CreativeFTP(QMainWindow):
         self.setWindowTitle("Creative FTP")
         self.resize(1200, 780)
         self.setStyleSheet("""
-            QWidget { background: #161925; color: #eaf0ff; font-size: 14px; }
-            QLabel#section { color: #b8b3ff; font-weight: 700; }
-            QLineEdit, QSpinBox, QComboBox, QTreeWidget, QPlainTextEdit, QPushButton {
-                background: #252b3e; border: 1px solid #414969; border-radius: 7px; padding: 6px;
+            QWidget { background: #12151b; color: #dce6ff; font-family: Arial; font-size: 13px; }
+            QLabel#section { color: rgba(220,230,255,0.6); font-size: 11px; font-weight: 700;
+                             letter-spacing: 1px; padding-top: 4px; }
+            QLineEdit, QSpinBox, QComboBox, QTreeWidget, QPlainTextEdit {
+                background: #1c2029; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 6px;
             }
-            QPushButton:hover { background: #373d59; }
-            QPushButton#primary { background: #a8a1ff; color: #1b1931; font-weight: 700; }
-            QPushButton:disabled, QPushButton#primary:disabled { background: #252b3e; color: #929ab5; }
-            QHeaderView::section { background: #303650; color: #eaf0ff; padding: 5px; border: 0; }
-            QTreeWidget::item:selected { background: #514a85; color: white; }
+            QLineEdit:focus, QSpinBox:focus, QComboBox:focus { border: 1px solid #8fb3ff; }
+            QComboBox QAbstractItemView { background: #232836; selection-background-color: #3a4252; }
+            QPushButton { background: rgba(255,255,255,0.06); border: none; border-radius: 10px;
+                          padding: 8px 14px; font-weight: 700; }
+            QPushButton:hover { background: rgba(255,255,255,0.1); }
+            QPushButton:pressed { background: rgba(255,255,255,0.14); }
+            QPushButton#primary { background: #8fb3ff; color: #12151b; }
+            QPushButton#primary:hover { background: #a3c1ff; }
+            QPushButton:disabled, QPushButton#primary:disabled { background: rgba(255,255,255,0.04);
+                                                                 color: rgba(220,230,255,0.35); }
+            QHeaderView::section { background: #232836; color: rgba(220,230,255,0.6); padding: 6px;
+                                   border: 0; font-weight: 700; }
+            QTreeWidget::item { padding: 4px; border-radius: 6px; }
+            QTreeWidget::item:hover { background: rgba(255,255,255,0.07); }
+            QTreeWidget::item:selected { background: #3a4252; color: #dce6ff; }
+            QPlainTextEdit { color: rgba(220,230,255,0.75); font-family: monospace; font-size: 12px; }
+            QSplitter::handle { background: transparent; }
+            QScrollBar:vertical { width: 10px; background: transparent; }
+            QScrollBar::handle:vertical { background: #3a4252; border-radius: 5px; min-height: 40px; }
+            QScrollBar:horizontal { height: 10px; background: transparent; }
+            QScrollBar::handle:horizontal { background: #3a4252; border-radius: 5px; min-width: 40px; }
+            QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
         """)
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.done.connect(self.finished, Qt.ConnectionType.QueuedConnection)
@@ -157,8 +175,8 @@ class CreativeFTP(QMainWindow):
         vertical.addWidget(self.log)
 
         panes = QSplitter()
-        self.local = FilePane("Lokal", [("↑", self.local_up), ("Ordner …", self.choose_local)])
-        self.remote = FilePane("Server", [("↑", self.remote_up), ("Neu laden", self.refresh_remote)])
+        self.local = FilePane("LOKAL", [("↑", self.local_up), ("Ordner …", self.choose_local)])
+        self.remote = FilePane("SERVER", [("↑", self.remote_up), ("Neu laden", self.refresh_remote)])
         self.local.path.returnPressed.connect(lambda: self.show_local(Path(self.local.path.text()).expanduser()))
         self.remote.path.returnPressed.connect(lambda: self.show_remote(self.remote.path.text()))
         self.local.tree.itemDoubleClicked.connect(self.open_local)
@@ -183,7 +201,7 @@ class CreativeFTP(QMainWindow):
 
         transfers = QWidget()
         transfer_layout = QVBoxLayout(transfers)
-        transfer_layout.addWidget(QLabel("Transferwarteschlange", objectName="section"))
+        transfer_layout.addWidget(QLabel("TRANSFERWARTESCHLANGE", objectName="section"))
         self.queue = QTreeWidget()
         self.queue.setRootIsDecorated(False)
         self.queue.setHeaderLabels(["Richtung", "Quelle", "Ziel", "Status"])
