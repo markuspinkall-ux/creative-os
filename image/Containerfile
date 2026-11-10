@@ -115,7 +115,7 @@ RUN dnf install -y flatpak \
 # ---------------------------------------------------------------------------
 # 7) Creative Shell (Taskleiste, Startmenü, Schnellzugriff)
 # ---------------------------------------------------------------------------
-RUN dnf install -y python3-pyside6 python3-paramiko qt6-qtsvg qt6-qtwayland layer-shell-qt \
+RUN dnf install -y python3-pyside6 python3-numpy python3-paramiko qt6-qtsvg qt6-qtwayland layer-shell-qt \
                    brightnessctl ddcutil liberation-sans-fonts \
  && dnf clean all
 
