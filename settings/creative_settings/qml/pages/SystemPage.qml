@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import QtQuick.Dialogs
 import Creative
 import ".."
 
@@ -88,12 +87,11 @@ SettingsPage {
         }
     }
 
-    FileDialog {
+    ImagePicker {
         id: avatarDialog
         title: "Profilbild wählen"
-        fileMode: FileDialog.OpenFile
-        nameFilters: ["Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.gif)", "Alle Dateien (*)"]
-        onAccepted: accountCard.error = session.previewAvatar(selectedFile.toString())
+        acceptText: "Als Profilbild nehmen"
+        onAccepted: (url) => accountCard.error = session.previewAvatar(url.toString())
     }
 
     Card {
