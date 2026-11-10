@@ -184,7 +184,8 @@ RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
 COPY --chmod=755 creative3d/creative-3d /usr/lib/creative-3d/creative-3d
 COPY --chmod=755 creative3d/creative3d-setup /usr/lib/creative-3d/creative3d-setup
 COPY creative3d/creative3d_worker.py creative3d/torchmcubes_shim.py creative3d/viewer.html \
-     creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py /usr/lib/creative-3d/
+     creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py creative3d/creative3d_softview.py \
+     /usr/lib/creative-3d/
 COPY creative3d/creative-3d.desktop /usr/share/applications/creative-3d.desktop
 COPY creative3d/creative-3d.svg /usr/share/icons/hicolor/scalable/apps/creative-3d.svg
 RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \

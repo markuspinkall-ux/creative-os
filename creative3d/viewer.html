@@ -8,7 +8,7 @@
            text-align: center; font-size: 14px; line-height: 1.6; pointer-events: none; }
   #empty b { color: #dce6ff; font-size: 16px; }
 </style>
-<script type="module" src="c3d:///model-viewer.min.js"></script>
+<script type="module" src="c3d://app/model-viewer.min.js"></script>
 </head><body>
 <model-viewer id="mv" camera-controls autoplay auto-rotate auto-rotate-delay="0" rotation-per-second="20deg"
               shadow-intensity="0.8" shadow-softness="0.9" exposure="1.05" interaction-prompt="none"
@@ -16,7 +16,17 @@
 <div id="empty"><div><b>Noch keine Figur</b><br>Bild links wählen und „3D-Figur erstellen“ drücken.<br>
 Ziehen dreht die Figur, Mausrad zoomt.</div></div>
 <script>
+  // Rückmeldung an Creative 3D: läuft WebGL, ist model-viewer da, lädt die Figur?
+  (function () {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (!gl) { console.log("C3D:nowebgl"); return; }
+    customElements.whenDefined("model-viewer").then(() => console.log("C3D:ready webgl"));
+  })();
+  window.addEventListener("error", (e) => console.log("C3D:error " + (e.message || "Skriptfehler")));
   const mv = document.getElementById("mv");
+  mv.addEventListener("load", () => console.log("C3D:modelloaded"));
+  mv.addEventListener("error", (e) => console.log("C3D:modelerror " + ((e.detail && e.detail.type) || "")));
   function show(url) {
     mv.src = url;
     document.getElementById("empty").style.display = "none";
