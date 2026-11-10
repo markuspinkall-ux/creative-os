@@ -47,10 +47,38 @@ install -Dm644 breezerc "$XDG/breezerc"
 install -Dm644 kdeglobals "$XDG/kdeglobals"
 install -Dm644 CreativeGraphit.colors /usr/share/color-schemes/CreativeGraphit.colors
 
-# Terminal: nur die Innenfläche leicht transparent, Text bleibt deckend.
+# Terminal im Graphit-Look: Farben, Schrift, Ränder, Cursor, Reiter, Eingabezeile
 install -Dm644 konsole/CreativeGraphit.colorscheme /usr/share/konsole/CreativeGraphit.colorscheme
 install -Dm644 konsole/CreativeGraphit.profile /usr/share/konsole/CreativeGraphit.profile
-printf '[Desktop Entry]\nDefaultProfile=CreativeGraphit.profile\n' > "$XDG/konsolerc"
+install -Dm644 konsole/creative-tabs.css /usr/share/konsole/creative-tabs.css
+install -Dm644 konsole/creative-prompt.sh /etc/profile.d/zz-creative-prompt.sh
+cat > "$XDG/konsolerc" <<'KONSOLERC'
+[Desktop Entry]
+DefaultProfile=CreativeGraphit.profile
+
+[KonsoleWindow]
+ShowMenuBarByDefault=false
+RememberWindowSize=true
+
+[MainWindow]
+MenuBar=Disabled
+ToolBarsMovable=Disabled
+
+[MainWindow][Toolbar mainToolBar]
+ToolButtonStyle=IconOnly
+IconSize=16
+
+[MainWindow][Toolbar sessionToolbar]
+ToolButtonStyle=IconOnly
+IconSize=16
+
+[TabBar]
+TabBarUseUserStyleSheet=true
+TabBarUserStyleSheetFile=file:///usr/share/konsole/creative-tabs.css
+TabBarVisibility=ShowTabBarWhenNeeded
+CloseTabOnMiddleMouseButton=true
+NewTabButton=true
+KONSOLERC
 
 # GTK
 install -Dm644 gtk/gtk-3.0/settings.ini "$XDG/gtk-3.0/settings.ini"

@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QImageReader, QKeySequence, QPainter, QPainterPath, QPalette, QPixmap
 from PySide6.QtWidgets import (
-    QApplication, QColorDialog, QDialog, QDialogButtonBox, QDockWidget, QFileDialog,
+    QApplication, QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QDockWidget, QFileDialog,
     QFormLayout, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QScrollArea, QSlider, QSpinBox, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
@@ -16,6 +16,7 @@ try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
 except ImportError:
     pass
 
+from .brushpanel import BRUSH_FILTER, BrushPanel
 from .canvas import Canvas
 from .document import Document, MAX_SIDE, apply_alpha, check_size, read_image, transparent
 from .transform import TransformDialog
@@ -37,7 +38,9 @@ class Window(QMainWindow):
         self.scroll.setWidget(self.canvas)
         self.scroll.setStyleSheet("QScrollArea { background: #101218; border: 0; }")
         self.setCentralWidget(self.scroll)
+        self.setAcceptDrops(True)
         self.make_actions()
+        self.make_brushes()
         self.make_layers()
         self.canvas.changed.connect(self.refresh)
         self.canvas.zoomChanged.connect(self.sync_zoom)
@@ -72,6 +75,8 @@ class Window(QMainWindow):
         self.action("Projekt speichern", self.save, standard.Save, file)
         self.action("Projekt speichern unter …", self.save_as, standard.SaveAs, file)
         self.action("PNG exportieren …", self.export, "Ctrl+Shift+E", file)
+        file.addSeparator()
+        self.action("Pinsel laden (.abr, .gbr, Bild) …", lambda: self.brush_panel.import_brushes(), menu=file)
         self.undo_action = self.action("Rückgängig", lambda: self.history(True), standard.Undo, edit)
         self.redo_action = self.action("Wiederholen", lambda: self.history(False), standard.Redo, edit)
         edit.addSeparator()
@@ -103,6 +108,9 @@ class Window(QMainWindow):
             ("mask_hide", "Maske: ausblenden", None, '<rect x="4" y="5" width="16" height="14"/><path d="M8 12h8"/>'),
             ("mask_show", "Maske: einblenden", None, '<rect x="4" y="5" width="16" height="14"/><path d="M8 12h8m-4-4v8"/>'),
             ("eraser", "Radierer", "E", '<path d="m4 14 9-10 7 6-8 10H9zm3-4 8 7m-4 3h10"/>'),
+            ("smudge", "Wischfinger", "W", '<path d="M9 21v-7l-3-3a2 2 0 0 1 3-3l2 2V4a2 2 0 0 1 4 0v6l3 1c2 1 2 3 1 5l-2 5"/>'),
+            ("bucket", "Füllwerkzeug", "G", '<path d="m5 11 7-7 7 7-7 7zm0 0h14m1 4s-2 2.5-2 3.5a2 2 0 0 0 4 0c0-1-2-3.5-2-3.5"/>'),
+            ("gradient", "Verlauf", "Shift+G", '<rect x="4" y="5" width="16" height="14"/><path d="M8 5v14m4-14v14m4-14v14" stroke-opacity=".5"/>'),
             ("clone", "Kopierstempel", "S", '<path d="M5 18h14v3H5zm1-3c0-3 4-2 4-5L9 6a3 3 0 0 1 6 0l-1 4c0 3 4 2 4 5z"/>'),
             ("rectangle", "Rechteckauswahl", "M", '<rect x="4" y="5" width="16" height="14" stroke-dasharray="2 3"/>'),
             ("ellipse", "Ellipsenauswahl", "O", '<ellipse cx="12" cy="12" rx="8" ry="7" stroke-dasharray="2 3"/>'),
@@ -138,13 +146,50 @@ class Window(QMainWindow):
         self.color_button.clicked.connect(self.choose_color)
         options.addWidget(self.color_button)
         self.update_color()
+        self.brush_button = QToolButton()
+        self.brush_button.setToolTip("Pinsel wählen und einstellen")
+        self.brush_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.brush_button.clicked.connect(lambda: (self.brush_dock.show(), self.brush_dock.raise_()))
+        self.brush_widgets = [options.addWidget(self.brush_button)]
         options.addWidget(QLabel("  Größe "))
-        size = QSpinBox()
-        size.setRange(1, 512)
-        size.setSuffix(" px")
-        size.setValue(self.canvas.diameter)
-        size.valueChanged.connect(lambda value: setattr(self.canvas, "diameter", value))
-        options.addWidget(size)
+        self.size_spin = QSpinBox()
+        self.size_spin.setRange(1, 2500)
+        self.size_spin.setSuffix(" px")
+        self.size_spin.setValue(self.canvas.diameter)
+        self.size_spin.valueChanged.connect(lambda value: setattr(self.canvas, "diameter", value))
+        options.addWidget(self.size_spin)
+        options.addWidget(QLabel("  Deckkraft "))
+        self.opacity_spin = QSpinBox()
+        self.opacity_spin.setRange(1, 100)
+        self.opacity_spin.setSuffix(" %")
+        self.opacity_spin.setValue(self.canvas.opacity)
+        self.opacity_spin.valueChanged.connect(lambda value: setattr(self.canvas, "opacity", value))
+        options.addWidget(self.opacity_spin)
+        self.flow_label = QLabel("  Fluss ")
+        self.flow_spin = QSpinBox()
+        self.flow_spin.setRange(1, 100)
+        self.flow_spin.setSuffix(" %")
+        self.flow_spin.valueChanged.connect(self.set_flow)
+        self.brush_widgets += [options.addWidget(self.flow_label), options.addWidget(self.flow_spin)]
+        # Füllwerkzeug
+        tolerance_label = QLabel("  Toleranz ")
+        tolerance = QSpinBox()
+        tolerance.setRange(0, 255)
+        tolerance.setValue(self.canvas.tolerance)
+        tolerance.valueChanged.connect(lambda value: setattr(self.canvas, "tolerance", value))
+        contiguous = QCheckBox("Benachbart")
+        contiguous.setChecked(self.canvas.contiguous)
+        contiguous.toggled.connect(lambda value: setattr(self.canvas, "contiguous", value))
+        self.bucket_widgets = [options.addWidget(tolerance_label), options.addWidget(tolerance),
+                               options.addWidget(contiguous)]
+        # Verlauf
+        kind = QComboBox()
+        kind.addItem("Linear", "linear")
+        kind.addItem("Radial", "radial")
+        kind.currentIndexChanged.connect(lambda _i: setattr(self.canvas, "gradient_kind", kind.currentData()))
+        self.gradient_widgets = [options.addWidget(QLabel("  Verlauf: Vordergrund → transparent ")),
+                                 options.addWidget(kind)]
+        self.canvas.presetChanged.connect(self.sync_preset)
         options.addSeparator()
         self.action("Auswahl zuschneiden", self.crop, toolbar=options)
         self.action("Einpassen", self.fit, toolbar=options)
@@ -259,10 +304,92 @@ class Window(QMainWindow):
         self.canvas.set_tool(tool)
         if name:
             self.tool_name.setText(name)
+        self.show_options(tool)
+        if tool == "bucket":
+            self.statusBar().showMessage("Füllwerkzeug: klicken, um zusammenhängende Flächen ähnlicher Farbe zu füllen.", 6000)
+        elif tool == "gradient":
+            self.statusBar().showMessage("Verlauf: von Start- zu Endpunkt ziehen.", 6000)
+        elif tool == "smudge":
+            self.statusBar().showMessage("Wischfinger: Farbe verwischen – „Fluss“ ist die Stärke.", 6000)
         if tool == "clone":
             self.statusBar().showMessage("Kopierstempel: Alt oder Umschalt + Klick setzt die Quelle.", 7000)
         elif tool == "crop":
             self.statusBar().showMessage("Rahmen ziehen und Eingabetaste drücken.", 5000)
+
+    def show_options(self, tool):
+        brushy = tool in Canvas.tools_brush
+        for action in self.brush_widgets:
+            action.setVisible(brushy)
+        for action in self.bucket_widgets:
+            action.setVisible(tool == "bucket")
+        for action in self.gradient_widgets:
+            action.setVisible(tool == "gradient")
+
+    def sync_preset(self):
+        preset = self.canvas.preset
+        self.brush_button.setText(f"  {preset.name}  ▾")
+        for spin, value in ((self.size_spin, preset.size), (self.opacity_spin, preset.opacity),
+                            (self.flow_spin, preset.flow)):
+            if spin.value() != value:
+                with QSignalBlocker(spin):
+                    spin.setValue(value)
+        if hasattr(self, "tool_opacity") and self.tool_opacity.value() != preset.opacity:
+            with QSignalBlocker(self.tool_opacity):
+                self.tool_opacity.setValue(preset.opacity)
+
+    def set_flow(self, value):
+        if self.canvas.preset.flow != value:
+            self.canvas.preset.flow = value
+            self.canvas.presetChanged.emit()
+
+    def make_brushes(self):
+        self.brush_dock = QDockWidget("Pinsel", self)
+        self.brush_dock.setObjectName("brushes")
+        self.brush_panel = BrushPanel(self.canvas, self)
+        self.brush_dock.setWidget(self.brush_panel)
+        self.brush_dock.setMinimumWidth(300)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.brush_dock)
+        self.menuBar().actions()[2].menu().addAction(self.brush_dock.toggleViewAction())
+        self.sync_preset()
+        self.show_options(self.canvas.tool)
+
+    def dragEnterEvent(self, event):
+        if any(url.toLocalFile().lower().endswith((".abr", ".gbr")) for url in event.mimeData().urls()):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        paths = [url.toLocalFile() for url in event.mimeData().urls()
+                 if url.toLocalFile().lower().endswith((".abr", ".gbr"))]
+        if paths:
+            self.brush_panel.import_paths(paths)
+            event.acceptProposedAction()
+
+    def selftest(self):
+        """Malt mit jedem Pinsel, Werkzeug und importiert eine erzeugte .abr (für den Build)."""
+        import tempfile
+        from PySide6.QtCore import QPointF
+        from . import brushes as B
+        from .brushengine import BrushLibrary, Stroke, bucket_fill, gradient_fill
+        with tempfile.TemporaryDirectory() as tmp:
+            library = BrushLibrary(tmp)
+            abr = Path(tmp, "test.abr")
+            abr.write_bytes(B.write_test_abr([B.round_tip(40, 30), B.star_tip(30)], 6, ["Weich", "Stern"]))
+            added = library.import_file(abr)
+            assert [p.name for p in added] == ["Weich", "Stern"], added
+            image = self.doc.layer.image
+            for preset in library.presets:
+                for mode in ("paint", "erase", "smudge"):
+                    stroke = Stroke(image, preset.copy(size=min(preset.size, 40)), "#8fb3ff", library, mode)
+                    for i in range(12):
+                        stroke.add(QPointF(50 + i * 9, 60 + (i % 3) * 7), .3 + i / 20)
+            bucket_fill(image, 5, 5, "#ff0000", 40)
+            gradient_fill(image, QPointF(0, 0), QPointF(200, 100), "#00ff00", "radial", opacity=.5)
+            self.brush_panel.library.presets.append(added[0])
+            self.brush_panel.populate()
+            self.brush_panel.library.presets.remove(added[0])
+        for tool in ("smudge", "bucket", "gradient", "brush"):
+            self.select_tool(tool, tool)
+        print("Creative Art: Pinsel-Selbsttest bestanden")
 
     def update_color(self):
         swatch = QPixmap(18, 18)
@@ -567,6 +694,8 @@ def main():
     window = Window()
     window.show()
     if args == ["--selftest"]:
+        app.processEvents()
+        window.selftest()
         app.processEvents()
         return 0
     if args:

@@ -32,13 +32,14 @@ Item {
         size: 22
     }
 
+    // Graphit-Kachel aus dem Creative-Symbolthema (wie im Startmenü)
     Image {
         anchors.centerIn: parent
         visible: root.icon.length === 0
-        width: 26
-        height: 26
-        sourceSize.width: 52
-        sourceSize.height: 52
+        width: 32
+        height: 32
+        sourceSize.width: 64
+        sourceSize.height: 64
         source: root.icon.length === 0 ? "image://icon/" + root.themeIcon : ""
         asynchronous: true
         smooth: true

@@ -158,7 +158,9 @@ RUN mkdir -p /var/opt \
  && dnf clean all
 # Graphit-Dialoge für alle Widget-Apps (Dateiauswahl, Rückfragen, Eingaben, Farbe)
 COPY dialogs/creative_dialogs.py /tmp/creative_dialogs.py
-RUN site="$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
+# Fedora: „purelib“ zeigt auf /usr/local (unter rpm-ostree ein Verweis nach /var) – daher fest /usr/lib
+RUN site="$(python3 -c 'import sys; print(f"/usr/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages")')" \
+ && test -d "$site" && python3 -c "import sys; sys.exit(0 if '$site' in sys.path else 1)" \
  && install -Dm644 /tmp/creative_dialogs.py "$site/creative_dialogs.py" && rm -f /tmp/creative_dialogs.py \
  && python3 -m compileall -q "$site/creative_dialogs.py" \
  && cd / && QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/dlg-home python3 -m creative_dialogs --selftest \
@@ -184,7 +186,8 @@ RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
 COPY --chmod=755 creative3d/creative-3d /usr/lib/creative-3d/creative-3d
 COPY --chmod=755 creative3d/creative3d-setup /usr/lib/creative-3d/creative3d-setup
 COPY creative3d/creative3d_worker.py creative3d/torchmcubes_shim.py creative3d/viewer.html \
-     creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py /usr/lib/creative-3d/
+     creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py creative3d/creative3d_softview.py \
+     /usr/lib/creative-3d/
 COPY creative3d/creative-3d.desktop /usr/share/applications/creative-3d.desktop
 COPY creative3d/creative-3d.svg /usr/share/icons/hicolor/scalable/apps/creative-3d.svg
 RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \
@@ -448,7 +451,7 @@ RUN chmod 755 /usr/bin/creative-welcome
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
 # Standard-Apps: Terminal, Spectacle (nimmt für Creative Shots im Hintergrund auf),
 # Entpacken (unsichtbar, für ZIP-Dateien)
-RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts qt6-qttranslations \
+RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts jetbrains-mono-fonts-all qt6-qttranslations \
         plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,

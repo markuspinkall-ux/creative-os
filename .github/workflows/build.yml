@@ -61,7 +61,13 @@ jobs:
       - name: Creative 3D – Netz-Baustein und Skelett prüfen
         run: |
           python3 -m pip install --quiet --user --break-system-packages numpy scikit-image || true
-          python3 -m unittest tests/test_creative3d.py
+          python3 -m unittest tests/test_creative3d.py tests/test_creative3d_softview.py
+
+      - name: Creative Art – Pinsel-Import (.abr/.gbr) und Fülleimer prüfen
+        run: python3 -m unittest tests/test_art_brushes.py
+
+      - name: Creative Mail – Nachrichten, Anhänge und Antworten prüfen
+        run: python3 -m unittest tests/test_mail.py
 
       - name: Namen festlegen
         id: names

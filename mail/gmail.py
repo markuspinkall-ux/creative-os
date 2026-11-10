@@ -1,6 +1,7 @@
 """Desktop OAuth and the Gmail API. Mail and credentials stay on the PC."""
 
 import base64
+import threading
 import hashlib
 import json
 import secrets
@@ -10,6 +11,7 @@ from email import policy
 from email.message import EmailMessage
 from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -107,6 +109,7 @@ class Gmail:
         self.address = address
         self.access = ""
         self.expires = 0
+        self._lock = threading.Lock()
 
     def keyring(self, action, value=None):
         args = ["secret-tool", action]
@@ -139,50 +142,191 @@ class Gmail:
         self.keyring("store", result["refresh_token"])
         return self.address
 
+    def ensure_token(self):
+        with self._lock:
+            if time.monotonic() >= self.expires:
+                refresh = self.keyring("lookup")
+                if not refresh:
+                    raise RuntimeError("Bitte das Google-Konto erneut verbinden.")
+                self.token({"grant_type": "refresh_token", "refresh_token": refresh})
+
     def api(self, path, params=None, data=None):
-        if time.monotonic() >= self.expires:
-            refresh = self.keyring("lookup")
-            if not refresh:
-                raise RuntimeError("Bitte das Google-Konto erneut verbinden.")
-            self.token({"grant_type": "refresh_token", "refresh_token": refresh})
+        self.ensure_token()
         return request(API + path + ("?" + urlencode(params) if params else ""), data, self.access)
 
-    def listing(self, folder, query, page):
-        params = {"maxResults": 20}
+    # ── Ordner und Labels ──────────────────────────────────────────────
+    SYSTEM = [("INBOX", "Posteingang"), ("STARRED", "Markiert"), ("IMPORTANT", "Wichtig"),
+              ("SENT", "Gesendet"), ("DRAFT", "Entwürfe"), ("", "Alle E-Mails"),
+              ("SPAM", "Spam"), ("TRASH", "Papierkorb")]
+
+    def labels(self):
+        """[(id, Name, ungelesen, System?)] – Systemordner zuerst, dann eigene Labels."""
+        self.ensure_token()
+        listed = self.api("labels").get("labels", [])
+        user = sorted((l for l in listed if l.get("type") == "user"), key=lambda l: l.get("name", "").lower())
+        wanted = [(lid, name, True) for lid, name in self.SYSTEM] + [(l["id"], l["name"], False) for l in user[:40]]
+
+        def count(entry):
+            lid, name, system = entry
+            if not lid or lid in ("SENT", "DRAFT", "TRASH"):
+                return lid, name, 0, system
+            try:
+                info = self.api("labels/" + lid)
+            except RuntimeError:
+                return lid, name, 0, system
+            unread = info.get("threadsUnread" if lid == "INBOX" else "messagesUnread", 0)
+            return lid, name, int(unread or 0), system
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            return list(pool.map(count, wanted))
+
+    # ── Liste ──────────────────────────────────────────────────────────
+    def listing(self, folder, query, page, size=30):
+        params = {"maxResults": size}
         if folder:
             params["labelIds"] = folder
         if query:
             params["q"] = query
         if page:
             params["pageToken"] = page
+        if folder in ("SPAM", "TRASH"):
+            params["includeSpamTrash"] = "true"
+        self.ensure_token()
         response = self.api("messages", params)
-        rows = []
-        for item in response.get("messages", []):
-            message = self.api("messages/" + item["id"], [
-                ("format", "metadata"), ("metadataHeaders", "From"),
-                ("metadataHeaders", "To"), ("metadataHeaders", "Subject"),
+        ids = [item["id"] for item in response.get("messages", [])]
+
+        def meta(message_id):
+            message = self.api("messages/" + message_id, [
+                ("format", "metadata"), ("metadataHeaders", "From"), ("metadataHeaders", "To"),
+                ("metadataHeaders", "Subject"), ("metadataHeaders", "Date"),
             ])
-            headers = {h["name"].lower(): h["value"] for h in message["payload"]["headers"]}
-            correspondent = "to" if folder == "SENT" else "from"
-            rows.append((item["id"], headers.get(correspondent, ""), headers.get("subject", "(Ohne Betreff)"),
-                         "UNREAD" in message.get("labelIds", [])))
+            return summary(message, folder)
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            rows = list(pool.map(meta, ids))
         return rows, response.get("nextPageToken")
 
+    # ── Lesen ──────────────────────────────────────────────────────────
     def message(self, message_id, unread):
-        raw = self.api("messages/" + message_id, {"format": "raw"})["raw"]
-        message = BytesParser(policy=policy.default).parsebytes(unb64(raw))
-        part = message.get_body(preferencelist=("plain", "html"))
-        body = part.get_content(errors="replace") if part else ""
+        data = self.api("messages/" + message_id, {"format": "raw"})
+        mail = parse_message(unb64(data["raw"]))
+        mail["id"] = message_id
+        mail["threadId"] = data.get("threadId", "")
+        mail["labels"] = data.get("labelIds", [])
         if unread:
-            self.api(f"messages/{message_id}/modify", data={"removeLabelIds": ["UNREAD"]})
-        return str(message["Subject"] or "(Ohne Betreff)"), str(message["From"] or ""), body, bool(
-            part and part.get_content_type() == "text/html"
-        )
+            self.modify(message_id, remove=["UNREAD"])
+        return mail
 
-    def send(self, recipient, subject, body):
-        message = EmailMessage()
-        message["From"] = self.address
-        message["To"] = recipient
-        message["Subject"] = subject
-        message.set_content(body)
-        self.api("messages/send", data={"raw": b64(message.as_bytes(policy=policy.SMTP))})
+    # ── Ändern ─────────────────────────────────────────────────────────
+    def modify(self, message_id, add=(), remove=()):
+        self.api(f"messages/{message_id}/modify", data={"addLabelIds": list(add), "removeLabelIds": list(remove)})
+        return message_id
+
+    def trash(self, message_id):
+        self.api(f"messages/{message_id}/trash", data={})
+        return message_id
+
+    def untrash(self, message_id):
+        self.api(f"messages/{message_id}/untrash", data={})
+        return message_id
+
+    # ── Senden ─────────────────────────────────────────────────────────
+    def send(self, recipient, subject, body, cc="", bcc="", html=None, attachments=(), reply=None):
+        message = build_message(self.address, recipient, subject, body, cc, bcc, html, attachments, reply)
+        data = {"raw": b64(message.as_bytes(policy=policy.SMTP))}
+        if reply and reply.get("threadId"):
+            data["threadId"] = reply["threadId"]
+        self.api("messages/send", data=data)
+
+
+# ── Hilfen ohne Netz (testbar) ─────────────────────────────────────────────
+
+def summary(message, folder=""):
+    headers = {h["name"].lower(): h["value"] for h in message.get("payload", {}).get("headers", [])}
+    labels = message.get("labelIds", [])
+    correspondent = headers.get("to", "") if folder in ("SENT", "DRAFT") else headers.get("from", "")
+    try:
+        when = int(message.get("internalDate", 0)) / 1000
+    except (TypeError, ValueError):
+        when = 0
+    return {
+        "id": message.get("id", ""), "threadId": message.get("threadId", ""),
+        "from": correspondent, "subject": headers.get("subject", "") or "(Ohne Betreff)",
+        "snippet": html_unescape(message.get("snippet", "")), "date": when,
+        "unread": "UNREAD" in labels, "starred": "STARRED" in labels,
+        "important": "IMPORTANT" in labels, "labels": labels,
+    }
+
+
+def html_unescape(text):
+    import html
+    return html.unescape(text or "")
+
+
+def parse_message(raw):
+    """RFC-822-Bytes → dict mit Kopfzeilen, Text, HTML, Anhängen und eingebetteten Bildern."""
+    mail = BytesParser(policy=policy.default).parsebytes(raw)
+    html_part = mail.get_body(preferencelist=("html",))
+    text_part = mail.get_body(preferencelist=("plain",))
+    attachments, inline = [], {}
+    for part in mail.walk():
+        if part.is_multipart() or part in (html_part, text_part):
+            continue
+        disposition = part.get_content_disposition()
+        filename = part.get_filename()
+        cid = (part.get("Content-ID") or "").strip("<> ")
+        try:
+            payload = part.get_payload(decode=True) or b""
+        except (ValueError, TypeError):
+            payload = b""
+        if cid and part.get_content_maintype() == "image" and disposition != "attachment":
+            inline[cid] = (part.get_content_type(), payload)
+        elif filename or disposition == "attachment":
+            attachments.append({"name": filename or "Anhang", "type": part.get_content_type(),
+                                "size": len(payload), "data": payload})
+
+    def content(part):
+        if not part:
+            return ""
+        try:
+            return part.get_content()
+        except (LookupError, ValueError, KeyError):
+            return (part.get_payload(decode=True) or b"").decode("utf-8", "replace")
+
+    return {
+        "subject": str(mail["Subject"] or "") or "(Ohne Betreff)",
+        "from": str(mail["From"] or ""), "to": str(mail["To"] or ""), "cc": str(mail["Cc"] or ""),
+        "reply_to": str(mail["Reply-To"] or ""), "date": str(mail["Date"] or ""),
+        "message_id": str(mail["Message-ID"] or ""), "references": str(mail["References"] or ""),
+        "text": content(text_part), "html": content(html_part),
+        "attachments": attachments, "inline": inline,
+    }
+
+
+def build_message(sender, to, subject, text, cc="", bcc="", html=None, attachments=(), reply=None):
+    import mimetypes
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = to
+    if cc:
+        message["Cc"] = cc
+    if bcc:
+        message["Bcc"] = bcc
+    message["Subject"] = subject
+    if reply:
+        if reply.get("message_id"):
+            message["In-Reply-To"] = reply["message_id"]
+            message["References"] = " ".join(x for x in (reply.get("references", ""), reply["message_id"]) if x)
+    message.set_content(text or "")
+    if html:
+        message.add_alternative(html, subtype="html")
+    for item in attachments:
+        if isinstance(item, (str, Path)):
+            path = Path(item)
+            name, data = path.name, path.read_bytes()
+        else:
+            name, data = item["name"], item["data"]
+        kind = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        main, sub = kind.split("/", 1)
+        message.add_attachment(data, maintype=main, subtype=sub, filename=name)
+    return message

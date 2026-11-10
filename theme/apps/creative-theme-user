@@ -118,9 +118,20 @@ fi
 
 # Einmalige Design-Migration; Sperrverhalten und Passwortprüfung bleiben unverändert.
 if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/null 2>&1; then
-    if [ "$(kreadconfig6 --file konsolerc --group CreativeOS --key GraphitStyleVersion --default 0)" != 1 ]; then
+    konsole_style="$(kreadconfig6 --file konsolerc --group CreativeOS --key GraphitStyleVersion --default 0)"
+    if [ "$konsole_style" -lt 1 ] 2>/dev/null; then
         kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile CreativeGraphit.profile
-        kwriteconfig6 --file konsolerc --group CreativeOS --key GraphitStyleVersion 1
+    fi
+    if [ "$konsole_style" -lt 2 ] 2>/dev/null; then
+        # Terminal-Fenster im Graphit-Look: ohne Menüleiste, schmale Leisten, Graphit-Reiter
+        kwriteconfig6 --file konsolerc --group MainWindow --key MenuBar Disabled
+        for bar in mainToolBar sessionToolbar; do
+            kwriteconfig6 --file konsolerc --group MainWindow --group "Toolbar $bar" --key ToolButtonStyle IconOnly
+            kwriteconfig6 --file konsolerc --group MainWindow --group "Toolbar $bar" --key IconSize 16
+        done
+        kwriteconfig6 --file konsolerc --group TabBar --key TabBarUseUserStyleSheet true
+        kwriteconfig6 --file konsolerc --group TabBar --key TabBarUserStyleSheetFile file:///usr/share/konsole/creative-tabs.css
+        kwriteconfig6 --file konsolerc --group CreativeOS --key GraphitStyleVersion 2
     fi
     if [ "$(kreadconfig6 --file kscreenlockerrc --group CreativeOS --key GraphitStyleVersion --default 0)" != 1 ]; then
         kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin org.kde.image

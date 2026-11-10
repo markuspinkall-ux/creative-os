@@ -14,8 +14,9 @@ import sys
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QProcess, QProcessEnvironment, Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtCore import (QBuffer, QByteArray, QIODevice, QProcess, QProcessEnvironment, QSettings, Qt, QTimer,
+                            QUrl, Signal)
+from PySide6.QtGui import QColor, QDesktopServices, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
     QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout, QWidget,
@@ -85,8 +86,8 @@ def gpu_name():
 # ---- Vorschau: eigenes URL-Schema c3d:// (Module und GLB dürfen nicht über file:// laden) ----
 WEB = None
 try:
-    from PySide6.QtWebEngineCore import (QWebEngineProfile, QWebEngineUrlRequestJob, QWebEngineUrlScheme,
-                                         QWebEngineUrlSchemeHandler)
+    from PySide6.QtWebEngineCore import (QWebEnginePage, QWebEngineProfile, QWebEngineUrlRequestJob,
+                                         QWebEngineUrlScheme, QWebEngineUrlSchemeHandler)
     from PySide6.QtWebEngineWidgets import QWebEngineView
     WEB = True
 except ImportError:                                            # ohne WebEngine: Vorschau als Bild
@@ -97,7 +98,9 @@ def register_scheme():
     if not WEB:
         return
     scheme = QWebEngineUrlScheme(b"c3d")
-    scheme.setSyntax(QWebEngineUrlScheme.Syntax.Path)
+    # Host-Syntax (c3d://app/…): Seite, model-viewer und GLB haben dieselbe Herkunft –
+    # bei Path-Syntax ist die Herkunft „opaque“ und Module/fetch werden per CORS blockiert.
+    scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
     scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
                     | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
     QWebEngineUrlScheme.registerScheme(scheme)
@@ -129,7 +132,99 @@ if WEB:
             buffer = QBuffer(job)
             buffer.setData(QByteArray(data))
             buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+            if hasattr(job, "setAdditionalResponseHeaders"):        # Qt ≥ 6.6
+                try:
+                    job.setAdditionalResponseHeaders({QByteArray(b"Access-Control-Allow-Origin"): QByteArray(b"*")})
+                except TypeError:
+                    pass
             job.reply(self.TYPES.get(file.suffix, b"application/octet-stream"), buffer)
+
+    class Page(QWebEnginePage):
+        """Meldungen der Vorschau (console.log „C3D:…“) an die App weitergeben."""
+        message = Signal(str)
+
+        def javaScriptConsoleMessage(self, level, text, line, source):
+            if text.startswith("C3D:"):
+                self.message.emit(text[4:].strip())
+            elif level == QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel:
+                print(f"Vorschau: {text} ({source}:{line})", file=sys.stderr)
+                self.message.emit("error " + text)
+
+
+class SoftView(QLabel):
+    """Ausweich-Vorschau ohne Grafikkarte: ziehen dreht, Mausrad zoomt."""
+
+    def __init__(self):
+        super().__init__("Noch keine Figur\n\nBild links wählen und „3D-Figur erstellen“ drücken.")
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setObjectName("muted")
+        self.setMinimumSize(200, 200)
+        self.mesh = None
+        self.yaw, self.pitch, self.zoom = 25.0, -10.0, 1.0
+        self.drag = None
+        self.rotating = True
+        self.fine = QTimer(self, singleShot=True, interval=180)
+        self.fine.timeout.connect(lambda: self.draw(fast=False))
+        self.spin = QTimer(self, interval=80)
+        self.spin.timeout.connect(self.turn)
+
+    def set_mesh(self, vertices, faces, normals, colors):
+        sys.path.insert(0, str(LIB))
+        import creative3d_softview as sv
+        self.mesh = sv.Mesh(vertices, faces, normals, colors)
+        self.draw(fast=False)
+        self.set_rotate(self.rotating)
+
+    def set_rotate(self, on):
+        self.rotating = on
+        if on and self.mesh is not None:
+            self.spin.start()
+        else:
+            self.spin.stop()
+
+    def turn(self):
+        if self.drag is None and self.isVisible():
+            self.yaw = (self.yaw + 4) % 360
+            self.draw(fast=True)
+
+    def draw(self, fast=True):
+        if self.mesh is None:
+            return
+        side = max(160, min(self.width(), self.height()) - 8)
+        ratio = self.devicePixelRatioF()
+        rgba = self.mesh.render(int(side * ratio), self.yaw, self.pitch, self.zoom, fast)
+        image = QImage(rgba.tobytes(), rgba.shape[1], rgba.shape[0], rgba.shape[1] * 4,
+                       QImage.Format.Format_RGBA8888).copy()
+        pixmap = QPixmap.fromImage(image)
+        pixmap.setDevicePixelRatio(ratio)
+        self.setPixmap(pixmap)
+        if fast:
+            self.fine.start()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.mesh is not None:
+            self.draw(fast=True)
+
+    def mousePressEvent(self, event):
+        self.drag = event.position()
+
+    def mouseMoveEvent(self, event):
+        if self.drag is not None and self.mesh is not None:
+            delta = event.position() - self.drag
+            self.drag = event.position()
+            self.yaw = (self.yaw + delta.x() * .6) % 360
+            self.pitch = max(-85.0, min(85.0, self.pitch - delta.y() * .4))
+            self.draw(fast=True)
+
+    def mouseReleaseEvent(self, _event):
+        self.drag = None
+        self.draw(fast=False)
+
+    def wheelEvent(self, event):
+        if self.mesh is not None:
+            self.zoom = max(.4, min(4.0, self.zoom * (1.12 if event.angleDelta().y() > 0 else 1 / 1.12)))
+            self.draw(fast=True)
 
 
 class DropLabel(QLabel):
@@ -262,21 +357,42 @@ class Creative3D(QMainWindow):
         self.rotate.setChecked(True)
         self.rotate.toggled.connect(lambda on: self.js(f"setRotate({'true' if on else 'false'})"))
         head.addWidget(self.rotate)
+        self.simple = QCheckBox("Einfache Vorschau")
+        self.simple.setToolTip("Zeichnet die Figur ohne Grafikkarte – falls die normale Vorschau leer bleibt")
+        head.addWidget(self.simple)
         rv.addLayout(head)
         self.stack = QStackedWidget()
         rv.addWidget(self.stack, 1)
         # Seite 0: Vorschau
         self.scheme = None
+        self.web_ok = False                 # hat die Web-Vorschau (WebGL) gemeldet, dass sie läuft?
+        self.web_failed = False
+        self.preview_stack = QStackedWidget()
+        self.soft = SoftView()
+        self.rotate.toggled.connect(self.soft.set_rotate)
         if WEB and preview_web:
             self.scheme = Scheme(self)
             QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"c3d", self.scheme)
             self.view = QWebEngineView()
-            self.view.page().setBackgroundColor(Qt.GlobalColor.transparent)
-            self.view.setUrl(QUrl("c3d:///viewer.html"))
+            page = Page(QWebEngineProfile.defaultProfile(), self.view)
+            page.message.connect(self.web_message)
+            self.view.setPage(page)
+            self.view.page().setBackgroundColor(QColor("#12151b"))
+            self.view.loadFinished.connect(self.web_loaded)
+            self.view.setUrl(QUrl("c3d://app/viewer.html"))
+            self.preview_stack.addWidget(self.view)
         else:
-            self.view = QLabel("Die drehbare Vorschau braucht Qt WebEngine.", objectName="muted")
-            self.view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.stack.addWidget(self.view)
+            self.view = None
+            self.web_failed = True
+        self.preview_stack.addWidget(self.soft)
+        self.preview_stack.setCurrentWidget(self.soft if self.web_failed else self.view)
+        self.stack.addWidget(self.preview_stack)
+        self.settings = QSettings("Creative OS", "Creative 3D")
+        self.simple.setChecked(self.web_failed or self.settings.value("simplePreview", False, type=bool))
+        self.simple.setEnabled(self.view is not None)
+        self.simple.toggled.connect(self.set_simple)
+        if self.simple.isChecked() and not self.web_failed:
+            self.use_soft("eingestellt")
         # Seite 1: Einrichtung
         setup = QWidget()
         sv = QVBoxLayout(setup)
@@ -348,8 +464,60 @@ class Creative3D(QMainWindow):
         self.rotate.setEnabled(bool(self.result))
 
     def js(self, code):
-        if WEB and isinstance(self.view, QWebEngineView):
+        if self.view is not None and not self.web_failed:
             self.view.page().runJavaScript(code)
+
+    # ---- Vorschau: Web (WebGL) oder Ausweich-Vorschau -------------------------------
+    def web_loaded(self, ok):
+        if not ok:
+            self.use_soft("Die Vorschau-Seite ließ sich nicht laden.")
+            return
+        # model-viewer muss sich innerhalb weniger Sekunden melden, sonst Ausweich-Vorschau
+        QTimer.singleShot(7000, lambda: None if self.web_ok else self.use_soft("Die 3D-Vorschau hat nicht geantwortet."))
+
+    def web_message(self, text):
+        if text == "ready webgl":
+            self.web_ok = True
+        elif text.startswith("nowebgl"):
+            self.use_soft("Die Grafikkarte steht der eingebauten Browser-Engine nicht zur Verfügung (kein WebGL).")
+        elif text.startswith("error") and not self.web_ok:
+            self.use_soft("Die 3D-Vorschau konnte nicht starten.")
+        elif text.startswith("modelerror"):
+            self.use_soft("Die Figur ließ sich in der 3D-Vorschau nicht laden.")
+
+    def set_simple(self, on):
+        self.settings.setValue("simplePreview", on)
+        if on:
+            self.use_soft("eingestellt")
+        elif self.view is not None:
+            self.web_failed = False
+            self.preview_stack.setCurrentWidget(self.view)
+            self.soft.set_rotate(False)
+            if self.result:
+                self.preview(self.rigged or self.result["files"]["glb"])
+
+    def use_soft(self, reason):
+        if self.web_failed:
+            return
+        self.web_failed = True
+        if hasattr(self, "simple") and not self.simple.isChecked():
+            self.simple.blockSignals(True)
+            self.simple.setChecked(True)
+            self.simple.blockSignals(False)
+        print(f"Creative 3D: Ausweich-Vorschau – {reason}", file=sys.stderr)
+        self.preview_stack.setCurrentWidget(self.soft)
+        if self.result:
+            self.show_soft()
+            self.status.setText("Einfache Vorschau (ohne Grafikkarte). Export und Skelett sind davon nicht betroffen.")
+
+    def show_soft(self):
+        if not (self.result and "npz" in self.result.get("files", {})):
+            return
+        try:
+            vertices, faces, normals, colors = self.mesh_data()
+            self.soft.set_mesh(vertices, faces, normals, colors)
+        except (OSError, ValueError, KeyError) as error:
+            self.soft.setText(f"Vorschau nicht möglich: {error}")
 
     def choose_image(self):
         if self.proc.state() != QProcess.ProcessState.NotRunning:
@@ -524,10 +692,14 @@ class Creative3D(QMainWindow):
         self.refresh()
 
     def preview(self, path):
-        if self.scheme and path:
+        if not path:
+            return
+        if self.web_failed:
+            self.show_soft()
+        elif self.scheme:
             self.counter += 1
             self.scheme.model = path
-            self.js(f"show('c3d:///model/{self.counter}.glb')")
+            self.js(f"show('c3d://app/model/{self.counter}.glb')")
 
     # ---- Export -------------------------------------------------------------------
     def save(self, fmt):
@@ -563,8 +735,13 @@ class Creative3D(QMainWindow):
 
 def main():
     selftest = "--selftest" in sys.argv
+    # Falls die Browser-Engine die Grafikkarte sperrt: WebGL notfalls per Software (SwiftShader)
+    flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
+    if "--enable-unsafe-swiftshader" not in flags:
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (flags + " --enable-unsafe-swiftshader").strip()
     if not selftest:
         register_scheme()
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     app.setApplicationName("Creative 3D")
     app.setDesktopFileName("creative-3d")
@@ -573,6 +750,10 @@ def main():
         assert not window.generate.isEnabled() and not window.result
         assert all(not b.isEnabled() for b in window.export_buttons)
         assert (LIB / "creative3d_worker.py").is_file() and SETUP.is_file()
+        import creative3d_softview as sv
+        vertices, faces = sv.uv_sphere()
+        window.soft.set_mesh(vertices, faces, None, None)
+        assert not window.soft.pixmap().isNull()
         window.close()
         return 0
     window.show()
