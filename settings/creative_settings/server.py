@@ -78,6 +78,127 @@ def list_disks(selected):
     return disks
 
 
+DUCK_STATUS = Path("/var/lib/creative-server/duckdns-status.json")
+IPV4_SERVICES = ("https://api.ipify.org", "https://ipv4.icanhazip.com", "https://v4.ident.me")
+IPV6_SERVICES = ("https://api6.ipify.org", "https://ipv6.icanhazip.com", "https://v6.ident.me")
+
+
+def _fetch_ip(services):
+    import ipaddress
+    import urllib.request
+    for url in services:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "CreativeOS-MeinServer"})
+            with urllib.request.urlopen(req, timeout=6) as r:
+                ip = r.read().decode().strip()
+            ipaddress.ip_address(ip)
+            return ip
+        except (OSError, ValueError):
+            continue
+    return ""
+
+
+def _resolve(host):
+    v4, v6 = set(), set()
+    try:
+        for fam, *_x, addr in socket.getaddrinfo(host, None):
+            (v4 if fam == socket.AF_INET else v6).add(addr[0])
+    except (socket.gaierror, UnicodeError):
+        pass
+    return sorted(v4), sorted(v6)
+
+
+def _port_open(port):
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+def _cmd(*args):
+    try:
+        r = subprocess.run(list(args), capture_output=True, text=True, timeout=6,
+                           env={"LC_ALL": "C", "PATH": "/usr/bin:/usr/sbin:/bin:/sbin"})
+        return r.returncode, r.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return -1, ""
+
+
+def network_check(domain):
+    """Prüft Schritt für Schritt, warum der Server von außen (nicht) erreichbar ist.
+    Läuft in einem Hintergrund-Thread. Rückgabe: dict mit Werten und Befunden."""
+    import ipaddress
+    import time
+    res = {"local": "", "ipv4": "", "ipv6": "", "dns": "", "last": "", "issues": []}
+
+    def add(level, text):          # level: ok | warn | error
+        res["issues"].append({"level": level, "text": text})
+
+    local = next((u[7:] for u in addresses()[1:]), "")
+    res["local"] = local or "–"
+    if not local:
+        add("error", "Dieser PC hat keine Heimnetz-Adresse. Netzwerkkabel bzw. WLAN prüfen.")
+        return res
+
+    v4, v6 = _fetch_ip(IPV4_SERVICES), _fetch_ip(IPV6_SERVICES)
+    res["ipv4"], res["ipv6"] = v4 or "–", v6 or "–"
+    if not v4 and not v6:
+        dns_ok = bool(_resolve("www.duckdns.org")[0])
+        add("error", "Dieser PC kommt nicht ins Internet. " +
+            ("Namen werden aufgelöst, aber keine Verbindung – Router oder Firewall prüfen." if dns_ok else
+             "Nicht einmal Internet-Namen lassen sich auflösen – Router-Verbindung bzw. DNS-Einstellungen prüfen."))
+        return res
+    if v4 and ipaddress.ip_address(v4) in ipaddress.ip_network("100.64.0.0/10"):
+        add("error", f"Deine Internet-Adresse {v4} ist geteilt (CGNAT). Damit kann dich niemand von außen "
+                     "erreichen – beim Anbieter eine öffentliche IPv4 anfragen.")
+    if not v4:
+        add("warn", "Nur IPv6 verfügbar. Aus IPv4-Netzen (z. B. vielen Handynetzen) ist der Server nicht erreichbar.")
+
+    if not domain:
+        add("warn", "Der Server ist nur im Heimnetz freigegeben – DuckDNS ist noch nicht eingerichtet.")
+        return res
+
+    # DuckDNS: wohin zeigt die Adresse?
+    d4, d6 = _resolve(domain)
+    res["dns"] = ", ".join(d4 + d6) or "–"
+    if not d4 and not d6:
+        add("error", f"{domain} lässt sich nicht auflösen. Ist der Name bei duckdns.org noch vorhanden?")
+    elif v4 and v4 not in d4:
+        add("error", f"DuckDNS zeigt auf {', '.join(d4) or 'keine IPv4'}, deine aktuelle Heimadresse ist aber {v4}. "
+                     "Mit „Jetzt aktualisieren“ korrigieren.")
+    elif v4:
+        add("ok", f"DuckDNS zeigt auf deine aktuelle Heimadresse {v4}.")
+
+    # Letzte automatische Aktualisierung
+    try:
+        st = json.loads(DUCK_STATUS.read_text(encoding="utf-8"))
+        when = time.strftime("%d.%m. %H:%M", time.localtime(st.get("time", 0)))
+        res["last"] = f"{when} – " + ("erfolgreich" if st.get("ok") else "fehlgeschlagen")
+        if not st.get("ok"):
+            add("error", f"Letzte DuckDNS-Aktualisierung ({when}) fehlgeschlagen: {st.get('error') or 'unbekannt'}")
+        elif time.time() - st.get("time", 0) > 30 * 60:
+            add("warn", f"DuckDNS wurde seit {when} nicht mehr aktualisiert.")
+    except (OSError, ValueError):
+        res["last"] = "–"
+    code, out = _cmd("systemctl", "is-active", "creative-duckdns.timer")
+    if out != "active":
+        add("error", "Die automatische DuckDNS-Aktualisierung ist aus. Bei neuer IP vom Anbieter "
+                     "zeigt DuckDNS dann ins Leere. „Jetzt aktualisieren“ schaltet sie wieder ein.")
+
+    # Webserver und Ports auf diesem PC
+    if not _port_open(80) or not _port_open(443):
+        add("error", "Der Webserver antwortet nicht auf Port " +
+            " und ".join(str(p) for p in (80, 443) if not _port_open(p)) + ". Server aus- und wieder einschalten.")
+    code, out = _cmd("firewall-cmd", "--query-service=https")
+    if out == "no":
+        add("error", "Die Firewall blockiert HTTPS (Port 443). „Jetzt aktualisieren“ öffnet ihn wieder.")
+
+    add("info", f"Bitte prüfen: Im Router müssen die Ports 80 und 443 an {local} weitergeleitet sein. Von außen "
+        f"testen: am Handy WLAN aus, dann https://{domain} öffnen.")
+    return res
+
+
 def addresses():
     host = socket.gethostname()
     urls = [f"http://{host}.local"]
@@ -92,6 +213,8 @@ def addresses():
 class ServerModel(QObject):
     changed = Signal()
     messageChanged = Signal()
+    netChanged = Signal()
+    _netDone = Signal(object)          # aus dem Prüf-Thread zurück in die Oberfläche
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -107,6 +230,9 @@ class ServerModel(QObject):
         self._timer.setInterval(5000)
         self._timer.timeout.connect(self.refresh)
         self._timer.start()
+        self._net = {}
+        self._netBusy = False
+        self._netDone.connect(self._on_net_done)
         self.refresh()
 
     @Slot()
@@ -257,6 +383,49 @@ class ServerModel(QObject):
         if site and not spawn_detached(["creative-files", site]):
             QDesktopServices.openUrl(QUrl.fromLocalFile(site))
 
+    @Slot()
+    def checkNetwork(self):
+        """Heimadresse ermitteln und den Weg aus dem Internet prüfen (im Hintergrund)."""
+        if self._netBusy:
+            return
+        import threading
+        self._netBusy = True
+        self.netChanged.emit()
+        domain = self._state.get("domain", "")
+        threading.Thread(target=lambda: self._netDone.emit(network_check(domain)), daemon=True).start()
+
+    @Slot(object)
+    def _on_net_done(self, result):
+        self._net = result
+        self._netBusy = False
+        self.netChanged.emit()
+
+    @Slot()
+    def updateDuckDns(self):
+        if self._busy:
+            return
+        self._busy = True
+        self.changed.emit()
+        self._set_message("DuckDNS wird auf deine aktuelle Heimadresse gesetzt …")
+
+        def done(code, out, _err):
+            self._busy = False
+            try:
+                result = json.loads(out.strip().splitlines()[-1]) if out.strip() else {}
+            except ValueError:
+                result = {}
+            if code in (126, 127):
+                self._set_message("Abgebrochen.")
+            elif result.get("ok"):
+                self._set_message(f"DuckDNS zeigt jetzt auf {result.get('ip') or 'deine aktuelle Adresse'}. "
+                                  "Bis es überall ankommt, kann es ein paar Minuten dauern.")
+            else:
+                self._set_message(result.get("error") or "DuckDNS konnte nicht aktualisiert werden.")
+            self.changed.emit()
+            QTimer.singleShot(1500, self.checkNetwork)
+
+        self._run.run(["pkexec", HELPER, "duckdns-now"], done, timeout_ms=0)
+
     def _set_message(self, text):
         self._message = text
         self.messageChanged.emit()
@@ -271,4 +440,6 @@ class ServerModel(QObject):
     urls = Property("QVariantList", lambda self: addresses(), notify=changed)
     message = Property(str, lambda self: self._message, notify=messageChanged)
     domain = Property(str, lambda self: self._state.get("domain", ""), notify=changed)
+    net = Property("QVariantMap", lambda self: self._net, notify=netChanged)
+    netBusy = Property(bool, lambda self: self._netBusy, notify=netChanged)
     localIp = Property(str, lambda self: next((u[7:] for u in addresses()[1:]), ""), notify=changed)
