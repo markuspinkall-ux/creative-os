@@ -77,6 +77,12 @@ gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 # Symbol-Design „Creative“: ersetzt die Original-Symbole der Standard-Apps
 # auch in Titelleiste und Taskleiste (z. B. Rechner, Terminal, Steam)
 sh icons/build-icon-theme.sh "$ICONS" /usr/share/icons/Creative
+# Startmenü: alle Creative-App-Symbole als Graphit-Kachel (wie Art, Writer, Cut …).
+# Die Strichsymbole der Shell selbst bleiben unverändert.
+python3 icons/tile-icons.py /usr/share/icons/Creative/apps/scalable
+python3 icons/tile-icons.py --inplace /usr/share/icons/hicolor/scalable/apps/creative-*.svg
+gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null || true
+gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
 
 # Startmenü aufräumen
 install -Dm755 apps/creative-apps-sync /usr/bin/creative-apps-sync
