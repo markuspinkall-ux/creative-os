@@ -1,94 +1,678 @@
 #!/usr/bin/python3
-"""Creative Mail, a native Gmail client for Creative OS."""
+"""Creative Mail – nativer Gmail-Client für Creative OS im Graphit-Look.
 
-import sys
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-
-from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtGui import QFont, QIcon, QTextDocument
-from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-    QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
-    QMessageBox, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget,
-)
-
-from gmail import Gmail
-
-SYSTEM_CLIENT = "/usr/share/creative-mail/google-oauth.json"
-STYLE = """
-QWidget { background: #1b202b; color: #dce6ff; font-size: 14px; }
-QLineEdit, QListWidget, QTextEdit, QComboBox {
-    background: #232836; border: 1px solid #3b455a; border-radius: 7px; padding: 7px;
-}
-QListWidget::item { padding: 9px; }
-QListWidget::item:selected { background: #365887; color: white; }
-QPushButton { background: #303b52; border: 1px solid #45526d; border-radius: 7px; padding: 7px 12px; }
-QPushButton:hover { background: #405475; }
-QPushButton:disabled { color: #8995ab; background: #232836; }
-QLabel#title { font-size: 20px; font-weight: bold; color: #8fb3ff; }
+Drei Spalten wie in professionellen Mail-Programmen: Ordner und Labels,
+Nachrichtenliste, Lesebereich. HTML-Mails werden echt dargestellt; Bilder
+von außen bleiben zum Schutz vor Tracking gesperrt, bis man sie freigibt.
 """
 
+import hashlib
+import html
+import os
+import re
+import sys
+import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
+from email.utils import getaddresses, parseaddr
+from pathlib import Path
+
+from PySide6.QtCore import QObject, QRect, QSettings, QSize, Qt, QTimer, QUrl
+from PySide6.QtGui import (
+    QAction, QColor, QDesktopServices, QFont, QIcon, QKeySequence, QPainter, QPixmap, QShortcut,
+    QTextCharFormat, QTextListFormat,
+)
+from PySide6.QtWidgets import (
+    QAbstractItemView, QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton,
+    QScrollArea, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTextBrowser, QTextEdit,
+    QToolButton, QVBoxLayout, QWidget,
+)
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox  # noqa: F811
+except ImportError:
+    pass
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gmail import Gmail  # noqa: E402
+
+SYSTEM_CLIENT = "/usr/share/creative-mail/google-oauth.json"
+MONTHS = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."]
+AVATAR_COLORS = ["#8fb3ff", "#6fdcc0", "#ffb07a", "#d7a8ff", "#f29cc8", "#f2d58a", "#5ec8f0", "#ff8a8e"]
+C = {"ground": "#12151b", "surface": "#1c2029", "side": "#171a22", "raised": "#232836", "track": "#3a4252",
+     "line": "#2a303d", "text": "#dce6ff", "muted": "#9aa6c4", "dim": "#6f7a92", "accent": "#8fb3ff",
+     "accentText": "#12151b", "select": "#2a3a5c", "flame": "#ffb07a", "star": "#f2d58a", "danger": "#ff8a8e"}
+
+STYLE = f"""
+* {{ font-family: "Arial", "Liberation Sans"; font-size: 13px; color: {C['text']}; }}
+QMainWindow, QWidget#reader, QWidget#listPane {{ background: {C['ground']}; }}
+QWidget#side {{ background: {C['side']}; }}
+QSplitter::handle {{ background: {C['line']}; }}
+QLabel {{ background: transparent; }}
+QLabel#brand {{ font-size: 17px; font-weight: bold; }}
+QLabel#paneTitle {{ font-size: 16px; font-weight: bold; }}
+QLabel#muted, QLabel#meta {{ color: {C['muted']}; }}
+QLabel#subject {{ font-size: 20px; font-weight: bold; }}
+QLabel#sender {{ font-size: 14px; font-weight: bold; }}
+QLabel#banner {{ background: {C['raised']}; border-radius: 10px; padding: 8px 12px; color: {C['muted']}; }}
+QPushButton {{ background: {C['raised']}; border: none; border-radius: 10px; padding: 8px 14px; }}
+QPushButton:hover {{ background: {C['track']}; }}
+QPushButton:disabled {{ color: {C['dim']}; }}
+QPushButton#primary {{ background: {C['accent']}; color: {C['accentText']}; font-weight: bold; padding: 10px 16px; }}
+QPushButton#primary:hover {{ background: #a6c3ff; }}
+QPushButton#chip {{ background: {C['raised']}; border-radius: 14px; padding: 6px 12px; text-align: left; }}
+QToolButton {{ background: transparent; border: none; border-radius: 8px; padding: 6px; }}
+QToolButton:hover {{ background: {C['raised']}; }}
+QToolButton:checked {{ background: {C['select']}; }}
+QToolButton::menu-indicator {{ image: none; }}
+QLineEdit {{ background: {C['raised']}; border: 1px solid transparent; border-radius: 10px; padding: 8px 12px; }}
+QLineEdit:focus {{ border-color: {C['accent']}; background: {C['ground']}; }}
+QLineEdit#field {{ background: transparent; border: none; border-bottom: 1px solid {C['line']}; border-radius: 0; padding: 9px 4px; }}
+QLineEdit#field:focus {{ border-bottom-color: {C['accent']}; }}
+QListWidget {{ background: transparent; border: none; outline: none; }}
+QListWidget#folders::item {{ border-radius: 10px; padding: 0; margin: 1px 8px; }}
+QTextEdit#composer {{ background: {C['ground']}; border: none; padding: 10px; font-size: 14px; }}
+QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
+QScrollBar::handle:vertical {{ background: {C['track']}; border-radius: 4px; min-height: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
+QMenu {{ background: {C['raised']}; border: 1px solid {C['line']}; border-radius: 10px; padding: 6px; }}
+QMenu::item {{ padding: 7px 18px; border-radius: 6px; }}
+QMenu::item:selected {{ background: {C['accent']}; color: {C['accentText']}; }}
+QStatusBar {{ background: {C['side']}; color: {C['muted']}; }}
+QFrame#card {{ background: {C['surface']}; border-radius: 18px; }}
+QFrame#hairline {{ background: {C['line']}; max-height: 1px; min-height: 1px; }}
+"""
+
+ICONS = {
+    "compose": '<path d="M4 20h4L19 9l-4-4L4 16zm11-15 4 4"/>',
+    "inbox": '<path d="M3 13h5l1 3h6l1-3h5M5 5h14l2 8v6H3v-6z"/>',
+    "star": '<path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.3L12 17.5 6.5 20.4l1-6.3L3 9.7l6.2-.9z"/>',
+    "important": '<path d="M4 6h11l5 6-5 6H4l4-6z"/>',
+    "sent": '<path d="m3 11 18-8-8 18-2-8z"/>',
+    "draft": '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/>',
+    "all": '<path d="M4 7h16v13H4zM3 4h18v3H3zM10 11h4"/>',
+    "spam": '<path d="M12 3 3 19h18zM12 10v4m0 3v.5"/>',
+    "trash": '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/>',
+    "label": '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+    "reply": '<path d="M10 8 4 13l6 5M4 13h10a6 6 0 0 1 6 6"/>',
+    "replyall": '<path d="M10 8 4 13l6 5m4-10-6 5 6 5M10 13h4a6 6 0 0 1 6 6"/>',
+    "forward": '<path d="m14 8 6 5-6 5m6-5H10a6 6 0 0 0-6 6"/>',
+    "archive": '<path d="M4 7h16v12.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5z"/><path d="M3 4h18v3H3zM10 11h4"/>',
+    "unread": '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+    "refresh": '<path d="M20 11a8 8 0 1 0-2 5.5M20 4v7h-7"/>',
+    "attach": '<path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7"/>',
+    "more": '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+    "image": '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+    "search": '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+    "bold": '<path d="M7 4h6a4 4 0 0 1 0 8H7zm0 8h7a4 4 0 0 1 0 8H7z"/>',
+    "italic": '<path d="M10 4h8M6 20h8M14 4l-4 16"/>',
+    "underline": '<path d="M7 4v7a5 5 0 0 0 10 0V4M5 21h14"/>',
+    "list": '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+    "link": '<path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1m2 4a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/>',
+    "close": '<path d="M6 6l12 12M18 6 6 18"/>',
+}
+FOLDER_ICONS = {"INBOX": "inbox", "STARRED": "star", "IMPORTANT": "important", "SENT": "sent", "DRAFT": "draft",
+                "": "all", "SPAM": "spam", "TRASH": "trash"}
+
+
+def icon(name, color=C["text"], size=20, fill="none"):
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24">'
+           f'<g fill="{fill}" stroke="{color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+           f'{ICONS[name]}</g></svg>')
+    pixmap = QPixmap()
+    pixmap.loadFromData(svg.encode(), "SVG")
+    return QIcon(pixmap)
+
+
+def display_name(address):
+    name, mail = parseaddr(address or "")
+    return (name or mail or address or "Unbekannt").strip().strip('"')
+
+
+def initials(text):
+    words = [w for w in re.split(r"[\s._@-]+", display_name(text)) if w and w[0].isalnum()]
+    if not words:
+        return "?"
+    return (words[0][0] + (words[1][0] if len(words) > 1 else "")).upper()
+
+
+def avatar_color(text):
+    _name, mail = parseaddr(text or "")
+    digest = hashlib.md5((mail or text or "").lower().encode()).digest()
+    return AVATAR_COLORS[digest[0] % len(AVATAR_COLORS)]
+
+
+def avatar_pixmap(text, size=36):
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    with QPainter(pixmap) as p:
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(avatar_color(text)))
+        p.drawEllipse(0, 0, size, size)
+        font = QFont("Arial")
+        font.setPixelSize(int(size * .38))
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(QColor(C["accentText"]))
+        p.drawText(QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, initials(text))
+    return pixmap
+
+
+def short_date(stamp):
+    if not stamp:
+        return ""
+    t, now = time.localtime(stamp), time.localtime()
+    if t[:3] == now[:3]:
+        return time.strftime("%H:%M", t)
+    if time.mktime(now) - stamp < 6 * 86400 and stamp < time.time():
+        return ["Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So."][t.tm_wday]
+    if t.tm_year == now.tm_year:
+        return f"{t.tm_mday}. {MONTHS[t.tm_mon - 1]}"
+    return time.strftime("%d.%m.%y", t)
+
+
+def human_size(n):
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}".replace(".", ",")
+        n /= 1024
+
+
+def plain_to_html(text):
+    escaped = html.escape(text or "")
+    escaped = re.sub(r"(https?://[^\s<]+)", r'<a href="\1">\1</a>', escaped)
+    return ('<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.55;white-space:pre-wrap;'
+            f'color:#1c2029">{escaped}</div>')
+
+
+REMOTE_IMG = re.compile(r"""<img[^>]+src\s*=\s*["']?\s*https?:""", re.I)
+
+
+# ── Hintergrundaufgaben ────────────────────────────────────────────────────
+
+class Jobs(QObject):
+    """Führt Gmail-Aufrufe im Hintergrund aus und meldet sich im Hauptthread zurück."""
+
+    def __init__(self, parent, on_error):
+        super().__init__(parent)
+        self.pool = ThreadPoolExecutor(max_workers=4)
+        self.pending = []
+        self.on_error = on_error
+        self.timer = QTimer(self, interval=60)
+        self.timer.timeout.connect(self.poll)
+
+    def run(self, task, done=None, failed=None):
+        self.pending.append((self.pool.submit(task), done, failed))
+        self.timer.start()
+
+    @property
+    def busy(self):
+        return bool(self.pending)
+
+    def poll(self):
+        finished = [job for job in self.pending if job[0].done()]
+        self.pending = [job for job in self.pending if not job[0].done()]
+        for future, done, failed in finished:     # Rückmeldungen dürfen neue Aufgaben starten
+            try:
+                result = future.result()
+            except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+                (failed or self.on_error)(exc)
+            else:
+                if done:
+                    done(result)
+        if not self.pending:
+            self.timer.stop()
+
+    def shutdown(self):
+        self.pool.shutdown(wait=False, cancel_futures=True)
+
+
+# ── Zeichnen der Listen ────────────────────────────────────────────────────
+
+class FolderDelegate(QStyledItemDelegate):
+    def sizeHint(self, option, index):
+        return QSize(200, 26 if index.data(Qt.ItemDataRole.UserRole + 3) else 38)
+
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = option.rect
+        if index.data(Qt.ItemDataRole.UserRole + 3):          # Abschnittsüberschrift
+            font = QFont("Arial")
+            font.setPixelSize(11)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.setPen(QColor(C["dim"]))
+            painter.drawText(rect.adjusted(14, 6, 0, 0), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                             index.data())
+            painter.restore()
+            return
+        selected = option.state & QStyle.StateFlag.State_Selected
+        hover = option.state & QStyle.StateFlag.State_MouseOver
+        if selected or hover:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(C["select"] if selected else C["raised"]))
+            painter.drawRoundedRect(rect, 10, 10)
+        ico = index.data(Qt.ItemDataRole.DecorationRole)
+        if isinstance(ico, QIcon):
+            ico.paint(painter, QRect(rect.left() + 12, rect.center().y() - 9, 18, 18))
+        unread = index.data(Qt.ItemDataRole.UserRole + 1) or 0
+        font = QFont("Arial")
+        font.setPixelSize(13)
+        font.setBold(bool(selected) or unread > 0)
+        painter.setFont(font)
+        painter.setPen(QColor(C["text"]))
+        text_rect = rect.adjusted(40, 0, -48, 0)
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter,
+                         painter.fontMetrics().elidedText(index.data(), Qt.TextElideMode.ElideRight, text_rect.width()))
+        if unread:
+            label = str(unread) if unread < 1000 else "999+"
+            font.setPixelSize(11)
+            painter.setFont(font)
+            w = painter.fontMetrics().horizontalAdvance(label) + 14
+            pill = QRect(rect.right() - w - 10, rect.center().y() - 10, w, 20)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(C["accent"] if index.data(Qt.ItemDataRole.UserRole) == "INBOX" else C["track"]))
+            painter.drawRoundedRect(pill, 10, 10)
+            painter.setPen(QColor(C["accentText"] if index.data(Qt.ItemDataRole.UserRole) == "INBOX" else C["text"]))
+            painter.drawText(pill, Qt.AlignmentFlag.AlignCenter, label)
+        painter.restore()
+
+
+class MessageDelegate(QStyledItemDelegate):
+    HEIGHT = 84
+
+    def sizeHint(self, option, index):
+        return QSize(300, self.HEIGHT)
+
+    def paint(self, painter, option, index):
+        row = index.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(row, dict):
+            return super().paint(painter, option, index)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = option.rect.adjusted(8, 3, -8, -3)
+        selected = option.state & QStyle.StateFlag.State_Selected
+        hover = option.state & QStyle.StateFlag.State_MouseOver
+        if selected or hover:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(C["select"] if selected else C["surface"]))
+            painter.drawRoundedRect(rect, 12, 12)
+        unread = row.get("unread")
+        if unread:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(C["accent"]))
+            painter.drawEllipse(rect.left() + 6, rect.top() + 18, 7, 7)
+        painter.drawPixmap(rect.left() + 18, rect.top() + 10, avatar_pixmap(row.get("from", ""), 34))
+        left = rect.left() + 64
+        right = rect.right() - 12
+        f = QFont("Arial")
+        # Absender und Datum
+        f.setPixelSize(13)
+        f.setBold(True)
+        painter.setFont(f)
+        date = short_date(row.get("date"))
+        date_w = painter.fontMetrics().horizontalAdvance(date) + 8
+        painter.setPen(QColor(C["text"] if unread else C["muted"]))
+        name = display_name(row.get("from", ""))
+        painter.drawText(QRect(left, rect.top() + 8, right - left - date_w, 18), Qt.AlignmentFlag.AlignVCenter,
+                         painter.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, right - left - date_w))
+        f.setBold(False)
+        f.setPixelSize(12)
+        painter.setFont(f)
+        painter.setPen(QColor(C["accent"] if unread else C["dim"]))
+        painter.drawText(QRect(right - date_w, rect.top() + 8, date_w, 18),
+                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, date)
+        # Betreff
+        f.setPixelSize(13)
+        f.setBold(bool(unread))
+        painter.setFont(f)
+        painter.setPen(QColor(C["text"]))
+        star_w = 20 if row.get("starred") else 0
+        subject_rect = QRect(left, rect.top() + 28, right - left - star_w, 18)
+        painter.drawText(subject_rect, Qt.AlignmentFlag.AlignVCenter,
+                         painter.fontMetrics().elidedText(row.get("subject", ""), Qt.TextElideMode.ElideRight,
+                                                          subject_rect.width()))
+        if star_w:
+            icon("star", C["star"], 16, C["star"]).paint(painter, QRect(right - 16, rect.top() + 29, 16, 16))
+        # Vorschau
+        f.setBold(False)
+        f.setPixelSize(12)
+        painter.setFont(f)
+        painter.setPen(QColor(C["muted"]))
+        snippet_rect = QRect(left, rect.top() + 48, right - left, 18)
+        painter.drawText(snippet_rect, Qt.AlignmentFlag.AlignVCenter,
+                         painter.fontMetrics().elidedText(row.get("snippet", ""), Qt.TextElideMode.ElideRight,
+                                                          snippet_rect.width()))
+        painter.restore()
+
+
+# ── Anzeige der Nachricht ──────────────────────────────────────────────────
+
+class MailBrowser(QTextBrowser):
+    """Einfache, sichere Darstellung (ohne Web-Engine): lädt nur eingebettete Bilder."""
+
+    def __init__(self):
+        super().__init__()
+        self.inline = {}
+        self.setOpenLinks(False)
+        self.anchorClicked.connect(QDesktopServices.openUrl)
+        self.setStyleSheet("QTextBrowser { background: #ffffff; color: #1c2029; border: none; border-radius: 14px;"
+                           " padding: 18px; }")
+
+    def show_mail(self, mail, allow_remote=False):
+        self.inline = mail.get("inline", {})
+        self.setHtml(mail.get("html") or plain_to_html(mail.get("text", "")))
+
+    def loadResource(self, kind, url):
+        if url.scheme() == "cid":
+            content = self.inline.get(url.path() or url.toString()[4:])
+            if content:
+                image = QPixmap()
+                image.loadFromData(content[1])
+                return image.toImage()
+        return None                          # nichts aus dem Netz laden
+
+
+def make_web_view():
+    """Volle HTML-Darstellung mit Qt WebEngine – ohne JavaScript, Bilder aus dem Netz nur auf Wunsch."""
+    if os.environ.get("CREATIVE_MAIL_NO_WEBENGINE"):
+        return None
+    try:
+        from PySide6.QtWebEngineCore import (
+            QWebEnginePage, QWebEngineProfile, QWebEngineSettings, QWebEngineUrlRequestInterceptor,
+        )
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+    except ImportError:
+        return None
+
+    class Guard(QWebEngineUrlRequestInterceptor):
+        allow_remote = False
+
+        def interceptRequest(self, info):
+            scheme = info.requestUrl().scheme()
+            if scheme in ("http", "https") and not self.allow_remote:
+                info.block(True)
+
+    class Page(QWebEnginePage):
+        def acceptNavigationRequest(self, url, kind, main_frame):
+            if kind == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
+                QDesktopServices.openUrl(url)
+                return False
+            return url.scheme() in ("file", "data", "about")
+
+        def createWindow(self, _kind):
+            return None
+
+    class View(QWebEngineView):
+        def __init__(self):
+            super().__init__()
+            self.profile = QWebEngineProfile(self)      # ohne Namen: nichts wird gespeichert
+            self.guard = Guard(self)
+            self.profile.setUrlRequestInterceptor(self.guard)
+            page = Page(self.profile, self)
+            settings = page.settings()
+            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, False)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
+            self.setPage(page)
+            self.page().setBackgroundColor(QColor("#ffffff"))
+            self.tmp = tempfile.TemporaryDirectory(prefix="creative-mail-")
+
+        def show_mail(self, mail, allow_remote=False):
+            self.guard.allow_remote = allow_remote
+            body = mail.get("html") or plain_to_html(mail.get("text", ""))
+            for cid, (kind, data) in mail.get("inline", {}).items():
+                import base64
+                uri = f"data:{kind};base64,{base64.b64encode(data).decode()}"
+                body = re.sub(rf"""cid:{re.escape(cid)}(?=["'\s>])""", uri, body)
+            head = ('<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src \'none\'">'
+                    '<style>html{background:#fff}body{margin:20px;font-family:Arial,sans-serif;color:#1c2029;'
+                    'word-wrap:break-word}img{max-width:100%;height:auto}</style>')
+            path = Path(self.tmp.name) / "mail.html"
+            path.write_text(head + body, encoding="utf-8")
+            self.load(QUrl.fromLocalFile(str(path)))
+
+    return View()
+
+
+# ── Verfassen ──────────────────────────────────────────────────────────────
+
+class ComposeWindow(QDialog):
+    def __init__(self, main, to="", cc="", subject="", quoted="", reply=None, attachments=(), title="Neue E-Mail"):
+        super().__init__(main)
+        self.main = main
+        self.reply = reply
+        self.attachments = list(attachments)      # Pfade oder {"name","data"}
+        self.setWindowTitle(title)
+        self.setWindowFlag(Qt.WindowType.Window)
+        self.setModal(False)
+        self.resize(760, 620)
+        self.setStyleSheet(STYLE + f"QDialog {{ background: {C['ground']}; }}")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 18, 22, 18)
+        layout.setSpacing(4)
+        head = QHBoxLayout()
+        heading = QLabel(title, objectName="paneTitle")
+        head.addWidget(heading, 1)
+        self.cc_toggle = QPushButton("Cc/Bcc")
+        self.cc_toggle.clicked.connect(self.show_cc)
+        head.addWidget(self.cc_toggle)
+        layout.addLayout(head)
+        self.to = QLineEdit(to, objectName="field", placeholderText="An")
+        self.cc = QLineEdit(cc, objectName="field", placeholderText="Cc")
+        self.bcc = QLineEdit(objectName="field", placeholderText="Bcc")
+        self.subject = QLineEdit(subject, objectName="field", placeholderText="Betreff")
+        for field in (self.to, self.cc, self.bcc, self.subject):
+            layout.addWidget(field)
+        self.cc.setVisible(bool(cc))
+        self.bcc.setVisible(False)
+        # Formatleiste
+        bar = QHBoxLayout()
+        bar.setContentsMargins(0, 10, 0, 4)
+        self.editor = QTextEdit(objectName="composer")
+        self.editor.setAcceptRichText(True)
+        for name, tip, slot in (("bold", "Fett (Strg+B)", self.bold), ("italic", "Kursiv (Strg+I)", self.italic),
+                                ("underline", "Unterstrichen (Strg+U)", self.underline),
+                                ("list", "Aufzählung", self.bullets), ("link", "Link einfügen", self.link)):
+            button = QToolButton()
+            button.setIcon(icon(name, C["muted"], 18))
+            button.setToolTip(tip)
+            button.clicked.connect(slot)
+            bar.addWidget(button)
+        bar.addStretch(1)
+        attach = QPushButton(icon("attach", C["text"], 16), " Datei anhängen")
+        attach.clicked.connect(self.add_files)
+        bar.addWidget(attach)
+        layout.addLayout(bar)
+        layout.addWidget(self.editor, 1)
+        self.chips = QHBoxLayout()
+        self.chips.setSpacing(6)
+        chip_box = QWidget()
+        chip_box.setLayout(self.chips)
+        self.chip_scroll = QScrollArea()
+        self.chip_scroll.setWidget(chip_box)
+        self.chip_scroll.setWidgetResizable(True)
+        self.chip_scroll.setFixedHeight(46)
+        self.chip_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.chip_scroll.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
+        layout.addWidget(self.chip_scroll)
+        foot = QHBoxLayout()
+        self.status = QLabel(objectName="muted")
+        foot.addWidget(self.status, 1)
+        discard = QPushButton("Verwerfen")
+        discard.clicked.connect(self.discard)
+        self.send_button = QPushButton("Senden", objectName="primary")
+        self.send_button.setIcon(icon("sent", C["accentText"], 16))
+        self.send_button.clicked.connect(self.send)
+        foot.addWidget(discard)
+        foot.addWidget(self.send_button)
+        layout.addLayout(foot)
+        for keys, owner, slot in (("Ctrl+Return", self, self.send), ("Ctrl+B", self.editor, self.bold),
+                                  ("Ctrl+I", self.editor, self.italic), ("Ctrl+U", self.editor, self.underline)):
+            shortcut = QShortcut(QKeySequence(keys), owner)
+            shortcut.activated.connect(slot)
+
+        signature = main.settings.value("signature", "", type=str).strip()
+        body = '<div style="font-family:Arial;font-size:14px"><br></div>'
+        if signature:
+            body += f'<div style="color:#9aa6c4">--<br>{html.escape(signature).replace(chr(10), "<br>")}</div>'
+        if quoted:
+            body += quoted
+        self.editor.setHtml(body)
+        cursor = self.editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        self.editor.setTextCursor(cursor)
+        self.refresh_chips()
+        QTimer.singleShot(0, (self.editor if to else self.to).setFocus)
+
+    def show_cc(self):
+        self.cc.setVisible(True)
+        self.bcc.setVisible(True)
+        self.cc_toggle.setVisible(False)
+        self.cc.setFocus()
+
+    def merge(self, fmt):
+        cursor = self.editor.textCursor()
+        cursor.mergeCharFormat(fmt)
+        self.editor.mergeCurrentCharFormat(fmt)
+
+    def bold(self):
+        fmt = QTextCharFormat()
+        fmt.setFontWeight(400 if int(self.editor.fontWeight()) > 500 else 700)
+        self.merge(fmt)
+
+    def italic(self):
+        fmt = QTextCharFormat()
+        fmt.setFontItalic(not self.editor.fontItalic())
+        self.merge(fmt)
+
+    def underline(self):
+        fmt = QTextCharFormat()
+        fmt.setFontUnderline(not self.editor.fontUnderline())
+        self.merge(fmt)
+
+    def bullets(self):
+        self.editor.textCursor().createList(QTextListFormat.Style.ListDisc)
+
+    def link(self):
+        from PySide6.QtWidgets import QInputDialog
+        try:
+            from creative_dialogs import QInputDialog  # noqa: F811
+        except ImportError:
+            pass
+        url, ok = QInputDialog.getText(self, "Link einfügen", "Adresse (https://…):", text="https://")
+        if ok and url.strip() and url.strip() != "https://":
+            cursor = self.editor.textCursor()
+            text = cursor.selectedText() or url.strip()
+            cursor.insertHtml(f'<a href="{html.escape(url.strip(), quote=True)}">{html.escape(text)}</a>')
+
+    def add_files(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Dateien anhängen", "", "Alle Dateien (*)")
+        self.attachments += [p for p in paths if p]
+        self.refresh_chips()
+
+    def attachment_info(self, item):
+        if isinstance(item, dict):
+            return item["name"], len(item["data"])
+        path = Path(item)
+        try:
+            return path.name, path.stat().st_size
+        except OSError:
+            return path.name, 0
+
+    def refresh_chips(self):
+        while self.chips.count():
+            widget = self.chips.takeAt(0).widget()
+            if widget:
+                widget.deleteLater()
+        for item in self.attachments:
+            name, size = self.attachment_info(item)
+            chip = QPushButton(icon("attach", C["muted"], 14), f" {name}  ·  {human_size(size)}   ✕", objectName="chip")
+            chip.setToolTip("Klicken zum Entfernen")
+            chip.clicked.connect(lambda _=False, it=item: self.remove_attachment(it))
+            self.chips.addWidget(chip)
+        self.chips.addStretch(1)
+        self.chip_scroll.setVisible(bool(self.attachments))
+
+    def remove_attachment(self, item):
+        self.attachments.remove(item)
+        self.refresh_chips()
+
+    def discard(self):
+        if self.editor.toPlainText().strip() and QMessageBox.question(
+                self, "Entwurf verwerfen", "Diese E-Mail verwerfen?") != QMessageBox.StandardButton.Yes:
+            return
+        self.reject()
+
+    def send(self):
+        to, cc, bcc = self.to.text().strip(), self.cc.text().strip(), self.bcc.text().strip()
+        everyone = [a for _n, a in getaddresses([to, cc, bcc]) if a]
+        if not to or any("@" not in a for a in everyone):
+            self.status.setText("Bitte gültige Empfängeradressen eingeben.")
+            self.to.setFocus()
+            return
+        total = sum(self.attachment_info(item)[1] for item in self.attachments)
+        if total > 24 * 1024 * 1024:
+            self.status.setText("Anhänge sind zusammen größer als 25 MB – Gmail nimmt das nicht an.")
+            return
+        if not self.subject.text().strip() and QMessageBox.question(
+                self, "Ohne Betreff senden", "Diese E-Mail hat keinen Betreff. Trotzdem senden?") \
+                != QMessageBox.StandardButton.Yes:
+            return
+        self.send_button.setEnabled(False)
+        self.status.setText("Wird gesendet …")
+        text, rich = self.editor.toPlainText(), self.editor.toHtml()
+        subject, attachments, reply = self.subject.text(), list(self.attachments), self.reply
+
+        def done(_result):
+            self.main.statusBar().showMessage("E-Mail gesendet.", 5000)
+            self.accept()
+            self.main.refresh_labels()
+
+        def failed(exc):
+            self.send_button.setEnabled(True)
+            self.status.setText(f"Nicht gesendet: {exc}")
+
+        self.main.jobs.run(lambda: self.main.gmail.send(to, subject, text, cc, bcc, rich, attachments, reply),
+                           done, failed)
+
+
+# ── Hauptfenster ───────────────────────────────────────────────────────────
 
 class MailWindow(QMainWindow):
     def __init__(self, selftest=False):
         super().__init__()
         self.setWindowTitle("Creative Mail")
-        self.resize(1080, 680)
+        self.resize(1360, 820)
         self.settings = QSettings()
         self.gmail = None
+        self.folder = "INBOX"
         self.page = None
-        self.loaded_query = ""
-        self.future = None
-        self.pool = ThreadPoolExecutor(max_workers=1)
-        self.timer = QTimer(self, interval=100)
-        self.timer.timeout.connect(self.poll)
-
-        central = QWidget()
-        layout = QVBoxLayout(central)
-        layout.setContentsMargins(16, 16, 16, 16)
-        title = QLabel("Creative Mail", objectName="title")
-        layout.addWidget(title)
-        top = QHBoxLayout()
-        self.login = QPushButton("Mit Google anmelden")
-        self.login.clicked.connect(self.connect_google)
-        self.account = QLabel("Kein Konto verbunden")
-        self.account.setTextFormat(Qt.TextFormat.PlainText)
-        self.compose = QPushButton("Neue E-Mail")
-        self.compose.clicked.connect(self.write_mail)
-        top.addWidget(self.login)
-        top.addWidget(self.account, 1)
-        top.addWidget(self.compose)
-        layout.addLayout(top)
-
-        bar = QHBoxLayout()
-        self.folder = QComboBox()
-        for name, value in [("Posteingang", "INBOX"), ("Gesendet", "SENT"), ("Alle E-Mails", "")]:
-            self.folder.addItem(name, value)
-        self.folder.currentIndexChanged.connect(lambda: self.refresh())
-        self.query = QLineEdit(placeholderText="E-Mails suchen …")
-        self.query.returnPressed.connect(self.refresh)
-        self.query.textChanged.connect(self.controls)
-        self.reload = QPushButton("Aktualisieren")
-        self.reload.clicked.connect(lambda: self.refresh())
-        self.more = QPushButton("Weitere laden")
-        self.more.clicked.connect(lambda: self.refresh(append=True))
-        for widget in (self.folder, self.query, self.reload, self.more):
-            bar.addWidget(widget, int(widget is self.query))
-        layout.addLayout(bar)
+        self.loading = False
+        self.current = None
+        self.allow_remote = False
+        self.composers = []
+        self.jobs = Jobs(self, self.error)
+        self.web = None
 
         split = QSplitter()
-        self.messages = QListWidget()
-        self.messages.itemActivated.connect(self.read_mail)
-        self.messages.itemClicked.connect(self.read_mail)
-        self.reader = QTextEdit(readOnly=True)
-        self.reader.setPlaceholderText("Wähle eine E-Mail aus.")
-        split.addWidget(self.messages)
-        split.addWidget(self.reader)
-        split.setSizes([370, 650])
-        layout.addWidget(split, 1)
-        self.setCentralWidget(central)
-        self.controls()
+        split.setHandleWidth(1)
+        split.setChildrenCollapsible(False)
+        split.addWidget(self.make_sidebar())
+        split.addWidget(self.make_list())
+        split.addWidget(self.make_reader())
+        split.setSizes([236, 420, 700])
+        split.setStretchFactor(2, 1)
+        self.setCentralWidget(split)
+        self.make_shortcuts()
+
+        self.poll_timer = QTimer(self, interval=120_000)
+        self.poll_timer.timeout.connect(self.check_new)
+
         client = self.settings.value("client", SYSTEM_CLIENT, type=str) if not selftest else SYSTEM_CLIENT
         address = self.settings.value("address", "", type=str) if not selftest else ""
         if address:
@@ -96,41 +680,580 @@ class MailWindow(QMainWindow):
                 self.gmail = Gmail(client, address)
             except ValueError as exc:
                 self.statusBar().showMessage(str(exc))
-            else:
-                self.account.setText(address)
-                self.refresh()
+        self.update_account()
+        if self.gmail:
+            self.refresh_labels()
+            self.refresh()
+            self.poll_timer.start()
 
-    def controls(self):
-        idle = self.future is None
-        connected = idle and self.gmail is not None
-        self.login.setEnabled(idle)
-        for widget in (self.compose, self.folder, self.query, self.reload, self.messages):
-            widget.setEnabled(connected)
-        self.more.setEnabled(connected and bool(self.page) and self.query.text().strip() == self.loaded_query)
+    # Aufbau
+    def make_sidebar(self):
+        side = QWidget(objectName="side")
+        side.setMinimumWidth(210)
+        side.setMaximumWidth(320)
+        layout = QVBoxLayout(side)
+        layout.setContentsMargins(0, 16, 0, 12)
+        layout.setSpacing(10)
+        brand = QHBoxLayout()
+        brand.setContentsMargins(16, 0, 16, 0)
+        logo = QLabel()
+        logo.setPixmap(QIcon.fromTheme("creative-mail", icon("unread", C["accent"], 26)).pixmap(26, 26))
+        brand.addWidget(logo)
+        brand.addWidget(QLabel("Creative Mail", objectName="brand"), 1)
+        layout.addLayout(brand)
+        compose_row = QHBoxLayout()
+        compose_row.setContentsMargins(12, 4, 12, 4)
+        self.compose_button = QPushButton(icon("compose", C["accentText"], 18), "  Neue E-Mail", objectName="primary")
+        self.compose_button.clicked.connect(lambda: self.open_composer())
+        compose_row.addWidget(self.compose_button)
+        layout.addLayout(compose_row)
+        self.folders = QListWidget(objectName="folders")
+        self.folders.setItemDelegate(FolderDelegate(self.folders))
+        self.folders.setMouseTracking(True)
+        self.folders.currentItemChanged.connect(self.pick_folder)
+        layout.addWidget(self.folders, 1)
+        self.fill_folders([(lid, name, 0, True) for lid, name in Gmail.SYSTEM])
+        # Konto
+        account = QHBoxLayout()
+        account.setContentsMargins(14, 0, 10, 0)
+        self.account_avatar = QLabel()
+        self.account_label = QLabel(objectName="muted")
+        self.account_label.setWordWrap(False)
+        self.account_menu_button = QToolButton()
+        self.account_menu_button.setIcon(icon("more", C["muted"], 18))
+        self.account_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(self)
+        menu.addAction("Signatur bearbeiten …", self.edit_signature)
+        menu.addAction("Google-Konto verbinden …", self.connect_google)
+        menu.addSeparator()
+        menu.addAction("Abmelden", self.sign_out)
+        self.account_menu_button.setMenu(menu)
+        account.addWidget(self.account_avatar)
+        account.addWidget(self.account_label, 1)
+        account.addWidget(self.account_menu_button)
+        layout.addLayout(account)
+        return side
 
-    def run_job(self, task, done, status):
-        if self.future is not None:
-            return
-        self.done = done
-        self.future = self.pool.submit(task)
-        self.statusBar().showMessage(status)
-        self.controls()
-        self.timer.start()
+    def make_list(self):
+        pane = QWidget(objectName="listPane")
+        pane.setMinimumWidth(320)
+        layout = QVBoxLayout(pane)
+        layout.setContentsMargins(0, 16, 0, 0)
+        layout.setSpacing(10)
+        head = QHBoxLayout()
+        head.setContentsMargins(18, 0, 12, 0)
+        self.pane_title = QLabel("Posteingang", objectName="paneTitle")
+        head.addWidget(self.pane_title, 1)
+        self.reload_button = QToolButton()
+        self.reload_button.setIcon(icon("refresh", C["muted"], 18))
+        self.reload_button.setToolTip("Aktualisieren (F5)")
+        self.reload_button.clicked.connect(lambda: (self.refresh(), self.refresh_labels()))
+        head.addWidget(self.reload_button)
+        layout.addLayout(head)
+        search = QHBoxLayout()
+        search.setContentsMargins(14, 0, 14, 0)
+        self.query = QLineEdit(placeholderText="Suchen – wie in Gmail, z. B. from:anna has:attachment")
+        self.query.addAction(icon("search", C["dim"], 16), QLineEdit.ActionPosition.LeadingPosition)
+        self.query.setClearButtonEnabled(True)
+        self.query.returnPressed.connect(self.refresh)
+        search.addWidget(self.query)
+        layout.addLayout(search)
+        self.list_state = QLabel(objectName="muted")
+        self.list_state.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.list_state.setVisible(False)
+        layout.addWidget(self.list_state)
+        self.messages = QListWidget()
+        self.messages.setItemDelegate(MessageDelegate(self.messages))
+        self.messages.setMouseTracking(True)
+        self.messages.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.messages.setUniformItemSizes(True)
+        self.messages.currentItemChanged.connect(self.open_message)
+        self.messages.verticalScrollBar().valueChanged.connect(self.maybe_more)
+        self.messages.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.messages.customContextMenuRequested.connect(self.list_menu)
+        layout.addWidget(self.messages, 1)
+        return pane
 
-    def poll(self):
-        if not self.future.done():
-            return
-        self.timer.stop()
-        future, self.future = self.future, None
-        self.statusBar().clearMessage()
-        try:
-            result = future.result()
-        except (OSError, RuntimeError, ValueError, KeyError) as exc:
-            QMessageBox.warning(self, "Creative Mail", str(exc))
+    def make_reader(self):
+        self.reader_stack = QStackedWidget()
+        # Willkommen / leer
+        empty = QWidget(objectName="reader")
+        e = QVBoxLayout(empty)
+        e.addStretch(1)
+        card = QFrame(objectName="card")
+        card.setMaximumWidth(460)
+        c = QVBoxLayout(card)
+        c.setContentsMargins(30, 28, 30, 28)
+        c.setSpacing(12)
+        self.empty_icon = QLabel()
+        self.empty_icon.setPixmap(icon("inbox", C["accent"], 44).pixmap(44, 44))
+        self.empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_title = QLabel("Willkommen bei Creative Mail", objectName="paneTitle")
+        self.empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_text = QLabel(objectName="muted")
+        self.empty_text.setWordWrap(True)
+        self.empty_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.login_button = QPushButton("Mit Google anmelden", objectName="primary")
+        self.login_button.clicked.connect(self.connect_google)
+        for w in (self.empty_icon, self.empty_title, self.empty_text, self.login_button):
+            c.addWidget(w)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(card)
+        row.addStretch(1)
+        e.addLayout(row)
+        e.addStretch(2)
+        self.reader_stack.addWidget(empty)
+
+        # Nachricht
+        reader = QWidget(objectName="reader")
+        r = QVBoxLayout(reader)
+        r.setContentsMargins(26, 16, 26, 18)
+        r.setSpacing(12)
+        tools = QHBoxLayout()
+        tools.setSpacing(2)
+        self.tool_buttons = {}
+        for key, name, tip, slot in (
+            ("reply", "reply", "Antworten (Strg+R)", lambda: self.reply_to(False)),
+            ("replyall", "replyall", "Allen antworten (Strg+Umschalt+R)", lambda: self.reply_to(True)),
+            ("forward", "forward", "Weiterleiten (Strg+Umschalt+F)", self.forward),
+            (None, None, None, None),
+            ("archive", "archive", "Archivieren (E)", self.archive),
+            ("trash", "trash", "Löschen (Entf)", self.delete),
+            ("unread", "unread", "Als ungelesen markieren (U)", self.mark_unread),
+            ("star", "star", "Markieren (S)", self.toggle_star),
+        ):
+            if key is None:
+                sep = QFrame()
+                sep.setFixedSize(1, 22)
+                sep.setStyleSheet(f"background: {C['line']};")
+                tools.addSpacing(6)
+                tools.addWidget(sep)
+                tools.addSpacing(6)
+                continue
+            button = QToolButton()
+            button.setIcon(icon(name, C["text"], 19))
+            button.setToolTip(tip)
+            button.setIconSize(QSize(19, 19))
+            button.clicked.connect(slot)
+            tools.addWidget(button)
+            self.tool_buttons[key] = button
+        tools.addStretch(1)
+        r.addLayout(tools)
+        self.subject_label = QLabel(objectName="subject")
+        self.subject_label.setWordWrap(True)
+        self.subject_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        r.addWidget(self.subject_label)
+        who = QHBoxLayout()
+        who.setSpacing(12)
+        self.sender_avatar = QLabel()
+        who.addWidget(self.sender_avatar, 0, Qt.AlignmentFlag.AlignTop)
+        names = QVBoxLayout()
+        names.setSpacing(2)
+        self.sender_label = QLabel(objectName="sender")
+        self.sender_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.recipients_label = QLabel(objectName="meta")
+        self.recipients_label.setWordWrap(True)
+        self.recipients_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        names.addWidget(self.sender_label)
+        names.addWidget(self.recipients_label)
+        who.addLayout(names, 1)
+        self.date_label = QLabel(objectName="meta")
+        who.addWidget(self.date_label, 0, Qt.AlignmentFlag.AlignTop)
+        r.addLayout(who)
+        self.banner = QWidget()
+        b = QHBoxLayout(self.banner)
+        b.setContentsMargins(0, 0, 0, 0)
+        self.banner_text = QLabel("Bilder aus dem Internet sind zum Schutz vor Tracking gesperrt.", objectName="banner")
+        b.addWidget(self.banner_text, 1)
+        load_images = QPushButton(icon("image", C["text"], 16), " Bilder laden")
+        load_images.clicked.connect(self.load_images)
+        b.addWidget(load_images)
+        r.addWidget(self.banner)
+        self.attach_row = QHBoxLayout()
+        self.attach_row.setSpacing(6)
+        self.attach_box = QWidget()
+        self.attach_box.setLayout(self.attach_row)
+        r.addWidget(self.attach_box)
+        self.body_holder = QVBoxLayout()
+        self.browser = MailBrowser()
+        self.body_holder.addWidget(self.browser)
+        r.addLayout(self.body_holder, 1)
+        self.reader_stack.addWidget(reader)
+        return self.reader_stack
+
+    def make_shortcuts(self):
+        for keys, slot in (("Ctrl+N", lambda: self.open_composer()), ("Ctrl+R", lambda: self.reply_to(False)),
+                           ("Ctrl+Shift+R", lambda: self.reply_to(True)), ("Ctrl+Shift+F", self.forward),
+                           ("F5", lambda: (self.refresh(), self.refresh_labels())), ("Ctrl+F", self.query.setFocus),
+                           ("Delete", self.delete), ("E", self.archive), ("S", self.toggle_star),
+                           ("U", self.mark_unread)):
+            # Einzeltasten und Entf nur in der Nachrichtenliste (nicht beim Tippen im Suchfeld)
+            single = len(keys) == 1 or keys == "Delete"
+            shortcut = QShortcut(QKeySequence(keys), self.messages if single else self)
+            if single:
+                shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(slot)
+
+    # Zustand
+    def error(self, exc):
+        self.set_loading(False)
+        QMessageBox.warning(self, "Creative Mail", str(exc))
+
+    def set_loading(self, on, text="Wird geladen …"):
+        self.loading = on
+        self.reload_button.setEnabled(not on)
+        if on:
+            self.statusBar().showMessage(text)
         else:
-            self.done(result)
-        self.controls()
+            self.statusBar().clearMessage()
 
+    def update_account(self):
+        connected = self.gmail is not None and bool(self.gmail.address)
+        address = self.gmail.address if connected else ""
+        self.account_label.setText(address or "Nicht angemeldet")
+        self.account_label.setToolTip(address)
+        self.account_avatar.setPixmap(avatar_pixmap(address or "?", 30))
+        for w in (self.compose_button, self.query, self.reload_button, self.folders):
+            w.setEnabled(connected)
+        self.login_button.setVisible(not connected)
+        if connected:
+            self.show_empty("Keine E-Mail ausgewählt", "Wähle links eine Nachricht aus.")
+        else:
+            self.show_empty("Willkommen bei Creative Mail",
+                            "Verbinde dein Gmail-Konto. Die Anmeldung läuft sicher über deinen Browser; "
+                            "Zugangsdaten bleiben im Schlüsselbund dieses PCs.")
+
+    def show_empty(self, title, text):
+        self.empty_title.setText(title)
+        self.empty_text.setText(text)
+        self.reader_stack.setCurrentIndex(0)
+
+    # Ordner
+    def fill_folders(self, labels):
+        current = self.folder
+        self.folders.blockSignals(True)
+        self.folders.clear()
+        user_started = False
+        for lid, name, unread, system in labels:
+            if not system and not user_started:
+                header = QListWidgetItem("LABELS")
+                header.setData(Qt.ItemDataRole.UserRole + 3, True)
+                header.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.folders.addItem(header)
+                user_started = True
+            item = QListWidgetItem(icon(FOLDER_ICONS.get(lid, "label") if system else "label", C["muted"], 18), name)
+            item.setData(Qt.ItemDataRole.UserRole, lid)
+            item.setData(Qt.ItemDataRole.UserRole + 1, unread)
+            self.folders.addItem(item)
+            if lid == current:
+                self.folders.setCurrentItem(item)
+        self.folders.blockSignals(False)
+
+    def refresh_labels(self):
+        if self.gmail:
+            self.jobs.run(self.gmail.labels, self.fill_folders, lambda exc: None)
+
+    def pick_folder(self, item, _old=None):
+        if item is None or item.data(Qt.ItemDataRole.UserRole + 3):
+            return
+        self.folder = item.data(Qt.ItemDataRole.UserRole)
+        self.pane_title.setText(item.text())
+        self.query.clear()
+        self.refresh()
+
+    # Liste
+    def refresh(self, append=False):
+        if not self.gmail or (self.loading and append):
+            return
+        folder, query = self.folder, self.query.text().strip()
+        page = self.page if append else None
+        if not append:
+            self.page = None
+            self.messages.clear()
+            self.show_empty("Keine E-Mail ausgewählt", "Wähle links eine Nachricht aus.")
+        self.set_loading(True)
+        token = object()
+        self._listing = token
+
+        def listed(result):
+            if self._listing is not token:
+                return
+            rows, self.page = result
+            self.set_loading(False)
+            for row in rows:
+                self.add_row(row)
+            empty = not self.messages.count()
+            self.list_state.setVisible(empty)
+            self.list_state.setText("Keine E-Mails gefunden." if query else "Hier ist nichts – alles erledigt.")
+
+        self.jobs.run(lambda: self.gmail.listing(folder, query, page), listed)
+
+    def add_row(self, row, top=False):
+        item = QListWidgetItem()
+        item.setData(Qt.ItemDataRole.UserRole, row)
+        item.setToolTip(f"{row.get('from', '')}\n{row.get('subject', '')}")
+        if top:
+            self.messages.insertItem(0, item)
+        else:
+            self.messages.addItem(item)
+        return item
+
+    def maybe_more(self, value):
+        bar = self.messages.verticalScrollBar()
+        if self.page and not self.loading and value >= bar.maximum() - MessageDelegate.HEIGHT * 2:
+            self.refresh(append=True)
+
+    def check_new(self):
+        if not self.gmail or self.loading or self.query.text().strip() or self.jobs.busy:
+            return
+        folder = self.folder
+        known = {self.messages.item(i).data(Qt.ItemDataRole.UserRole)["id"] for i in range(self.messages.count())}
+
+        def listed(result):
+            if folder != self.folder:
+                return
+            for row in reversed([r for r in result[0] if r["id"] not in known]):
+                self.add_row(row, top=True)
+
+        self.jobs.run(lambda: self.gmail.listing(folder, "", None, 20), listed, lambda exc: None)
+        self.refresh_labels()
+
+    def row_item(self, message_id):
+        for i in range(self.messages.count()):
+            item = self.messages.item(i)
+            if item.data(Qt.ItemDataRole.UserRole)["id"] == message_id:
+                return item
+        return None
+
+    def update_row(self, message_id, **changes):
+        item = self.row_item(message_id)
+        if item:
+            row = dict(item.data(Qt.ItemDataRole.UserRole))
+            row.update(changes)
+            item.setData(Qt.ItemDataRole.UserRole, row)
+
+    def list_menu(self, pos):
+        item = self.messages.itemAt(pos)
+        if not item:
+            return
+        self.messages.setCurrentItem(item)
+        row = item.data(Qt.ItemDataRole.UserRole)
+        menu = QMenu(self)
+        menu.addAction(icon("reply", C["text"], 16), "Antworten", lambda: self.reply_to(False))
+        menu.addAction(icon("forward", C["text"], 16), "Weiterleiten", self.forward)
+        menu.addSeparator()
+        menu.addAction(icon("unread", C["text"], 16), "Als gelesen markieren" if row.get("unread") else
+                       "Als ungelesen markieren", self.mark_unread)
+        menu.addAction(icon("star", C["text"], 16), "Markierung entfernen" if row.get("starred") else "Markieren",
+                       self.toggle_star)
+        menu.addAction(icon("archive", C["text"], 16), "Archivieren", self.archive)
+        menu.addAction(icon("trash", C["text"], 16), "Löschen", self.delete)
+        menu.exec(self.messages.viewport().mapToGlobal(pos))
+
+    # Lesen
+    def open_message(self, item, _old=None):
+        if item is None:
+            return
+        row = item.data(Qt.ItemDataRole.UserRole)
+        self.allow_remote = False
+        token = object()
+        self._reading = token
+        self.statusBar().showMessage("E-Mail wird geladen …")
+
+        def received(mail):
+            if self._reading is not token:
+                return
+            self.statusBar().clearMessage()
+            self.current = mail
+            if row.get("unread"):
+                self.update_row(row["id"], unread=False)
+                self.refresh_labels()
+            self.show_mail(mail)
+
+        self.jobs.run(lambda: self.gmail.message(row["id"], row.get("unread")), received)
+
+    def body_view(self):
+        if self.web is None and not os.environ.get("CREATIVE_MAIL_NO_WEBENGINE"):
+            self.web = make_web_view() or False
+            if self.web:
+                self.body_holder.replaceWidget(self.browser, self.web)
+                self.browser.hide()
+        return self.web or self.browser
+
+    def show_mail(self, mail):
+        self.reader_stack.setCurrentIndex(1)
+        self.subject_label.setText(mail["subject"])
+        self.sender_avatar.setPixmap(avatar_pixmap(mail["from"], 42))
+        name, address = parseaddr(mail["from"])
+        self.sender_label.setText(f"{html.escape(display_name(mail['from']))}  <span style='color:{C['muted']};font-weight:normal'>"
+                                  f"{html.escape(address) if name else ''}</span>")
+        to = ", ".join(display_name(a) for a in mail["to"].split(",") if a.strip())
+        cc = ", ".join(display_name(a) for a in mail["cc"].split(",") if a.strip())
+        self.recipients_label.setText(f"An: {to}" + (f"   ·   Cc: {cc}" if cc else ""))
+        self.date_label.setText(self.long_date(mail))
+        starred = "STARRED" in mail.get("labels", [])
+        self.tool_buttons["star"].setIcon(icon("star", C["star"] if starred else C["text"], 19,
+                                               C["star"] if starred else "none"))
+        remote = bool(mail.get("html")) and bool(REMOTE_IMG.search(mail["html"]))
+        self.banner.setVisible(remote and not self.allow_remote)
+        self.fill_attachments(mail.get("attachments", []))
+        self.body_view().show_mail(mail, self.allow_remote)
+
+    def long_date(self, mail):
+        row = self.messages.currentItem().data(Qt.ItemDataRole.UserRole) if self.messages.currentItem() else {}
+        stamp = row.get("date") if row else 0
+        if not stamp:
+            return mail.get("date", "")
+        t = time.localtime(stamp)
+        return f"{t.tm_mday}. {MONTHS[t.tm_mon - 1]} {t.tm_year}, {time.strftime('%H:%M', t)}"
+
+    def load_images(self):
+        if self.current:
+            self.allow_remote = True
+            self.banner.setVisible(False)
+            if self.web:
+                self.web.show_mail(self.current, True)
+            else:
+                self.statusBar().showMessage("Bilder aus dem Netz zeigt nur die volle Ansicht (Qt WebEngine).", 6000)
+
+    def fill_attachments(self, attachments):
+        while self.attach_row.count():
+            widget = self.attach_row.takeAt(0).widget()
+            if widget:
+                widget.deleteLater()
+        for item in attachments:
+            chip = QPushButton(icon("attach", C["muted"], 14), f" {item['name']}  ·  {human_size(item['size'])}",
+                               objectName="chip")
+            chip.setToolTip("Klicken zum Speichern")
+            chip.clicked.connect(lambda _=False, it=item: self.save_attachment(it))
+            self.attach_row.addWidget(chip)
+        self.attach_row.addStretch(1)
+        self.attach_box.setVisible(bool(attachments))
+
+    def save_attachment(self, item):
+        downloads = Path.home() / "Downloads"
+        start = str((downloads if downloads.is_dir() else Path.home()) / item["name"])
+        path, _ = QFileDialog.getSaveFileName(self, "Anhang speichern", start, "Alle Dateien (*)")
+        if path:
+            try:
+                Path(path).write_bytes(item["data"])
+            except OSError as exc:
+                QMessageBox.warning(self, "Anhang speichern", str(exc))
+            else:
+                self.statusBar().showMessage(f"„{Path(path).name}“ gespeichert.", 5000)
+
+    # Aktionen
+    def selected_row(self):
+        item = self.messages.currentItem()
+        return item.data(Qt.ItemDataRole.UserRole) if item else None
+
+    def change(self, task, done):
+        row = self.selected_row()
+        if not row or not self.gmail:
+            return
+        self.jobs.run(lambda: task(row["id"]), lambda _r: done(row))
+
+    def drop_row(self, row, message):
+        item = self.row_item(row["id"])
+        if item:
+            index = self.messages.row(item)
+            self.messages.takeItem(index)
+            if self.messages.count():
+                self.messages.setCurrentRow(min(index, self.messages.count() - 1))
+            else:
+                self.show_empty("Keine E-Mail ausgewählt", "Wähle links eine Nachricht aus.")
+        self.statusBar().showMessage(message, 4000)
+        self.refresh_labels()
+
+    def archive(self):
+        self.change(lambda mid: self.gmail.modify(mid, remove=["INBOX"]),
+                    lambda row: self.drop_row(row, "Archiviert.") if self.folder == "INBOX"
+                    else self.statusBar().showMessage("Archiviert.", 4000))
+
+    def delete(self):
+        if self.folder == "TRASH":
+            return
+        self.change(self.gmail.trash if self.gmail else None, lambda row: self.drop_row(row, "In den Papierkorb verschoben."))
+
+    def mark_unread(self):
+        row = self.selected_row()
+        if not row:
+            return
+        unread = not row.get("unread")
+        self.change(lambda mid: self.gmail.modify(mid, add=["UNREAD"]) if unread else
+                    self.gmail.modify(mid, remove=["UNREAD"]),
+                    lambda r: (self.update_row(r["id"], unread=unread), self.refresh_labels()))
+
+    def toggle_star(self):
+        row = self.selected_row()
+        if not row:
+            return
+        starred = not row.get("starred")
+
+        def done(r):
+            self.update_row(r["id"], starred=starred)
+            if self.current and self.current.get("id") == r["id"]:
+                labels = set(self.current.get("labels", []))
+                (labels.add if starred else labels.discard)("STARRED")
+                self.current["labels"] = list(labels)
+                self.tool_buttons["star"].setIcon(icon("star", C["star"] if starred else C["text"], 19,
+                                                       C["star"] if starred else "none"))
+
+        self.change(lambda mid: self.gmail.modify(mid, add=["STARRED"]) if starred else
+                    self.gmail.modify(mid, remove=["STARRED"]), done)
+
+    def quote(self, mail, heading):
+        body = mail.get("html") or plain_to_html(mail.get("text", ""))
+        body = re.sub(r"(?is)<(script|style|head)[^>]*>.*?</\1>", "", body)
+        return (f'<br><div style="color:#6f7a92">{html.escape(heading)}</div>'
+                f'<blockquote style="margin:0 0 0 8px;border-left:3px solid #8fb3ff;padding-left:10px">{body}'
+                '</blockquote>')
+
+    def reply_to(self, everyone):
+        mail = self.current
+        if not mail or not self.gmail:
+            return
+        own = (self.gmail.address or "").lower()
+        to = mail.get("reply_to") or mail["from"]
+        cc = ""
+        if everyone:
+            others = [f"{n} <{a}>" if n else a for n, a in getaddresses([mail["to"], mail["cc"]])
+                      if a and a.lower() != own and a.lower() not in to.lower()]
+            cc = ", ".join(others)
+        subject = mail["subject"]
+        if not subject.lower().startswith(("re:", "aw:")):
+            subject = "Re: " + subject
+        heading = f"Am {self.date_label.text()} schrieb {display_name(mail['from'])}:"
+        self.open_composer(to=to, cc=cc, subject=subject, quoted=self.quote(mail, heading),
+                           reply={"message_id": mail.get("message_id"), "references": mail.get("references"),
+                                  "threadId": mail.get("threadId")},
+                           title="Allen antworten" if everyone else "Antworten")
+
+    def forward(self):
+        mail = self.current
+        if not mail:
+            return
+        subject = mail["subject"]
+        if not subject.lower().startswith(("fwd:", "wg:")):
+            subject = "Fwd: " + subject
+        heading = (f"---------- Weitergeleitete Nachricht ----------\nVon: {mail['from']}\n"
+                   f"Datum: {self.date_label.text()}\nBetreff: {mail['subject']}\nAn: {mail['to']}")
+        quoted = '<br><div style="color:#6f7a92;white-space:pre-wrap">' + html.escape(heading) + "</div><br>" + \
+                 re.sub(r"(?is)<(script|style|head)[^>]*>.*?</\1>", "",
+                        mail.get("html") or plain_to_html(mail.get("text", "")))
+        attachments = [{"name": a["name"], "data": a["data"]} for a in mail.get("attachments", [])]
+        self.open_composer(subject=subject, quoted=quoted, attachments=attachments, title="Weiterleiten")
+
+    def open_composer(self, **kwargs):
+        if not self.gmail:
+            return
+        window = ComposeWindow(self, **kwargs)
+        self.composers.append(window)
+        window.finished.connect(lambda _r, w=window: self.composers.remove(w) if w in self.composers else None)
+        window.show()
+
+    # Konto
     def connect_google(self):
         client = self.settings.value("client", SYSTEM_CLIENT, type=str)
         if not Path(client).is_file():
@@ -148,110 +1271,97 @@ class MailWindow(QMainWindow):
             return
 
         def connected(address):
+            self.set_loading(False)
             self.gmail = gmail
             self.settings.setValue("client", client)
             self.settings.setValue("address", address)
-            self.account.setText(address)
-            self.query.clear()
+            self.folder = "INBOX"
+            self.update_account()
+            self.refresh_labels()
             self.refresh()
+            self.poll_timer.start()
 
-        self.run_job(gmail.connect, connected, "Google-Anmeldung im Browser abschließen …")
+        self.set_loading(True, "Google-Anmeldung im Browser abschließen …")
+        self.jobs.run(gmail.connect, connected)
 
-    def refresh(self, append=False):
-        if not self.gmail or self.future is not None:
+    def sign_out(self):
+        if not self.gmail or QMessageBox.question(
+                self, "Abmelden", f"{self.gmail.address} in Creative Mail abmelden?") != QMessageBox.StandardButton.Yes:
             return
-        folder, query = self.folder.currentData(), self.query.text().strip()
-        page = self.page if append else None
-        if not append:
-            self.page = None
-            self.messages.clear()
-            self.reader.clear()
+        self.settings.remove("address")
+        self.gmail = None
+        self.current = None
+        self.poll_timer.stop()
+        self.messages.clear()
+        self.fill_folders([(lid, name, 0, True) for lid, name in Gmail.SYSTEM])
+        self.update_account()
 
-        def listed(result):
-            rows, self.page = result
-            self.loaded_query = query
-            for message_id, sender, subject, unread in rows:
-                item = QListWidgetItem(f"{subject}\n{sender}")
-                item.setData(Qt.ItemDataRole.UserRole, (message_id, unread))
-                font = QFont(item.font())
-                font.setBold(unread)
-                item.setFont(font)
-                self.messages.addItem(item)
-            if not self.messages.count():
-                self.statusBar().showMessage("Keine E-Mails gefunden.")
-
-        self.run_job(lambda: self.gmail.listing(folder, query, page), listed, "E-Mails werden geladen …")
-
-    def read_mail(self, item):
-        message_id, unread = item.data(Qt.ItemDataRole.UserRole)
-
-        def received(result):
-            subject, sender, body, html = result
-            if html:
-                document = QTextDocument()
-                document.setHtml(body)
-                body = document.toPlainText()
-            self.reader.setPlainText(f"{subject}\nVon: {sender}\n\n{body}")
-            item.setData(Qt.ItemDataRole.UserRole, (message_id, False))
-            font = item.font()
-            font.setBold(False)
-            item.setFont(font)
-
-        self.run_job(lambda: self.gmail.message(message_id, unread), received, "E-Mail wird geladen …")
-
-    def write_mail(self):
+    def edit_signature(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Neue E-Mail")
-        dialog.resize(570, 380)
-        form = QFormLayout(dialog)
-        recipient, subject, body = QLineEdit(), QLineEdit(), QTextEdit()
-        form.addRow("An", recipient)
-        form.addRow("Betreff", subject)
-        form.addRow(body)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
-        send = buttons.addButton("Senden", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttons.rejected.connect(dialog.reject)
-        form.addRow(buttons)
-        status = QLabel()
-        form.addRow(status)
-
-        def submit():
-            address, title, message = recipient.text().strip(), subject.text(), body.toPlainText()
-            if not address:
-                status.setText("Bitte eine Empfängeradresse eingeben.")
-                return
-            send.setEnabled(False)
-            status.setText("Wird gesendet …")
-            self.run_job(lambda: self.gmail.send(address, title, message), sent, "E-Mail wird gesendet …")
-
-        def sent(_result):
-            dialog.accept()
-            self.statusBar().showMessage("E-Mail gesendet.", 5000)
-
-        def unlock():
-            if self.future is None and dialog.isVisible():
-                send.setEnabled(True)
-                if status.text() == "Wird gesendet …":
-                    status.setText("Versand nicht bestätigt. Bitte vor erneutem Senden „Gesendet“ prüfen.")
-
-        timer = QTimer(dialog, interval=150)
-        timer.timeout.connect(unlock)
-        send.clicked.connect(submit)
-        timer.start()
-        dialog.exec()
-        timer.stop()
+        dialog.setWindowTitle("Signatur")
+        dialog.setStyleSheet(STYLE + f"QDialog {{ background: {C['surface']}; }}"
+                             f"QPlainTextEdit {{ background: {C['ground']}; border-radius: 10px; padding: 8px; }}")
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(22, 18, 22, 18)
+        layout.addWidget(QLabel("Signatur", objectName="paneTitle"))
+        layout.addWidget(QLabel("Wird unter jede neue E-Mail gesetzt.", objectName="muted"))
+        text = QPlainTextEdit(self.settings.value("signature", "", type=str))
+        text.setMinimumSize(420, 140)
+        layout.addWidget(text)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        cancel = QPushButton("Abbrechen")
+        cancel.clicked.connect(dialog.reject)
+        save = QPushButton("Speichern", objectName="primary")
+        save.clicked.connect(dialog.accept)
+        row.addWidget(cancel)
+        row.addWidget(save)
+        layout.addLayout(row)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.settings.setValue("signature", text.toPlainText())
 
     def closeEvent(self, event):
-        if self.future is not None:
-            event.ignore()
-            self.statusBar().showMessage("Bitte warte, bis die laufende Aktion abgeschlossen ist.")
-        else:
-            self.pool.shutdown(wait=False)
-            super().closeEvent(event)
+        self.jobs.shutdown()
+        super().closeEvent(event)
+
+    def selftest(self):
+        """Zeigt Beispiel-Mails, öffnet das Verfassen-Fenster (ohne Netz)."""
+        sample = [{"id": str(i), "from": f"Anna Beispiel <anna{i}@example.org>", "subject": f"Test {i}",
+                   "snippet": "Hallo, hier ist die Vorschau …", "date": time.time() - i * 90000,
+                   "unread": i % 2 == 0, "starred": i == 1} for i in range(6)]
+        for row in sample:
+            self.add_row(row)
+        self.fill_folders([("INBOX", "Posteingang", 3, True), ("SENT", "Gesendet", 0, True),
+                           ("Label_1", "Projekte", 2, False)])
+        mail = {"subject": "Test", "from": "Anna <anna@example.org>", "to": "ich@example.org", "cc": "",
+                "html": '<p>Hallo <img src="https://tracker.example/x.png"></p>', "text": "", "date": "",
+                "attachments": [{"name": "bild.png", "size": 1234, "data": b"x"}], "inline": {}, "labels": []}
+        self.messages.setCurrentRow(0)
+        self.show_mail(mail)
+        assert self.banner.isVisibleTo(self.reader_stack.currentWidget())
+        self.messages.viewport().grab()
+        self.folders.viewport().grab()
+        self.gmail = type("Fake", (), {"address": "ich@example.org"})()
+        self.current = dict(mail, id="0", message_id="<a@b>", references="", threadId="t", reply_to="")
+        self.reply_to(True)
+        self.forward()
+        for window in list(self.composers):
+            window.grab()
+            window.reject()
+        self.gmail = None
+        print("Creative Mail: Selbsttest bestanden")
 
 
 def main():
     selftest = "--selftest" in sys.argv
+    if selftest:
+        os.environ["CREATIVE_MAIL_NO_WEBENGINE"] = "1"
+    else:
+        try:  # WebEngine muss vor der Anwendung geladen werden
+            import PySide6.QtWebEngineWidgets  # noqa: F401
+        except ImportError:
+            pass
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     app.setOrganizationName("Creative OS")
     app.setApplicationName("Creative Mail")
@@ -261,6 +1371,8 @@ def main():
     window = MailWindow(selftest)
     window.show()
     if selftest:
+        app.processEvents()
+        window.selftest()
         QTimer.singleShot(150, app.quit)
     return app.exec()
 

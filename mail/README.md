@@ -1,9 +1,19 @@
 # Creative Mail
 
-Nativer Gmail-Client für Creative OS. Unterstützt Posteingang, Gesendet, alle
-E-Mails, Gmail-Suche, Lesen und Senden von Text-E-Mails. HTML-Nachrichten werden
-als Text angezeigt. Dateianhänge lassen sich in dieser Version nicht öffnen oder
-versenden.
+Nativer Gmail-Client für Creative OS im Graphit-Look:
+
+- drei Spalten: Ordner und eigene Labels mit Ungelesen-Zählern, Nachrichtenliste
+  mit Absender-Kürzel, Datum, Vorschau und Stern, Lesebereich
+- echte HTML-Darstellung (Qt WebEngine, ohne JavaScript); Bilder aus dem Netz
+  sind zum Schutz vor Tracking gesperrt, bis man „Bilder laden“ wählt
+- Anhänge speichern, eingebettete Bilder, Antworten, Allen antworten,
+  Weiterleiten (mit Anhängen), Archivieren, Löschen, (un)gelesen, markieren
+- Verfassen mit Cc/Bcc, Formatierung (fett, kursiv, Liste, Link), Anhängen bis
+  25 MB und Signatur; Gmail-Suche, automatisches Nachladen beim Blättern,
+  alle zwei Minuten neue Mails
+- Tastenkürzel: Strg+N neu, Strg+R antworten, Strg+Umschalt+R allen,
+  Strg+Umschalt+F weiterleiten, E archivieren, Entf löschen, S markieren,
+  U ungelesen, F5 aktualisieren, Strg+Eingabe senden
 
 ## Google-Konto verbinden
 
