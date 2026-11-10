@@ -8,6 +8,7 @@ Befehle:
   internet <name> Aus dem Internet erreichbar machen (DuckDNS, Token über stdin)
   internet-off    Nur noch im Heimnetz
   duckdns-update  Internet-Adresse aktualisieren (läuft alle 5 Minuten)
+  duckdns-now     Wie duckdns-update, mit Rückmeldung für die Systemsteuerung
 
 Sicherheitsregeln: Es wird nie formatiert und nie etwas gelöscht. Das
 System-Laufwerk wird nur über den festen Ordner /var/srv/mein-server benutzt.
@@ -218,6 +219,15 @@ def enable(target):
     # Den mitgelieferten Caddy-Dienst nicht parallel laufen lassen (Port 80)
     run("systemctl", "disable", "--now", "caddy.service")
     firewall(True)
+    if domain:
+        # „disable“ schließt Port 443 und stoppt die DuckDNS-Aktualisierung –
+        # beim Wiedereinschalten beides zurückholen, sonst ist der Server von
+        # außen nicht erreichbar und DuckDNS zeigt irgendwann auf eine alte IP.
+        if shutil.which("firewall-cmd"):
+            run("firewall-cmd", "--permanent", "--add-service=https")
+            run("firewall-cmd", "--reload")
+        run("systemctl", "enable", "--now", "creative-duckdns.timer")
+        duckdns_update()
     run("systemctl", "daemon-reload")
     r = run("systemctl", "enable", "--now", "creative-server.service")
     run("systemctl", "restart", "creative-server.service")
@@ -259,6 +269,20 @@ def load_state():
         return {}
 
 
+DUCK_STATUS = STATE_DIR / "duckdns-status.json"   # ohne Token, für die Systemsteuerung lesbar
+
+
+def write_duck_status(ok, ip="", error=""):
+    """Letztes DuckDNS-Ergebnis merken, damit die Systemsteuerung es anzeigen kann."""
+    import time
+    try:
+        DUCK_STATUS.write_text(json.dumps({"ok": ok, "ip": ip, "error": error, "time": int(time.time())},
+                                          ensure_ascii=False), encoding="utf-8")
+        os.chmod(DUCK_STATUS, 0o644)
+    except OSError:
+        pass
+
+
 def duckdns_update():
     try:
         cfg = json.loads(DUCK.read_text(encoding="utf-8"))
@@ -266,12 +290,39 @@ def duckdns_update():
         return False
     import urllib.parse
     import urllib.request
-    q = urllib.parse.urlencode({"domains": cfg["name"], "token": cfg["token"], "ip": ""})
+    # verbose=true: DuckDNS antwortet mit „OK\n<IPv4>\n<IPv6>\nUPDATED|NOCHANGE“
+    q = urllib.parse.urlencode({"domains": cfg["name"], "token": cfg["token"], "ip": "", "verbose": "true"})
     try:
         with urllib.request.urlopen(f"https://www.duckdns.org/update?{q}", timeout=15) as r:
-            return r.read().decode().strip() == "OK"
-    except OSError:
+            lines = r.read().decode().strip().splitlines()
+    except OSError as e:
+        write_duck_status(False, error=f"duckdns.org nicht erreichbar ({getattr(e, 'reason', e)})")
         return False
+    if lines and lines[0].strip() == "OK":
+        write_duck_status(True, ip=lines[1].strip() if len(lines) > 1 else "")
+        return True
+    write_duck_status(False, error="DuckDNS hat Name oder Token abgelehnt (Antwort „KO“)")
+    return False
+
+
+def duckdns_now():
+    """Sofort aktualisieren (Knopf in der Systemsteuerung)."""
+    if not DUCK.exists():
+        fail("Der Internet-Zugang ist nicht eingerichtet.")
+    # Gleich mitreparieren: automatische Aktualisierung und Port 443
+    if shutil.which("firewall-cmd"):
+        run("firewall-cmd", "--permanent", "--add-service=https")
+        run("firewall-cmd", "--reload")
+    run("systemctl", "enable", "--now", "creative-duckdns.timer")
+    if duckdns_update():
+        st = json.loads(DUCK_STATUS.read_text(encoding="utf-8"))
+        print(json.dumps({"ok": True, "ip": st.get("ip", "")}, ensure_ascii=False))
+    else:
+        try:
+            err = json.loads(DUCK_STATUS.read_text(encoding="utf-8")).get("error")
+        except (OSError, ValueError):
+            err = None
+        fail(err or "DuckDNS konnte nicht aktualisiert werden.")
 
 
 def internet_on(name):
@@ -309,6 +360,7 @@ def internet_off():
     st = load_state()
     run("systemctl", "disable", "--now", "creative-duckdns.timer")
     DUCK.unlink(missing_ok=True)
+    DUCK_STATUS.unlink(missing_ok=True)
     if shutil.which("firewall-cmd"):
         run("firewall-cmd", "--permanent", "--remove-service=https")
         run("firewall-cmd", "--reload")
@@ -344,5 +396,7 @@ if __name__ == "__main__":
         internet_off()
     elif len(sys.argv) == 2 and sys.argv[1] == "duckdns-update":
         sys.exit(0 if duckdns_update() else 1)
+    elif len(sys.argv) == 2 and sys.argv[1] == "duckdns-now":
+        duckdns_now()
     else:
         fail("Unbekannter Befehl.")

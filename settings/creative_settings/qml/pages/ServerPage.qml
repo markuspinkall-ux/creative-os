@@ -338,4 +338,82 @@ SettingsPage {
             }
         }
     }
+
+    // ---- Verbindung prüfen --------------------------------------------------------------
+    Card {
+        title: "Verbindung prüfen"
+        subtitle: "Zeigt deine aktuelle Heimadresse und findet Fehler auf dem Weg aus dem Internet"
+        visible: server.installed
+
+        Repeater {
+            model: [
+                { label: "Adresse im Heimnetz", hint: "Diese IP muss im Router als Ziel der Portfreigabe stehen", value: server.net.local },
+                { label: "Heimadresse im Internet (IPv4)", hint: "Vergibt dein Anbieter – kann sich ändern, z. B. nach Router-Neustart", value: server.net.ipv4 },
+                { label: "Heimadresse im Internet (IPv6)", hint: "", value: server.net.ipv6 },
+                { label: server.domain ? server.domain + " zeigt auf" : "DuckDNS", hint: "Muss mit der Heimadresse übereinstimmen", value: server.domain ? server.net.dns : "nicht eingerichtet" },
+                { label: "Letzte DuckDNS-Aktualisierung", hint: "Läuft automatisch alle 5 Minuten", value: server.net.last }
+            ]
+            delegate: SettingRow {
+                visible: index !== 4 || server.domain !== ""
+                label: modelData.label
+                hint: modelData.hint
+                Text {
+                    text: server.netBusy ? "…" : (modelData.value || "–")
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
+                }
+            }
+        }
+
+        Column {
+            width: parent.width
+            spacing: 8
+            topPadding: 6
+            bottomPadding: 6
+            Repeater {
+                model: server.netBusy ? [] : (server.net.issues || [])
+                delegate: Rectangle {
+                    width: parent.width
+                    height: issueText.implicitHeight + 18
+                    radius: 10
+                    color: modelData.level === "ok" ? Qt.rgba(Theme.ok.r, Theme.ok.g, Theme.ok.b, 0.1)
+                         : modelData.level === "error" ? Qt.rgba(1, 0.42, 0.42, 0.12)
+                         : modelData.level === "warn" ? Qt.rgba(1, 0.69, 0.48, 0.12)
+                         : Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.1)
+                    Rectangle {
+                        x: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 9; height: 9; radius: 5
+                        color: modelData.level === "ok" ? Theme.ok : modelData.level === "error" ? "#ff6b6b"
+                             : modelData.level === "warn" ? Theme.flame : Theme.accent
+                    }
+                    Text {
+                        id: issueText
+                        x: 30
+                        width: parent.width - 42
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.WordWrap
+                        text: modelData.text
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                    }
+                }
+            }
+            Row {
+                spacing: 8
+                CButton { text: server.netBusy ? "Prüfe …" : "Erneut prüfen"; enabled: !server.netBusy; onClicked: server.checkNetwork() }
+                CButton {
+                    visible: server.domain !== ""
+                    text: "Jetzt aktualisieren"
+                    primary: true
+                    enabled: !server.busy && !server.netBusy
+                    onClicked: server.updateDuckDns()
+                }
+            }
+        }
+        Component.onCompleted: server.checkNetwork()
+    }
 }
