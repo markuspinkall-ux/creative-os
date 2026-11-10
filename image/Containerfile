@@ -440,7 +440,7 @@ RUN chmod 755 /usr/bin/creative-welcome
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
 # Standard-Apps: Terminal, Spectacle (nimmt für Creative Shots im Hintergrund auf),
 # Entpacken (unsichtbar, für ZIP-Dateien)
-RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts qt6-qttranslations \
+RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts jetbrains-mono-fonts-all qt6-qttranslations \
         plasma-integration breeze-gtk breeze-icon-theme \
  && dnf clean all
 # Überflüssige KDE-Programme entfernen. Wird etwas davon noch gebraucht,

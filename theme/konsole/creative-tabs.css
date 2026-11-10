@@ -1,0 +1,13 @@
+/* Creative OS – Graphit-Reiter für Konsole */
+QTabBar { background: #12151b; }
+QTabBar::tab {
+    background: #1c2029; color: #9aa6c4;
+    border: none; border-radius: 10px;
+    padding: 6px 14px; margin: 6px 3px 4px 3px;
+    min-width: 110px;
+    font-family: "Arial"; font-size: 12px;
+}
+QTabBar::tab:hover:!selected { background: #232836; color: #dce6ff; }
+QTabBar::tab:selected { background: #232836; color: #dce6ff; border: 1px solid #8fb3ff; }
+QTabBar QToolButton { background: transparent; border: none; border-radius: 8px; }
+QTabBar QToolButton:hover { background: #232836; }

@@ -1,11 +1,11 @@
 [Background]
-Color=28,32,41
+Color=18,21,27
 
 [BackgroundFaint]
-Color=28,32,41
+Color=18,21,27
 
 [BackgroundIntense]
-Color=28,32,41
+Color=18,21,27
 
 [Foreground]
 Color=220,230,255
@@ -17,10 +17,10 @@ Color=186,198,223
 Color=255,255,255
 
 [Color0]
-Color=28,32,41
+Color=58,66,82
 
 [Color0Faint]
-Color=28,32,41
+Color=58,66,82
 
 [Color0Intense]
 Color=140,150,175
@@ -90,7 +90,7 @@ Color=255,255,255
 
 [General]
 Description=Creative Graphit
-Opacity=0.92
+Opacity=1
 Blur=false
 Wallpaper=
 
