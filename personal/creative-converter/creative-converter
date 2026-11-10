@@ -1,0 +1,480 @@
+#!/usr/bin/python3
+"""Creative Converter – YouTube-Videos als MP3 speichern (persönliche App, nicht Teil der Releases).
+
+Link einfügen → Titel, Länge und Vorschaubild erscheinen in der Liste →
+„Konvertieren“. Die Arbeit macht yt-dlp (lädt nur die Tonspur) mit ffmpeg
+(wandelt in MP3, bettet Cover und Titel ein).
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
+
+from PySide6.QtCore import QProcess, QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QIcon, QPixmap
+from PySide6.QtWidgets import (
+    QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QVBoxLayout, QWidget,
+)
+
+APP_DIR = Path(__file__).resolve().parent
+YTDLP_LOCAL = APP_DIR / "yt-dlp"
+QUALITIES = [("320", "Beste Qualität · 320 kbit/s"), ("256", "Sehr gut · 256 kbit/s"),
+             ("192", "Gut · 192 kbit/s"), ("128", "Klein · 128 kbit/s")]
+URL_RE = re.compile(r"^https?://(www\.|m\.|music\.)?(youtube\.com|youtu\.be)/", re.I)
+PROGRESS_RE = re.compile(r"^cc-progress\s+([\d.]+)%")
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QLabel#hint { color:rgba(220,230,255,0.45); font-size:11px; }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget, QFrame#row QWidget { background:transparent; }
+    QFrame#row { background:#232836; border-radius:12px; }
+    QLineEdit, QComboBox { background:#232836; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px 10px; }
+    QLineEdit:focus, QComboBox:focus { border:1px solid #8fb3ff; }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:9px 14px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QPushButton#primary:hover { background:#a3c1ff; }
+    QPushButton:disabled { color:rgba(220,230,255,0.35); background:rgba(255,255,255,0.04); }
+    QListWidget { background:transparent; border:none; }
+    QListWidget::item { border:none; margin:0 0 8px 0; }
+    QProgressBar { background:#12151b; border:none; border-radius:4px; height:8px; }
+    QProgressBar::chunk { background:#8fb3ff; border-radius:4px; }
+    QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836; border:1px solid rgba(255,255,255,0.15); }
+    QCheckBox::indicator:checked { background:#8fb3ff; }
+    QScrollBar:vertical { width:10px; background:transparent; }
+    QScrollBar::handle:vertical { background:#3a4252; border-radius:5px; min-height:40px; }
+    QScrollBar::add-line, QScrollBar::sub-line { width:0; height:0; }
+"""
+
+
+# ---- reine Hilfsfunktionen (ohne Oberfläche, testbar) -------------------------------------
+
+def ytdlp():
+    if YTDLP_LOCAL.is_file() and os.access(YTDLP_LOCAL, os.X_OK):
+        return str(YTDLP_LOCAL)
+    return shutil.which("yt-dlp") or ""
+
+
+def music_dir():
+    try:
+        out = subprocess.run(["xdg-user-dir", "MUSIC"], capture_output=True, text=True, timeout=3).stdout.strip()
+        if out and out != str(Path.home()):
+            return Path(out)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    for name in ("Musik", "Music"):
+        if (Path.home() / name).is_dir():
+            return Path.home() / name
+    return Path.home() / "Musik"
+
+
+def is_youtube(url):
+    return bool(URL_RE.match(url.strip()))
+
+
+def duration_text(seconds):
+    if not seconds:
+        return ""
+    seconds = int(seconds)
+    h, rest = divmod(seconds, 3600)
+    m, s = divmod(rest, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+def info_args(url, playlist):
+    return ["-J", "--flat-playlist" if playlist else "--no-playlist", "--no-warnings", url]
+
+
+def parse_info(data, url):
+    """yt-dlp -J → Liste von Einträgen {url, title, uploader, duration, thumb}."""
+    def entry(d, fallback_url):
+        thumbs = d.get("thumbnails") or []
+        thumb = d.get("thumbnail") or (thumbs[-1].get("url") if thumbs else "")
+        link = d.get("webpage_url") or d.get("url") or fallback_url
+        if link and not link.startswith("http") and d.get("id"):
+            link = f"https://www.youtube.com/watch?v={d['id']}"
+        return {"url": link, "title": d.get("title") or "Ohne Titel",
+                "uploader": d.get("uploader") or d.get("channel") or "",
+                "duration": d.get("duration") or 0, "thumb": thumb}
+    if data.get("_type") == "playlist":
+        return [entry(e, "") for e in data.get("entries") or [] if e]
+    return [entry(data, url)]
+
+
+def convert_args(url, folder, quality, cover):
+    args = ["--no-playlist", "-f", "bestaudio/best", "-x", "--audio-format", "mp3",
+            "--audio-quality", f"{quality}K", "--embed-metadata",
+            "-P", str(folder), "-o", "%(title)s.%(ext)s", "--windows-filenames",
+            "--newline", "--no-warnings", "--progress-template", "download:cc-progress %(progress._percent_str)s"]
+    if cover:
+        args += ["--embed-thumbnail", "--convert-thumbnails", "jpg"]
+    return args + [url]
+
+
+def parse_progress(line):
+    """Fortschritt (0–100) aus einer yt-dlp-Zeile, sonst None."""
+    m = PROGRESS_RE.match(line.strip())
+    return float(m.group(1)) if m else None
+
+
+# ---- Oberfläche ---------------------------------------------------------------------------
+
+@dataclass
+class Job:
+    url: str
+    title: str
+    uploader: str
+    duration: int
+    thumb: str
+    widget: "JobRow" = None
+    state: str = "wartet"          # wartet | läuft | fertig | fehler
+
+
+class JobRow(QFrame):
+    def __init__(self, job, remove):
+        super().__init__(objectName="row")
+        self.job = job
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 10, 12, 10)
+        layout.setSpacing(12)
+        self.cover = QLabel()
+        self.cover.setFixedSize(128, 72)
+        self.cover.setStyleSheet("background:#12151b; border-radius:8px;")
+        self.cover.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.cover)
+        text = QVBoxLayout()
+        text.setSpacing(4)
+        title = QLabel(job.title)
+        title.setStyleSheet("font-weight:700; font-size:14px;")
+        title.setWordWrap(True)
+        meta = QLabel(" · ".join(x for x in (job.uploader, duration_text(job.duration)) if x), objectName="muted")
+        self.status = QLabel("Wartet", objectName="muted")
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 100)
+        self.bar.setTextVisible(False)
+        self.bar.hide()
+        for w in (title, meta, self.status, self.bar):
+            text.addWidget(w)
+        layout.addLayout(text, 1)
+        self.remove = QPushButton("✕")
+        self.remove.setFixedWidth(40)
+        self.remove.setToolTip("Aus der Liste nehmen")
+        self.remove.clicked.connect(lambda: remove(job))
+        layout.addWidget(self.remove, 0, Qt.AlignmentFlag.AlignTop)
+
+    def set_cover(self, data):
+        pix = QPixmap()
+        if data and pix.loadFromData(data):
+            self.cover.setPixmap(pix.scaled(QSize(128, 72), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                            Qt.TransformationMode.SmoothTransformation).copy(0, 0, 128, 72))
+
+    def set_state(self, state, text, percent=None):
+        self.job.state = state
+        color = {"fertig": "#6fdcc0", "fehler": "#ffb07a", "läuft": "#8fb3ff"}.get(state, "rgba(220,230,255,0.6)")
+        self.status.setStyleSheet(f"color:{color};")
+        self.status.setText(text)
+        self.bar.setVisible(state == "läuft")
+        if percent is not None:
+            self.bar.setValue(int(percent))
+        self.remove.setEnabled(state != "läuft")
+
+
+class Converter(QMainWindow):
+    infoReady = Signal(object, object, str)
+    coverReady = Signal(object, bytes)
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Creative Converter")
+        self.setWindowIcon(QIcon.fromTheme("creative-converter"))
+        self.resize(820, 680)
+        self.setStyleSheet(STYLE)
+        self.jobs, self.current, self.folder = [], None, music_dir()
+        self.pool = ThreadPoolExecutor(max_workers=3)
+        self.infoReady.connect(self.add_entries, Qt.ConnectionType.QueuedConnection)
+        self.coverReady.connect(lambda job, data: job.widget and job.widget.set_cover(data),
+                                Qt.ConnectionType.QueuedConnection)
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_output)
+        self.proc.finished.connect(self.job_finished)
+        self.buffer = b""
+        self.last_lines = []
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        box = QVBoxLayout(root)
+        box.setContentsMargins(18, 14, 18, 12)
+        box.setSpacing(12)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("Creative Converter", objectName="title"))
+        top.addStretch()
+        sub = QLabel("YouTube → MP3", objectName="muted")
+        top.addWidget(sub)
+        box.addLayout(top)
+
+        # Link eingeben
+        panel = QFrame(objectName="panel")
+        p = QVBoxLayout(panel)
+        p.setContentsMargins(14, 12, 14, 14)
+        p.addWidget(QLabel("LINK", objectName="section"))
+        row = QHBoxLayout()
+        self.url = QLineEdit(placeholderText="https://www.youtube.com/watch?v=…")
+        self.url.returnPressed.connect(self.add_url)
+        row.addWidget(self.url, 1)
+        paste = QPushButton("Einfügen")
+        paste.clicked.connect(self.paste)
+        row.addWidget(paste)
+        self.add_button = QPushButton("Hinzufügen", objectName="primary")
+        self.add_button.clicked.connect(self.add_url)
+        row.addWidget(self.add_button)
+        p.addLayout(row)
+        self.playlist = QCheckBox("Ganze Playlist übernehmen, wenn der Link zu einer Playlist gehört")
+        p.addWidget(self.playlist)
+        box.addWidget(panel)
+
+        # Liste
+        list_panel = QFrame(objectName="panel")
+        lp = QVBoxLayout(list_panel)
+        lp.setContentsMargins(14, 12, 14, 14)
+        head = QHBoxLayout()
+        head.addWidget(QLabel("WARTESCHLANGE", objectName="section"))
+        head.addStretch()
+        self.count = QLabel("", objectName="muted")
+        head.addWidget(self.count)
+        lp.addLayout(head)
+        self.list = QListWidget()
+        self.list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self.list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        lp.addWidget(self.list, 1)
+        self.empty = QLabel("Füge oben einen YouTube-Link ein.", objectName="muted")
+        self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lp.addWidget(self.empty)
+        box.addWidget(list_panel, 1)
+
+        # Einstellungen + Start
+        settings = QFrame(objectName="panel")
+        s = QHBoxLayout(settings)
+        s.setContentsMargins(14, 12, 14, 12)
+        s.setSpacing(10)
+        self.quality = QComboBox()
+        for key, label in QUALITIES:
+            self.quality.addItem(label, key)
+        s.addWidget(self.quality)
+        self.cover = QCheckBox("Cover einbetten")
+        self.cover.setChecked(True)
+        s.addWidget(self.cover)
+        self.folder_button = QPushButton()
+        self.folder_button.setToolTip("Zielordner wählen")
+        self.folder_button.clicked.connect(self.choose_folder)
+        s.addWidget(self.folder_button, 1)
+        open_folder = QPushButton("Ordner öffnen")
+        open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.folder))))
+        s.addWidget(open_folder)
+        self.start = QPushButton("Konvertieren", objectName="primary")
+        self.start.clicked.connect(self.start_queue)
+        s.addWidget(self.start)
+        self.stop = QPushButton("Abbrechen")
+        self.stop.clicked.connect(self.cancel)
+        s.addWidget(self.stop)
+        box.addWidget(settings)
+        foot = QHBoxLayout()
+        self.message = QLabel("", objectName="muted")
+        foot.addWidget(self.message, 1)
+        update = QPushButton("yt-dlp aktualisieren")
+        update.setToolTip("YouTube ändert sich oft – wenn etwas nicht klappt, zuerst aktualisieren")
+        update.clicked.connect(self.update_ytdlp)
+        foot.addWidget(update)
+        box.addLayout(foot)
+        box.addWidget(QLabel("Nur für eigene Videos oder Inhalte, deren Download erlaubt ist.", objectName="hint"))
+        self.refresh()
+        if not ytdlp():
+            self.message.setText("yt-dlp fehlt – bitte install.sh erneut ausführen.")
+
+    # ---- Liste ----------------------------------------------------------------------
+    def refresh(self):
+        self.folder_button.setText("Ziel: " + str(self.folder).replace(str(Path.home()), "~"))
+        waiting = sum(j.state == "wartet" for j in self.jobs)
+        done = sum(j.state == "fertig" for j in self.jobs)
+        self.count.setText(f"{len(self.jobs)} Titel · {done} fertig" if self.jobs else "")
+        self.empty.setVisible(not self.jobs)
+        self.list.setVisible(bool(self.jobs))
+        self.start.setEnabled(bool(waiting) and self.current is None and bool(ytdlp()))
+        self.stop.setEnabled(self.current is not None)
+
+    def paste(self):
+        self.url.setText(QGuiApplication.clipboard().text().strip())
+        self.add_url()
+
+    def add_url(self):
+        url = self.url.text().strip()
+        if not url:
+            return
+        if not is_youtube(url):
+            self.message.setText("Das ist kein YouTube-Link.")
+            return
+        if not ytdlp():
+            self.message.setText("yt-dlp fehlt – bitte install.sh erneut ausführen.")
+            return
+        self.url.clear()
+        self.message.setText("Lese Titel und Vorschaubild …")
+        playlist = self.playlist.isChecked()
+
+        def work():
+            try:
+                out = subprocess.run([ytdlp()] + info_args(url, playlist), capture_output=True, text=True, timeout=90)
+                if out.returncode != 0:
+                    raise RuntimeError(out.stderr.strip().splitlines()[-1] if out.stderr.strip() else "unbekannter Fehler")
+                self.infoReady.emit(parse_info(json.loads(out.stdout), url), None, url)
+            except Exception as error:  # noqa: BLE001 – Fehler landen in der Oberfläche
+                self.infoReady.emit([], str(error), url)
+        self.pool.submit(work)
+
+    def add_entries(self, entries, error, url):
+        if error:
+            self.message.setText(f"Konnte den Link nicht lesen: {error}")
+            return
+        known = {j.url for j in self.jobs}
+        added = 0
+        for e in entries:
+            if not e["url"] or e["url"] in known:
+                continue
+            job = Job(e["url"], e["title"], e["uploader"], e["duration"], e["thumb"])
+            job.widget = JobRow(job, self.remove_job)
+            item = QListWidgetItem()
+            item.setSizeHint(job.widget.sizeHint())
+            self.list.addItem(item)
+            self.list.setItemWidget(item, job.widget)
+            self.jobs.append(job)
+            added += 1
+            if job.thumb:
+                self.pool.submit(self.load_cover, job)
+        self.message.setText(f"{added} Titel hinzugefügt." if added else "Schon in der Liste.")
+        self.refresh()
+
+    def load_cover(self, job):
+        try:
+            req = urllib.request.Request(job.thumb, headers={"User-Agent": "CreativeConverter"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                self.coverReady.emit(job, r.read(4 * 1024 * 1024))
+        except Exception:  # noqa: BLE001 – ohne Cover geht es auch
+            pass
+
+    def remove_job(self, job):
+        if job is self.current:
+            return
+        index = self.jobs.index(job)
+        self.jobs.pop(index)
+        self.list.takeItem(index)
+        self.refresh()
+
+    def choose_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Zielordner wählen", str(self.folder))
+        if folder:
+            self.folder = Path(folder)
+            self.refresh()
+
+    # ---- Konvertieren ---------------------------------------------------------------
+    def start_queue(self):
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.next_job()
+
+    def next_job(self):
+        job = next((j for j in self.jobs if j.state == "wartet"), None)
+        self.current = job
+        self.refresh()
+        if not job:
+            done = sum(j.state == "fertig" for j in self.jobs)
+            self.message.setText(f"Fertig – {done} MP3 in {str(self.folder).replace(str(Path.home()), '~')}.")
+            return
+        job.widget.set_state("läuft", "Lädt die Tonspur …", 0)
+        self.buffer, self.last_lines = b"", []
+        self.proc.start(ytdlp(), convert_args(job.url, self.folder, self.quality.currentData(), self.cover.isChecked()))
+
+    def read_output(self):
+        self.buffer += bytes(self.proc.readAllStandardOutput())
+        *lines, self.buffer = self.buffer.split(b"\n")
+        job = self.current
+        for raw in lines:
+            line = raw.decode(errors="replace").strip()
+            if not line or not job:
+                continue
+            self.last_lines = (self.last_lines + [line])[-5:]
+            percent = parse_progress(line)
+            if percent is not None:
+                job.widget.set_state("läuft", f"Lädt die Tonspur … {percent:.0f} %", percent * 0.9)
+            elif "[ExtractAudio]" in line:
+                job.widget.set_state("läuft", "Wandelt in MP3 um …", 92)
+            elif "[EmbedThumbnail]" in line or "[Metadata]" in line:
+                job.widget.set_state("läuft", "Fügt Cover und Titel ein …", 97)
+
+    def job_finished(self, code, _status):
+        job, self.current = self.current, None
+        if job:
+            if code == 0:
+                job.widget.set_state("fertig", "Fertig ✓", 100)
+            elif job.state == "wartet":         # abgebrochen
+                job.widget.set_state("wartet", "Abgebrochen – wartet")
+            else:
+                reason = next((l for l in reversed(self.last_lines) if "ERROR" in l), "")
+                job.widget.set_state("fehler", "Fehler: " + (reason.replace("ERROR:", "").strip()[:140] or f"Code {code}"))
+        if self.stopping:
+            self.stopping = False
+            self.refresh()
+            return
+        self.next_job()
+
+    stopping = False
+
+    def cancel(self):
+        if self.current:
+            self.stopping = True
+            self.current.state = "wartet"
+            self.proc.kill()
+
+    def update_ytdlp(self):
+        if not YTDLP_LOCAL.is_file():
+            self.message.setText("yt-dlp kommt aus dem System – dort aktualisieren.")
+            return
+        self.message.setText("yt-dlp wird aktualisiert …")
+        out = subprocess.run([str(YTDLP_LOCAL), "-U"], capture_output=True, text=True, timeout=120)
+        lines = (out.stdout + out.stderr).strip().splitlines()
+        self.message.setText(lines[-1] if lines else "Fertig.")
+
+    def closeEvent(self, event):
+        if self.current and QMessageBox.question(self, "Creative Converter",
+                                                 "Es wird gerade konvertiert. Trotzdem beenden?") != QMessageBox.StandardButton.Yes:
+            event.ignore()
+            return
+        self.proc.kill()
+        self.pool.shutdown(wait=False, cancel_futures=True)
+        super().closeEvent(event)
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Creative Converter")
+    app.setDesktopFileName("creative-converter")
+    window = Converter()
+    if "--selftest" in sys.argv:
+        window.close()
+        return 0
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
