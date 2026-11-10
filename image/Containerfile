@@ -215,6 +215,15 @@ COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.d
 COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
 RUN chmod 755 /usr/bin/creative-podcast
 
+# Creative Mail: Qt-Client und Secret Service für Gmail.
+RUN dnf install -y libsecret && dnf clean all
+COPY mail/gmail.py mail/creative-mail /usr/lib/creative-mail/
+COPY mail/creative-mail.desktop /usr/share/applications/creative-mail.desktop
+COPY mail/creative-mail.svg /usr/share/icons/hicolor/scalable/apps/creative-mail.svg
+RUN chmod 755 /usr/lib/creative-mail/creative-mail \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/mail-home timeout 30 /usr/lib/creative-mail/creative-mail --selftest \
+ && rm -rf /tmp/mail-home
+
 # Creative Magazin – Lieblingsseiten per RSS als tägliche Zeitschrift lesen.
 COPY magazin/creative_magazin /usr/lib/creative-magazin/creative_magazin
 COPY magazin/bin/creative-magazin /usr/bin/creative-magazin

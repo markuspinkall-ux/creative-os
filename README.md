@@ -11,6 +11,7 @@ Spiele laufen ab Werk (Steam + Proton fest eingebaut).
 | Creative Player (Musik, Videos, IPTV) | `media/` |
 | Systemsteuerung (Netzwerk, Bildschirme, Ton, Drucker, Mein Server, Darstellung, Updates, System) | `settings/` |
 | Mein Server (Webseite im Heimnetz) | `server/` |
+| Creative Mail (Gmail im Graphit-Stil) | [`mail/`](mail/) |
 | Brave-Startseite und -Einstellungen | `browser/` |
 | Willkommens-Assistent | `welcome/` |
 | Aussehen aller Apps (Farben, Fensterrahmen, Symbole, aufgeräumtes Startmenü) | `theme/` |

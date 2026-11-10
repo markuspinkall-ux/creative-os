@@ -1,0 +1,269 @@
+#!/usr/bin/python3
+"""Creative Mail, a native Gmail client for Creative OS."""
+
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+from PySide6.QtCore import QSettings, Qt, QTimer
+from PySide6.QtGui import QFont, QIcon, QTextDocument
+from PySide6.QtWidgets import (
+    QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+    QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QMessageBox, QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget,
+)
+
+from gmail import Gmail
+
+SYSTEM_CLIENT = "/usr/share/creative-mail/google-oauth.json"
+STYLE = """
+QWidget { background: #1b202b; color: #dce6ff; font-size: 14px; }
+QLineEdit, QListWidget, QTextEdit, QComboBox {
+    background: #232836; border: 1px solid #3b455a; border-radius: 7px; padding: 7px;
+}
+QListWidget::item { padding: 9px; }
+QListWidget::item:selected { background: #365887; color: white; }
+QPushButton { background: #303b52; border: 1px solid #45526d; border-radius: 7px; padding: 7px 12px; }
+QPushButton:hover { background: #405475; }
+QPushButton:disabled { color: #8995ab; background: #232836; }
+QLabel#title { font-size: 20px; font-weight: bold; color: #8fb3ff; }
+"""
+
+
+class MailWindow(QMainWindow):
+    def __init__(self, selftest=False):
+        super().__init__()
+        self.setWindowTitle("Creative Mail")
+        self.resize(1080, 680)
+        self.settings = QSettings()
+        self.gmail = None
+        self.page = None
+        self.loaded_query = ""
+        self.future = None
+        self.pool = ThreadPoolExecutor(max_workers=1)
+        self.timer = QTimer(self, interval=100)
+        self.timer.timeout.connect(self.poll)
+
+        central = QWidget()
+        layout = QVBoxLayout(central)
+        layout.setContentsMargins(16, 16, 16, 16)
+        title = QLabel("Creative Mail", objectName="title")
+        layout.addWidget(title)
+        top = QHBoxLayout()
+        self.login = QPushButton("Mit Google anmelden")
+        self.login.clicked.connect(self.connect_google)
+        self.account = QLabel("Kein Konto verbunden")
+        self.account.setTextFormat(Qt.TextFormat.PlainText)
+        self.compose = QPushButton("Neue E-Mail")
+        self.compose.clicked.connect(self.write_mail)
+        top.addWidget(self.login)
+        top.addWidget(self.account, 1)
+        top.addWidget(self.compose)
+        layout.addLayout(top)
+
+        bar = QHBoxLayout()
+        self.folder = QComboBox()
+        for name, value in [("Posteingang", "INBOX"), ("Gesendet", "SENT"), ("Alle E-Mails", "")]:
+            self.folder.addItem(name, value)
+        self.folder.currentIndexChanged.connect(lambda: self.refresh())
+        self.query = QLineEdit(placeholderText="E-Mails suchen …")
+        self.query.returnPressed.connect(self.refresh)
+        self.query.textChanged.connect(self.controls)
+        self.reload = QPushButton("Aktualisieren")
+        self.reload.clicked.connect(lambda: self.refresh())
+        self.more = QPushButton("Weitere laden")
+        self.more.clicked.connect(lambda: self.refresh(append=True))
+        for widget in (self.folder, self.query, self.reload, self.more):
+            bar.addWidget(widget, int(widget is self.query))
+        layout.addLayout(bar)
+
+        split = QSplitter()
+        self.messages = QListWidget()
+        self.messages.itemActivated.connect(self.read_mail)
+        self.messages.itemClicked.connect(self.read_mail)
+        self.reader = QTextEdit(readOnly=True)
+        self.reader.setPlaceholderText("Wähle eine E-Mail aus.")
+        split.addWidget(self.messages)
+        split.addWidget(self.reader)
+        split.setSizes([370, 650])
+        layout.addWidget(split, 1)
+        self.setCentralWidget(central)
+        self.controls()
+        client = self.settings.value("client", SYSTEM_CLIENT, type=str) if not selftest else SYSTEM_CLIENT
+        address = self.settings.value("address", "", type=str) if not selftest else ""
+        if address:
+            try:
+                self.gmail = Gmail(client, address)
+            except ValueError as exc:
+                self.statusBar().showMessage(str(exc))
+            else:
+                self.account.setText(address)
+                self.refresh()
+
+    def controls(self):
+        idle = self.future is None
+        connected = idle and self.gmail is not None
+        self.login.setEnabled(idle)
+        for widget in (self.compose, self.folder, self.query, self.reload, self.messages):
+            widget.setEnabled(connected)
+        self.more.setEnabled(connected and bool(self.page) and self.query.text().strip() == self.loaded_query)
+
+    def run_job(self, task, done, status):
+        if self.future is not None:
+            return
+        self.done = done
+        self.future = self.pool.submit(task)
+        self.statusBar().showMessage(status)
+        self.controls()
+        self.timer.start()
+
+    def poll(self):
+        if not self.future.done():
+            return
+        self.timer.stop()
+        future, self.future = self.future, None
+        self.statusBar().clearMessage()
+        try:
+            result = future.result()
+        except (OSError, RuntimeError, ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Creative Mail", str(exc))
+        else:
+            self.done(result)
+        self.controls()
+
+    def connect_google(self):
+        client = self.settings.value("client", SYSTEM_CLIENT, type=str)
+        if not Path(client).is_file():
+            QMessageBox.information(self, "Google-Anmeldung einrichten",
+                                    "Wähle die OAuth-JSON-Datei deiner Google-Desktop-App. "
+                                    "Die Gmail API muss im zugehörigen Google-Projekt aktiviert sein.")
+            client, _ = QFileDialog.getOpenFileName(self, "Google-OAuth-Datei auswählen", "", "JSON (*.json)")
+            if not client:
+                return
+        try:
+            gmail = Gmail(client)
+        except ValueError as exc:
+            self.settings.remove("client")
+            QMessageBox.warning(self, "Creative Mail", str(exc))
+            return
+
+        def connected(address):
+            self.gmail = gmail
+            self.settings.setValue("client", client)
+            self.settings.setValue("address", address)
+            self.account.setText(address)
+            self.query.clear()
+            self.refresh()
+
+        self.run_job(gmail.connect, connected, "Google-Anmeldung im Browser abschließen …")
+
+    def refresh(self, append=False):
+        if not self.gmail or self.future is not None:
+            return
+        folder, query = self.folder.currentData(), self.query.text().strip()
+        page = self.page if append else None
+        if not append:
+            self.page = None
+            self.messages.clear()
+            self.reader.clear()
+
+        def listed(result):
+            rows, self.page = result
+            self.loaded_query = query
+            for message_id, sender, subject, unread in rows:
+                item = QListWidgetItem(f"{subject}\n{sender}")
+                item.setData(Qt.ItemDataRole.UserRole, (message_id, unread))
+                font = QFont(item.font())
+                font.setBold(unread)
+                item.setFont(font)
+                self.messages.addItem(item)
+            if not self.messages.count():
+                self.statusBar().showMessage("Keine E-Mails gefunden.")
+
+        self.run_job(lambda: self.gmail.listing(folder, query, page), listed, "E-Mails werden geladen …")
+
+    def read_mail(self, item):
+        message_id, unread = item.data(Qt.ItemDataRole.UserRole)
+
+        def received(result):
+            subject, sender, body, html = result
+            if html:
+                document = QTextDocument()
+                document.setHtml(body)
+                body = document.toPlainText()
+            self.reader.setPlainText(f"{subject}\nVon: {sender}\n\n{body}")
+            item.setData(Qt.ItemDataRole.UserRole, (message_id, False))
+            font = item.font()
+            font.setBold(False)
+            item.setFont(font)
+
+        self.run_job(lambda: self.gmail.message(message_id, unread), received, "E-Mail wird geladen …")
+
+    def write_mail(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Neue E-Mail")
+        dialog.resize(570, 380)
+        form = QFormLayout(dialog)
+        recipient, subject, body = QLineEdit(), QLineEdit(), QTextEdit()
+        form.addRow("An", recipient)
+        form.addRow("Betreff", subject)
+        form.addRow(body)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        send = buttons.addButton("Senden", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        status = QLabel()
+        form.addRow(status)
+
+        def submit():
+            address, title, message = recipient.text().strip(), subject.text(), body.toPlainText()
+            if not address:
+                status.setText("Bitte eine Empfängeradresse eingeben.")
+                return
+            send.setEnabled(False)
+            status.setText("Wird gesendet …")
+            self.run_job(lambda: self.gmail.send(address, title, message), sent, "E-Mail wird gesendet …")
+
+        def sent(_result):
+            dialog.accept()
+            self.statusBar().showMessage("E-Mail gesendet.", 5000)
+
+        def unlock():
+            if self.future is None and dialog.isVisible():
+                send.setEnabled(True)
+                if status.text() == "Wird gesendet …":
+                    status.setText("Versand nicht bestätigt. Bitte vor erneutem Senden „Gesendet“ prüfen.")
+
+        timer = QTimer(dialog, interval=150)
+        timer.timeout.connect(unlock)
+        send.clicked.connect(submit)
+        timer.start()
+        dialog.exec()
+        timer.stop()
+
+    def closeEvent(self, event):
+        if self.future is not None:
+            event.ignore()
+            self.statusBar().showMessage("Bitte warte, bis die laufende Aktion abgeschlossen ist.")
+        else:
+            self.pool.shutdown(wait=False)
+            super().closeEvent(event)
+
+
+def main():
+    selftest = "--selftest" in sys.argv
+    app = QApplication(sys.argv)
+    app.setOrganizationName("Creative OS")
+    app.setApplicationName("Creative Mail")
+    app.setDesktopFileName("creative-mail")
+    app.setWindowIcon(QIcon.fromTheme("creative-mail"))
+    app.setStyleSheet(STYLE)
+    window = MailWindow(selftest)
+    window.show()
+    if selftest:
+        QTimer.singleShot(150, app.quit)
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

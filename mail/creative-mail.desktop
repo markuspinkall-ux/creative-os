@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Mail
+Comment=Gmail im Creative-OS-Design
+Exec=/usr/lib/creative-mail/creative-mail
+Icon=creative-mail
+Terminal=false
+Categories=Network;Email;
