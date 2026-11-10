@@ -12,6 +12,10 @@ from PySide6.QtWidgets import (
     QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPushButton, QVBoxLayout,
     QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox
+except ImportError:
+    pass
 
 
 def flatpak(*args):
@@ -180,9 +184,8 @@ class FlatRules(QWidget):
         self.load_rules()
 
     def show_error(self, message, error):
-        dialog = QMessageBox(QMessageBox.Icon.Warning, "Creative FlatRules", message, parent=self)
-        dialog.setDetailedText(getattr(error, "stderr", None) or str(error))
-        dialog.exec()
+        details = (getattr(error, "stderr", None) or str(error)).strip()
+        QMessageBox.warning(self, "Creative FlatRules", f"{message}\n\n{details}" if details else message)
 
 
 def main():
