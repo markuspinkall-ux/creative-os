@@ -2,9 +2,9 @@
 Type=Application
 Name=Creative FTP
 GenericName=Dateiübertragung
-Comment=Dateien über SFTP, FTPS und FTP übertragen
+Comment=Dateien über SFTP, FTPS und FTP übertragen – wie FileZilla
 Exec=creative-ftp
-Icon=folder-remote
+Icon=creative-ftp
 Terminal=false
 Categories=Network;FileTransfer;
 Keywords=FTP;FTPS;SFTP;Server;Upload;Download;

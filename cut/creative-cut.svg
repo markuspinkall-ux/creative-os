@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Klappe -->
+  <path d="M15 22l31-8 2 7-31 8z" fill="#8fb3ff"/>
+  <path d="M21 20.4l4 6.6m4-8.6l4 6.6m4-8.6l4 6.6" stroke="#232836" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Körper mit Play -->
+  <rect x="15" y="30" width="34" height="20" rx="4" fill="#dce6ff"/>
+  <path d="M29 34.5v11l9-5.5z" fill="#232836"/>
+</svg>

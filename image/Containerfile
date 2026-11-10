@@ -164,11 +164,13 @@ COPY software/creativecraft-screenshot.jpg /usr/share/creative-os/software/creat
 COPY --chmod=755 ftp/creative-ftp /usr/lib/creative-ftp/creative-ftp
 COPY ftp/ftp_session.py /usr/lib/creative-ftp/ftp_session.py
 COPY ftp/creative-ftp.desktop /usr/share/applications/creative-ftp.desktop
+COPY ftp/creative-ftp.svg /usr/share/icons/hicolor/scalable/apps/creative-ftp.svg
 RUN ln -s /usr/lib/creative-ftp/creative-ftp /usr/bin/creative-ftp \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-ftp --selftest
 COPY --chmod=755 cut/creative-cut /usr/lib/creative-cut/creative-cut
 COPY cut/cut_project.py cut/cut_timeline.py /usr/lib/creative-cut/
 COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
+COPY cut/creative-cut.svg /usr/share/icons/hicolor/scalable/apps/creative-cut.svg
 RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
