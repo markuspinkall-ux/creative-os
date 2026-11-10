@@ -6,9 +6,16 @@ Look angezeigt; Klick öffnet das Programm, Rechtsklick zeigt sein Menü.
 Abfragen laufen über `busctl` (JSON), damit nichts blockiert.
 """
 
+import glob
+import hashlib
 import json
+import os
+import struct
+import tempfile
+import zlib
 
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
+from PySide6.QtGui import QIcon
 
 from .runner import Runner
 
@@ -23,6 +30,91 @@ CREATIVE_ICONS = {"steam": "games", "discord": "chat", "brave": "browser", "crea
 def _data(v):
     """busctl-JSON: {"type": …, "data": …} → Wert"""
     return v.get("data") if isinstance(v, dict) and "data" in v else v
+
+
+PIXMAP_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir(),
+                          "creative-shell", "tray")
+ICON_EXTS = (".png", ".svg", ".xpm")
+
+
+def find_in_theme_path(name, theme_path):
+    """IconName + IconThemePath → absoluter Dateipfad (oder "").
+    Electron/Chromium legen das Symbol z. B. direkt als <pfad>/<name>.png ab,
+    andere Programme als kleines Theme (<pfad>/hicolor/32x32/apps/<name>.png)."""
+    if not name or not theme_path or not os.path.isdir(theme_path):
+        return ""
+    if os.path.isabs(name) and os.path.exists(name):
+        return name
+    for ext in ("",) + ICON_EXTS:
+        p = os.path.join(theme_path, name + ext)
+        if os.path.isfile(p):
+            return p
+    found = []
+    for ext in ICON_EXTS:
+        found += glob.glob(os.path.join(theme_path, "*", "*", "*", name + ext))
+        found += glob.glob(os.path.join(theme_path, "*", "*", name + ext))
+    if not found:
+        return ""
+
+    def size(p):                       # „…/48x48/apps/x.png“ → 48, scalable zuerst
+        for part in p.split(os.sep):
+            if part == "scalable":
+                return 10 ** 6
+            if "x" in part and part.split("x")[0].isdigit():
+                return int(part.split("x")[0])
+        return 0
+    return max(found, key=size)
+
+
+def best_pixmap(pixmaps):
+    """IconPixmap (a(iiay)) → (breite, höhe, bytes) der größten gültigen Variante."""
+    best = None
+    for p in pixmaps or []:
+        p = _data(p)
+        if not isinstance(p, list) or len(p) < 3:
+            continue
+        w, h, raw = int(_data(p[0])), int(_data(p[1])), _data(p[2])
+        raw = bytes(raw or [])
+        if w > 0 and h > 0 and len(raw) >= w * h * 4 and (best is None or w * h > best[0] * best[1]):
+            best = (w, h, raw[:w * h * 4])
+    return best
+
+
+def pixmap_to_png(w, h, argb):
+    """SNI-Pixmap (ARGB32, Big Endian = Bytes A,R,G,B) → PNG-Bytes (RGBA)."""
+    rgba = bytearray(len(argb))
+    rgba[0::4], rgba[1::4], rgba[2::4], rgba[3::4] = argb[1::4], argb[2::4], argb[3::4], argb[0::4]
+    stride = w * 4
+    rows = b"".join(b"\0" + bytes(rgba[y * stride:(y + 1) * stride]) for y in range(h))
+
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+
+
+def save_pixmap(pixmaps):
+    """Schreibt die Pixmap als PNG in den Cache und gibt den Pfad zurück ("" wenn leer).
+    Der Dateiname enthält eine Prüfsumme: ändert das Programm sein Symbol,
+    ändert sich der Pfad, und QML lädt das neue Bild statt eines gecachten."""
+    best = best_pixmap(pixmaps)
+    if not best:
+        return ""
+    w, h, raw = best
+    if not any(raw[0::4]):                        # komplett transparent
+        return ""
+    digest = hashlib.sha1(struct.pack(">II", w, h) + raw).hexdigest()[:16]
+    path = os.path.join(PIXMAP_DIR, digest + ".png")
+    if not os.path.exists(path):
+        try:
+            os.makedirs(PIXMAP_DIR, mode=0o700, exist_ok=True)
+            tmp = path + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(pixmap_to_png(w, h, raw))
+            os.replace(tmp, path)
+        except OSError:
+            return ""
+    return path
 
 
 def split_item(entry):
@@ -112,12 +204,12 @@ class TrayItems(QObject):
                 self._fetch(e)
 
     def _fetch(self, entry):
-        """Liest Id, Title, IconName, Menu, Status einzeln (fehlt eine, stört das nicht)."""
+        """Liest Id, Title, IconName, IconThemePath, Menu, Status einzeln (fehlt eine, stört das nicht)."""
         it = self._items.get(entry)
         if not it:
             return
         result = {}
-        names = ["Id", "Title", "IconName", "Menu", "Status"]
+        names = ["Id", "Title", "IconName", "IconThemePath", "Menu", "Status"]
 
         def got(name):
             def done(code, out, _err):
@@ -126,11 +218,39 @@ class TrayItems(QObject):
                 except ValueError:
                     result[name] = ""
                 if len(result) == len(names):
-                    self._apply(entry, result)
+                    self._resolve_icon(entry, result)
             return done
 
         for n in names:
             self._busctl(["get-property", it["service"], it["path"], ITEM_IF, n], got(n))
+
+    def _resolve_icon(self, entry, r):
+        """Symbol in dieser Reihenfolge suchen (wie KDE):
+        1. IconName im eigenen IconThemePath des Programms
+        2. IconName im Icon-Theme
+        3. IconPixmap – die Bilddaten selbst (Electron-Apps wie ChatGPT, Slack, Element)"""
+        name, theme_path = r["IconName"], r["IconThemePath"]
+        icon = find_in_theme_path(name, theme_path)
+        if not icon and name and (os.path.isabs(name) and os.path.exists(name) or QIcon.hasThemeIcon(name)):
+            icon = name
+        if icon:
+            self._apply(entry, {**r, "Icon": icon})
+            return
+        it = self._items.get(entry)
+        if not it:
+            return
+
+        def done(code, out, _err):
+            path = ""
+            if code == 0:
+                try:
+                    path = save_pixmap(_data(json.loads(out)))
+                except (ValueError, TypeError):
+                    path = ""
+            # Ohne Pixmap den Namen trotzdem durchreichen (QML zeigt dann das Ersatzsymbol)
+            self._apply(entry, {**r, "Icon": path or name})
+
+        self._busctl(["get-property", it["service"], it["path"], ITEM_IF, "IconPixmap"], done)
 
     def _apply(self, entry, r):
         it = self._items.get(entry)
@@ -138,7 +258,7 @@ class TrayItems(QObject):
             return
         name = (r["Id"] + " " + r["Title"] + " " + r["IconName"]).lower()
         creative = next((c for k, c in CREATIVE_ICONS.items() if k in name), "")
-        new = {**it, "id": r["Id"], "title": r["Title"] or r["Id"], "icon": r["IconName"], "menu": r["Menu"],
+        new = {**it, "id": r["Id"], "title": r["Title"] or r["Id"], "icon": r.get("Icon", r["IconName"]), "menu": r["Menu"],
                "status": r["Status"] or "Active", "creative": creative}
         if new != it:
             self._items[entry] = new
