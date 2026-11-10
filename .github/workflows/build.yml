@@ -58,6 +58,11 @@ jobs:
       - name: Creative Cut – Zeitleiste, Projektformat und Export prüfen
         run: python3 -m unittest tests/test_cut.py
 
+      - name: Creative 3D – Netz-Baustein und Skelett prüfen
+        run: |
+          python3 -m pip install --quiet --user --break-system-packages numpy scikit-image || true
+          python3 -m unittest tests/test_creative3d.py
+
       - name: Namen festlegen
         id: names
         run: |

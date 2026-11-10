@@ -1,0 +1,84 @@
+#!/bin/sh
+# Creative 3D – KI einmalig einrichten (in den Benutzerordner, ohne sudo).
+#   ~/.local/share/creative-3d/
+#     bin/uv        Paketwerkzeug (holt auch ein passendes Python 3.11)
+#     venv/         PyTorch (CUDA), TripoSR-Abhängigkeiten
+#     TripoSR/      Quellcode von TripoSR (MIT, fester Stand)
+#     hf/ u2net/    Modelle: TripoSR (~1,7 GB) und Hintergrund-Entfernung
+#     ready         Markierung „fertig eingerichtet“
+# Ausgabe: Zeilen „STEP <n> <gesamt> <text>“ für die Fortschrittsanzeige.
+#   creative3d-setup            einrichten / reparieren
+#   creative3d-setup --entfernen  alles wieder löschen
+set -eu
+DATA="${CREATIVE3D_HOME:-$HOME/.local/share/creative-3d}"
+TRIPOSR_COMMIT="107cefdc244c39106fa830359024f6a2f1c78871"
+TORCH_VERSION="2.7.1"
+TOTAL=7
+step() { echo "STEP $1 $TOTAL $2"; }
+
+if [ "${1:-}" = "--entfernen" ]; then
+    rm -rf "$DATA"
+    echo "Creative-3D-KI entfernt."
+    exit 0
+fi
+mkdir -p "$DATA/bin" "$DATA/hf" "$DATA/u2net"
+rm -f "$DATA/ready"
+
+step 1 "Prüfe die Grafikkarte …"
+INDEX="https://download.pytorch.org/whl/cpu"
+if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+    cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d ' ')
+    name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+    major=${cap%%.*}
+    if [ -n "$major" ] && [ "$major" -ge 10 ] 2>/dev/null; then
+        INDEX="https://download.pytorch.org/whl/cu128"   # RTX 50 (Blackwell) braucht CUDA 12.8
+    else
+        INDEX="https://download.pytorch.org/whl/cu126"
+    fi
+    echo "Grafikkarte: $name (Rechenstufe $cap)"
+else
+    echo "Keine NVIDIA-Grafikkarte gefunden – es läuft auf dem Prozessor (deutlich langsamer)."
+fi
+
+step 2 "Lade das Paketwerkzeug uv …"
+if [ ! -x "$DATA/bin/uv" ]; then
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$DATA/bin" UV_NO_MODIFY_PATH=1 sh >/dev/null
+fi
+UV="$DATA/bin/uv"
+export UV_CACHE_DIR="$DATA/cache" UV_PYTHON_INSTALL_DIR="$DATA/python"
+
+step 3 "Richte Python 3.11 ein …"
+[ -x "$DATA/venv/bin/python" ] || "$UV" venv --quiet --python 3.11 "$DATA/venv"
+PY="$DATA/venv/bin/python"
+
+step 4 "Lade PyTorch (ca. 2–3 GB, das dauert etwas) …"
+"$UV" pip install --python "$PY" "torch==$TORCH_VERSION" --index-url "$INDEX"
+
+step 5 "Lade die übrigen Bausteine …"
+"$UV" pip install --python "$PY" "numpy<2" "omegaconf==2.3.0" "einops==0.7.0" "transformers==4.35.0" \
+    "trimesh==4.0.5" "huggingface-hub<1" "rembg[cpu]==2.0.59" "imageio" "scikit-image" "pillow" "networkx"
+site=$("$PY" -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
+mkdir -p "$site/torchmcubes"
+cp "$(dirname "$0")/torchmcubes_shim.py" "$site/torchmcubes/__init__.py"
+
+step 6 "Lade TripoSR …"
+rm -rf "$DATA/TripoSR.neu"
+mkdir -p "$DATA/TripoSR.neu"
+curl -fsSL "https://codeload.github.com/VAST-AI-Research/TripoSR/tar.gz/$TRIPOSR_COMMIT" \
+    | tar -xz -C "$DATA/TripoSR.neu" --strip-components=1
+rm -rf "$DATA/TripoSR"
+mv "$DATA/TripoSR.neu" "$DATA/TripoSR"
+
+step 7 "Lade das 3D-Modell (ca. 1,7 GB) und die Hintergrund-Entfernung …"
+HF_HOME="$DATA/hf" U2NET_HOME="$DATA/u2net" "$PY" - <<'PYEOF'
+from huggingface_hub import hf_hub_download
+for name in ("config.yaml", "model.ckpt"):
+    hf_hub_download("stabilityai/TripoSR", name)
+hf_hub_download("facebook/dino-vitb16", "config.json")
+import rembg
+rembg.new_session()
+import torch
+print("PyTorch", torch.__version__, "· Grafikkarte:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "keine")
+PYEOF
+date +%s > "$DATA/ready"
+echo "FERTIG"

@@ -31,6 +31,7 @@ VISIBLE = {
     "creative-magazin.desktop": (None, None),
     "creative-mail.desktop": (None, None),
     "creative-cut.desktop": (None, None),
+    "creative-3d.desktop": (None, None),
     "creative-ftp.desktop": (None, None),
     "creative-widgets.desktop": (None, None),
     "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),
