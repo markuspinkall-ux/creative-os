@@ -1,0 +1,498 @@
+#!/usr/bin/python3
+"""Creative 3D – aus einem Foto eine 3D-Figur machen (TripoSR, läuft lokal).
+
+Links das Bild (ziehen und ablegen oder wählen), rechts die drehbare Vorschau,
+darunter Export als GLB, OBJ, STL und PLY. Die KI selbst (PyTorch, TripoSR,
+Modell, zusammen ca. 5 GB) richtet die App beim ersten Start einmalig im
+Benutzerordner ein – so bleibt das System-Abbild klein.
+"""
+
+import json
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QProcess, QProcessEnvironment, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtWidgets import (
+    QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
+    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout, QWidget,
+)
+
+LIB = Path("/usr/lib/creative-3d")
+if not (LIB / "creative3d_worker.py").is_file():
+    LIB = Path(__file__).resolve().parent                     # aus dem Quellordner gestartet
+DATA = Path(os.environ.get("CREATIVE3D_HOME") or Path.home() / ".local/share/creative-3d")
+SETUP = LIB / "creative3d-setup"
+OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-3d"
+IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
+DETAIL = [(256, "Normal"), (320, "Hoch"), (384, "Sehr hoch")]
+FORMATS = [("glb", "GLB", "Für Blender, Spiele-Engines, Web und AR"), ("obj", "OBJ", "Universell, mit Farben je Punkt"),
+           ("stl", "STL", "Für den 3D-Druck, 10 cm hoch"), ("ply", "PLY", "Punktwolken- und Netz-Werkzeuge")]
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QLabel#chip { background:#232836; border-radius:10px; padding:5px 10px; color:rgba(220,230,255,0.75); }
+    QLabel#drop { background:#12151b; border:2px dashed rgba(143,179,255,0.35); border-radius:14px;
+                  color:rgba(220,230,255,0.6); }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget { background:transparent; }
+    QFrame#panel QLabel#drop { background:#12151b; }
+    QComboBox, QPlainTextEdit { background:#232836; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:7px 9px; }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QPlainTextEdit { font-family:monospace; font-size:11px; color:rgba(220,230,255,0.7); }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:9px 14px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QPushButton#primary:hover { background:#a3c1ff; }
+    QPushButton:disabled, QPushButton#primary:disabled { background:rgba(255,255,255,0.04); color:rgba(220,230,255,0.35); }
+    QProgressBar { background:#12151b; border:none; border-radius:5px; height:10px; }
+    QProgressBar::chunk { background:#8fb3ff; border-radius:5px; }
+    QSlider::groove:horizontal { height:4px; background:#3a4252; border-radius:2px; }
+    QSlider::sub-page:horizontal { background:#8fb3ff; border-radius:2px; }
+    QSlider::handle:horizontal { background:#dce6ff; width:14px; margin:-6px 0; border-radius:7px; }
+    QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836; border:1px solid rgba(255,255,255,0.15); }
+    QCheckBox::indicator:checked { background:#8fb3ff; }
+"""
+
+
+def ready():
+    return (DATA / "ready").is_file() and (DATA / "venv/bin/python").is_file()
+
+
+def gpu_name():
+    if not shutil.which("nvidia-smi"):
+        return ""
+    import subprocess
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+                             capture_output=True, text=True, timeout=5).stdout.strip().splitlines()
+        return out[0] if out else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+# ---- Vorschau: eigenes URL-Schema c3d:// (Module und GLB dürfen nicht über file:// laden) ----
+WEB = None
+try:
+    from PySide6.QtWebEngineCore import (QWebEngineProfile, QWebEngineUrlRequestJob, QWebEngineUrlScheme,
+                                         QWebEngineUrlSchemeHandler)
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    WEB = True
+except ImportError:                                            # ohne WebEngine: Vorschau als Bild
+    WEB = False
+
+
+def register_scheme():
+    if not WEB:
+        return
+    scheme = QWebEngineUrlScheme(b"c3d")
+    scheme.setSyntax(QWebEngineUrlScheme.Syntax.Path)
+    scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
+                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
+    QWebEngineUrlScheme.registerScheme(scheme)
+
+
+if WEB:
+    class Scheme(QWebEngineUrlSchemeHandler):
+        """Liefert viewer.html, model-viewer und die aktuelle GLB-Datei."""
+        TYPES = {".html": b"text/html", ".js": b"text/javascript", ".glb": b"model/gltf-binary"}
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.model = None
+
+        def requestStarted(self, job):
+            path = job.requestUrl().path()
+            if path.startswith("/model/") and self.model:
+                file = Path(self.model)
+            elif path in ("/viewer.html", "/model-viewer.min.js"):
+                file = LIB / path.lstrip("/")
+            else:
+                job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+                return
+            try:
+                data = file.read_bytes()
+            except OSError:
+                job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+                return
+            buffer = QBuffer(job)
+            buffer.setData(QByteArray(data))
+            buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+            job.reply(self.TYPES.get(file.suffix, b"application/octet-stream"), buffer)
+
+
+class DropLabel(QLabel):
+    dropped = Signal(str)
+    clicked = Signal()
+
+    def __init__(self):
+        super().__init__("Bild hierher ziehen\noder klicken zum Wählen\n\nAm besten: ganze Person, von vorn,\nruhiger Hintergrund",
+                         objectName="drop")
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setAcceptDrops(True)
+        self.setMinimumSize(300, 300)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName("Bild für die 3D-Figur")
+
+    def mousePressEvent(self, _event):
+        self.clicked.emit()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        urls = [u.toLocalFile() for u in event.mimeData().urls() if u.isLocalFile()]
+        if urls:
+            self.dropped.emit(urls[0])
+
+
+class Creative3D(QMainWindow):
+    def __init__(self, preview_web=True):
+        super().__init__()
+        self.setWindowTitle("Creative 3D")
+        self.resize(1240, 780)
+        self.setStyleSheet(STYLE)
+        self.image = None
+        self.result = None
+        self.counter = 0
+        self.buffer = b""
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_output)
+        self.proc.finished.connect(self.finished)
+        self.mode = None                                       # "setup" | "generate"
+        self.error = ""
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        box = QVBoxLayout(root)
+        box.setContentsMargins(18, 14, 18, 14)
+        box.setSpacing(12)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("Creative 3D", objectName="title"))
+        top.addWidget(QLabel("Foto → 3D-Figur", objectName="muted"))
+        top.addStretch()
+        self.chip = QLabel(objectName="chip")
+        top.addWidget(self.chip)
+        box.addLayout(top)
+
+        body = QHBoxLayout()
+        body.setSpacing(12)
+        # ---- links: Bild und Einstellungen ----
+        left = QFrame(objectName="panel")
+        left.setFixedWidth(380)
+        lv = QVBoxLayout(left)
+        lv.setContentsMargins(14, 12, 14, 14)
+        lv.setSpacing(10)
+        lv.addWidget(QLabel("BILD", objectName="section"))
+        self.drop = DropLabel()
+        self.drop.clicked.connect(self.choose_image)
+        self.drop.dropped.connect(self.set_image)
+        lv.addWidget(self.drop, 1)
+        self.background = QCheckBox("Hintergrund automatisch entfernen")
+        self.background.setChecked(True)
+        lv.addWidget(self.background)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Detailstufe"))
+        self.detail = QComboBox()
+        for res, label in DETAIL:
+            self.detail.addItem(label, res)
+        row.addWidget(self.detail, 1)
+        lv.addLayout(row)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Größe im Bild"))
+        self.fill = QSlider(Qt.Orientation.Horizontal)
+        self.fill.setRange(70, 95)
+        self.fill.setValue(85)
+        self.fill.setToolTip("Wie viel vom Bild die Figur einnimmt, bevor die KI sie liest")
+        self.fill_label = QLabel("85 %")
+        self.fill.valueChanged.connect(lambda v: self.fill_label.setText(f"{v} %"))
+        row.addWidget(self.fill, 1)
+        row.addWidget(self.fill_label)
+        lv.addLayout(row)
+        self.generate = QPushButton("3D-Figur erstellen", objectName="primary")
+        self.generate.clicked.connect(self.start_generate)
+        lv.addWidget(self.generate)
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setTextVisible(False)
+        self.progress.hide()
+        lv.addWidget(self.progress)
+        self.status = QLabel("", objectName="muted")
+        self.status.setWordWrap(True)
+        lv.addWidget(self.status)
+        body.addWidget(left)
+
+        # ---- rechts: Vorschau / Einrichtung ----
+        right = QFrame(objectName="panel")
+        rv = QVBoxLayout(right)
+        rv.setContentsMargins(14, 12, 14, 14)
+        rv.setSpacing(10)
+        head = QHBoxLayout()
+        head.addWidget(QLabel("3D-VORSCHAU", objectName="section"))
+        head.addStretch()
+        self.info = QLabel("", objectName="muted")
+        head.addWidget(self.info)
+        self.rotate = QCheckBox("Drehen")
+        self.rotate.setChecked(True)
+        self.rotate.toggled.connect(lambda on: self.js(f"setRotate({'true' if on else 'false'})"))
+        head.addWidget(self.rotate)
+        rv.addLayout(head)
+        self.stack = QStackedWidget()
+        rv.addWidget(self.stack, 1)
+        # Seite 0: Vorschau
+        self.scheme = None
+        if WEB and preview_web:
+            self.scheme = Scheme(self)
+            QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"c3d", self.scheme)
+            self.view = QWebEngineView()
+            self.view.page().setBackgroundColor(Qt.GlobalColor.transparent)
+            self.view.setUrl(QUrl("c3d:///viewer.html"))
+        else:
+            self.view = QLabel("Die drehbare Vorschau braucht Qt WebEngine.", objectName="muted")
+            self.view.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.stack.addWidget(self.view)
+        # Seite 1: Einrichtung
+        setup = QWidget()
+        sv = QVBoxLayout(setup)
+        sv.setContentsMargins(30, 20, 30, 20)
+        sv.addStretch()
+        title = QLabel("KI einmalig einrichten")
+        title.setStyleSheet("font-size:20px; font-weight:700;")
+        sv.addWidget(title)
+        text = QLabel("Creative 3D nutzt TripoSR, eine frei verfügbare KI (MIT-Lizenz), die komplett auf deinem "
+                      "PC läuft – dein Foto verlässt den Rechner nicht.\n\nDafür werden einmalig PyTorch, TripoSR "
+                      "und das Modell in deinen Benutzerordner geladen: zusammen etwa 5 GB, je nach Leitung "
+                      "10–30 Minuten. Das System selbst bleibt unverändert.", objectName="muted")
+        text.setWordWrap(True)
+        sv.addWidget(text)
+        self.setup_button = QPushButton("KI einrichten", objectName="primary")
+        self.setup_button.clicked.connect(self.start_setup)
+        self.setup_button.setFixedWidth(200)
+        sv.addSpacing(8)
+        sv.addWidget(self.setup_button)
+        self.setup_progress = QProgressBar()
+        self.setup_progress.setRange(0, 100)
+        self.setup_progress.setTextVisible(False)
+        self.setup_progress.hide()
+        sv.addWidget(self.setup_progress)
+        self.setup_status = QLabel("", objectName="muted")
+        sv.addWidget(self.setup_status)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setMaximumHeight(170)
+        self.log.hide()
+        sv.addWidget(self.log)
+        sv.addStretch()
+        self.stack.addWidget(setup)
+        # Export
+        export = QHBoxLayout()
+        export.addWidget(QLabel("SPEICHERN ALS", objectName="section"))
+        self.export_buttons = []
+        for fmt, label, tip in FORMATS:
+            button = QPushButton(label + " …")
+            button.setToolTip(tip)
+            button.clicked.connect(lambda _=False, f=fmt: self.save(f))
+            export.addWidget(button)
+            self.export_buttons.append(button)
+        export.addStretch()
+        self.folder_button = QPushButton("Ordner öffnen")
+        self.folder_button.clicked.connect(self.open_folder)
+        export.addWidget(self.folder_button)
+        rv.addLayout(export)
+        body.addWidget(right, 1)
+        box.addLayout(body, 1)
+        self.refresh()
+
+    # ---- Zustand ------------------------------------------------------------------
+    def refresh(self):
+        busy = self.proc.state() != QProcess.ProcessState.NotRunning
+        is_ready = ready()
+        gpu = gpu_name()
+        self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte – Prozessor")
+        self.stack.setCurrentIndex(0 if is_ready else 1)
+        self.generate.setEnabled(is_ready and bool(self.image) and not busy)
+        self.generate.setToolTip("" if is_ready else "Zuerst rechts die KI einrichten")
+        self.setup_button.setEnabled(not busy)
+        for b in self.export_buttons + [self.folder_button]:
+            b.setEnabled(bool(self.result) and not busy)
+        self.rotate.setEnabled(bool(self.result))
+
+    def js(self, code):
+        if WEB and isinstance(self.view, QWebEngineView):
+            self.view.page().runJavaScript(code)
+
+    def choose_image(self):
+        if self.proc.state() != QProcess.ProcessState.NotRunning:
+            return
+        path, _ = QFileDialog.getOpenFileName(self, "Bild wählen", str(Path.home() / "Bilder"),
+                                              IMAGE_TYPES + ";;Alle Dateien (*)")
+        if path:
+            self.set_image(path)
+
+    def set_image(self, path):
+        pix = QPixmap(path)
+        if pix.isNull():
+            self.status.setText("Diese Datei ist kein Bild, das sich öffnen lässt.")
+            return
+        self.image = path
+        self.drop.setPixmap(pix.scaled(self.drop.size() * 0.95, Qt.AspectRatioMode.KeepAspectRatio,
+                                       Qt.TransformationMode.SmoothTransformation))
+        self.status.setText(Path(path).name)
+        self.refresh()
+
+    # ---- KI einrichten ------------------------------------------------------------
+    def start_setup(self):
+        self.mode, self.error, self.buffer = "setup", "", b""
+        self.log.clear()
+        self.log.show()
+        self.setup_progress.setValue(0)
+        self.setup_progress.show()
+        self.setup_status.setText("Starte …")
+        self.proc.start("sh", [str(SETUP)])
+        self.refresh()
+
+    # ---- Figur erzeugen -----------------------------------------------------------
+    def start_generate(self):
+        if not (self.image and ready()):
+            return
+        self.counter += 1
+        self.out = OUTPUT / time.strftime("%Y%m%d-%H%M%S")
+        args = [str(LIB / "creative3d_worker.py"), "--image", self.image, "--out", str(self.out),
+                "--resolution", str(self.detail.currentData()), "--foreground", f"{self.fill.value() / 100:.2f}"]
+        if not self.background.isChecked():
+            args.append("--keep-background")
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONUNBUFFERED", "1")
+        self.proc.setProcessEnvironment(env)
+        self.mode, self.error, self.buffer = "generate", "", b""
+        self.progress.setValue(0)
+        self.progress.show()
+        self.status.setText("Starte …")
+        self.proc.start(str(DATA / "venv/bin/python"), args)
+        self.refresh()
+
+    def read_output(self):
+        self.buffer += bytes(self.proc.readAllStandardOutput())
+        *lines, self.buffer = self.buffer.split(b"\n")
+        for raw in lines:
+            line = raw.decode(errors="replace").rstrip()
+            if not line:
+                continue
+            if self.mode == "setup":
+                self.handle_setup_line(line)
+            else:
+                self.handle_worker_line(line)
+
+    def handle_setup_line(self, line):
+        self.log.appendPlainText(line)
+        if line.startswith("STEP "):
+            parts = line.split(" ", 3)
+            try:
+                n, total = int(parts[1]), int(parts[2])
+                self.setup_progress.setValue(int((n - 1) * 100 / total))
+            except (ValueError, IndexError):
+                pass
+            self.setup_status.setText(parts[3] if len(parts) > 3 else "")
+
+    def handle_worker_line(self, line):
+        kind, _, rest = line.partition(" ")
+        if kind == "P":
+            pct, _, text = rest.partition(" ")
+            if pct.isdigit():
+                self.progress.setValue(int(pct))
+            self.status.setText(text)
+        elif kind == "OK":
+            try:
+                self.show_result(json.loads(rest))
+            except ValueError:
+                self.error = "Antwort der KI nicht lesbar."
+        elif kind == "ERR":
+            self.error = rest
+        else:
+            self.last = line
+
+    def show_result(self, result):
+        self.result = result
+        if self.scheme:
+            self.scheme.model = result["files"]["glb"]
+            self.js(f"show('c3d:///model/{self.counter}.glb')")
+        faces = f"{result.get('faces', 0):,}".replace(",", ".")
+        self.info.setText(f"{faces} Dreiecke · {result.get('seconds', 0)} s")
+
+    def finished(self, code, _status):
+        mode, self.mode = self.mode, None
+        if mode == "setup":
+            ok = code == 0 and ready()
+            self.setup_progress.setValue(100 if ok else self.setup_progress.value())
+            self.setup_status.setText("Fertig – Creative 3D ist bereit." if ok
+                                      else "Einrichtung fehlgeschlagen – Details siehe unten. Erneut versuchen?")
+            if ok:
+                self.status.setText("KI bereit. Wähle links ein Bild.")
+        else:
+            self.progress.hide()
+            if code != 0 or self.error:
+                self.status.setText("Fehler: " + (self.error or getattr(self, "last", "") or f"Code {code}"))
+            elif self.result:
+                self.status.setText("Fertig. Ziehen dreht die Figur, unten speichern.")
+        self.refresh()
+
+    # ---- Export -------------------------------------------------------------------
+    def save(self, fmt):
+        if not self.result:
+            return
+        source = Path(self.result["files"][fmt])
+        target, _ = QFileDialog.getSaveFileName(self, f"Als {fmt.upper()} speichern",
+                                                str(Path.home() / source.name), f"{fmt.upper()} (*.{fmt})")
+        if not target:
+            return
+        if not target.lower().endswith("." + fmt):
+            target += "." + fmt
+        try:
+            shutil.copyfile(source, target)
+            self.status.setText(f"Gespeichert: {target.replace(str(Path.home()), '~')}")
+        except OSError as error:
+            QMessageBox.warning(self, "Speichern fehlgeschlagen", str(error))
+
+    def open_folder(self):
+        if self.result:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(self.result["files"]["glb"]).parent)))
+
+    def closeEvent(self, event):
+        if self.proc.state() != QProcess.ProcessState.NotRunning:
+            if QMessageBox.question(self, "Creative 3D", "Es läuft noch etwas. Trotzdem beenden?") \
+                    != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            self.proc.kill()
+            self.proc.waitForFinished(2000)
+        super().closeEvent(event)
+
+
+def main():
+    selftest = "--selftest" in sys.argv
+    if not selftest:
+        register_scheme()
+    app = QApplication(sys.argv)
+    app.setApplicationName("Creative 3D")
+    app.setDesktopFileName("creative-3d")
+    window = Creative3D(preview_web=not selftest)
+    if selftest:
+        assert not window.generate.isEnabled() and not window.result
+        assert all(not b.isEnabled() for b in window.export_buttons)
+        assert (LIB / "creative3d_worker.py").is_file() and SETUP.is_file()
+        window.close()
+        return 0
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

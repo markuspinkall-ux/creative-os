@@ -172,6 +172,18 @@ COPY cut/cut_project.py cut/cut_timeline.py /usr/lib/creative-cut/
 COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
 COPY cut/creative-cut.svg /usr/share/icons/hicolor/scalable/apps/creative-cut.svg
 RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
+# Creative 3D: Foto → 3D-Figur (TripoSR). Die KI (PyTorch, Modell ~5 GB) richtet die App
+# beim ersten Start im Benutzerordner ein – hier nur Oberfläche, Rechenteil und Vorschau.
+COPY --chmod=755 creative3d/creative-3d /usr/lib/creative-3d/creative-3d
+COPY --chmod=755 creative3d/creative3d-setup /usr/lib/creative-3d/creative3d-setup
+COPY creative3d/creative3d_worker.py creative3d/torchmcubes_shim.py creative3d/viewer.html /usr/lib/creative-3d/
+COPY creative3d/creative-3d.desktop /usr/share/applications/creative-3d.desktop
+COPY creative3d/creative-3d.svg /usr/share/icons/hicolor/scalable/apps/creative-3d.svg
+RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \
+      https://cdn.jsdelivr.net/npm/@google/model-viewer@4.1.0/dist/model-viewer.min.js \
+ && test -s /usr/lib/creative-3d/model-viewer.min.js \
+ && ln -s /usr/lib/creative-3d/creative-3d /usr/bin/creative-3d \
+ && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3d --selftest
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg

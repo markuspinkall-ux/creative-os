@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Würfel -->
+  <path d="M32 13l16 9v19l-16 9-16-9V22z" fill="none" stroke="#8fb3ff" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M16 22l16 9 16-9M32 31v19" fill="none" stroke="#8fb3ff" stroke-width="2.4" stroke-linejoin="round" opacity=".55"/>
+  <!-- Figur -->
+  <circle cx="32" cy="24.5" r="4" fill="#dce6ff"/>
+  <path d="M25 41c0-6 3-10 7-10s7 4 7 10z" fill="#dce6ff"/>
+</svg>

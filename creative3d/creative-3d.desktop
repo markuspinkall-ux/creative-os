@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative 3D
+GenericName=Foto zu 3D-Figur
+Comment=Aus einem Foto eine 3D-Figur machen – GLB, OBJ, STL, PLY
+Exec=creative-3d
+Icon=creative-3d
+Terminal=false
+Categories=Graphics;3DGraphics;
+Keywords=3D;Figur;Modell;GLB;OBJ;STL;PLY;3D-Druck;TripoSR;KI;
+StartupWMClass=creative-3d
