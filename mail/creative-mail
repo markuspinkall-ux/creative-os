@@ -1053,7 +1053,7 @@ class MailWindow(QMainWindow):
 
     # Lesen
     def open_message(self, item, _old=None):
-        if item is None:
+        if item is None or self.gmail is None or not hasattr(self.gmail, "message"):
             return
         row = item.data(Qt.ItemDataRole.UserRole)
         self.allow_remote = False

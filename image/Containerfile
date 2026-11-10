@@ -158,7 +158,9 @@ RUN mkdir -p /var/opt \
  && dnf clean all
 # Graphit-Dialoge für alle Widget-Apps (Dateiauswahl, Rückfragen, Eingaben, Farbe)
 COPY dialogs/creative_dialogs.py /tmp/creative_dialogs.py
-RUN site="$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
+# Fedora: „purelib“ zeigt auf /usr/local (unter rpm-ostree ein Verweis nach /var) – daher fest /usr/lib
+RUN site="$(python3 -c 'import sys; print(f"/usr/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages")')" \
+ && test -d "$site" && python3 -c "import sys; sys.exit(0 if '$site' in sys.path else 1)" \
  && install -Dm644 /tmp/creative_dialogs.py "$site/creative_dialogs.py" && rm -f /tmp/creative_dialogs.py \
  && python3 -m compileall -q "$site/creative_dialogs.py" \
  && cd / && QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/dlg-home python3 -m creative_dialogs --selftest \

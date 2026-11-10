@@ -877,4 +877,6 @@ def _selftest():
 
 if __name__ == "__main__":
     if "--selftest" in sys.argv:
-        sys.exit(_selftest())
+        code = _selftest()
+        sys.stdout.flush()
+        os._exit(code)          # Qt-Aufräumen beim Beenden soll den Build nicht stören
