@@ -18,6 +18,10 @@ from PySide6.QtWidgets import (
     QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
+except ImportError:
+    pass
 
 DEMO = [
     ("org.gimp.GIMP", "GIMP", "Fotos bearbeiten und Grafiken gestalten", "G", "#a998d9"),

@@ -28,6 +28,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
+except ImportError:
+    pass
 
 from . import fileio, lexer
 from .editor import CodeEditor

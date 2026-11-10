@@ -20,6 +20,10 @@ from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
     QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout, QWidget,
 )
+try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox
+except ImportError:
+    pass
 
 LIB = Path("/usr/lib/creative-3d")
 if not (LIB / "creative3d_worker.py").is_file():
