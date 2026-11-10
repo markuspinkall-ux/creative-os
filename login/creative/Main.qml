@@ -19,6 +19,55 @@ Item {
     property string message: ""
     property bool busy: false
 
+    // ---- Server-Modus ---------------------------------------------------------------
+    // /usr/libexec/creative-servermode schreibt alle 30 s seinen Status hierher.
+    // Lesen per XHR braucht QML_XHR_ALLOW_FILE_READ=1 (sddm-creative.conf).
+    property var server: ({ active: false })
+    property bool loginRequested: false        // „Zurück zum normalen Modus“ gedrückt
+    property bool dimmed: false                 // Bildschirm abgedunkelt (spart Strom/Display)
+    readonly property bool serverView: server.active === true && !loginRequested
+    readonly property bool serverHealthy: server.server === true
+                                          && (Date.now() / 1000 - (server.updated || 0)) < 120
+
+    function readServer() {
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== XMLHttpRequest.DONE)
+                return
+            try {
+                root.server = xhr.responseText ? JSON.parse(xhr.responseText) : { active: false }
+            } catch (e) {
+                root.server = { active: false }
+            }
+        }
+        xhr.open("GET", "file:///var/lib/creative-servermode/state.json")
+        xhr.send()
+    }
+    function wake() {
+        root.dimmed = false
+        idle.restart()
+        if (root.loginRequested)
+            backToMask.restart()
+    }
+    function sinceText() {
+        if (!server.since)
+            return ""
+        const d = new Date(server.since * 1000)
+        const today = new Date()
+        const sameDay = d.toDateString() === today.toDateString()
+        return "seit " + (sameDay ? "" : Qt.formatDate(d, "dd.MM. ")) + Qt.formatTime(d, "HH:mm") + " Uhr"
+    }
+
+    Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.readServer() }
+    // Nach 2 Minuten ohne Eingabe im Server-Modus abdunkeln
+    Timer { id: idle; interval: 120000; running: root.server.active === true; onTriggered: root.dimmed = true }
+    // Anmeldung angefangen, aber liegen gelassen → nach 1 Minute zurück zur Maske
+    Timer {
+        id: backToMask
+        interval: 60000
+        onTriggered: { root.loginRequested = false; password.text = ""; root.message = "" }
+    }
+
     function userName() {
         const i = userModel.index(root.userIndex, 0)
         return userModel.data(i, Qt.UserRole + 1) || ""          // name
@@ -110,6 +159,7 @@ Item {
     // ---- Benutzer + Passwort --------------------------------------------------------
     Column {
         id: loginBox
+        visible: !root.serverView
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.48
         spacing: 16
@@ -163,6 +213,7 @@ Item {
                 focus: true
                 enabled: !root.busy
                 onAccepted: root.login()
+                onTextChanged: root.wake()
                 Keys.onEscapePressed: text = ""
             }
             Rectangle {
@@ -198,9 +249,158 @@ Item {
         }
     }
 
+    // ---- Server-Modus: Maske statt Anmeldung -------------------------------------------
+    Rectangle {
+        id: serverCard
+        visible: root.serverView
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: parent.height * 0.44
+        width: 520
+        height: serverColumn.implicitHeight + 64
+        radius: 20
+        color: Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.92)
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+
+        Column {
+            id: serverColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 32
+            spacing: 14
+
+            Row {
+                spacing: 12
+                Rectangle {
+                    id: statusDot
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 12; height: 12; radius: 6
+                    color: root.serverHealthy ? "#6fdcc0" : "#ffb07a"
+                    SequentialAnimation on opacity {
+                        running: root.serverView && root.serverHealthy
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 0.35; duration: 1400; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 1; duration: 1400; easing.type: Easing.InOutSine }
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Server-Modus"
+                    color: root.textColor
+                    font.family: root.fontFamily
+                    font.pixelSize: 26
+                    font.bold: true
+                }
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: root.serverHealthy
+                      ? "„Mein Server“ ist online. Alles andere ruht, der PC geht nicht in Bereitschaft."
+                      : "„Mein Server“ antwortet gerade nicht. Melde dich an und prüfe ihn in der Systemsteuerung."
+                color: root.serverHealthy ? root.muted : "#ffb07a"
+                font.family: root.fontFamily
+                font.pixelSize: 15
+                lineHeight: 1.3
+            }
+
+            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+
+            // Adressen
+            Repeater {
+                model: [
+                    root.server.host ? { k: "Heimnetz", v: "http://" + root.server.host + ".local" } : null,
+                    (root.server.ips || []).length ? { k: "IP-Adresse", v: root.server.ips.join(", ") } : null,
+                    root.server.domain ? { k: "Internet", v: "https://" + root.server.domain } : null,
+                    root.server.since ? { k: "Läuft", v: root.sinceText() } : null
+                ].filter(x => x !== null)
+                delegate: Row {
+                    required property var modelData
+                    spacing: 12
+                    Text {
+                        width: 110
+                        text: parent.modelData.k
+                        color: root.muted
+                        font.family: root.fontFamily
+                        font.pixelSize: 14
+                    }
+                    Text {
+                        text: parent.modelData.v
+                        color: root.textColor
+                        font.family: root.fontFamily
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                }
+            }
+
+            Item { width: 1; height: 6 }
+
+            // Zurück zum normalen Modus → Passwortfeld
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: backLabel.implicitWidth + 48
+                height: 46
+                radius: 23
+                color: backMouse.pressed ? Qt.darker(root.accent, 1.15) : root.accent
+                Text {
+                    id: backLabel
+                    anchors.centerIn: parent
+                    text: "Zurück zum normalen Modus"
+                    color: root.dark
+                    font.family: root.fontFamily
+                    font.pixelSize: 15
+                    font.bold: true
+                }
+                MouseArea {
+                    id: backMouse
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.loginRequested = true
+                        root.message = ""
+                        backToMask.restart()
+                        password.forceActiveFocus()
+                    }
+                }
+                Accessible.role: Accessible.Button
+                Accessible.name: backLabel.text
+            }
+        }
+    }
+
+    // Hinweis über dem Passwortfeld, wenn man aus der Maske kommt
+    Column {
+        visible: root.server.active === true && root.loginRequested
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: loginBox.top
+        anchors.bottomMargin: 18
+        spacing: 6
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "Anmelden beendet den Server-Modus"
+            color: root.muted
+            font.family: root.fontFamily
+            font.pixelSize: 14
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "‹ Zurück zur Server-Ansicht"
+            color: root.accent
+            font.family: root.fontFamily
+            font.pixelSize: 14
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -6
+                cursorShape: Qt.PointingHandCursor
+                onClicked: { root.loginRequested = false; password.text = ""; root.message = "" }
+            }
+        }
+    }
+
     // ---- Andere Benutzer ---------------------------------------------------------------
     Row {
-        visible: userModel.count > 1
+        visible: userModel.count > 1 && !root.serverView
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 40
@@ -259,6 +459,21 @@ Item {
         }
         MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pb.activated() }
     }
+
+    // ---- Abdunkeln im Server-Modus; jede Maus-/Tastatureingabe weckt auf -------------
+    HoverHandler { onPointChanged: if (root.server.active === true) root.wake() }
+    Rectangle {
+        anchors.fill: parent
+        z: 60
+        color: "black"
+        opacity: root.dimmed ? 0.92 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 800 } }
+        MouseArea { anchors.fill: parent; onClicked: root.wake() }
+    }
+    Keys.onPressed: root.wake()
+    onLoginRequestedChanged: if (!loginRequested) backToMask.stop()
+    onServerViewChanged: serverView ? root.forceActiveFocus() : password.forceActiveFocus()
 
     Component.onCompleted: password.forceActiveFocus()
 }

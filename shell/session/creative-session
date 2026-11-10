@@ -18,5 +18,9 @@ export XDG_DATA_DIRS="/usr/share/creative-os/data:$data"
 # Graphit-Farben für Qt- und GTK-Programme
 export QT_QPA_PLATFORMTHEME=kde
 [ -x /usr/libexec/creative-theme-user ] && /usr/libexec/creative-theme-user
+# Anmelden beendet den Server-Modus: pausierte Dienste und Energieprofil zurück
+if grep -qs '"active": true' /var/lib/creative-servermode/state.json; then
+    pkexec /usr/libexec/creative-servermode off >/dev/null 2>&1 &
+fi
 
 exec kwin_wayland --xwayland --exit-with-session /usr/libexec/creative-shell-supervisor

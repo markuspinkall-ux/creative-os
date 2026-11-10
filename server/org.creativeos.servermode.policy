@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Creative OS</vendor>
+  <!-- Ohne Passwort: Der Server-Modus beendet nur die eigene Sitzung, und
+       zurück geht es nur über die normale Anmeldung mit Passwort. -->
+  <action id="org.creativeos.servermode">
+    <description>Server-Modus ein- oder ausschalten</description>
+    <message>Zum Wechseln in den Server-Modus wird dein Passwort benötigt.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/creative-servermode</annotate>
+  </action>
+</policyconfig>
