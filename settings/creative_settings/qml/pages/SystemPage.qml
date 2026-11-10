@@ -170,18 +170,15 @@ SettingsPage {
         }
     }
 
-    Dialog {
+    ConfirmDialog {
         id: deleteAccountDialog
         property var account
-        anchors.centerIn: Overlay.overlay
+        danger: true
         title: account ? "Konto „" + account.name + "“ löschen?" : "Konto löschen?"
-        modal: true
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        Label {
-            text: "Der persönliche Ordner bleibt erhalten."
-            color: Theme.text
-        }
-        onAccepted: if (account) system.deleteAccount(account.uid, account.name)
+        text: "Die Person kann sich danach nicht mehr anmelden. Ihr persönlicher Ordner bleibt erhalten. "
+              + "Zum Bestätigen fragt das System gleich nach deinem Passwort."
+        confirmText: "Konto löschen"
+        onConfirmed: if (account) system.deleteAccount(account.uid, account.name)
     }
 
     // ---- Danke: worauf Creative OS aufbaut --------------------------------------------------
