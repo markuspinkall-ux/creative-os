@@ -1,60 +1,112 @@
 #!/usr/bin/python3
-"""Creative Cut video editor."""
+"""Creative Cut – Videos schneiden wie mit Final Cut.
+
+Medien links, Vorschau in der Mitte, Inspektor rechts, unten die magnetische
+Zeitleiste mit Titel-, Video- und Musikspur. Effekte: Looks, Tempo, Rückwärts,
+Ken Burns, Übergänge, Titel-Vorlagen und Musik mit Blenden.
+"""
 
 import json
 import os
+import subprocess
 import sys
 import textwrap
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, replace
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from PySide6.QtCore import QFile, QIODevice, QProcess, QSaveFile, Qt, QUrl, Signal
+from PySide6.QtCore import QFile, QIODevice, QProcess, QSaveFile, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton,
-    QScrollArea, QSlider, QSpinBox, QSplitter, QVBoxLayout, QWidget,
+    QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout,
+    QLabel, QLineEdit, QListWidget, QMainWindow, QMessageBox, QProgressBar, QPushButton,
+    QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
 
-from cut_project import Clip, Media, join_args, probe, read_project, segment_args
+from cut_project import (
+    KENBURNS, LOOKS, SPEEDS, TITLE_STYLES, TRANSITIONS, Clip, Media, Music, Title, finish_args, join_args,
+    layout, needs_finish, probe, project_data, read_project, segment_args, thumbnail_args,
+)
+from cut_timeline import CACHE, TimelineView
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#hint { color:rgba(220,230,255,0.6); }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget { background:transparent; }
+    QListWidget, QDoubleSpinBox, QSpinBox, QComboBox, QLineEdit {
+        background:#232836; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:6px;
+    }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:8px 14px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton:pressed { background:rgba(255,255,255,0.14); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QPushButton#primary:hover { background:#a3c1ff; }
+    QPushButton:disabled { color:rgba(220,230,255,0.35); }
+    QListWidget::item { padding:7px; border-radius:8px; }
+    QListWidget::item:hover { background:rgba(255,255,255,0.07); }
+    QListWidget::item:selected { background:#3a4252; color:#dce6ff; }
+    QSlider::groove:horizontal { height:4px; background:#3a4252; border-radius:2px; }
+    QSlider::sub-page:horizontal { background:#8fb3ff; border-radius:2px; }
+    QSlider::handle:horizontal { background:#dce6ff; width:14px; margin:-6px 0; border-radius:7px; }
+    QProgressBar { background:#232836; border:none; border-radius:6px; height:12px; text-align:center; }
+    QProgressBar::chunk { background:#8fb3ff; border-radius:6px; }
+    QScrollArea { border:none; }
+    QScrollBar:horizontal { height:10px; background:transparent; }
+    QScrollBar::handle:horizontal { background:#3a4252; border-radius:5px; min-width:40px; }
+    QScrollBar:vertical { width:10px; background:transparent; }
+    QScrollBar::handle:vertical { background:#3a4252; border-radius:5px; min-height:40px; }
+    QScrollBar::add-line, QScrollBar::sub-line { width:0; height:0; }
+    QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836;
+                           border:1px solid rgba(255,255,255,0.15); }
+    QCheckBox::indicator:checked { background:#8fb3ff; }
+    QVideoWidget { background:#000; }
+    QStatusBar { color:rgba(220,230,255,0.6); }
+"""
+VIDEO_TYPES = "*.mp4 *.mov *.mkv *.webm *.avi *.m4v *.mts *.mxf"
+AUDIO_TYPES = "*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus"
 
 
 def timecode(ms):
-    seconds, milliseconds = divmod(ms, 1000)
+    seconds, milliseconds = divmod(max(0, int(ms)), 1000)
     return f"{seconds // 60:02d}:{seconds % 60:02d}.{milliseconds:03d}"
+
+
+def combo(items):
+    box = QComboBox()
+    for key, label in items:
+        box.addItem(label, key)
+    return box
+
+
+def set_combo(box, key):
+    index = box.findData(key)
+    box.setCurrentIndex(max(0, index))
 
 
 class CreativeCut(QMainWindow):
     imported = Signal(object, object)
+    thumbDone = Signal(str)
 
     def __init__(self):
         super().__init__()
-        self.resize(1260, 790)
-        self.setStyleSheet("""
-            QWidget { background:#171925; color:#eef0fb; font-size:14px; }
-            QLabel#title { font-size:24px; font-weight:700; }
-            QLabel#section { color:#b8adff; font-weight:700; }
-            QFrame#panel { border:1px solid #353c57; border-radius:9px; }
-            QListWidget, QDoubleSpinBox, QSpinBox, QComboBox, QPushButton {
-                background:#262b40; border:1px solid #404869; border-radius:7px; padding:6px;
-            }
-            QPushButton:hover, QListWidget::item:hover { background:#373d59; }
-            QPushButton#primary { background:#a99aff; color:#1e1a33; font-weight:700; }
-            QPushButton:disabled { color:#8b93ad; }
-            QListWidget::item { padding:8px; }
-            QListWidget::item:selected { background:#514884; color:white; }
-            QVideoWidget { background:#080911; }
-        """)
-        self.media, self.clips = [], []
+        self.resize(1360, 860)
+        self.setStyleSheet(STYLE)
+        self.media, self.clips, self.titles, self.music = [], [], [], []
         self.undo_stack, self.redo_stack = [], []
         self.project = None
-        self.saved = ((), ())
+        self.saved = self.snapshot()
         self.pool = ThreadPoolExecutor(max_workers=1)
+        self.thumbs = ThreadPoolExecutor(max_workers=2)
         self.importing = False
+        self.loading = False                      # Inspektor wird gerade befüllt
+        self.selection = ("", -1)
         self.imported.connect(self.finish_import, Qt.ConnectionType.QueuedConnection)
         self.preview_clip = None
         self.preview_index = None
@@ -65,6 +117,8 @@ class CreativeCut(QMainWindow):
         self.process.finished.connect(self.render_finished)
         self.process.errorOccurred.connect(self.render_error)
         self.process.readyReadStandardOutput.connect(self.render_progress)
+        self.apply_timer = QTimer(self, singleShot=True, interval=250)
+        self.apply_timer.timeout.connect(self.apply_inspector)
 
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
@@ -75,34 +129,41 @@ class CreativeCut(QMainWindow):
 
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
+        layout_ = QVBoxLayout(central)
+        layout_.setContentsMargins(14, 10, 14, 6)
         top = QHBoxLayout()
         top.addWidget(QLabel("Creative Cut", objectName="title"))
         top.addStretch()
-        self.button(top, "Neues Projekt", self.new_project)
-        self.button(top, "Projekt öffnen …", self.open_project)
+        self.button(top, "Neu", self.new_project)
+        self.button(top, "Öffnen …", self.open_project)
         self.button(top, "Speichern", self.save_project)
-        self.export_button = self.button(top, "MP4 exportieren …", self.start_export, primary=True)
-        layout.addLayout(top)
+        self.export_button = self.button(top, "Exportieren …", self.start_export, primary=True)
+        layout_.addLayout(top)
 
         vertical = QSplitter(Qt.Orientation.Vertical)
+        vertical.setHandleWidth(8)
         workspace = QSplitter()
+        workspace.setHandleWidth(8)
+
+        # ---- Medien ----
         library, bin_layout = self.panel("MEDIEN")
-        self.import_button = self.button(bin_layout, "Videos importieren …", self.import_media, primary=True)
+        self.import_button = self.button(bin_layout, "Importieren …", self.import_media, primary=True)
         self.library = QListWidget()
         self.library.itemDoubleClicked.connect(self.preview_media)
         bin_layout.addWidget(self.library, 1)
-        self.button(bin_layout, "Zur Timeline hinzufügen", self.append_clip)
+        self.button(bin_layout, "Zur Zeitleiste", self.append_media)
+        bin_layout.addWidget(QLabel("Videos kommen in die Hauptspur,\nMusik in die Musikspur.", objectName="hint"))
         workspace.addWidget(library)
 
+        # ---- Vorschau ----
         viewer, viewer_layout = self.panel("VORSCHAU")
         self.video = QVideoWidget()
         self.player.setVideoOutput(self.video)
         viewer_layout.addWidget(self.video, 1)
         playback = QHBoxLayout()
-        self.button(playback, "Play / Pause", self.toggle_play)
-        self.button(playback, "Timeline abspielen", self.play_timeline)
-        self.effects_preview = self.button(viewer_layout, "Vorschau mit Effekten rendern", self.render_preview)
+        self.play_button = self.button(playback, "▶", self.toggle_play)
+        self.play_button.setFixedWidth(46)
+        self.play_button.setToolTip("Abspielen / Pause (Leertaste)")
         self.seek = QSlider(Qt.Orientation.Horizontal)
         self.seek.setAccessibleName("Position im Vorschauclip")
         self.seek.setRange(0, 0)
@@ -110,145 +171,261 @@ class CreativeCut(QMainWindow):
         playback.addWidget(self.seek, 1)
         self.clock = QLabel("00:00.000")
         playback.addWidget(self.clock)
+        self.effects_preview = self.button(playback, "Mit Effekten ansehen", self.render_preview)
+        self.effects_preview.setToolTip("Rendert eine kleine Vorschau mit allen Effekten, Übergängen, Titeln und Musik")
         viewer_layout.addLayout(playback)
         workspace.addWidget(viewer)
 
-        inspector, inspector_layout = self.panel("CLIP-INSPEKTOR")
-        form = QFormLayout()
-        self.start = QDoubleSpinBox(decimals=3, suffix=" s", singleStep=0.1)
-        self.end = QDoubleSpinBox(decimals=3, suffix=" s", singleStep=0.1)
-        self.volume = QSpinBox(minimum=0, maximum=100, value=100, suffix=" %")
-        form.addRow("Start", self.start)
-        form.addRow("Ende", self.end)
-        form.addRow("Clip-Lautstärke", self.volume)
-        self.title_text = QLineEdit(placeholderText="Optionaler Titel")
-        self.title_text.setMaxLength(160)
-        form.addRow("Titeltext", self.title_text)
-        self.fade_in = QDoubleSpinBox(decimals=3, suffix=" s", singleStep=0.1, maximum=86400)
-        self.fade_out = QDoubleSpinBox(decimals=3, suffix=" s", singleStep=0.1, maximum=86400)
-        form.addRow("Einblenden", self.fade_in)
-        form.addRow("Ausblenden", self.fade_out)
-        self.brightness = QSpinBox(minimum=-100, maximum=100, suffix=" %")
-        self.contrast = QSpinBox(minimum=50, maximum=150, suffix=" %")
-        self.saturation = QSpinBox(minimum=0, maximum=200, suffix=" %")
-        form.addRow("Helligkeit", self.brightness)
-        form.addRow("Kontrast", self.contrast)
-        form.addRow("Sättigung", self.saturation)
-        inspector_layout.addLayout(form)
-        self.trim_button = self.button(inspector_layout, "Änderungen übernehmen", self.trim)
+        # ---- Inspektor ----
+        self.inspector = QStackedWidget()
+        self.inspector.addWidget(self.empty_page())
+        self.inspector.addWidget(self.clip_page())
+        self.inspector.addWidget(self.title_page())
+        self.inspector.addWidget(self.music_page())
+        inspector, inspector_layout = self.panel("INSPEKTOR")
+        inspector_layout.addWidget(self.inspector)
         inspector_layout.addStretch()
         inspector_layout.addWidget(QLabel("EXPORT", objectName="section"))
+        export_row = QHBoxLayout()
         self.resolution = QComboBox()
         self.resolution.addItems(["1080p", "720p", "2160p"])
-        inspector_layout.addWidget(self.resolution)
         self.fps = QComboBox()
-        self.fps.addItems(["30", "24", "60"])
-        inspector_layout.addWidget(self.fps)
+        self.fps.addItems(["30", "24", "25", "60"])
+        export_row.addWidget(self.resolution)
+        export_row.addWidget(self.fps)
+        inspector_layout.addLayout(export_row)
         inspector_scroll = QScrollArea()
         inspector_scroll.setWidgetResizable(True)
         inspector_scroll.setWidget(inspector)
+        inspector_scroll.setMinimumWidth(300)
         workspace.addWidget(inspector_scroll)
-        workspace.setSizes([250, 700, 260])
+        workspace.setSizes([240, 760, 320])
         vertical.addWidget(workspace)
 
-        timeline, timeline_layout = self.panel("TIMELINE  ·  HAUPTSPUR")
+        # ---- Zeitleiste ----
+        timeline, timeline_layout = self.panel("ZEITLEISTE")
         edit = QHBoxLayout()
-        self.button(edit, "Teilen am Abspielkopf", self.split)
-        self.button(edit, "← Nach links", lambda: self.reorder(-1))
-        self.button(edit, "Nach rechts →", lambda: self.reorder(1))
-        self.button(edit, "Entfernen", self.remove_clip)
-        self.undo_button = self.button(edit, "Rückgängig", lambda: self.restore(self.undo_stack, self.redo_stack))
-        self.redo_button = self.button(edit, "Wiederholen", lambda: self.restore(self.redo_stack, self.undo_stack))
+        self.button(edit, "Titel +", self.add_title).setToolTip("Titel am Abspielkopf einfügen")
+        self.button(edit, "Teilen", self.split).setToolTip("Clip am Abspielkopf teilen (Strg+B)")
+        self.button(edit, "Entfernen", self.remove_selected).setToolTip("Auswahl entfernen (Entf)")
+        self.undo_button = self.button(edit, "↶", lambda: self.restore(self.undo_stack, self.redo_stack))
+        self.undo_button.setToolTip("Rückgängig (Strg+Z)")
+        self.redo_button = self.button(edit, "↷", lambda: self.restore(self.redo_stack, self.undo_stack))
+        self.redo_button.setToolTip("Wiederholen (Strg+Umschalt+Z)")
         edit.addStretch()
         self.length = QLabel()
         edit.addWidget(self.length)
+        self.button(edit, "−", lambda: self.timeline.set_zoom(self.timeline.pps / 1.4)).setToolTip("Herauszoomen")
+        self.button(edit, "+", lambda: self.timeline.set_zoom(self.timeline.pps * 1.4)).setToolTip("Hineinzoomen (Strg+Mausrad)")
         timeline_layout.addLayout(edit)
-        self.timeline = QListWidget()
-        self.timeline.setFlow(QListWidget.Flow.LeftToRight)
-        self.timeline.setWrapping(False)
-        self.timeline.setHorizontalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
-        self.timeline.currentRowChanged.connect(self.select_clip)
-        timeline_layout.addWidget(self.timeline)
+        self.timeline = TimelineView(self)
+        self.timeline.selected.connect(self.select)
+        self.timeline.seek.connect(self.seek_timeline)
+        self.timeline.moved.connect(self.move_clip)
+        self.timeline.shifted.connect(self.shift_item)
+        self.timeline.wantThumb.connect(self.make_thumb)
+        self.thumbDone.connect(self.timeline.thumb_ready, Qt.ConnectionType.QueuedConnection)
+        scroll = QScrollArea()
+        scroll.setWidget(self.timeline)
+        scroll.setWidgetResizable(True)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setMinimumHeight(self.timeline.minimumHeight() + 14)
+        timeline_layout.addWidget(scroll)
         vertical.addWidget(timeline)
-        vertical.setSizes([540, 170])
-        layout.addWidget(vertical)
+        vertical.setSizes([560, 250])
+        layout_.addWidget(vertical)
 
         progress = QHBoxLayout()
         self.progress = QProgressBar()
         self.progress.setAccessibleName("Exportfortschritt")
-        self.cancel_button = self.button(progress, "Rendern abbrechen", self.cancel_export)
+        self.cancel_button = self.button(progress, "Abbrechen", self.cancel_export)
         progress.insertWidget(0, self.progress, 1)
-        layout.addLayout(progress)
+        layout_.addLayout(progress)
         self.progress.hide()
         self.cancel_button.hide()
         for shortcut, callback in ((QKeySequence.StandardKey.Save, self.save_project),
                                    (QKeySequence.StandardKey.Open, self.open_project),
                                    (QKeySequence.StandardKey.Undo, self.undo_button.click),
-                                   (QKeySequence.StandardKey.Redo, self.redo_button.click)):
+                                   (QKeySequence.StandardKey.Redo, self.redo_button.click),
+                                   (QKeySequence("Ctrl+B"), self.split),
+                                   (QKeySequence(Qt.Key.Key_Delete), self.remove_selected),
+                                   (QKeySequence(Qt.Key.Key_Space), self.toggle_play)):
             action = QAction(self)
             action.setShortcut(QKeySequence(shortcut))
+            action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
             action.triggered.connect(callback)
             self.addAction(action)
         self.refresh()
-        self.statusBar().showMessage("Importiere ein Video und füge es zur Timeline hinzu.")
+        self.statusBar().showMessage("Importiere Videos und Musik und füge sie zur Zeitleiste hinzu.")
 
+    # ---- Bausteine ---------------------------------------------------------------------
     def panel(self, title):
         frame = QFrame(objectName="panel")
-        layout = QVBoxLayout(frame)
-        layout.addWidget(QLabel(title, objectName="section"))
-        return frame, layout
+        layout_ = QVBoxLayout(frame)
+        layout_.setContentsMargins(12, 10, 12, 12)
+        layout_.addWidget(QLabel(title, objectName="section"))
+        return frame, layout_
 
-    def button(self, layout, label, callback, primary=False):
+    def button(self, layout_, label, callback, primary=False):
         button = QPushButton(label, objectName="primary" if primary else "")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(callback)
-        layout.addWidget(button)
+        layout_.addWidget(button)
         return button
 
-    def snapshot(self):
-        return tuple(self.media), tuple(self.clips)
+    def live(self, widget):
+        """Änderungen im Inspektor sofort (leicht verzögert) übernehmen."""
+        for name in ("valueChanged", "currentIndexChanged", "textEdited", "toggled"):
+            signal = getattr(widget, name, None)
+            if signal is not None:
+                signal.connect(lambda *_: None if self.loading else self.apply_timer.start())
+        return widget
 
-    def refresh(self, row=-1):
-        self.library.clear()
-        for media in self.media:
-            self.library.addItem(f"{media.name}  ·  {timecode(media.duration)}")
-        self.timeline.blockSignals(True)
-        self.timeline.clear()
-        for i, clip in enumerate(self.clips, 1):
-            item = QListWidgetItem(f"{i:02d}  {clip.media.name}\n{timecode(clip.start)} – {timecode(clip.end)}")
-            item.setToolTip(clip.media.path)
-            self.timeline.addItem(item)
-        self.timeline.setCurrentRow(row)
-        self.timeline.blockSignals(False)
-        self.select_clip(row)
-        self.length.setText("Gesamtdauer  " + timecode(sum(clip.duration for clip in self.clips)))
+    def seconds(self, maximum=86400.0):
+        return self.live(QDoubleSpinBox(decimals=2, suffix=" s", singleStep=0.1, maximum=maximum))
+
+    def empty_page(self):
+        page = QWidget()
+        box = QVBoxLayout(page)
+        label = QLabel("Wähle einen Clip, Titel oder ein Musikstück in der Zeitleiste.", objectName="hint")
+        label.setWordWrap(True)
+        box.addWidget(label)
+        box.addStretch()
+        return page
+
+    def clip_page(self):
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setContentsMargins(0, 0, 0, 0)
+        self.start, self.end = self.seconds(), self.seconds()
+        self.volume = self.live(QSpinBox(minimum=0, maximum=100, value=100, suffix=" %"))
+        form.addRow(QLabel("SCHNITT", objectName="section"))
+        form.addRow("Start", self.start)
+        form.addRow("Ende", self.end)
+        form.addRow("Lautstärke", self.volume)
+        form.addRow(QLabel("LOOK", objectName="section"))
+        self.look = self.live(combo(LOOKS.items()))
+        form.addRow("Farb-Look", self.look)
+        self.brightness = self.live(QSpinBox(minimum=-100, maximum=100, suffix=" %"))
+        self.contrast = self.live(QSpinBox(minimum=50, maximum=150, suffix=" %"))
+        self.saturation = self.live(QSpinBox(minimum=0, maximum=200, suffix=" %"))
+        form.addRow("Helligkeit", self.brightness)
+        form.addRow("Kontrast", self.contrast)
+        form.addRow("Sättigung", self.saturation)
+        form.addRow(QLabel("BEWEGUNG & TEMPO", objectName="section"))
+        self.speed = self.live(combo([(s, {25: "Zeitlupe 25 %", 50: "Zeitlupe 50 %", 75: "75 %", 100: "Normal",
+                                           150: "150 %", 200: "Zeitraffer 2×", 400: "Zeitraffer 4×"}[s])
+                                      for s in SPEEDS]))
+        form.addRow("Tempo", self.speed)
+        self.reverse = self.live(QCheckBox("Rückwärts abspielen"))
+        form.addRow("", self.reverse)
+        self.kenburns = self.live(combo(KENBURNS.items()))
+        form.addRow("Ken Burns", self.kenburns)
+        form.addRow(QLabel("BLENDEN & ÜBERGANG", objectName="section"))
+        self.fade_in, self.fade_out = self.seconds(), self.seconds()
+        form.addRow("Einblenden", self.fade_in)
+        form.addRow("Ausblenden", self.fade_out)
+        self.transition = self.live(combo(TRANSITIONS.items()))
+        self.transition.setToolTip("Übergang vom vorherigen Clip in diesen")
+        self.transition_s = self.seconds(5.0)
+        self.transition_s.setMinimum(0.1)
+        form.addRow("Übergang davor", self.transition)
+        form.addRow("Übergangsdauer", self.transition_s)
+        form.addRow(QLabel("TEXT IM CLIP", objectName="section"))
+        self.title_text = self.live(QLineEdit(placeholderText="Optionaler Untertitel"))
+        self.title_text.setMaxLength(160)
+        form.addRow("Text", self.title_text)
+        return page
+
+    def title_page(self):
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow(QLabel("TITEL", objectName="section"))
+        self.t_text = self.live(QLineEdit(placeholderText="Titeltext"))
+        self.t_text.setMaxLength(160)
+        self.t_style = self.live(combo(TITLE_STYLES.items()))
+        self.t_at, self.t_duration = self.seconds(), self.seconds(600)
+        self.t_duration.setMinimum(0.3)
+        form.addRow("Text", self.t_text)
+        form.addRow("Vorlage", self.t_style)
+        form.addRow("Beginnt bei", self.t_at)
+        form.addRow("Dauer", self.t_duration)
+        return page
+
+    def music_page(self):
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow(QLabel("MUSIK", objectName="section"))
+        self.m_name = QLabel()
+        self.m_name.setWordWrap(True)
+        form.addRow(self.m_name)
+        self.m_at, self.m_start, self.m_end = self.seconds(), self.seconds(), self.seconds()
+        self.m_volume = self.live(QSpinBox(minimum=0, maximum=100, suffix=" %"))
+        self.m_fade_in, self.m_fade_out = self.seconds(60), self.seconds(60)
+        form.addRow("Beginnt bei", self.m_at)
+        form.addRow("Ab Stelle", self.m_start)
+        form.addRow("Bis Stelle", self.m_end)
+        form.addRow("Lautstärke", self.m_volume)
+        form.addRow("Einblenden", self.m_fade_in)
+        form.addRow("Ausblenden", self.m_fade_out)
+        return page
+
+    # ---- Zustand -----------------------------------------------------------------------
+    def snapshot(self):
+        return tuple(self.media), tuple(self.clips), tuple(self.titles), tuple(self.music)
+
+    def refresh(self, selection=None):
+        if selection is not None:
+            self.selection = selection
+        kind, index = self.selection
+        items = {"clip": self.clips, "title": self.titles, "music": self.music}.get(kind)
+        if items is None or not 0 <= index < len(items):
+            self.selection = ("", -1)
+        if getattr(self, "_listed", None) != tuple(self.media):
+            self._listed = tuple(self.media)
+            row = self.library.currentRow()
+            self.library.clear()
+            for media in self.media:
+                icon = "🎬" if media.video else "♪"
+                self.library.addItem(f"{icon}  {media.name}  ·  {timecode(media.duration)}")
+            self.library.setCurrentRow(min(row, len(self.media) - 1))
+        _, total = layout(self.clips)
+        self.length.setText("Länge  " + timecode(total))
         self.undo_button.setEnabled(bool(self.undo_stack))
         self.redo_button.setEnabled(bool(self.redo_stack))
         self.export_button.setEnabled(bool(self.clips) and self.export is None)
         self.effects_preview.setEnabled(self.export_button.isEnabled())
+        self.timeline.selection = self.selection
+        self.timeline.relayout()
+        self.show_inspector()
         name = self.project.stem if self.project else "Neues Projekt"
         self.setWindowTitle(f"{name}{' *' if self.snapshot() != self.saved else ''} – Creative Cut")
 
     def checkpoint(self):
         self.undo_stack.append(self.snapshot())
-        del self.undo_stack[:-50]
+        del self.undo_stack[:-80]
         self.redo_stack.clear()
 
     def restore(self, source, destination):
         if source:
             destination.append(self.snapshot())
-            self.media, self.clips = map(list, source.pop())
+            self.media, self.clips, self.titles, self.music = map(list, source.pop())
             self.refresh()
 
+    # ---- Import ------------------------------------------------------------------------
     def import_media(self):
         if self.importing:
             return
-        files, _ = QFileDialog.getOpenFileNames(self, "Videos importieren", str(Path.home()),
-                                               "Videos (*.mp4 *.mov *.mkv *.webm *.avi *.m4v *.mts *.mxf);;Alle Dateien (*)")
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Videos und Musik importieren", str(Path.home()),
+            f"Videos und Musik ({VIDEO_TYPES} {AUDIO_TYPES});;Videos ({VIDEO_TYPES});;Musik ({AUDIO_TYPES});;Alle Dateien (*)")
         if not files:
             return
         self.importing = True
         self.import_button.setEnabled(False)
-        self.statusBar().showMessage("Videos werden geprüft …")
+        self.statusBar().showMessage("Dateien werden geprüft …")
 
         def work():
             found, errors = [], []
@@ -258,7 +435,7 @@ class CreativeCut(QMainWindow):
                 except (ValueError, OSError, TypeError, KeyError) as error:
                     errors.append(f"{Path(path).name}: {error}")
                 except Exception:
-                    errors.append(f"{Path(path).name}: Video konnte nicht gelesen werden.")
+                    errors.append(f"{Path(path).name}: Datei konnte nicht gelesen werden.")
             self.imported.emit(found, errors)
         self.pool.submit(work)
 
@@ -270,120 +447,242 @@ class CreativeCut(QMainWindow):
         if new:
             self.checkpoint()
             self.media.extend(new)
-            self.refresh(self.timeline.currentRow())
+            self.refresh()
             self.library.setCurrentRow(len(self.media) - len(new))
-        self.statusBar().showMessage(f"{len(new)} Videos importiert.", 5000)
+        self.statusBar().showMessage(f"{len(new)} Dateien importiert.", 5000)
         if errors:
             QMessageBox.warning(self, "Import", "\n".join(errors))
 
-    def append_clip(self):
+    def append_media(self):
         row = self.library.currentRow()
-        if row >= 0:
-            self.checkpoint()
-            media = self.media[row]
-            self.clips.append(Clip(media, 0, media.duration))
-            self.refresh(len(self.clips) - 1)
-
-    def select_clip(self, row):
-        valid = 0 <= row < len(self.clips)
-        self.trim_button.setEnabled(valid)
-        if valid:
-            clip = self.clips[row]
-            self.show_trim_values(clip)
-            self.preview(clip)
-        else:
-            self.preview_index = None
-            self.player.stop()
-            self.player.setSource(QUrl())
-            self.preview_clip = self.pending_seek = None
-            self.seek.setRange(0, 0)
-            self.clock.setText(timecode(0))
-
-    def show_trim_values(self, clip):
-        for control, value in ((self.start, clip.start), (self.end, clip.end)):
-            control.setMaximum(clip.media.duration / 1000)
-            control.setValue(value / 1000)
-        self.volume.setValue(clip.volume)
-        self.title_text.setText(clip.title)
-        self.fade_in.setValue(clip.fade_in / 1000)
-        self.fade_out.setValue(clip.fade_out / 1000)
-        self.brightness.setValue(clip.brightness)
-        self.contrast.setValue(clip.contrast)
-        self.saturation.setValue(clip.saturation)
-
-    def trim(self):
-        row = self.timeline.currentRow()
         if row < 0:
+            self.statusBar().showMessage("Wähle zuerst links ein Video oder Musikstück.", 5000)
             return
-        start, end = round(self.start.value() * 1000), round(self.end.value() * 1000)
-        if end - start < 50:
-            self.statusBar().showMessage("Das Ende muss mindestens 0,05 Sekunden nach dem Start liegen.", 6000)
-            return
-        fade_in, fade_out = round(self.fade_in.value() * 1000), round(self.fade_out.value() * 1000)
-        if fade_in + fade_out > end - start:
-            self.statusBar().showMessage("Die Ein- und Ausblendungen müssen zusammen in den Clip passen.", 6000)
-            return
+        media = self.media[row]
         self.checkpoint()
-        self.clips[row] = replace(
-            self.clips[row], start=start, end=end, volume=self.volume.value(),
-            title=self.title_text.text().replace("\x00", "").replace("\r", " ").replace("\n", " ").strip(), fade_in=fade_in, fade_out=fade_out,
-            brightness=self.brightness.value(), contrast=self.contrast.value(), saturation=self.saturation.value(),
-        )
-        self.refresh(row)
+        if media.video:
+            self.clips.append(Clip(media, 0, media.duration))
+            self.refresh(("clip", len(self.clips) - 1))
+        else:
+            self.music.append(Music(media, at=self.timeline.playhead if self.music else 0,
+                                    start=0, end=media.duration))
+            self.refresh(("music", len(self.music) - 1))
+
+    def make_thumb(self, media_path, ms, target):
+        def work():
+            try:
+                CACHE.mkdir(parents=True, exist_ok=True)
+                media = next((m for m in self.media if m.path == media_path), None)
+                if media is not None:
+                    subprocess.run(thumbnail_args(media, ms, target), capture_output=True, timeout=20)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            self.thumbDone.emit(target)
+        self.thumbs.submit(work)
+
+    # ---- Auswahl & Inspektor -----------------------------------------------------------
+    def select(self, kind, index):
+        self.selection = (kind, index)
+        self.show_inspector()
+        if kind == "clip":
+            starts, _ = layout(self.clips)
+            self.preview(self.clips[index], index, play=False)
+            self.timeline.set_playhead(starts[index])
+
+    def show_inspector(self):
+        kind, index = self.selection
+        self.loading = True
+        try:
+            if kind == "clip":
+                clip = self.clips[index]
+                for control, value in ((self.start, clip.start), (self.end, clip.end)):
+                    control.setMaximum(clip.media.duration / 1000)
+                    control.setValue(value / 1000)
+                self.volume.setValue(clip.volume)
+                set_combo(self.look, clip.look)
+                self.brightness.setValue(clip.brightness)
+                self.contrast.setValue(clip.contrast)
+                self.saturation.setValue(clip.saturation)
+                set_combo(self.speed, clip.speed)
+                self.reverse.setChecked(clip.reverse)
+                set_combo(self.kenburns, clip.kenburns)
+                self.fade_in.setValue(clip.fade_in / 1000)
+                self.fade_out.setValue(clip.fade_out / 1000)
+                set_combo(self.transition, clip.transition)
+                self.transition.setEnabled(index > 0)
+                self.transition_s.setValue(clip.transition_ms / 1000)
+                self.transition_s.setEnabled(index > 0)
+                if self.title_text.text() != clip.title:
+                    self.title_text.setText(clip.title)
+                self.inspector.setCurrentIndex(1)
+            elif kind == "title":
+                title = self.titles[index]
+                if self.t_text.text() != title.text:
+                    self.t_text.setText(title.text)
+                set_combo(self.t_style, title.style)
+                self.t_at.setValue(title.at / 1000)
+                self.t_duration.setValue(title.duration / 1000)
+                self.inspector.setCurrentIndex(2)
+            elif kind == "music":
+                music = self.music[index]
+                self.m_name.setText("♪  " + music.media.name)
+                for control in (self.m_start, self.m_end):
+                    control.setMaximum(music.media.duration / 1000)
+                self.m_at.setValue(music.at / 1000)
+                self.m_start.setValue(music.start / 1000)
+                self.m_end.setValue(music.end / 1000)
+                self.m_volume.setValue(music.volume)
+                self.m_fade_in.setValue(music.fade_in / 1000)
+                self.m_fade_out.setValue(music.fade_out / 1000)
+                self.inspector.setCurrentIndex(3)
+            else:
+                self.inspector.setCurrentIndex(0)
+        finally:
+            self.loading = False
+
+    def apply_inspector(self):
+        kind, index = self.selection
+        ms = lambda box: round(box.value() * 1000)  # noqa: E731
+        if kind == "clip":
+            old = self.clips[index]
+            start, end = ms(self.start), ms(self.end)
+            if end - start < 50:
+                self.statusBar().showMessage("Das Ende muss mindestens 0,05 s nach dem Start liegen.", 6000)
+                return
+            new = replace(
+                old, start=start, end=end, volume=self.volume.value(), look=self.look.currentData(),
+                brightness=self.brightness.value(), contrast=self.contrast.value(),
+                saturation=self.saturation.value(), speed=self.speed.currentData(),
+                reverse=self.reverse.isChecked(), kenburns=self.kenburns.currentData(),
+                fade_in=ms(self.fade_in), fade_out=ms(self.fade_out),
+                transition=self.transition.currentData() if index > 0 else "",
+                transition_ms=max(100, ms(self.transition_s)),
+                title=self.title_text.text().replace("\x00", "").replace("\r", " ").replace("\n", " ").strip(),
+            )
+            if new.fade_in + new.fade_out > new.length:
+                self.statusBar().showMessage("Ein- und Ausblenden müssen zusammen in den Clip passen.", 6000)
+                return
+            if new != old:
+                self.checkpoint()
+                self.clips[index] = new
+                if self.preview_clip == old:
+                    self.preview_clip = new
+                    self.player.setPlaybackRate(new.speed / 100)
+                    self.audio.setVolume(new.volume / 100)
+        elif kind == "title":
+            text = self.t_text.text().replace("\x00", "").replace("\r", " ").replace("\n", " ").strip()
+            if not text:
+                return
+            new = Title(text, ms(self.t_at), max(300, ms(self.t_duration)), self.t_style.currentData())
+            if new != self.titles[index]:
+                self.checkpoint()
+                self.titles[index] = new
+        elif kind == "music":
+            old = self.music[index]
+            start, end = ms(self.m_start), ms(self.m_end)
+            if end - start < 50:
+                self.statusBar().showMessage("„Bis Stelle“ muss nach „Ab Stelle“ liegen.", 6000)
+                return
+            new = replace(old, at=ms(self.m_at), start=start, end=end, volume=self.m_volume.value(),
+                          fade_in=min(ms(self.m_fade_in), end - start), fade_out=min(ms(self.m_fade_out), end - start))
+            if new != old:
+                self.checkpoint()
+                self.music[index] = new
+        else:
+            return
+        self.refresh()
+
+    # ---- Bearbeiten --------------------------------------------------------------------
+    def add_title(self):
+        self.checkpoint()
+        self.titles.append(Title("Mein Titel", self.timeline.playhead, 3000, "mitte"))
+        self.refresh(("title", len(self.titles) - 1))
+        self.t_text.setFocus()
+        self.t_text.selectAll()
+
+    def clip_at(self, ms):
+        starts, _ = layout(self.clips)
+        for i in reversed(range(len(starts))):
+            if starts[i] <= ms < starts[i] + self.clips[i].length:
+                return i
+        return -1
+
+    def source_pos(self, index, ms):
+        """Zeitleisten-ms → Stelle im Quellvideo des Clips."""
+        clip = self.clips[index]
+        starts, _ = layout(self.clips)
+        offset = (ms - starts[index]) * clip.speed / 100
+        pos = clip.end - offset if clip.reverse else clip.start + offset
+        return int(min(clip.end, max(clip.start, pos)))
 
     def split(self):
-        row = self.timeline.currentRow()
-        if row < 0:
+        index = self.clip_at(self.timeline.playhead)
+        if index < 0:
+            self.statusBar().showMessage("Setze den Abspielkopf auf einen Clip.", 5000)
             return
-        clip, position = self.clips[row], self.player.position()
-        if self.preview_clip != clip or not clip.start + 50 <= position <= clip.end - 50:
-            self.statusBar().showMessage("Wähle einen Clip und setze den Abspielkopf in seinen Schnittbereich.", 6000)
+        clip = self.clips[index]
+        position = self.source_pos(index, self.timeline.playhead)
+        if not clip.start + 50 <= position <= clip.end - 50 or clip.reverse:
+            self.statusBar().showMessage("Hier kann nicht geteilt werden.", 5000)
             return
         self.checkpoint()
-        self.clips[row:row + 1] = [
-            replace(clip, end=position, fade_in=min(clip.fade_in, position - clip.start), fade_out=0),
-            replace(clip, start=position, fade_in=0, fade_out=min(clip.fade_out, clip.end - position)),
-        ]
-        self.refresh(row + 1)
+        first = replace(clip, end=position, fade_out=0)
+        second = replace(clip, start=position, fade_in=0, transition="")
+        first = replace(first, fade_in=min(first.fade_in, first.length))
+        second = replace(second, fade_out=min(second.fade_out, second.length))
+        self.clips[index:index + 1] = [first, second]
+        self.refresh(("clip", index + 1))
 
-    def reorder(self, offset):
-        row = self.timeline.currentRow()
-        target = row + offset
-        if row >= 0 and 0 <= target < len(self.clips):
-            self.checkpoint()
-            self.clips.insert(target, self.clips.pop(row))
-            self.refresh(target)
+    def move_clip(self, source, target):
+        self.checkpoint()
+        self.clips.insert(target, self.clips.pop(source))
+        if self.clips:
+            self.clips[0] = replace(self.clips[0], transition="")
+        self.refresh(("clip", target))
 
-    def remove_clip(self):
-        row = self.timeline.currentRow()
-        if row >= 0:
-            self.checkpoint()
-            self.clips.pop(row)
-            self.refresh(min(row, len(self.clips) - 1))
+    def shift_item(self, kind, index, at):
+        self.checkpoint()
+        items = self.titles if kind == "title" else self.music
+        items[index] = replace(items[index], at=at)
+        self.refresh((kind, index))
 
+    def remove_selected(self):
+        kind, index = self.selection
+        items = {"clip": self.clips, "title": self.titles, "music": self.music}.get(kind)
+        if items is None or not 0 <= index < len(items):
+            return
+        self.checkpoint()
+        items.pop(index)
+        if kind == "clip" and self.clips:
+            self.clips[0] = replace(self.clips[0], transition="")
+        self.refresh((kind, min(index, len(items) - 1)) if items else ("", -1))
+
+    # ---- Vorschau ----------------------------------------------------------------------
     def preview_media(self, item):
         media = self.media[self.library.row(item)]
         self.preview(Clip(media, 0, media.duration))
 
-    def preview(self, clip, index=None):
+    def preview(self, clip, index=None, play=False, position=None):
         self.player.pause()
         self.preview_clip, self.preview_index = clip, index
-        if index is not None:
-            self.timeline.blockSignals(True)
-            self.timeline.setCurrentRow(index)
-            self.timeline.blockSignals(False)
-            self.trim_button.setEnabled(True)
-            self.show_trim_values(clip)
         self.audio.setVolume(clip.volume / 100)
+        self.player.setPlaybackRate(clip.speed / 100)
         self.seek.setRange(clip.start, clip.end)
-        self.seek.setValue(clip.start)
-        self.clock.setText(timecode(clip.start))
-        self.pending_seek = (clip.start, index is not None)
+        start = clip.start if position is None else position
+        self.seek.setValue(start)
+        self.clock.setText(timecode(start))
+        self.pending_seek = (start, play)
         url = QUrl.fromLocalFile(clip.media.path)
         if self.player.source() != url:
             self.player.setSource(url)
         elif self.player.isSeekable():
             self.apply_seek()
+
+    def seek_timeline(self, ms):
+        self.timeline.set_playhead(ms)
+        index = self.clip_at(ms)
+        if index >= 0:
+            self.preview(self.clips[index], index, play=self.player.isPlaying(), position=self.source_pos(index, ms))
 
     def apply_seek(self):
         if self.pending_seek is None:
@@ -406,32 +705,41 @@ class CreativeCut(QMainWindow):
         if not self.seek.isSliderDown():
             self.seek.setValue(position)
         self.clock.setText(timecode(position))
-        if self.player.isPlaying() and self.preview_clip and position >= self.preview_clip.end:
+        self.play_button.setText("❚❚" if self.player.isPlaying() else "▶")
+        clip, index = self.preview_clip, self.preview_index
+        if index is not None and 0 <= index < len(self.clips) and self.clips[index] == clip:
+            starts, _ = layout(self.clips)
+            self.timeline.set_playhead(starts[index] + round((position - clip.start) * 100 / clip.speed))
+        if self.player.isPlaying() and clip and position >= clip.end:
             self.advance_preview()
 
     def advance_preview(self):
         if self.preview_index is not None and self.preview_index + 1 < len(self.clips):
             index = self.preview_index + 1
-            self.preview(self.clips[index], index)
+            self.preview(self.clips[index], index, play=True)
         else:
-            self.preview_index = None
             self.player.pause()
+            self.play_button.setText("▶")
 
     def toggle_play(self):
-        if not self.preview_clip:
-            return
         if self.player.isPlaying():
             self.player.pause()
-        else:
-            if self.player.position() >= self.preview_clip.end:
-                self.player.setPosition(self.preview_clip.start)
-            self.player.play()
+            self.play_button.setText("▶")
+            return
+        if self.preview_clip is None:
+            if not self.clips:
+                return
+            index = max(0, self.clip_at(self.timeline.playhead))     # Zeitleiste ab Abspielkopf
+            starts, _ = layout(self.clips)
+            self.preview(self.clips[index], index, play=True,
+                         position=self.source_pos(index, max(self.timeline.playhead, starts[index])))
+            return
+        if self.player.position() >= self.preview_clip.end:
+            self.player.setPosition(self.preview_clip.start)
+        self.player.play()
+        self.play_button.setText("❚❚")
 
-    def play_timeline(self):
-        if self.clips:
-            index = max(0, self.timeline.currentRow())
-            self.preview(self.clips[index], index)
-
+    # ---- Projekt -----------------------------------------------------------------------
     def permit_project_change(self):
         if self.importing or self.export:
             self.statusBar().showMessage("Warte auf den Import oder Export.", 5000)
@@ -443,16 +751,18 @@ class CreativeCut(QMainWindow):
                                       | QMessageBox.StandardButton.Cancel)
         return choice == QMessageBox.StandardButton.Discard or (choice == QMessageBox.StandardButton.Save and self.save_project())
 
-    def load_state(self, path, media, clips):
-        self.project, self.media, self.clips = path, media, clips
+    def load_state(self, path, media, clips, titles, music):
+        self.project, self.media, self.clips, self.titles, self.music = path, media, clips, titles, music
         self.saved = self.snapshot()
         self.undo_stack.clear()
         self.redo_stack.clear()
-        self.refresh()
+        self.preview_clip = self.preview_index = None
+        self.timeline.set_playhead(0)
+        self.refresh(("", -1))
 
     def new_project(self):
         if self.permit_project_change():
-            self.load_state(None, [], [])
+            self.load_state(None, [], [], [], [])
 
     def open_project(self):
         if not self.permit_project_change():
@@ -472,8 +782,7 @@ class CreativeCut(QMainWindow):
             if not name:
                 return False
             path = Path(name if name.endswith(".creativecut") else name + ".creativecut")
-        data = {"version": 1, "media": [asdict(media) for media in self.media],
-                "timeline": [self.clip_data(clip) for clip in self.clips]}
+        data = project_data(self.media, self.clips, self.titles, self.music)
         payload = json.dumps(data, ensure_ascii=False, indent=2).encode()
         output = QSaveFile(str(path))
         if not output.open(QIODevice.OpenModeFlag.WriteOnly) or output.write(payload) != len(payload) or not output.commit():
@@ -481,16 +790,10 @@ class CreativeCut(QMainWindow):
             return False
         self.project = path
         self.saved = self.snapshot()
-        self.refresh(self.timeline.currentRow())
+        self.refresh()
         return True
 
-    @staticmethod
-    def clip_data(clip):
-        data = asdict(clip)
-        del data["media"]
-        data["path"] = clip.media.path
-        return data
-
+    # ---- Export ------------------------------------------------------------------------
     def render_preview(self):
         if not self.export and self.clips:
             self.start_render(None, 960, 540, int(self.fps.currentText()))
@@ -498,7 +801,8 @@ class CreativeCut(QMainWindow):
     def start_export(self):
         if self.export or not self.clips:
             return
-        path, _ = QFileDialog.getSaveFileName(self, "MP4 exportieren", str(Path.home() / "Video.mp4"), "MP4 (*.mp4)")
+        path, _ = QFileDialog.getSaveFileName(self, "Video exportieren", str(Path.home() / "Videos" / "Mein Film.mp4"),
+                                              "MP4 (*.mp4)")
         if not path:
             return
         target = Path(path if path.lower().endswith(".mp4") else path + ".mp4")
@@ -514,8 +818,10 @@ class CreativeCut(QMainWindow):
         except OSError as error:
             QMessageBox.warning(self, "Rendern fehlgeschlagen", str(error))
             return
-        self.export = dict(target=target, temp=temp, clips=list(self.clips), index=0, cancelled=False,
-                           width=width, height=height, fps=fps, output=b"")
+        clips, titles, music = list(self.clips), list(self.titles), list(self.music)
+        self.export = dict(target=target, temp=temp, clips=clips, titles=titles, music=music, index=0,
+                           stage="clips", cancelled=False, width=width, height=height, fps=fps, output=b"",
+                           total=layout(clips)[1])
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         self.progress.show()
@@ -530,28 +836,36 @@ class CreativeCut(QMainWindow):
         root = Path(job["temp"].name)
         index = job["index"]
         job["output"] = b""
-        if index < len(job["clips"]):
-            self.statusBar().showMessage(f"Rendere Clip {index + 1} von {len(job['clips'])} …")
-            clip = job["clips"][index]
-            title_file = None
-            if clip.title:
-                title_file = f"title-{index}.txt"
-                try:
+        clips = job["clips"]
+        try:
+            if index < len(clips):
+                self.statusBar().showMessage(f"Rendere Clip {index + 1} von {len(clips)} …")
+                clip = clips[index]
+                title_file = None
+                if clip.title:
+                    title_file = f"title-{index}.txt"
                     (root / title_file).write_text(textwrap.fill(clip.title, width=36), encoding="utf-8")
-                except OSError as error:
-                    self.end_export(str(error))
-                    return
-            args = segment_args(clip, root / f"segment-{index}.mp4",
-                                job["width"], job["height"], job["fps"], title_file)
-        else:
-            manifest = root / "segments.txt"
-            try:
+                args = segment_args(clip, root / f"segment-{index}.mp4",
+                                    job["width"], job["height"], job["fps"], title_file)
+            elif needs_finish(clips, job["titles"], job["music"]):
+                job["stage"] = "finish"
+                self.statusBar().showMessage("Übergänge, Titel und Musik werden eingefügt …")
+                files = []
+                for k, title in enumerate(job["titles"]):
+                    files.append(f"track-title-{k}.txt")
+                    (root / files[-1]).write_text(textwrap.fill(title.text, width=32), encoding="utf-8")
+                args = finish_args([root / f"segment-{i}.mp4" for i in range(len(clips))], clips,
+                                   job["titles"], job["music"], job["width"], job["height"], job["fps"],
+                                   files, root / "export.mp4")
+            else:
+                job["stage"] = "finish"
+                manifest = root / "segments.txt"
                 manifest.write_text("".join(f"file segment-{i}.mp4\n" for i in range(index)), encoding="utf-8")
-            except OSError as error:
-                self.end_export(str(error))
-                return
-            self.statusBar().showMessage("Füge die gerenderten Clips zusammen …")
-            args = join_args(manifest, root / "export.mp4")
+                self.statusBar().showMessage("Füge die gerenderten Clips zusammen …")
+                args = join_args(manifest, root / "export.mp4")
+        except OSError as error:
+            self.end_export(str(error))
+            return
         self.process.setWorkingDirectory(str(root))
         self.process.start("ffmpeg", args)
 
@@ -562,12 +876,16 @@ class CreativeCut(QMainWindow):
         job = self.export
         lines = (job["output"] + chunk).split(b"\n")
         job["output"] = lines.pop()
-        index = job["index"]
-        if index < len(job["clips"]):
-            for line in lines:
-                if line.startswith(b"out_time_us=") and line[12:].isdigit():
-                    fraction = min(1, int(line[12:]) / (job["clips"][index].duration * 1000))
-                    self.progress.setValue(int(99 * (index + fraction) / len(job["clips"])))
+        clips = job["clips"]
+        for line in lines:
+            if not (line.startswith(b"out_time_us=") and line[12:].isdigit()):
+                continue
+            done = int(line[12:]) / 1000
+            if job["stage"] == "clips" and job["index"] < len(clips):
+                fraction = min(1, done / clips[job["index"]].length)
+                self.progress.setValue(int(80 * (job["index"] + fraction) / len(clips)))
+            elif job["stage"] == "finish" and job["total"]:
+                self.progress.setValue(80 + int(19 * min(1, done / job["total"])))
 
     def render_finished(self, code, _status):
         job = self.export
@@ -576,7 +894,7 @@ class CreativeCut(QMainWindow):
         error = bytes(self.process.readAllStandardError()).decode(errors="replace").strip()
         if job["cancelled"] or code:
             self.end_export(error or ("Export abgebrochen." if job["cancelled"] else "FFmpeg konnte nicht exportieren."))
-        elif job["index"] < len(job["clips"]):
+        elif job["stage"] == "clips":
             job["index"] += 1
             self.next_render()
         elif job["target"] is None:
@@ -607,9 +925,9 @@ class CreativeCut(QMainWindow):
             if self.rendered_preview:
                 self.rendered_preview.cleanup()
             self.rendered_preview = job["temp"]
-            duration = sum(clip.duration for clip in job["clips"])
+            duration = job["total"]
             path = str(Path(self.rendered_preview.name) / "export.mp4")
-            self.preview(Clip(Media(path, duration, True), 0, duration))
+            self.preview(Clip(Media(path, duration, True), 0, duration), play=True)
         else:
             job["temp"].cleanup()
         self.progress.hide()
@@ -620,7 +938,7 @@ class CreativeCut(QMainWindow):
             QMessageBox.warning(self, "Export fehlgeschlagen", error)
         self.statusBar().showMessage(
             "Export abgebrochen." if job["cancelled"] else "Export fehlgeschlagen." if error
-            else "Effektvorschau fertig. Drücke Play." if preview_ready
+            else "Vorschau mit allen Effekten läuft." if preview_ready
             else f"Export fertig: {job['target']}", 10000)
 
     def closeEvent(self, event):
@@ -632,6 +950,7 @@ class CreativeCut(QMainWindow):
         if self.rendered_preview:
             self.rendered_preview.cleanup()
         self.pool.shutdown(wait=False)
+        self.thumbs.shutdown(wait=False, cancel_futures=True)
         super().closeEvent(event)
 
 
@@ -640,7 +959,8 @@ def main():
     app.setDesktopFileName("creative-cut")
     window = CreativeCut()
     if "--selftest" in sys.argv:
-        assert not window.export_button.isEnabled() and window.timeline.count() == 0
+        assert not window.export_button.isEnabled() and not window.clips
+        assert window.inspector.count() == 4 and window.timeline.total() == 0
         window.close()
         return 0
     window.show()

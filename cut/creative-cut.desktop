@@ -2,9 +2,9 @@
 Type=Application
 Name=Creative Cut
 GenericName=Videoschnitt
-Comment=Videos schneiden, arrangieren und als MP4 exportieren
+Comment=Videos schneiden – mit Übergängen, Looks, Titeln und Musik
 Exec=creative-cut
 Icon=applications-multimedia
 Terminal=false
 Categories=AudioVideo;AudioVideoEditing;
-Keywords=Video;Schnitt;Timeline;MP4;
+Keywords=Video;Schnitt;Timeline;MP4;Final Cut;Effekte;Übergang;Titel;Musik;
