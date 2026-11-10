@@ -14,6 +14,7 @@ Item {
     readonly property color accent: "#8fb3ff"
     readonly property string fontFamily: "Arial"
     readonly property string userName: typeof kscreenlocker_userName !== "undefined" ? kscreenlocker_userName : ""
+    readonly property string userImage: typeof kscreenlocker_userImage !== "undefined" ? String(kscreenlocker_userImage) : ""
     property bool busy: false
     property string message: ""
 
@@ -110,14 +111,26 @@ Item {
             width: 84
             height: 84
             radius: 42
-            color: root.accent
+            color: face.status === Image.Ready ? "transparent" : root.accent
             Text {
                 anchors.centerIn: parent
+                visible: face.status !== Image.Ready
                 text: (root.userName.length > 0 ? root.userName[0] : "?").toUpperCase()
                 color: "#12151b"
                 font.family: root.fontFamily
                 font.pixelSize: 36
                 font.bold: true
+            }
+            Image {
+                id: face
+                anchors.fill: parent
+                source: root.userImage
+                visible: status === Image.Ready
+                fillMode: Image.PreserveAspectCrop
+                sourceSize.width: 168
+                sourceSize.height: 168
+                smooth: true
+                cache: false
             }
         }
 

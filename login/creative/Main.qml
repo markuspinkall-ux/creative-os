@@ -76,6 +76,20 @@ Item {
         const i = userModel.index(root.userIndex, 0)
         return userModel.data(i, Qt.UserRole + 2) || userName()   // realName
     }
+    function userIcon() {
+        // Profilbild vom Kontodienst (AccountsService); SDDMs Standard-Gesicht zählt nicht
+        const i = userModel.index(root.userIndex, 0)
+        const icon = String(userModel.data(i, Qt.UserRole + 4) || "")   // icon
+        if (!icon.length || icon.indexOf("/sddm/faces/") >= 0 || icon.indexOf("default") >= 0)
+            return ""
+        return icon.indexOf("file:") === 0 ? icon : "file://" + icon
+    }
+    function initials() {
+        const words = String(realName()).replace(/-/g, " ").split(/\s+/).filter(w => w.length > 0)
+        if (words.length >= 2)
+            return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase()
+        return words.length ? words[0].charAt(0).toUpperCase() : "?"
+    }
     function sessionIndex() {
         // Nur die Creative-Sitzung anbieten, sonst die zuletzt benutzte
         for (let n = 0; n < sessionModel.rowCount(); n++) {
@@ -167,14 +181,27 @@ Item {
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 96; height: 96; radius: 48
-            color: root.accent
+            color: face.status === Image.Ready ? "transparent" : root.accent
             Text {
                 anchors.centerIn: parent
-                text: (root.realName() || "?").charAt(0).toUpperCase()
+                visible: face.status !== Image.Ready
+                text: root.initials()
                 color: root.dark
                 font.family: root.fontFamily
-                font.pixelSize: 40
+                font.pixelSize: text.length > 1 ? 36 : 40
                 font.bold: true
+            }
+            // Profilbild (schon rund gespeichert); fehlt es, bleibt das Kürzel
+            Image {
+                id: face
+                anchors.fill: parent
+                source: root.userIcon()
+                visible: status === Image.Ready
+                fillMode: Image.PreserveAspectCrop
+                sourceSize.width: 192
+                sourceSize.height: 192
+                smooth: true
+                cache: false
             }
         }
         Text {

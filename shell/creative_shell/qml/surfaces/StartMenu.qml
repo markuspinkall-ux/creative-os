@@ -15,6 +15,7 @@ Item {
         powerMenu.visible = false
         powerMenu.confirmServer = false
         session.refreshServer()
+        session.refreshAvatar()
         appMenu.visible = false
         list.currentIndex = -1
         list.positionViewAtBeginning()
@@ -472,19 +473,10 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 10
 
-                Rectangle {
-                    width: 30
-                    height: 30
-                    radius: 15
-                    color: Theme.accent
-                    Text {
-                        anchors.centerIn: parent
-                        text: session.initial
-                        color: Theme.accentText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 13
-                        font.bold: true
-                    }
+                Avatar {
+                    size: 30
+                    source: session.avatar
+                    initials: session.initials
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter

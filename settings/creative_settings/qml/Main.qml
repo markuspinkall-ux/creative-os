@@ -57,11 +57,7 @@ ApplicationWindow {
                 leftPadding: 8
                 bottomPadding: 14
                 spacing: 10
-                Rectangle {
-                    width: 34; height: 34; radius: 17
-                    color: Theme.accent
-                    Text { anchors.centerIn: parent; text: session.initial; color: Theme.accentText; font.pixelSize: 15; font.bold: true }
-                }
+                Avatar { size: 34; source: session.avatar; initials: session.initials }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     Text { text: session.userName; color: Theme.text; font.pixelSize: 14; font.bold: true }
