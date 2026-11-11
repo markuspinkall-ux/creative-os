@@ -1,0 +1,76 @@
+# Creative OS – Startmenü der Installations-ISO im Graphit-Look (GRUB 2)
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "stretch"
+desktop-color: "#12151b"
+terminal-font: "Liberation Sans Regular 18"
+terminal-left: "8%"
+terminal-top: "30%"
+terminal-width: "84%"
+terminal-height: "60%"
+terminal-border: "0"
+
++ image {
+    left = 8%
+    top = 14%
+    width = 96
+    height = 96
+    file = "logo.png"
+}
++ label {
+    left = 8%+120
+    top = 14%+8
+    width = 70%
+    height = 48
+    text = "Creative OS"
+    font = "Liberation Sans Bold 36"
+    color = "#dce6ff"
+}
++ label {
+    left = 8%+122
+    top = 14%+58
+    width = 70%
+    height = 30
+    text = "Installation – wähle aus, wie es losgehen soll"
+    font = "Liberation Sans Regular 18"
+    color = "#8fa0c4"
+}
+
++ boot_menu {
+    left = 8%
+    top = 32%
+    width = 52%
+    height = 38%
+    item_font = "Liberation Sans Regular 20"
+    selected_item_font = "Liberation Sans Bold 20"
+    item_color = "#dce6ff"
+    selected_item_color = "#12151b"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 46
+    item_padding = 18
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
++ label {
+    id = "__timeout__"
+    left = 8%
+    top = 74%
+    width = 60%
+    height = 26
+    text = "Automatischer Start in %d Sekunden"
+    font = "Liberation Sans Regular 18"
+    color = "#8fa0c4"
+}
++ label {
+    left = 8%
+    top = 74%+34
+    width = 80%
+    height = 26
+    text = "↑ ↓ auswählen  ·  Enter starten  ·  E bearbeiten"
+    font = "Liberation Sans Regular 18"
+    color = "#5d6884"
+}

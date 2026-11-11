@@ -1,0 +1,54 @@
+name: Installation fotografieren
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "claude/installer-*"]
+    paths:
+      - image/netinstall/**
+      - tools/installer-fotos.sh
+      - .github/workflows/installer-fotos.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: installer-fotos-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  fotos:
+    name: Installation in einer virtuellen Maschine fotografieren
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - name: Platz schaffen und KVM freischalten
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list 2>/dev/null || true
+          getent hosts archive.ubuntu.com >/dev/null || { echo 'DNS gestört – nehme 1.1.1.1/8.8.8.8'; sudo rm -f /etc/resolv.conf; printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' | sudo tee /etc/resolv.conf >/dev/null; }
+          sudo apt-get -o Acquire::Retries=3 update -qq
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat python3-pil >/dev/null
+          sudo chmod 666 /dev/kvm
+      - name: Installations-ISOs bauen
+        run: bash tools/installer-fotos.sh build
+        env:
+          OWNER: ${{ github.repository_owner }}
+      - name: Installation starten und fotografieren
+        run: bash tools/installer-fotos.sh run
+      - name: Fotos im Branch „installer-fotos“ ablegen
+        if: always()
+        run: |
+          cd installer-fotos
+          ls *.png >/dev/null 2>&1 || exit 0
+          mkdir -p /tmp/pub && cp *.png /tmp/pub/ && cd /tmp/pub
+          printf '# Creative OS – Installation\n\nAufgenommen von Lauf %s (%s).\n\n![Übersicht](uebersicht.png)\n' \
+            "${{ github.run_id }}" "${{ github.sha }}" > README.md
+          git init -q -b installer-fotos
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add . && git commit -qm "Installer-Fotos ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" installer-fotos
