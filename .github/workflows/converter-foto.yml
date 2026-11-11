@@ -1,0 +1,22 @@
+name: Converter fotografieren
+on:
+  push:
+    branches: [persoenlich-converter]
+  workflow_dispatch:
+jobs:
+  foto:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -q && sudo apt-get install -y -q xvfb libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-randr0 libxcb-render-util0 libxcb-image0 libegl1 fonts-liberation
+          pip install -q PySide6
+        timeout-minutes: 10
+      - run: |
+          mkdir -p fotos
+          xvfb-run -s "-screen 0 860x720x24" python3 personal/creative-converter/test/foto.py fotos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: converter-fotos
+          path: fotos
