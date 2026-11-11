@@ -1,0 +1,200 @@
+#!/usr/bin/python3 -I
+"""Passwortspeicher (KWallet) ohne Nachfragen: Creative OS gibt der Standard-Brieftasche
+„kdewallet“ ein leeres Passwort und öffnet sie bei jeder Anmeldung selbst.
+
+So meldet sich der Passwortspeicher nie mehr mit einem Fenster, und Programme, die ihn
+brauchen (Chrome/Brave/Edge, Creative Mail, VS Code …), funktionieren trotzdem.
+
+Ablauf (bei jeder Anmeldung, im Hintergrund):
+ 1. kwalletrc so einstellen, dass nichts nachfragt
+ 2. ksecretd so starten, wie es das PAM-Modul tut – mit dem Schlüssel für ein leeres Passwort
+    (fehlt die Brieftasche, legt ksecretd sie damit neu an)
+ 3. Bleibt die Brieftasche zu, hatte sie bisher ein Passwort: einmalig nach
+    ~/.local/share/kwalletd/Sicherung-<Datum>/ verschieben und leer neu anlegen.
+    (Mit dem alten Passwort lässt sich die Sicherung in „KDE-Passwortspeicher“ wieder öffnen.)
+"""
+
+import hashlib
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+KEYSIZE = SALTSIZE = 56
+ITERATIONS = 50000
+WALLET = "kdewallet"
+HOME = Path.home()
+WALLET_DIR = Path(os.environ.get("XDG_DATA_HOME") or HOME / ".local/share") / "kwalletd"
+MARKER = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config") / "creative" / "passwortspeicher-leer"
+DAEMONS = ("/usr/bin/ksecretd", "/usr/bin/kwalletd6", "/usr/bin/kwalletd5")
+SETTINGS = {
+    "Enabled": "true", "First Use": "false", "Use One Wallet": "true", "Default Wallet": WALLET,
+    "Local Wallet": WALLET, "Close When Idle": "false", "Close on Screensaver": "false",
+    "Leave Open": "true", "Prompt on Open": "false",
+}
+
+
+def log(msg):
+    print(time.strftime("%H:%M:%S"), msg, flush=True)
+
+
+def blank_hash(salt):
+    """Schlüssel eines leeren Passworts – genauso wie KWallet/pam_kwallet ihn bilden."""
+    return hashlib.pbkdf2_hmac("sha512", b"", salt, ITERATIONS, KEYSIZE)
+
+
+def salt_for(wallet_dir, create=True):
+    path = wallet_dir / f"{WALLET}.salt"
+    if path.exists() and path.stat().st_size == SALTSIZE:
+        return path.read_bytes()
+    if not create:
+        return None
+    wallet_dir.mkdir(parents=True, exist_ok=True)
+    salt = os.urandom(SALTSIZE)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(salt)
+    return salt
+
+
+def configure():
+    tool = shutil.which("kwriteconfig6") or shutil.which("kwriteconfig5")
+    if not tool:
+        log("kwriteconfig fehlt – Einstellungen bleiben")
+        return
+    for key, value in SETTINGS.items():
+        subprocess.run([tool, "--file", "kwalletrc", "--group", "Wallet", "--key", key, value], check=False)
+    subprocess.run([tool, "--file", "kwalletrc", "--group", "org.freedesktop.secrets", "--key", "apiEnabled", "true"], check=False)
+
+
+def daemon():
+    return next((d for d in DAEMONS if os.access(d, os.X_OK)), None)
+
+
+def stop_daemons():
+    for name in ("ksecretd", "kwalletd6", "kwalletd5"):
+        subprocess.run(["pkill", "-u", str(os.getuid()), "-x", name], check=False)
+    time.sleep(1.5)
+
+
+def launch(daemon_path, key):
+    """Startet den Passwortspeicher wie pam_kwallet: Schlüssel über eine Pipe,
+    Umgebung über einen lokalen Socket."""
+    rfd, wfd = os.pipe()
+    sock_dir = tempfile.mkdtemp(prefix="creative-wallet-", dir=os.environ.get("XDG_RUNTIME_DIR") or None)
+    sock_path = os.path.join(sock_dir, "kwallet.socket")
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(sock_path)
+    server.listen(1)
+    env = dict(os.environ, PAM_KWALLET5_LOGIN=sock_path)
+    proc = subprocess.Popen([daemon_path, "--pam-login", str(rfd), str(server.fileno())],
+                            pass_fds=(rfd, server.fileno()), env=env,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    os.close(rfd)
+    os.write(wfd, key)
+    os.close(wfd)
+    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    for _ in range(50):
+        try:
+            client.connect(sock_path)
+            break
+        except OSError:
+            time.sleep(0.1)
+    lines = "".join(f"{k}={v}\n" for k, v in os.environ.items()
+                    if k in ("DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS",
+                             "XDG_RUNTIME_DIR", "XDG_SESSION_ID", "XDG_CURRENT_DESKTOP", "LANG", "QT_QPA_PLATFORM"))
+    try:
+        client.sendall(lines.encode())
+    except OSError:
+        pass
+    client.close()
+    server.close()
+    shutil.rmtree(sock_dir, ignore_errors=True)
+    return proc
+
+
+def wallet_state():
+    """True = offen, False = sicher zu, None = keine Antwort (dann nichts verschieben)."""
+    answers = []
+    res = subprocess.run(["busctl", "--user", "get-property", "org.freedesktop.secrets",
+                          "/org/freedesktop/secrets/aliases/default",
+                          "org.freedesktop.Secret.Collection", "Locked"],
+                         capture_output=True, text=True, timeout=10)
+    if res.returncode == 0 and res.stdout.strip() in ("b false", "b true"):
+        answers.append(res.stdout.strip() == "b false")
+    res = subprocess.run(["busctl", "--user", "call", "org.kde.kwalletd6", "/modules/kwalletd6",
+                          "org.kde.KWallet", "isOpen", "s", WALLET],
+                         capture_output=True, text=True, timeout=10)
+    if res.returncode == 0 and res.stdout.strip() in ("b true", "b false"):
+        answers.append(res.stdout.strip() == "b true")
+    if any(answers):
+        return True
+    return False if answers else None
+
+
+def unlocked(timeout=15):
+    deadline = time.time() + timeout
+    state = None
+    while time.time() < deadline:
+        try:
+            state = wallet_state()
+        except subprocess.TimeoutExpired:
+            state = None
+        if state:
+            return True
+        time.sleep(1)
+    return state
+
+
+def main():
+    configure()
+    path = daemon()
+    if not path:
+        log("kein ksecretd/kwalletd gefunden")
+        return 0
+    wallet = WALLET_DIR / f"{WALLET}.kwl"
+    existed = wallet.exists() and wallet.stat().st_size >= 60
+    salt = salt_for(WALLET_DIR, create=not existed)
+    state = None
+    if salt is not None:
+        stop_daemons()
+        launch(path, blank_hash(salt))
+        state = unlocked()
+        if state:
+            log("Passwortspeicher offen (leeres Passwort)")
+            MARKER.parent.mkdir(parents=True, exist_ok=True)
+            MARKER.write_text("ok\n")
+            return 0
+    if not existed:
+        log("Passwortspeicher ließ sich nicht anlegen")
+        return 1
+    if salt is not None and state is None:
+        log("Passwortspeicher antwortet nicht – nichts verschoben")
+        return 1
+    if MARKER.exists():
+        log("Passwortspeicher bleibt zu – Umstellung lief schon einmal, nichts weiter verschoben")
+        return 1
+    # Die alte Brieftasche hat ein Passwort: sichern und leer neu anlegen (nur einmal)
+    stop_daemons()
+    backup = WALLET_DIR / time.strftime("Sicherung-%Y-%m-%d-%H%M")
+    backup.mkdir(parents=True, exist_ok=True)
+    for ext in (".kwl", ".salt"):
+        f = WALLET_DIR / f"{WALLET}{ext}"
+        if f.exists():
+            f.rename(backup / f.name)
+    log(f"alte Brieftasche gesichert: {backup}")
+    salt = salt_for(WALLET_DIR, create=True)
+    launch(path, blank_hash(salt))
+    ok = bool(unlocked())
+    MARKER.parent.mkdir(parents=True, exist_ok=True)
+    MARKER.write_text("ok\n" if ok else "versucht\n")
+    log("neue leere Brieftasche " + ("offen" if ok else "NICHT offen"))
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

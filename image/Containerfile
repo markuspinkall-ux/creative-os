@@ -140,6 +140,7 @@ COPY widgets/creative-widgets.desktop /usr/share/applications/creative-widgets.d
 COPY widgets/creative-widgets.svg /usr/share/icons/hicolor/scalable/apps/creative-widgets.svg
 COPY shell/session/creative-session /usr/bin/creative-session
 COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
+COPY shell/session/creative-wallet-setup /usr/libexec/creative-wallet-setup
 COPY shell/session/creative.desktop /usr/share/wayland-sessions/creative.desktop
 COPY shell/session/creative-graphical-session.service /usr/lib/systemd/user/creative-graphical-session.service
 COPY shell/session/kde-portal.conf /usr/lib/systemd/user/plasma-xdg-desktop-portal-kde.service.d/50-creative-session.conf
@@ -215,7 +216,7 @@ COPY shell/creative_shell/qml/Creative/icons/twitch.svg /usr/share/icons/hicolor
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 
 # Creative OS ist die einzige Sitzung im Anmeldebildschirm
-RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/bin/creative-webapp \
+RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/libexec/creative-wallet-setup /usr/bin/creative-webapp \
  && rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop
 
 # ---------------------------------------------------------------------------
