@@ -27,7 +27,12 @@ STAMP
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ -d "$here/installer" ]; then
     cp "$here/installer/anaconda-gtk.css" "$work/upd/anaconda-gtk.css"
-    mkdir -p "$work/upd/usr/share/anaconda/pixmaps" "$work/upd/etc/gtk-3.0"
+    mkdir -p "$work/upd/usr/share/anaconda/pixmaps" "$work/upd/etc/gtk-3.0" "$work/upd/etc/anaconda/conf.d"
+    # Sicherer Weg: Anaconda lädt das eigene Stylesheet über seine Konfiguration
+    # (custom_stylesheet, Vorrang vor den Fedora-Farben); updates.img legt sich über das System.
+    cp "$here/installer/anaconda-gtk.css" "$work/upd/usr/share/anaconda/creative-gtk.css"
+    printf '[User Interface]\ncustom_stylesheet = /usr/share/anaconda/creative-gtk.css\n' \
+        > "$work/upd/etc/anaconda/conf.d/99-creative-os.conf"
     cp "$here"/installer/pixmaps/*.png "$work/upd/usr/share/anaconda/pixmaps/"
     # Bilder während der Installation: Creative OS statt Fedora-Hinweise
     mkdir -p "$work/upd/usr/share/anaconda/pixmaps/rnotes/en" "$work/upd/usr/share/anaconda/pixmaps/rnotes/de"

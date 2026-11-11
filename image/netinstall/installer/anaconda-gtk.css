@@ -17,7 +17,7 @@
     border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 .logo {
-    background-image: url('/run/install/updates/usr/share/anaconda/pixmaps/sidebar-logo.png');
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-logo.png');
     background-position: 50% 28px;
     background-repeat: no-repeat;
     background-color: transparent;
@@ -41,7 +41,7 @@ AnacondaSpokeWindow #nav-box GtkButton {
 }
 AnacondaSpokeWindow #nav-box button:hover { background-color: #a3c1ff; }
 AnacondaSpokeWindow #nav-box label { color: @creative_text; }
-AnacondaLayoutIndicator {
+AnacondaLayoutIndicator, AnacondaLayoutIndicator label {
     background-color: @creative_raised;
     color: @creative_text;
     border-radius: 8px;

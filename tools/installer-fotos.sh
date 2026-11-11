@@ -39,6 +39,13 @@ OVMF_VARS=$(ls /usr/share/OVMF/OVMF_VARS_4M.fd /usr/share/OVMF/OVMF_VARS.fd 2>/d
 n=0
 qmp() { printf '{"execute":"qmp_capabilities"}\n%s\n' "$1" | timeout 5 socat - UNIX-CONNECT:"$W/qmp.sock" >/dev/null 2>&1; }
 key() { for k in "$@"; do qmp "{\"execute\":\"send-key\",\"arguments\":{\"keys\":[{\"type\":\"qcode\",\"data\":\"$k\"}]}}"; sleep 0.4; done; }
+click() {  # absolute Mausposition (usb-tablet, 0…32767) und Linksklick
+    x=$(( $1 * 32767 / 1280 )); y=$(( $2 * 32767 / 800 ))
+    qmp "{\"execute\":\"input-send-event\",\"arguments\":{\"events\":[{\"type\":\"abs\",\"data\":{\"axis\":\"x\",\"value\":$x}},{\"type\":\"abs\",\"data\":{\"axis\":\"y\",\"value\":$y}}]}}"
+    sleep 0.3
+    qmp '{"execute":"input-send-event","arguments":{"events":[{"type":"btn","data":{"down":true,"button":"left"}}]}}'; sleep 0.15
+    qmp '{"execute":"input-send-event","arguments":{"events":[{"type":"btn","data":{"down":false,"button":"left"}}]}}'
+}
 # Bildschirmfoto; doppelte (unveränderte) Bilder werden verworfen
 shot() {
     qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$W/tmp.ppm\"}}"; sleep 1
@@ -66,10 +73,13 @@ stop() { kill "$(cat "$W/qemu.pid")" 2>/dev/null; sleep 3; }
 
 echo "=== 1) Startmenü und Übersicht des Installers"
 boot "$W/iso/umschauen.iso" || { echo "QEMU startet nicht"; exit 1; }
-sleep 12; shot startmenue
-key down; sleep 1; shot startmenue-auswahl; key up
+# Startmenü abwarten (UEFI braucht ein paar Sekunden), dabei immer wieder fotografieren
+for i in $(seq 1 20); do sleep 2; shot startmenue; done
+key down; sleep 1; shot startmenue-auswahl; key up; sleep 1
 key ret
 for i in $(seq 1 30); do sleep 10; shot installer; done
+# Übersicht → „Benutzer anlegen“ antippen (Position aus der Übersicht bei 1280×800)
+click 979 397; sleep 6; shot benutzer
 stop
 
 echo "=== 2) Vollautomatische Installation (Fortschritt)"
