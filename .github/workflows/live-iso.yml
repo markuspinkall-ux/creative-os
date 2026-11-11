@@ -58,9 +58,9 @@ jobs:
         uses: ublue-os/titanoboa@main
         with:
           image-ref: localhost/creative-live:${{ env.VARIANT }}
-          iso-dest: ${{ github.workspace }}/creative-os-${{ env.VARIANT }}-live.iso
       - name: Speicher freigeben
         run: |
+          mv "${{ steps.iso.outputs.iso-dest }}" "$GITHUB_WORKSPACE/creative-os-$VARIANT-live.iso"
           sudo podman rmi -af >/dev/null 2>&1 || true
           sudo podman system prune -af >/dev/null 2>&1 || true
           ls -lh *.iso; df -h /
