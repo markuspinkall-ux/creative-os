@@ -307,6 +307,10 @@ class Converter(QMainWindow):
         self.quality = QComboBox()
         for key, label in QUALITIES:
             self.quality.addItem(label, key)
+        popup = self.quality.view().window()      # runde Ecken ohne weiße Kanten
+        popup.setWindowFlags(popup.windowFlags() | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        popup.setStyleSheet("background:transparent;")
         s.addWidget(self.quality)
         self.cover = QCheckBox("Cover einbetten")
         self.cover.setChecked(True)
