@@ -8,12 +8,15 @@ import re
 import shutil
 import socket
 import subprocess
+import time
 from pathlib import Path
 
 from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QProcess, QProcessEnvironment, QTimer, QUrl, Signal, Slot
 
 from creative_shell import config as shell_config
 from creative_shell.runner import Runner, spawn_detached
+
+from .updateprogress import UpdateProgress, read_rx_bytes
 
 
 def _read(path):
@@ -230,30 +233,29 @@ class SystemModel(QObject):
         env.insert("LANG", "C")
         p.setProcessEnvironment(env)
         p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        st = {"buf": "", "out": [], "need": 0, "got": 0}
+        st = {"buf": "", "out": [], "progress": UpdateProgress(), "started": time.monotonic()}
         self._set_upd(progress=-1, progressText="Warte auf dein Passwort …")
+
+        def show():
+            state = st["progress"].state()
+            if not st["out"]:
+                return                                   # noch keine Ausgabe: Passwortabfrage läuft
+            self._set_upd(progress=state["progress"], progressText=state["text"])
 
         def handle(line):
             st["out"].append(line)
-            low = line.lower()
-            m = re.search(r"layers needed:\s*(\d+)\s*\(([^)]*)\)", low)
-            if m:
-                st["need"] = int(m.group(1))
-                self._set_upd(progress=0, progressText=f"Lade {st['need']} Teile ({m.group(2).upper().replace('.', ',')}) …")
-                return
-            if "fetching" in low and ("done" in low or "layer" in low or "chunk" in low):
-                if "done" in low or st["need"] == 0:
-                    st["got"] += 1
-                if st["need"]:
-                    pct = min(95, int(st["got"] * 95 / st["need"]))
-                    self._set_upd(progress=pct, progressText=f"Teil {min(st['got'], st['need'])} von {st['need']} geladen …")
-                return
-            if "receiving" in low or "pulling" in low or "checking out" in low:
-                self._set_upd(progressText="Update wird geladen …")
-            elif "staging deployment" in low or "writing objects" in low:
-                self._set_upd(progress=97, progressText="Wird für den nächsten Neustart vorbereitet …")
-            elif "no upgrade available" in low or "no updates available" in low:
-                self._set_upd(progress=100, progressText="Kein neues Update.")
+            st["progress"].feed(line)
+            show()
+
+        def tick():
+            st["progress"].sample(time.monotonic() - st["started"], read_rx_bytes())
+            show()
+
+        timer = QTimer(p)
+        timer.setInterval(1000)
+        timer.timeout.connect(tick)
+        timer.start()
+        tick()
 
         def read():
             st["buf"] += bytes(p.readAllStandardOutput()).decode("utf-8", "replace")
@@ -264,6 +266,7 @@ class SystemModel(QObject):
                     handle(line.strip())
 
         def finished(code, status):
+            timer.stop()
             read()
             if st["buf"].strip():
                 handle(st["buf"].strip())
