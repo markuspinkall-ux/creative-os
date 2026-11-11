@@ -16,5 +16,7 @@ COPY installer/org.creativeos.installer.policy /usr/share/polkit-1/actions/org.c
 COPY installer/creative-installer.desktop /usr/share/applications/creative-installer.desktop
 COPY shell/creative_shell/qml/Creative/icons/rocket.svg /usr/share/icons/hicolor/scalable/apps/creative-installer.svg
 COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
+# aktuelle Graphit-Bausteine (das Basis-Abbild kann älter sein als der Installer)
+COPY shell/creative_shell/qml/Creative /usr/lib/creative-shell/creative_shell/qml/Creative
 
 RUN bash /src/live/build.sh "$VARIANT" && rm -rf /src
