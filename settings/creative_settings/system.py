@@ -16,7 +16,7 @@ from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QProcess, QPro
 from creative_shell import config as shell_config
 from creative_shell.runner import Runner, spawn_detached
 
-from .updateprogress import UpdateProgress, read_rx_bytes
+from .updateprogress import UpdateProgress, read_rx_bytes, read_wx_bytes
 
 
 def _read(path):
@@ -75,6 +75,25 @@ def disk_text():
             continue
     return "Unbekannt"
 
+
+
+UPDATE_HISTORY = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-os" / "update-zeiten.json"
+
+
+def _load_update_history():
+    """Gemessene Zeiten vom letzten Update (Entpack-Geschwindigkeit, Dauer des Einrichtens)."""
+    try:
+        return json.loads(UPDATE_HISTORY.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_update_history(data):
+    try:
+        UPDATE_HISTORY.parent.mkdir(parents=True, exist_ok=True)
+        UPDATE_HISTORY.write_text(json.dumps(data))
+    except OSError:
+        pass
 
 class SystemModel(QObject):
     changed = Signal()
@@ -233,7 +252,7 @@ class SystemModel(QObject):
         env.insert("LANG", "C")
         p.setProcessEnvironment(env)
         p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        st = {"buf": "", "out": [], "progress": UpdateProgress(), "started": time.monotonic()}
+        st = {"buf": "", "out": [], "progress": UpdateProgress(_load_update_history()), "started": time.monotonic()}
         self._set_upd(progress=-1, progressText="Warte auf dein Passwort …")
 
         def show():
@@ -248,7 +267,7 @@ class SystemModel(QObject):
             show()
 
         def tick():
-            st["progress"].sample(time.monotonic() - st["started"], read_rx_bytes())
+            st["progress"].sample(time.monotonic() - st["started"], read_rx_bytes(), read_wx_bytes())
             show()
 
         timer = QTimer(p)
@@ -273,6 +292,9 @@ class SystemModel(QObject):
             if status != QProcess.ExitStatus.NormalExit:
                 code = -1
             out = "\n".join(st["out"])
+            if code == 0 and st["progress"].total:
+                st["progress"].finish(time.monotonic() - st["started"])
+                _save_update_history(st["progress"].history())
             self._set_upd(progress=100 if code == 0 else -1, progressText="")
             p.deleteLater()
             done(code, out, out)
