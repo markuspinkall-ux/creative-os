@@ -78,6 +78,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list 2>/dev/null || true
+          getent hosts archive.ubuntu.com >/dev/null || { echo 'DNS gestört – nehme 1.1.1.1/8.8.8.8'; sudo rm -f /etc/resolv.conf; printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' | sudo tee /etc/resolv.conf >/dev/null; }
           sudo apt-get -o Acquire::Retries=3 update -qq
           sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat python3-pil dosfstools >/dev/null
           sudo chmod 666 /dev/kvm
