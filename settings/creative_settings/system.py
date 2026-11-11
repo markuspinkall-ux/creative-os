@@ -585,7 +585,9 @@ class LookModel(QObject):
             return
         self._design, self._accent = new
         self.changed.emit()
-        _look.apply_system()           # GTK-, KDE- und Terminal-Farben
+        _look.apply_system()           # GTK-, KDE- und Terminal-Farben, Bildschirmsperre
+        # Anmeldebildschirm (läuft vor der Anmeldung): Design systemweit merken
+        spawn_detached(["pkexec", "/usr/libexec/creative-login-look", *new])
         # Taskleiste lädt sich selbst neu; dieses Fenster startet mit dem neuen Design neu
         spawn_detached(["creative-settings", "--page", "look"])
         QTimer.singleShot(600, QCoreApplication.quit)

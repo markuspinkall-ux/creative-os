@@ -150,6 +150,7 @@ COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
 # KDE-Sperrbildschirm nur optisch anpassen; Authentifizierung bleibt original.
 COPY shell/lockscreen/style-lockscreen.py shell/lockscreen/install-lockscreen.sh /tmp/creative-lockscreen/
 COPY login/creative/background.svg /usr/share/creative-os/lockscreen/background.svg
+COPY login/creative/background-light.svg /usr/share/creative-os/lockscreen/background-light.svg
 RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
@@ -505,6 +506,9 @@ RUN if rpm -q obs-studio >/dev/null 2>&1; then \
 RUN dnf install -y --skip-unavailable sddm sddm-wayland-plasma && dnf clean all
 COPY login/creative /usr/share/sddm/themes/creative
 COPY login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/10-creative.conf
+# Design des Anmeldebildschirms (Graphit/Porzellan) – gesetzt aus Einstellungen → Darstellung
+COPY --chmod=755 login/creative-login-look /usr/libexec/creative-login-look
+COPY login/org.creativeos.login-look.policy /usr/share/polkit-1/actions/org.creativeos.login-look.policy
 RUN (systemctl disable plasmalogin.service 2>/dev/null || true) \
  && systemctl enable --force sddm.service
 

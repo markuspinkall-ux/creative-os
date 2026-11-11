@@ -79,6 +79,8 @@ def outputs():
     files[ROOT / "theme/konsole/CreativePorzellan.profile"] = prof
     wall = (CREATIVE / "wallpapers/graphit.svg").read_text()
     files[CREATIVE / "wallpapers-light/porzellan.svg"] = wall_light(wall)
+    login_bg = (ROOT / "login/creative/background.svg").read_text()
+    files[ROOT / "login/creative/background-light.svg"] = wall_light(login_bg)
     return files
 
 

@@ -35,6 +35,13 @@ if [ "$design" = porzellan ] || [ -n "$current" ]; then
         plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
     fi
 fi
+# Bildschirmsperre: heller oder dunkler Hintergrund
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+    bg=/usr/share/creative-os/lockscreen/background.svg
+    [ "$design" = porzellan ] && [ -f /usr/share/creative-os/lockscreen/background-light.svg ] \
+        && bg=/usr/share/creative-os/lockscreen/background-light.svg
+    kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key Image "file://$bg"
+fi
 # Terminal
 if command -v kwriteconfig6 >/dev/null 2>&1; then
     kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile "$scheme.profile"
