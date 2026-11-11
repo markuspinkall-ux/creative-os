@@ -1,84 +1,57 @@
 #!/bin/sh
-# Creative 3D – KI einmalig einrichten (in den Benutzerordner, ohne sudo).
-#   ~/.local/share/creative-3d/
-#     bin/uv        Paketwerkzeug (holt auch ein passendes Python 3.11)
-#     venv/         PyTorch (CUDA), TripoSR-Abhängigkeiten
-#     TripoSR/      Quellcode von TripoSR (MIT, fester Stand)
-#     hf/ u2net/    Modelle: TripoSR (~1,7 GB) und Hintergrund-Entfernung
-#     ready         Markierung „fertig eingerichtet“
+# Creative 3D – KI (TRELLIS) einmalig einrichten, ohne sudo.
+#   Container:  ghcr.io/markuspinkall-ux/creative-trellis:latest  (≈ 14 GB, fertig kompiliert)
+#   Modelle:    ~/.local/share/creative-3d/modelle  (≈ 4 GB: TRELLIS, DINOv2, Hintergrund-Entfernung)
+#   Markierung: ~/.local/share/creative-3d/trellis-ready
 # Ausgabe: Zeilen „STEP <n> <gesamt> <text>“ für die Fortschrittsanzeige.
-#   creative3d-setup            einrichten / reparieren
+#   creative3d-setup              einrichten / reparieren
 #   creative3d-setup --entfernen  alles wieder löschen
 set -eu
 DATA="${CREATIVE3D_HOME:-$HOME/.local/share/creative-3d}"
-TRIPOSR_COMMIT="107cefdc244c39106fa830359024f6a2f1c78871"
-TORCH_VERSION="2.7.1"
-TOTAL=7
+IMAGE="${CREATIVE3D_IMAGE:-ghcr.io/markuspinkall-ux/creative-trellis:latest}"
+TOTAL=5
 step() { echo "STEP $1 $TOTAL $2"; }
+fail() { echo "FEHLER: $*"; exit 1; }
 
 if [ "${1:-}" = "--entfernen" ]; then
+    podman rmi -f "$IMAGE" >/dev/null 2>&1 || true
     rm -rf "$DATA"
     echo "Creative-3D-KI entfernt."
     exit 0
 fi
-mkdir -p "$DATA/bin" "$DATA/hf" "$DATA/u2net"
-rm -f "$DATA/ready"
+rm -f "$DATA/trellis-ready" "$DATA/ready"
+
+# Reste der früheren TripoSR-Einrichtung (≈ 5 GB) aufräumen
+for old in venv TripoSR hf u2net bin python cache; do
+    [ -e "$DATA/$old" ] && rm -rf "${DATA:?}/$old" && echo "Alte TripoSR-Daten entfernt: $old"
+done
+mkdir -p "$DATA/modelle"
 
 step 1 "Prüfe die Grafikkarte …"
-INDEX="https://download.pytorch.org/whl/cpu"
-if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-    cap=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d ' ')
-    name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
-    major=${cap%%.*}
-    if [ -n "$major" ] && [ "$major" -ge 10 ] 2>/dev/null; then
-        INDEX="https://download.pytorch.org/whl/cu128"   # RTX 50 (Blackwell) braucht CUDA 12.8
-    else
-        INDEX="https://download.pytorch.org/whl/cu126"
-    fi
-    echo "Grafikkarte: $name (Rechenstufe $cap)"
-else
-    echo "Keine NVIDIA-Grafikkarte gefunden – es läuft auf dem Prozessor (deutlich langsamer)."
+command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 \
+    || fail "Creative 3D braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Creative OS."
+nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1 | sed 's/^/Grafikkarte: /'
+mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
+[ "${mem:-0}" -lt 11000 ] 2>/dev/null && echo "Hinweis: Unter 12 GB Grafikspeicher kann TRELLIS zu wenig Speicher haben."
+
+step 2 "Prüfe den Container-Zugriff auf die Grafikkarte …"
+command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Creative OS aktualisieren."
+if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
+    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Creative OS aktualisieren und neu starten."
 fi
 
-step 2 "Lade das Paketwerkzeug uv …"
-if [ ! -x "$DATA/bin/uv" ]; then
-    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$DATA/bin" UV_NO_MODIFY_PATH=1 sh >/dev/null
-fi
-UV="$DATA/bin/uv"
-export UV_CACHE_DIR="$DATA/cache" UV_PYTHON_INSTALL_DIR="$DATA/python"
+step 3 "Lade den TRELLIS-Container (≈ 14 GB, das dauert eine Weile) …"
+podman pull "$IMAGE" 2>&1 | grep -v '^Writing manifest' || fail "Der TRELLIS-Container ließ sich nicht laden."
+podman image exists "$IMAGE" || fail "Der TRELLIS-Container fehlt nach dem Laden."
 
-step 3 "Richte Python 3.11 ein …"
-[ -x "$DATA/venv/bin/python" ] || "$UV" venv --quiet --python 3.11 "$DATA/venv"
-PY="$DATA/venv/bin/python"
+step 4 "Lade die KI-Modelle (≈ 4 GB) …"
+podman run --rm --security-opt label=disable -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
+    || fail "Die Modelle ließen sich nicht laden."
 
-step 4 "Lade PyTorch (ca. 2–3 GB, das dauert etwas) …"
-"$UV" pip install --python "$PY" "torch==$TORCH_VERSION" --index-url "$INDEX"
+step 5 "Teste die Grafikkarte im Container …"
+podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entrypoint python3 "$IMAGE" -c \
+    "import torch; assert torch.cuda.is_available(), 'keine Grafikkarte'; print('Grafikkarte im Container:', torch.cuda.get_device_name(0))" \
+    || fail "Der Container sieht die Grafikkarte nicht. Bitte neu starten und erneut versuchen."
 
-step 5 "Lade die übrigen Bausteine …"
-"$UV" pip install --python "$PY" "numpy<2" "omegaconf==2.3.0" "einops==0.7.0" "transformers==4.35.0" \
-    "trimesh==4.0.5" "huggingface-hub<1" "rembg[cpu]==2.0.59" "imageio" "scikit-image" "pillow" "networkx"
-site=$("$PY" -c "import sysconfig; print(sysconfig.get_paths()['purelib'])")
-mkdir -p "$site/torchmcubes"
-cp "$(dirname "$0")/torchmcubes_shim.py" "$site/torchmcubes/__init__.py"
-
-step 6 "Lade TripoSR …"
-rm -rf "$DATA/TripoSR.neu"
-mkdir -p "$DATA/TripoSR.neu"
-curl -fsSL "https://codeload.github.com/VAST-AI-Research/TripoSR/tar.gz/$TRIPOSR_COMMIT" \
-    | tar -xz -C "$DATA/TripoSR.neu" --strip-components=1
-rm -rf "$DATA/TripoSR"
-mv "$DATA/TripoSR.neu" "$DATA/TripoSR"
-
-step 7 "Lade das 3D-Modell (ca. 1,7 GB) und die Hintergrund-Entfernung …"
-HF_HOME="$DATA/hf" U2NET_HOME="$DATA/u2net" "$PY" - <<'PYEOF'
-from huggingface_hub import hf_hub_download
-for name in ("config.yaml", "model.ckpt"):
-    hf_hub_download("stabilityai/TripoSR", name)
-hf_hub_download("facebook/dino-vitb16", "config.json")
-import rembg
-rembg.new_session()
-import torch
-print("PyTorch", torch.__version__, "· Grafikkarte:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "keine")
-PYEOF
-date +%s > "$DATA/ready"
+date +%s > "$DATA/trellis-ready"
 echo "FERTIG"

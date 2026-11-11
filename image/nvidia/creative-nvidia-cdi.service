@@ -1,0 +1,16 @@
+[Unit]
+Description=NVIDIA-Grafikkarte für Container freigeben (CDI, z. B. Creative 3D)
+# Läuft bei jedem Start neu – so passt die Beschreibung immer zur installierten Treiberversion.
+After=systemd-modules-load.service local-fs.target
+ConditionPathExists=/usr/bin/nvidia-ctk
+
+[Service]
+Type=oneshot
+# nvidia-smi lädt bei Bedarf das Kernelmodul; ohne NVIDIA-Karte endet der Dienst still.
+ExecCondition=/usr/bin/nvidia-smi -L
+ExecStart=/usr/bin/mkdir -p /run/cdi
+ExecStart=/usr/bin/nvidia-ctk cdi generate --output=/run/cdi/nvidia.yaml --quiet
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

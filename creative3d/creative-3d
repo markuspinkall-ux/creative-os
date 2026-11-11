@@ -1,10 +1,11 @@
 #!/usr/bin/python3
-"""Creative 3D – aus einem Foto eine 3D-Figur machen (TripoSR, läuft lokal).
+"""Creative 3D – aus einem Foto eine 3D-Figur machen (TRELLIS von Microsoft, läuft lokal).
 
 Links das Bild (ziehen und ablegen oder wählen), rechts die drehbare Vorschau,
-darunter Export als GLB, OBJ, STL und PLY. Die KI selbst (PyTorch, TripoSR,
-Modell, zusammen ca. 5 GB) richtet die App beim ersten Start einmalig im
-Benutzerordner ein – so bleibt das System-Abbild klein.
+darunter Export als GLB, OBJ, STL und PLY. TRELLIS läuft in einem fertig
+kompilierten Container auf der NVIDIA-Grafikkarte; Container (≈ 14 GB) und
+Modelle (≈ 4 GB) richtet die App beim ersten Start einmalig ein – so bleibt
+das System-Abbild klein.
 """
 
 import json
@@ -27,15 +28,17 @@ except ImportError:
     pass
 
 LIB = Path("/usr/lib/creative-3d")
-if not (LIB / "creative3d_worker.py").is_file():
+if not (LIB / "creative3d_softview.py").is_file():
     LIB = Path(__file__).resolve().parent                     # aus dem Quellordner gestartet
 sys.path.insert(0, str(LIB))
 DATA = Path(os.environ.get("CREATIVE3D_HOME") or Path.home() / ".local/share/creative-3d")
 SETUP = LIB / "creative3d-setup"
 OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-3d"
 IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
-DETAIL = [(256, "Normal"), (320, "Hoch"), (384, "Sehr hoch")]
-FORMATS = [("glb", "GLB", "Für Blender, Spiele-Engines, Web und AR"), ("obj", "OBJ", "Universell, mit Farben je Punkt"),
+IMAGE = os.environ.get("CREATIVE3D_IMAGE", "ghcr.io/markuspinkall-ux/creative-trellis:latest")
+QUALITY = [("normal", "Normal (≈ 1–2 Min.)"), ("hoch", "Hoch – schärfere Textur (≈ 3–5 Min.)")]
+FORMATS = [("glb", "GLB", "Für Blender, Spiele-Engines, Web und AR – mit Textur"),
+           ("obj", "OBJ", "Universell, mit Textur (MTL + PNG)"),
            ("stl", "STL", "Für den 3D-Druck, 10 cm hoch"), ("ply", "PLY", "Punktwolken- und Netz-Werkzeuge")]
 
 STYLE = """
@@ -68,7 +71,7 @@ STYLE = """
 
 
 def ready():
-    return (DATA / "ready").is_file() and (DATA / "venv/bin/python").is_file()
+    return (DATA / "trellis-ready").is_file()
 
 
 def gpu_name():
@@ -299,26 +302,15 @@ class Creative3D(QMainWindow):
         self.drop.clicked.connect(self.choose_image)
         self.drop.dropped.connect(self.set_image)
         lv.addWidget(self.drop, 1)
-        self.background = QCheckBox("Hintergrund automatisch entfernen")
-        self.background.setChecked(True)
-        lv.addWidget(self.background)
+        hint = QLabel("Der Hintergrund wird automatisch entfernt und das Motiv zugeschnitten.", objectName="muted")
+        hint.setWordWrap(True)
+        lv.addWidget(hint)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Detailstufe"))
+        row.addWidget(QLabel("Qualität"))
         self.detail = QComboBox()
-        for res, label in DETAIL:
-            self.detail.addItem(label, res)
+        for key, label in QUALITY:
+            self.detail.addItem(label, key)
         row.addWidget(self.detail, 1)
-        lv.addLayout(row)
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Größe im Bild"))
-        self.fill = QSlider(Qt.Orientation.Horizontal)
-        self.fill.setRange(70, 95)
-        self.fill.setValue(85)
-        self.fill.setToolTip("Wie viel vom Bild die Figur einnimmt, bevor die KI sie liest")
-        self.fill_label = QLabel("85 %")
-        self.fill.valueChanged.connect(lambda v: self.fill_label.setText(f"{v} %"))
-        row.addWidget(self.fill, 1)
-        row.addWidget(self.fill_label)
         lv.addLayout(row)
         lv.addWidget(QLabel("SKELETT", objectName="section"))
         self.skeleton = QComboBox()
@@ -401,10 +393,11 @@ class Creative3D(QMainWindow):
         title = QLabel("KI einmalig einrichten")
         title.setStyleSheet("font-size:20px; font-weight:700;")
         sv.addWidget(title)
-        text = QLabel("Creative 3D nutzt TripoSR, eine frei verfügbare KI (MIT-Lizenz), die komplett auf deinem "
-                      "PC läuft – dein Foto verlässt den Rechner nicht.\n\nDafür werden einmalig PyTorch, TripoSR "
-                      "und das Modell in deinen Benutzerordner geladen: zusammen etwa 5 GB, je nach Leitung "
-                      "10–30 Minuten. Das System selbst bleibt unverändert.", objectName="muted")
+        text = QLabel("Creative 3D nutzt TRELLIS von Microsoft, eine frei verfügbare KI (MIT-Lizenz), die komplett "
+                      "auf deiner NVIDIA-Grafikkarte läuft – dein Bild verlässt den Rechner nicht.\n\nDafür werden "
+                      "einmalig ein fertiger TRELLIS-Container (≈ 14 GB) und die Modelle (≈ 4 GB) geladen, je nach "
+                      "Leitung 20–60 Minuten. Das System selbst bleibt unverändert; alte TripoSR-Daten werden "
+                      "dabei gelöscht.", objectName="muted")
         text.setWordWrap(True)
         sv.addWidget(text)
         self.setup_button = QPushButton("KI einrichten", objectName="primary")
@@ -450,7 +443,7 @@ class Creative3D(QMainWindow):
         busy = self.proc.state() != QProcess.ProcessState.NotRunning
         is_ready = ready()
         gpu = gpu_name()
-        self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte – Prozessor")
+        self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte – TRELLIS braucht eine")
         self.stack.setCurrentIndex(0 if is_ready else 1)
         self.generate.setEnabled(is_ready and bool(self.image) and not busy)
         self.generate.setToolTip("" if is_ready else "Zuerst rechts die KI einrichten")
@@ -555,10 +548,20 @@ class Creative3D(QMainWindow):
             return
         self.counter += 1
         self.out = OUTPUT / time.strftime("%Y%m%d-%H%M%S")
-        args = [str(LIB / "creative3d_worker.py"), "--image", self.image, "--out", str(self.out),
-                "--resolution", str(self.detail.currentData()), "--foreground", f"{self.fill.value() / 100:.2f}"]
-        if not self.background.isChecked():
-            args.append("--keep-background")
+        self.out.mkdir(parents=True, exist_ok=True)
+        # Bild in den Ausgabeordner kopieren: Sonderzeichen im Pfad (:, ,) stören podman -v nicht
+        source = Path(self.image)
+        stem = "".join(c if c.isalnum() or c in "-_" else "_" for c in source.stem)[:60] or "bild"
+        copy = self.out / f"{stem}{source.suffix.lower() or '.png'}"
+        try:
+            shutil.copyfile(source, copy)
+        except OSError as error:
+            self.status.setText(f"Bild nicht lesbar: {error}")
+            return
+        args = ["run", "--rm", "--security-opt", "label=disable", "--device", "nvidia.com/gpu=all",
+                "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
+                "-v", f"{DATA / 'modelle'}:/cache", "-v", f"{self.out}:/out",
+                IMAGE, "--image", f"/out/{copy.name}", "--out", "/out", "--quality", str(self.detail.currentData())]
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONUNBUFFERED", "1")
         self.proc.setProcessEnvironment(env)
@@ -566,7 +569,7 @@ class Creative3D(QMainWindow):
         self.progress.setValue(0)
         self.progress.show()
         self.status.setText("Starte …")
-        self.proc.start(str(DATA / "venv/bin/python"), args)
+        self.proc.start("podman", args)
         self.refresh()
 
     def read_output(self):
@@ -601,8 +604,13 @@ class Creative3D(QMainWindow):
             self.status.setText(text)
         elif kind == "OK":
             try:
-                self.show_result(json.loads(rest))
-            except ValueError:
+                result = json.loads(rest)
+                # Der Container nennt Dateien relativ zu /out → Pfade auf diesem PC
+                result["files"] = {k: str(self.out / v) for k, v in result.get("files", {}).items()}
+                if result.get("input"):
+                    result["input"] = str(self.out / result["input"])
+                self.show_result(result)
+            except (ValueError, TypeError, AttributeError):
                 self.error = "Antwort der KI nicht lesbar."
         elif kind == "ERR":
             self.error = rest
@@ -714,6 +722,10 @@ class Creative3D(QMainWindow):
             target += "." + fmt
         try:
             shutil.copyfile(source, target)
+            if fmt == "obj":   # Material (.mtl) und Textur gehören dazu
+                for extra in source.parent.iterdir():
+                    if extra != source and extra.suffix.lower() in (".mtl", ".png", ".jpg", ".jpeg"):
+                        shutil.copyfile(extra, Path(target).parent / extra.name)
             self.status.setText(f"Gespeichert: {target.replace(str(Path.home()), '~')}")
         except OSError as error:
             QMessageBox.warning(self, "Speichern fehlgeschlagen", str(error))
@@ -749,7 +761,7 @@ def main():
     if selftest:
         assert not window.generate.isEnabled() and not window.result
         assert all(not b.isEnabled() for b in window.export_buttons)
-        assert (LIB / "creative3d_worker.py").is_file() and SETUP.is_file()
+        assert SETUP.is_file() and (LIB / "creative3d_softview.py").is_file()
         import creative3d_softview as sv
         vertices, faces = sv.uv_sphere()
         window.soft.set_mesh(vertices, faces, None, None)
