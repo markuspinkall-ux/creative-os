@@ -36,7 +36,7 @@ ApplicationWindow {
     property string hostName: "creative-os"
     property bool understood: false
     property string hint: ""
-    property bool logOpen: false
+    property bool logOpen: autoMode
 
     // Testlauf in der VM (creative-installer --auto): Schritte nacheinander selbst ausfüllen
     Timer {

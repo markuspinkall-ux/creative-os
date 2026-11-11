@@ -28,6 +28,9 @@ install -Dm644 "$SRC/creative-live-setup.service" /usr/lib/systemd/system/creati
 systemctl enable creative-live-setup.service
 install -Dm644 "$SRC/49-creative-installer.rules" /etc/polkit-1/rules.d/49-creative-installer.rules
 
+# Live-Sitzung: keine automatische Bildschirmsperre
+sed -i 's/^Autolock=true/Autolock=false/; s/^LockOnResume=true/LockOnResume=false/' /usr/share/creative-os/xdg/kscreenlockerrc || true
+
 # 4) Anaconda als Unterbau der Installation (+ Fedora-Installer für Sonderfälle, im Graphit-Look)
 dnf install -y --allowerasing anaconda-live anaconda-core libblockdev-btrfs libblockdev-lvm libblockdev-dm openssl
 mkdir -p /usr/share/anaconda/pixmaps /etc/anaconda/conf.d

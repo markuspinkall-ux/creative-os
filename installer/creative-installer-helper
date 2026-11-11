@@ -33,6 +33,14 @@ def out(line):
     print(line, flush=True)
 
 
+def journal(line):
+    """Auch ins Systemprotokoll (im VM-Test landet es so auf der seriellen Konsole)."""
+    try:
+        subprocess.run(["logger", "-t", "creative-installer", "--", line[:900]], timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def lsblk():
     res = subprocess.run(["lsblk", "--json", "--bytes", "--paths", "-o",
                           "NAME,PATH,SIZE,MODEL,TRAN,TYPE,RM,RO,FSTYPE,LABEL"],
@@ -130,13 +138,19 @@ def install(cfg):
 
     threading.Thread(target=creep, daemon=True).start()
     tail = []
+    exact = []
     for line in proc.stdout:
         line = line.rstrip()
         if not line:
             continue
         log.write(line + "\n")
         log.flush()
-        tail = (tail + [line])[-12:]
+        journal(line)
+        tail = (tail + [line])[-40:]
+        if exact is not None and exact and len(exact) < 4 and "exact error message" not in line.lower():
+            exact.append(line.strip())
+        if "exact error message" in line.lower():
+            exact = [""]
         out("L " + line[:300])
         hit = plan.stage_for(line, state["pct"])
         if hit:
@@ -148,7 +162,19 @@ def install(cfg):
             out(f"P {state['pct']} {state['text']}")
     code = proc.wait()
     if code != 0:
-        reason = next((t for t in reversed(tail) if re.search(r"error|fehler|failed|traceback", t, re.I)), tail[-1] if tail else "")
+        reason = " ".join(x for x in (exact or []) if x)
+        if not reason:
+            reason = next((t for t in reversed(tail) if re.search(r"error|fehler|failed|traceback", t, re.I)
+                           and "exact error message" not in t.lower()), tail[-1] if tail else "")
+        for t in tail:
+            journal("TAIL " + t)
+        try:
+            for extra in ("/tmp/anaconda.log", "/tmp/packaging.log", "/tmp/storage.log"):
+                if os.path.exists(extra):
+                    for t in open(extra, errors="replace").read().splitlines()[-30:]:
+                        journal(os.path.basename(extra) + ": " + t)
+        except OSError:
+            pass
         out(f"ERR Anaconda hat mit Fehler {code} abgebrochen. {reason}".strip())
         return 1
     out("P 100 Fertig")
