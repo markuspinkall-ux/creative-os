@@ -745,7 +745,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Creative 3D")
     app.setDesktopFileName("creative-3d")
-    window = Creative3D(preview_web=not selftest)
+    window = Creative3D(preview_web=not selftest and not os.environ.get("CREATIVE3D_NO_WEB"))
     if selftest:
         assert not window.generate.isEnabled() and not window.result
         assert all(not b.isEnabled() for b in window.export_buttons)

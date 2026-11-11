@@ -167,6 +167,27 @@ jobs:
             exit "$code"
           fi
 
+      - name: Oberflächen fotografieren (alle Apps, ohne Bildschirm)
+        if: matrix.variant == 'amd'
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          mkdir -p shots
+          sudo podman run --rm --network none --entrypoint /bin/sh \
+            -v "$PWD/tools/screenshots:/tools:ro,Z" -v "$PWD/shots:/out:Z" \
+            "localhost/creative-os:${{ matrix.variant }}-build" /tools/run.sh /out
+          sudo chown -R "$(id -u):$(id -g)" shots
+
+      - name: Bildschirmfotos hochladen
+        if: matrix.variant == 'amd' && always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: bildschirmfotos
+          path: shots/*.png
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Abbild in wiederverwendbare Schichten aufteilen
         if: steps.base.outputs.image == ''
         run: |
