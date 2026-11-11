@@ -82,7 +82,7 @@ if [ -d "$here/grub-theme" ] && command -v grub2-mkfont >/dev/null 2>&1; then
     if [ -f "$sans" ] && [ -f "$bold" ]; then
         # nur die nötigen Zeichen – sonst meldet GRUB „glyphs too large to fit on screen“
         # und bleibt im Textmodus (Latein + Umlaute, Gedankenstrich, Mittelpunkt, Pfeile)
-        ranges="0x20-0x7E,0xA0-0x17F,0x2013-0x2014,0x2022,0x2190-0x2193,0x2192"
+        ranges="0x20-0x7E,0xA0-0x17F,0x2013-0x2014,0x2022-0x2022,0x2190-0x2193"
         for n in 18 20; do grub2-mkfont -r "$ranges" -s "$n" -o "$theme_dir/sans-$n.pf2" "$sans"; done
         for n in 20 36; do grub2-mkfont -r "$ranges" -s "$n" -o "$theme_dir/bold-$n.pf2" "$bold"; done
     else
