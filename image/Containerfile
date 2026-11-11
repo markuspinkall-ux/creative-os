@@ -253,9 +253,9 @@ COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.d
 COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
 RUN chmod 755 /usr/bin/creative-podcast
 
-# Creative Mail: Qt-Client und Secret Service für Gmail.
+# Creative Mail: Qt-Client (IMAP/SMTP) und Secret Service für die Passwörter.
 RUN dnf install -y libsecret && dnf clean all
-COPY mail/gmail.py mail/creative-mail /usr/lib/creative-mail/
+COPY mail/mailcore.py mail/creative-mail /usr/lib/creative-mail/
 COPY mail/creative-mail.desktop /usr/share/applications/creative-mail.desktop
 COPY mail/creative-mail.svg /usr/share/icons/hicolor/scalable/apps/creative-mail.svg
 RUN chmod 755 /usr/lib/creative-mail/creative-mail \
