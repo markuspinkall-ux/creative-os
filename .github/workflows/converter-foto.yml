@@ -3,6 +3,8 @@ on:
   push:
     branches: [persoenlich-converter]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   foto:
     runs-on: ubuntu-24.04
@@ -16,7 +18,7 @@ jobs:
       - run: |
           mkdir -p fotos
           xvfb-run -s "-screen 0 860x720x24" python3 personal/creative-converter/test/foto.py fotos
-      - uses: actions/upload-artifact@v4
-        with:
-          name: converter-fotos
-          path: fotos
+      - run: |
+          cd fotos && git init -q -b converter-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Converter-Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" converter-fotos
