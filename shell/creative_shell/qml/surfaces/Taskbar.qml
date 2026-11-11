@@ -84,7 +84,7 @@ Item {
                     anchors.centerIn: parent
                     width: 1
                     height: 28
-                    color: Qt.rgba(1, 1, 1, 0.1)
+                    color: Theme.tint(0.1)
                 }
             }
 
@@ -107,6 +107,10 @@ Item {
                         tasks.activate(root.screenName, modelData.key, modelData.desktopId)
                     }
                     onMiddleClicked: tasks.launchNew(modelData.desktopId)
+                    onRightClicked: shell.toggleTaskMenu(root.screenName, {
+                        key: modelData.key, desktopId: modelData.desktopId, name: modelData.name,
+                        running: modelData.running, count: modelData.count
+                    }, mapToItem(null, width / 2, 0).x)
                 }
             }
         }
@@ -381,7 +385,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 1
                     height: 20
-                    color: Qt.rgba(1, 1, 1, 0.1)
+                    color: Theme.tint(0.1)
                 }
 
                 SvgIcon {

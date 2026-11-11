@@ -9,10 +9,33 @@ Item {
     width: 1920
     height: 1080
 
-    readonly property color textColor: "#dce6ff"
-    readonly property color muted: Qt.rgba(220 / 255, 230 / 255, 255 / 255, 0.6)
-    readonly property color accent: "#8fb3ff"
-    readonly property color dark: "#12151b"
+    // Design wie zuletzt in den Einstellungen gewählt (Graphit/Porzellan + Akzent),
+    // geschrieben von /usr/libexec/creative-login-look nach /var/lib/creative-os/login-look.json
+    property var look: ({ design: "graphit", accent: "blau" })
+    readonly property bool light: look.design === "porzellan"
+    readonly property var accents: ({ "blau": ["#8fb3ff", "#3d6fe0"], "gruen": ["#6fdcc0", "#1f9e7f"],
+                                      "orange": ["#ffb07a", "#d9773a"], "lila": ["#c3a6ff", "#7c4ddb"] })
+    readonly property color textColor: light ? "#1c2433" : "#dce6ff"
+    readonly property color muted: light ? Qt.rgba(28 / 255, 36 / 255, 51 / 255, 0.62) : Qt.rgba(220 / 255, 230 / 255, 255 / 255, 0.6)
+    readonly property color accent: (accents[look.accent] || accents["blau"])[light ? 1 : 0]
+    readonly property color accentText: light ? "#ffffff" : "#12151b"
+    readonly property color dark: light ? "#e9eef6" : "#12151b"
+    readonly property color flame: light ? "#d9773a" : "#ffb07a"
+    readonly property color okColor: light ? "#1f9e7f" : "#6fdcc0"
+    function tint(a) { return light ? Qt.rgba(20 / 255, 30 / 255, 50 / 255, a * 0.9) : Qt.rgba(1, 1, 1, a) }
+    function panel(a) { return light ? Qt.rgba(1, 1, 1, Math.min(1, a + 0.04)) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, a) }
+    function readLook() {
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== XMLHttpRequest.DONE)
+                return
+            try {
+                if (xhr.responseText) root.look = JSON.parse(xhr.responseText)
+            } catch (e) { }
+        }
+        xhr.open("GET", "file:///var/lib/creative-os/login-look.json")
+        xhr.send()
+    }
     readonly property string fontFamily: "Arial"
 
     property int userIndex: Math.max(0, userModel.lastIndex)
@@ -126,13 +149,13 @@ Item {
     Rectangle { anchors.fill: parent; color: root.dark }
     Image {
         anchors.fill: parent
-        source: Qt.resolvedUrl(config.background || "background.svg")
+        source: Qt.resolvedUrl(root.light ? "background-light.svg" : (config.background || "background.svg"))
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: width
         sourceSize.height: height
         asynchronous: true
     }
-    Rectangle { anchors.fill: parent; color: Qt.rgba(0.05, 0.06, 0.08, 0.55) }
+    Rectangle { anchors.fill: parent; color: root.light ? Qt.rgba(0.93, 0.95, 0.98, 0.35) : Qt.rgba(0.05, 0.06, 0.08, 0.55) }
 
     // ---- Uhr ------------------------------------------------------------------------
     Column {
@@ -186,7 +209,7 @@ Item {
                 anchors.centerIn: parent
                 visible: face.status !== Image.Ready
                 text: root.initials()
-                color: root.dark
+                color: root.accentText
                 font.family: root.fontFamily
                 font.pixelSize: text.length > 1 ? 36 : 40
                 font.bold: true
@@ -221,8 +244,8 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: 25
-                color: Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.92)
-                border.color: password.activeFocus ? root.accent : Qt.rgba(1, 1, 1, 0.12)
+                color: root.panel(0.92)
+                border.color: password.activeFocus ? root.accent : root.tint(0.12)
                 border.width: password.activeFocus ? 2 : 1
             }
             TextField {
@@ -253,7 +276,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: root.busy ? "…" : "→"
-                    color: root.dark
+                    color: root.accentText
                     font.pixelSize: 20
                     font.bold: true
                 }
@@ -270,7 +293,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.message || (keyboard && keyboard.capsLock ? "Feststelltaste ist aktiv" : " ")
-            color: "#ffb07a"
+            color: root.flame
             font.family: root.fontFamily
             font.pixelSize: 14
         }
@@ -285,8 +308,8 @@ Item {
         width: 520
         height: serverColumn.implicitHeight + 64
         radius: 20
-        color: Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.92)
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        color: root.panel(0.92)
+        border.color: root.tint(0.08)
 
         Column {
             id: serverColumn
@@ -302,7 +325,7 @@ Item {
                     id: statusDot
                     anchors.verticalCenter: parent.verticalCenter
                     width: 12; height: 12; radius: 6
-                    color: root.serverHealthy ? "#6fdcc0" : "#ffb07a"
+                    color: root.serverHealthy ? root.okColor : root.flame
                     SequentialAnimation on opacity {
                         running: root.serverView && root.serverHealthy
                         loops: Animation.Infinite
@@ -325,13 +348,13 @@ Item {
                 text: root.serverHealthy
                       ? "„Mein Server“ ist online. Alles andere ruht, der PC geht nicht in Bereitschaft."
                       : "„Mein Server“ antwortet gerade nicht. Melde dich an und prüfe ihn in der Systemsteuerung."
-                color: root.serverHealthy ? root.muted : "#ffb07a"
+                color: root.serverHealthy ? root.muted : root.flame
                 font.family: root.fontFamily
                 font.pixelSize: 15
                 lineHeight: 1.3
             }
 
-            Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { width: parent.width; height: 1; color: root.tint(0.08) }
 
             // Adressen
             Repeater {
@@ -374,7 +397,7 @@ Item {
                     id: backLabel
                     anchors.centerIn: parent
                     text: "Zurück zum normalen Modus"
-                    color: root.dark
+                    color: root.accentText
                     font.family: root.fontFamily
                     font.pixelSize: 15
                     font.bold: true
@@ -436,9 +459,9 @@ Item {
             model: userModel
             delegate: Rectangle {
                 width: 150; height: 44; radius: 22
-                color: index === root.userIndex ? Qt.rgba(143 / 255, 179 / 255, 255 / 255, 0.22)
-                                                : (um.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.8))
-                border.color: index === root.userIndex ? root.accent : Qt.rgba(1, 1, 1, 0.1)
+                color: index === root.userIndex ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.22)
+                                                : (um.containsMouse ? root.tint(0.1) : root.panel(0.8))
+                border.color: index === root.userIndex ? root.accent : root.tint(0.1)
                 Text {
                     anchors.centerIn: parent
                     text: model.realName || model.name
@@ -476,7 +499,7 @@ Item {
         width: row.implicitWidth + 28
         height: 44
         radius: 22
-        color: pm.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.8)
+        color: pm.containsMouse ? root.tint(0.12) : root.panel(0.8)
         Row {
             id: row
             anchors.centerIn: parent
@@ -502,5 +525,5 @@ Item {
     onLoginRequestedChanged: if (!loginRequested) backToMask.stop()
     onServerViewChanged: serverView ? root.forceActiveFocus() : password.forceActiveFocus()
 
-    Component.onCompleted: password.forceActiveFocus()
+    Component.onCompleted: { readLook(); password.forceActiveFocus() }
 }

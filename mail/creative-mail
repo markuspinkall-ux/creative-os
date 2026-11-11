@@ -42,6 +42,12 @@ AVATAR_COLORS = ["#8fb3ff", "#6fdcc0", "#ffb07a", "#d7a8ff", "#f29cc8", "#f2d58a
 C = {"ground": "#12151b", "surface": "#1c2029", "side": "#171a22", "raised": "#232836", "track": "#3a4252",
      "line": "#2a303d", "text": "#dce6ff", "muted": "#9aa6c4", "dim": "#6f7a92", "accent": "#8fb3ff",
      "accentText": "#12151b", "select": "#2a3a5c", "flame": "#ffb07a", "star": "#f2d58a", "danger": "#ff8a8e"}
+try:  # helles oder dunkles Design (Einstellungen → Darstellung)
+    from creative_look import is_light as _is_light, palette as _palette
+    C = _palette(C)
+    LIGHT = _is_light()
+except ImportError:
+    LIGHT = False
 
 STYLE = f"""
 * {{ font-family: "Arial", "Liberation Sans"; font-size: 13px; color: {C['text']}; }}

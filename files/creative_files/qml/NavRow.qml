@@ -10,13 +10,29 @@ Rectangle {
     property bool current: false
     property int indent: 0
     property bool ejectable: false
+    property string dropTarget: ""     // Ordner (oder "trash"), in den man hier ablegen kann
     signal clicked()
     signal ejectClicked()
 
     width: parent ? parent.width : 210
     height: 34
     radius: 9
-    color: current ? Qt.rgba(1, 1, 1, 0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
+    color: drop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
+           : current ? Theme.tint(0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
+    border.color: drop.containsDrag ? Theme.accent : "transparent"
+
+    DropArea {
+        id: drop
+        anchors.fill: parent
+        enabled: r.dropTarget.length > 0
+        onEntered: (drag) => { drag.accepted = drag.hasUrls }
+        onDropped: (d) => {
+            const mode = ((d.modifiers & Qt.ControlModifier) || d.proposedAction === Qt.CopyAction) ? "copy"
+                         : ((d.modifiers & Qt.ShiftModifier) ? "move" : "auto")
+            fm.dropUrls(d.urls, r.dropTarget, mode)
+            d.accept(Qt.CopyAction)
+        }
+    }
 
     Row {
         x: 12 + r.indent

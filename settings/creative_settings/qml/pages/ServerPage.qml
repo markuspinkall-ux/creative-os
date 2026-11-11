@@ -17,14 +17,14 @@ SettingsPage {
         width: parent.width
         height: 96
         radius: 16
-        color: server.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.1) : Qt.rgba(1, 1, 1, 0.03)
+        color: server.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.1) : Theme.tint(0.03)
         border.color: server.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35) : "transparent"
 
         Rectangle {
             x: 20
             anchors.verticalCenter: parent.verticalCenter
             width: 56; height: 56; radius: 16
-            color: server.active ? Theme.accent : Qt.rgba(1, 1, 1, 0.08)
+            color: server.active ? Theme.accent : Theme.tint(0.08)
             SvgIcon { anchors.centerIn: parent; name: server.active ? "server-dark" : "server"; size: 26 }
         }
         Column {
@@ -105,8 +105,8 @@ SettingsPage {
                     width: (grid.width - (grid.columns - 1) * 12) / grid.columns
                     height: 108
                     radius: 14
-                    color: modelData.selected ? Qt.rgba(1, 1, 1, 0.05) : (dm.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : Qt.rgba(1, 1, 1, 0.02))
-                    border.color: modelData.selected ? Theme.accent : Qt.rgba(1, 1, 1, 0.08)
+                    color: modelData.selected ? Theme.tint(0.05) : (dm.containsMouse ? Theme.tint(0.04) : Theme.tint(0.02))
+                    border.color: modelData.selected ? Theme.accent : Theme.tint(0.08)
                     border.width: modelData.selected ? 2 : 1
                     Column {
                         x: 16; y: 14
@@ -132,7 +132,7 @@ SettingsPage {
                                 width: tagText.implicitWidth + 14
                                 height: 20
                                 radius: 6
-                                color: modelData.selected ? Theme.accent : Qt.rgba(1, 1, 1, 0.08)
+                                color: modelData.selected ? Theme.accent : Theme.tint(0.08)
                                 Text {
                                     id: tagText
                                     anchors.centerIn: parent
@@ -146,7 +146,7 @@ SettingsPage {
                         }
                         Rectangle {
                             width: parent.width; height: 6; radius: 3
-                            color: Qt.rgba(1, 1, 1, 0.1)
+                            color: Theme.tint(0.1)
                             Rectangle { width: parent.width * modelData.used; height: 6; radius: 3; color: modelData.selected ? Theme.accent : "#5a6478" }
                         }
                         Text {

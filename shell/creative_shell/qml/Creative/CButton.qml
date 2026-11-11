@@ -18,7 +18,7 @@ Rectangle {
         ? (mouse.pressed ? Qt.darker("#e5484d", 1.15) : (mouse.containsMouse ? "#ec5d62" : "#e5484d"))
         : primary
         ? (mouse.pressed ? Qt.darker(Theme.accent, 1.15) : Theme.accent)
-        : (mouse.pressed ? Theme.pressed : (mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06)))
+        : (mouse.pressed ? Theme.pressed : (mouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06)))
 
     Text {
         id: label

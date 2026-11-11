@@ -17,7 +17,7 @@
     border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 .logo {
-    background-image: url('/run/install/updates/usr/share/anaconda/pixmaps/sidebar-logo.png');
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-logo.png');
     background-position: 50% 28px;
     background-repeat: no-repeat;
     background-color: transparent;
@@ -41,7 +41,7 @@ AnacondaSpokeWindow #nav-box GtkButton {
 }
 AnacondaSpokeWindow #nav-box button:hover { background-color: #a3c1ff; }
 AnacondaSpokeWindow #nav-box label { color: @creative_text; }
-AnacondaLayoutIndicator {
+AnacondaLayoutIndicator, AnacondaLayoutIndicator label {
     background-color: @creative_raised;
     color: @creative_text;
     border-radius: 8px;
@@ -157,3 +157,35 @@ infobar.info label, infobar.warning label, infobar.question label, infobar.error
 
 /* Passwort-Stärke */
 levelbar.discrete trough block.filled.high, levelbar.discrete trough block.filled.full { background: #6fdcc0; border-color: #6fdcc0; }
+
+/* ---- Wie der Desktop: Hintergrundbild hinter Übersicht und Fortschritt ---- */
+AnacondaHubWindow box.background, AnacondaStandaloneWindow box.background,
+AnacondaBaseStandalone box.background {
+    background-color: @creative_ground;
+    background-image: linear-gradient(rgba(18, 21, 27, 0.45), rgba(18, 21, 27, 0.45)),
+                      url('/usr/share/anaconda/pixmaps/creative-wallpaper.png');
+    background-size: cover;
+    background-position: center;
+}
+AnacondaHubWindow scrolledwindow, AnacondaHubWindow viewport,
+AnacondaStandaloneWindow notebook, AnacondaStandaloneWindow notebook > stack,
+AnacondaStandaloneWindow scrolledwindow, AnacondaStandaloneWindow viewport,
+AnacondaBaseStandalone notebook, AnacondaBaseStandalone notebook > stack,
+AnacondaBaseStandalone scrolledwindow, AnacondaBaseStandalone viewport {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+}
+/* Kacheln der Übersicht als Graphit-Karten */
+AnacondaSpokeSelector {
+    background-color: rgba(35, 40, 54, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 4px;
+}
+AnacondaSpokeSelector:hover { background-color: rgba(48, 55, 74, 0.92); }
+AnacondaSpokeSelector image { color: @creative_accent; -gtk-icon-style: symbolic; -gtk-icon-effect: none; opacity: 1; }
+#anaconda-spoke-selector-status { color: rgba(220, 230, 255, 0.6); }
+AnacondaHubWindow label, AnacondaStandaloneWindow label { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+
+AnacondaHubWindow button label, AnacondaStandaloneWindow button label { text-shadow: none; }

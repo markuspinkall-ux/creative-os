@@ -50,7 +50,7 @@ PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
-POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth")
+POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth", "taskmenu")
 SURFACES = POPUPS + ("bubble",)
 DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch")
 
@@ -118,6 +118,7 @@ class ShellController(QObject):
         self._open = {key: "" for key in POPUPS}   # welches Menü ist auf welchem Monitor offen
         self._panel_focus = ""                      # "calendar": Schnellzugriff zeigt den Kalender
         self._tray_menu_key = ""
+        self._task_menu = {}
         self._last_screen = ""
         self._primary_name = ""      # Hauptbildschirm laut KWin
         self._primary_proc = None
@@ -204,7 +205,7 @@ class ShellController(QObject):
         self._surfaces[name] = entry
         geo = screen.geometry()
         if self._layer:  # im Testmodus kein Hintergrund, sonst wäre der Desktop verdeckt
-            entry["bg"] = self._create(screen, "background", "Wallpaper.qml", geo.width(), geo.height(), False)
+            entry["bg"] = self._create(screen, "background", "Wallpaper.qml", geo.width(), geo.height(), True)
             _win_show(entry["bg"])
         entry["bar"] = self._create(screen, "bar", "Taskbar.qml", geo.width(), BAR_HEIGHT, False)
         _win_show(entry["bar"])
@@ -309,6 +310,9 @@ class ShellController(QObject):
             elif key == "appmenu":
                 entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
                                           self._popup_height(screen, 460), True, key)
+            elif key == "taskmenu":   # ganze Breite: die Karte sitzt über dem angeklickten Symbol
+                entry[key] = self._create(screen, "left", "TaskMenu.qml", screen.geometry().width(),
+                                          190 + POPUP_GAP, True, key)
             elif key == "chat":
                 entry[key] = self._create(screen, "right", "AssistantChat.qml", BUBBLE_WIDTH,
                                           self._popup_height(screen, 560), True, key)
@@ -384,6 +388,23 @@ class ShellController(QObject):
         self._tray_menu_key = item_key
         self._toggle(name, "appmenu")
 
+    @Slot(str, "QVariantMap", float)
+    def toggleTaskMenu(self, name, item, x):
+        """Rechtsklick auf ein Programm in der Taskleiste: Neues Fenster / Schließen."""
+        same = self._task_menu.get("key") == item.get("key")
+        if self._open["taskmenu"] == name and same:
+            self.closePopups()
+            return
+        last_key, last_time = self._last_auto_close
+        if last_key == f"taskmenu:{name}" and time.monotonic() - last_time < 0.35:
+            if same:
+                return                         # gerade durch diesen Klick geschlossen
+            self._last_auto_close = ("", 0.0)  # anderes Programm: Menü dort öffnen
+        if self._open["taskmenu"]:
+            self.closePopups()
+        self._task_menu = dict(item, x=float(x))
+        self._toggle(name, "taskmenu")
+
     # Sprechblase des Assistenten (nimmt keinen Fokus, verschwindet von selbst)
     def _bubble_screen(self):
         if self._last_screen in self._surfaces:
@@ -434,6 +455,7 @@ class ShellController(QObject):
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
     assistantMenuOpenOn = Property(str, lambda self: self._open["assistant"], notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
+    taskMenu = Property("QVariantMap", lambda self: dict(self._task_menu), notify=openChanged)
     chatOpenOn = Property(str, lambda self: self._open["chat"], notify=openChanged)
     screenNames = Property("QStringList", lambda self: list(self._surfaces), notify=screensChanged)
     widgetScreens = Property("QVariantMap", lambda self: self._widget_screens, notify=widgetScreensChanged)
@@ -510,7 +532,8 @@ def main():
     def wallpaper_url():
         path = os.path.expanduser(config.load().get("wallpaper") or "")
         if not path or not os.path.exists(path):
-            path = str(QML_DIR / "Creative" / "wallpapers" / "graphit.svg")
+            from creative_shell import look
+            path = str(look.default_wallpaper(QML_DIR))
         return QUrl.fromLocalFile(path)
 
     ctx.setContextProperty("wallpaperUrl", wallpaper_url())
@@ -519,6 +542,15 @@ def main():
     cfg_dir.mkdir(parents=True, exist_ok=True)
     watcher = QFileSystemWatcher([str(cfg_dir)])
     watcher.directoryChanged.connect(lambda _p: ctx.setContextProperty("wallpaperUrl", wallpaper_url()))
+    # Design gewechselt (Einstellungen → Darstellung)? Dann die Oberfläche neu laden:
+    # Code 75 = der Supervisor startet sofort neu, ohne es als Absturz zu zählen.
+    from creative_shell import look as _look
+    started_look = _look.read()
+
+    def look_changed(_p=None):
+        if _look.read() != started_look:
+            QTimer.singleShot(400, lambda: app.exit(75))
+    watcher.directoryChanged.connect(look_changed)
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)

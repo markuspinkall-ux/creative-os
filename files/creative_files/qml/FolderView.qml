@@ -18,13 +18,62 @@ Item {
         return "single"
     }
 
-    function pressItem(row, mouse, item) {
+    // Klick auf schon Ausgewähltes: Auswahl bleibt (zum Ziehen); erst beim Loslassen ohne Ziehen → nur dieses
+    property int pendingRow: -1
+
+    function pressItem(row, mouse, item, selected) {
+        pendingRow = -1
         if (mouse.button === Qt.RightButton) {
             fm.select(row, "keep")
             view.itemMenu(item, mouse.x, mouse.y)
-        } else {
-            fm.select(row, modeFor(mouse))
+            return
         }
+        const mode = modeFor(mouse)
+        if (mode === "single" && selected && fm.selectedCount > 1)
+            pendingRow = row
+        else
+            fm.select(row, mode)
+        if (!view.trash)
+            item.grabToImage(r => view.dragImage = r.url)
+    }
+
+    function releaseItem(row) {
+        if (pendingRow === row) fm.select(row, "single")
+        pendingRow = -1
+    }
+
+    // Ziehen & Ablegen: Strg = kopieren, Umschalt = verschieben, sonst wie bei Windows
+    // (gleiches Laufwerk → verschieben, anderes Laufwerk → kopieren)
+    property url dragImage
+    function dropMode(drop) {
+        if ((drop.modifiers & Qt.ControlModifier) || drop.proposedAction === Qt.CopyAction) return "copy"
+        if (drop.modifiers & Qt.ShiftModifier) return "move"
+        return "auto"
+    }
+    function dropInto(drop, target) {
+        if (!drop.hasUrls) return
+        fm.dropUrls(drop.urls, target, dropMode(drop))
+        // Wir erledigen das Verschieben selbst – die Quelle soll nichts löschen
+        drop.accept(Qt.CopyAction)
+    }
+
+    // Unsichtbarer Träger für das Ziehen aus der Liste (auch in andere Programme)
+    component DragCarrier: Item {
+        width: 1; height: 1
+        Drag.dragType: Drag.Automatic
+        Drag.supportedActions: Qt.CopyAction | Qt.MoveAction
+        Drag.proposedAction: Qt.MoveAction
+        Drag.mimeData: ({ "text/uri-list": fm.selectionUris })
+        Drag.imageSource: view.dragImage
+        Drag.onDragFinished: { x = 0; y = 0; view.pendingRow = -1 }
+    }
+
+    // Ordner als Ablageziel
+    component FolderDrop: DropArea {
+        property string target
+        anchors.fill: parent
+        onEntered: (drag) => { drag.accepted = drag.hasUrls }
+        onDropped: (drop) => view.dropInto(drop, target)
     }
 
     // Klick ins Leere hebt die Auswahl auf (liegt unter den Einträgen)
@@ -55,10 +104,29 @@ Item {
             HeaderText { width: view.colUnit * 1.0; text: view.trash ? "Ursprünglicher Ort" : "Typ" }
             HeaderText { width: view.colUnit * 0.8; text: "Größe"; horizontalAlignment: Text.AlignRight }
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.tint(0.06) }
     }
 
     EmptyArea {}
+
+    // Ablegen im freien Bereich: in diesen Ordner (im Papierkorb: in den Papierkorb)
+    DropArea {
+        id: backgroundDrop
+        anchors.fill: parent
+        onEntered: (drag) => { drag.accepted = drag.hasUrls }
+        onDropped: (drop) => view.dropInto(drop, view.trash ? "trash" : "")
+    }
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 6
+        radius: 14
+        z: 5
+        color: "transparent"
+        border.width: 2
+        border.color: Theme.accent
+        opacity: backgroundDrop.containsDrag ? 0.6 : 0
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+    }
 
     ListView {
         id: list
@@ -81,9 +149,11 @@ Item {
             width: list.width
             height: 40
             radius: 9
-            color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
-                                  : (m.containsMouse ? Theme.subtle : "transparent")
-            border.color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : "transparent"
+            color: rowDrop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
+                   : model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                                    : (m.containsMouse ? Theme.subtle : "transparent")
+            border.color: rowDrop.containsDrag ? Theme.accent
+                          : (model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : "transparent")
 
             Row {
                 x: 12
@@ -114,12 +184,17 @@ Item {
                 Cell { width: view.colUnit * 0.8; text: model.sizeText; horizontalAlignment: Text.AlignRight }
             }
 
+            DragCarrier { id: rowCarrier; Drag.active: m.drag.active }
+            FolderDrop { id: rowDrop; enabled: model.isDir && !view.trash; target: model.path }
             MouseArea {
                 id: m
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onPressed: (mouse) => view.pressItem(index, mouse, row)
+                drag.target: view.trash ? null : rowCarrier
+                preventStealing: true
+                onPressed: (mouse) => view.pressItem(index, mouse, row, model.selected)
+                onClicked: (mouse) => { if (mouse.button === Qt.LeftButton) view.releaseItem(index) }
                 onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) fm.activate(index) }
             }
             Accessible.role: Accessible.ListItem
@@ -149,9 +224,11 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 4
                 radius: 12
-                color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
-                                      : (tm.containsMouse ? Theme.subtle : "transparent")
-                border.color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : "transparent"
+                color: tileDrop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.24)
+                       : model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+                                        : (tm.containsMouse ? Theme.subtle : "transparent")
+                border.color: tileDrop.containsDrag ? Theme.accent
+                              : (model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : "transparent")
 
                 FileGlyph {
                     y: 14
@@ -175,12 +252,17 @@ Item {
                     font.pixelSize: 12
                     font.bold: model.selected
                 }
+                DragCarrier { id: tileCarrier; Drag.active: tm.drag.active }
+                FolderDrop { id: tileDrop; enabled: model.isDir && !view.trash; target: model.path }
                 MouseArea {
                     id: tm
                     anchors.fill: parent
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    onPressed: (mouse) => view.pressItem(index, mouse, tile)
+                    drag.target: view.trash ? null : tileCarrier
+                    preventStealing: true
+                    onPressed: (mouse) => view.pressItem(index, mouse, tile, model.selected)
+                    onClicked: (mouse) => { if (mouse.button === Qt.LeftButton) view.releaseItem(index) }
                     onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) fm.activate(index) }
                 }
             }
@@ -196,7 +278,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             size: 56
             isDir: !view.trash
-            tint: Qt.rgba(1, 1, 1, 0.12)
+            tint: Theme.tint(0.12)
             visible: !view.trash
         }
         SvgIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "trash"; size: 48; visible: view.trash; opacity: 0.5 }

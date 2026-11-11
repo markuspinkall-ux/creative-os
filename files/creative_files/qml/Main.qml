@@ -189,8 +189,8 @@ ApplicationWindow {
             width: win.width
             height: 48
             color: Theme.surface
-            Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.05) }
-            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.05) }
+            Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.tint(0.05) }
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.tint(0.05) }
 
             Row {
                 x: 12
@@ -206,7 +206,7 @@ ApplicationWindow {
                     enabled: inFolder
                     onClicked: newMenu.openAt(newBtn, 0, newBtn.height + 6)
                 }
-                Rectangle { width: 1; height: 22; color: Qt.rgba(1, 1, 1, 0.1); anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { width: 1; height: 22; color: Theme.tint(0.1); anchors.verticalCenter: parent.verticalCenter }
                 Item { width: 4; height: 1 }
                 CToolButton { icon: "cut"; text: "Ausschneiden"; enabled: inFolder && hasSel; onClicked: fm.cutSelection() }
                 CToolButton { icon: "copy"; text: "Kopieren"; enabled: inFolder && hasSel; onClicked: fm.copySelection() }
@@ -232,7 +232,7 @@ ApplicationWindow {
                 visible: fm.page !== "pc"
                 icon: fm.view === "list" ? "grid" : "list"
                 text: fm.view === "list" ? "Kacheln" : "Liste"
-                color: Qt.rgba(1, 1, 1, 0.06)
+                color: Theme.tint(0.06)
                 onClicked: fm.view = (fm.view === "list" ? "tiles" : "list")
             }
         }
@@ -357,7 +357,7 @@ ApplicationWindow {
         anchors.bottom: parent.bottom
         height: 30
         color: Theme.surface
-        Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.05) }
+        Rectangle { width: parent.width; height: 1; color: Theme.tint(0.05) }
         Text {
             x: 16
             anchors.verticalCenter: parent.verticalCenter

@@ -1,0 +1,41 @@
+name: Systemsteuerung Vorschau
+# Fotografiert Seiten der Systemsteuerung direkt aus dem Quelltext (ohne Abbild-Bau),
+# damit Änderungen vor dem Mergen sichtbar sind. Fotos landen im Branch „qml-vorschau“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [settings/**, shell/creative_shell/qml/**, .github/workflows/qml-vorschau.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: qml-vorschau
+  cancel-in-progress: false
+jobs:
+  fotos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation
+          pip install -q PySide6
+      - name: Fotografieren
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          PYTHONPATH: ${{ github.workspace }}/tools/screenshots
+          CREATIVE_SCREENSHOT_DELAY: "2500"
+        run: |
+          mkdir -p vorschau
+          CREATIVE_SCREENSHOT=vorschau/neuerungen.png timeout 40 python3 -m creative_settings --neuerungen 2>&1 | tail -20 || true
+          CREATIVE_SCREENSHOT=vorschau/updates.png timeout 40 python3 -m creative_settings --page updates 2>&1 | tail -5 || true
+          ls -la vorschau
+        working-directory: settings
+      - name: Ablegen
+        run: |
+          cd settings/vorschau && git init -q -b qml-vorschau && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Vorschau ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" qml-vorschau

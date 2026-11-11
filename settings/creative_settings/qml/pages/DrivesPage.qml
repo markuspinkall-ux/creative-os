@@ -176,7 +176,7 @@ SettingsPage {
                         width: parent.width
                         height: 48
                         radius: 10
-                        color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : (fsMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.04))
+                        color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : (fsMouse.containsMouse ? Theme.tint(0.07) : Theme.tint(0.04))
                         border.color: cur ? Theme.accent : "transparent"
                         Column {
                             x: 12

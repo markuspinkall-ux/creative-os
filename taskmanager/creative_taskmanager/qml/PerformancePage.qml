@@ -19,7 +19,7 @@ Item {
         spacing: 4
         model: tm.tiles
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) } }
+        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) } }
         delegate: PerfTile {
             required property var modelData
             width: ListView.view.width
@@ -93,7 +93,7 @@ Item {
                 id: graphBox
                 width: parent.width
                 height: Math.max(200, Math.min(340, root.height * 0.42))
-                color: Qt.rgba(1, 1, 1, 0.015)
+                color: Theme.tint(0.015)
                 property color c: root.d.color || Theme.accent
                 border.color: Qt.rgba(c.r, c.g, c.b, 0.65)
                 border.width: 1
@@ -166,7 +166,7 @@ Item {
                         width: 46
                         height: 34
                         radius: 6
-                        color: Qt.rgba(1, 1, 1, 0.03)
+                        color: Theme.tint(0.03)
                         border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.3)
                         Rectangle {
                             anchors.left: parent.left

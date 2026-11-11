@@ -15,6 +15,7 @@ Item {
 
     signal clicked()
     signal middleClicked()
+    signal rightClicked()
 
     implicitWidth: 44
     implicitHeight: 44
@@ -75,11 +76,13 @@ Item {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onClicked: (mouse) => {
             if (mouse.button === Qt.MiddleButton)
                 root.middleClicked()
+            else if (mouse.button === Qt.RightButton)
+                root.rightClicked()
             else
                 root.clicked()
         }

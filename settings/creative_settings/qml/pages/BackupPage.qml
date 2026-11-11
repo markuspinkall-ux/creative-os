@@ -18,7 +18,7 @@ SettingsPage {
             Rectangle {
                 width: 52; height: 52; radius: 14
                 anchors.verticalCenter: parent.verticalCenter
-                color: backup.target ? Qt.rgba(0.43, 0.86, 0.75, 0.15) : Qt.rgba(1, 1, 1, 0.06)
+                color: backup.target ? Qt.rgba(0.43, 0.86, 0.75, 0.15) : Theme.tint(0.06)
                 SvgIcon { anchors.centerIn: parent; name: "save"; size: 24 }
             }
             Column {
@@ -58,7 +58,7 @@ SettingsPage {
                 width: parent.width
                 height: 8
                 radius: 4
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Theme.tint(0.08)
                 Rectangle {
                     width: parent.width * Math.max(0.02, backup.percent / 100)
                     height: parent.height

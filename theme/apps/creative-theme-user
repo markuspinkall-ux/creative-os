@@ -5,9 +5,13 @@
 #     (Farben, Fensterrahmen). Vorher wird einmalig eine Sicherung angelegt.
 conf="${XDG_CONFIG_HOME:-$HOME/.config}"
 
+# Design (graphit = dunkel, porzellan = hell) – gewählt unter Einstellungen → Darstellung
+design=$(sed -n 's/^design=//p' "$conf/creative-os/look.conf" 2>/dev/null | head -1)
+[ "$design" = porzellan ] || design=graphit
 src=/usr/share/creative-os/gtk/gtk.css
+[ "$design" = porzellan ] && [ -f /usr/share/creative-os/gtk/gtk-light.css ] && src=/usr/share/creative-os/gtk/gtk-light.css
 if [ -f "$src" ]; then
-    marker="/* Creative OS – Graphit"
+    marker="/* Creative OS – "
     for v in gtk-3.0 gtk-4.0; do
         dst="$conf/$v/gtk.css"
         # Eigene Datei des Benutzers bleibt – nur unsere oder die von KDE
@@ -25,7 +29,8 @@ for v in gtk-3.0 gtk-4.0; do
     ini="$conf/$v/settings.ini"
     sys_ini="/usr/share/creative-os/xdg/$v/settings.ini"
     [ -f "$sys_ini" ] || continue
-    if [ ! -e "$ini" ] || grep -qiE "gtk-theme-name=Breeze|gtk-application-prefer-dark-theme=(false|0)" "$ini"; then
+    if [ ! -e "$ini" ] || grep -qiE "gtk-theme-name=Breeze" "$ini" \
+       || { [ "$design" = graphit ] && grep -qiE "gtk-application-prefer-dark-theme=(false|0)" "$ini"; }; then
         mkdir -p "$conf/$v"
         cp "$sys_ini" "$ini"
     fi
@@ -33,19 +38,25 @@ done
 # Unter Wayland lesen GTK-Programme ihre Einstellungen aus GSettings
 if command -v gsettings >/dev/null 2>&1; then
     gs() { gsettings set org.gnome.desktop.interface "$1" "$2" 2>/dev/null; }
-    gs gtk-theme "Adwaita-dark"
-    gs color-scheme "prefer-dark"
+    if [ "$design" = porzellan ]; then
+        gs gtk-theme "Adwaita"
+        gs color-scheme "prefer-light"
+    else
+        gs gtk-theme "Adwaita-dark"
+        gs color-scheme "prefer-dark"
+    fi
     gs icon-theme "Creative"
     gs cursor-theme "breeze_cursors"
     gs font-name "Arial 10"
     gs accent-color "blue"
 fi
 
-python3 - "$conf" <<'PY'
+python3 - "$conf" "$design" <<'PY'
 import re, shutil, sys
 from pathlib import Path
 
 conf = Path(sys.argv[1])
+light = sys.argv[2] == "porzellan"
 # Datei -> (ganze Abschnitte entfernen, einzelne Schlüssel je Abschnitt entfernen)
 RULES = {
     "kdeglobals": (
@@ -60,6 +71,8 @@ RULES = {
                            {"ksmserver": {"Log Out", "Log Out Without Confirmation"}}),
 }
 
+if light:  # die helle Palette steht bewusst in der eigenen kdeglobals – nicht entfernen
+    RULES["kdeglobals"] = (re.compile(r"^(WM)$"), {"KDE": {"widgetStyle", "LookAndFeelPackage"}, "Icons": {"Theme"}})
 for name, (drop_groups, drop_keys) in RULES.items():
     path = conf / name
     if not path.is_file():
@@ -115,6 +128,38 @@ if [ ! -e "$steam_cfg" ]; then
 }
 VDF
 fi
+
+# Brave im Graphit-Look: Brave übernimmt Farben und Menüs (auch das Rechtsklick-Menü)
+# vom GTK-Design von Creative OS. Einmalig je Profil umstellen – nur wenn Brave nicht läuft;
+# wer danach in Brave ein anderes Design wählt, behält es.
+if ! pgrep -u "$(id -u)" -x brave >/dev/null 2>&1; then
+python3 - "$conf" <<'PY'
+import json, sys
+from pathlib import Path
+base = Path(sys.argv[1]) / "BraveSoftware" / "Brave-Browser"
+marker = Path(sys.argv[1]) / "creative" / "brave-graphit-v1"
+if base.is_dir() and not marker.exists():
+    for prefs in list(base.glob("Default/Preferences")) + list(base.glob("Profile */Preferences")):
+        try:
+            data = json.loads(prefs.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        theme = data.setdefault("extensions", {}).setdefault("theme", {})
+        theme["system_theme"] = 1          # 1 = GTK (Creative-Graphit), 0 = Standard
+        theme.pop("id", None)              # eigenes Farbschema (alte Richtlinie) entfernen
+        theme.pop("pack", None)
+        data.setdefault("browser", {}).setdefault("theme", {}).pop("user_color", None)
+        data["browser"]["theme"].pop("color_variant", None)
+        tmp = prefs.with_name("Preferences.creative-tmp")
+        tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+        tmp.replace(prefs)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("1\n")
+PY
+fi
+
+# Farben für KDE-Programme und Terminal ans gewählte Design anpassen
+[ -x /usr/libexec/creative-look-apply ] && /usr/libexec/creative-look-apply --no-gtk
 
 # Einmalige Design-Migration; Sperrverhalten und Passwortprüfung bleiben unverändert.
 if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/null 2>&1; then

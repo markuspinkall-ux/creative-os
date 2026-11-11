@@ -73,7 +73,7 @@ SettingsPage {
                 width: parent.width
                 height: 8
                 radius: 4
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Theme.tint(0.08)
                 clip: true
                 // bekannter Fortschritt
                 Rectangle {
@@ -162,7 +162,7 @@ SettingsPage {
                         height: 34
                         radius: 17
                         opacity: u.busy && !cur ? 0.5 : 1
-                        color: cur ? Theme.accent : (chMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                        color: cur ? Theme.accent : (chMouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
                         Text {
                             id: chText
                             anchors.centerIn: parent
@@ -196,7 +196,7 @@ SettingsPage {
         SettingRow {
             label: "Was ist neu?"
             hint: "Alle Neuerungen jeder freigegebenen Version"
-            CButton { text: "Neuerungen ansehen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os/releases") }
+            CButton { text: "Neuerungen ansehen"; onClicked: news.open() }
         }
         SettingRow {
             label: "Apps aktualisieren"
@@ -204,5 +204,12 @@ SettingsPage {
             last: true
             CButton { text: "Software öffnen"; onClicked: system.openSoftware() }
         }
+    }
+
+    NeuerungenDialog {
+        id: news
+        entries: system.changelog
+        version: u.version || ""
+        Component.onCompleted: if (showNews) Qt.callLater(open)
     }
 }

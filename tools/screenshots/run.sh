@@ -19,10 +19,23 @@ shot() {   # shot <name> <programm> [argumente …]
 for page in network displays sound look updates system server backup; do
     shot "einstellungen-$page" /usr/bin/creative-settings --page "$page"
 done
+shot "einstellungen-neuerungen" /usr/bin/creative-settings --neuerungen
 for app in art writer cut ftp 3d software notes mail claude iso broadcast pictures \
            taskmanager magazin podcast player calculator welcome files obs; do
     bin="/usr/bin/creative-$app"
     [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
     shot "$app" "$bin"
 done
+# Helles Design „Porzellan“: dieselben Fenster noch einmal (Name mit „hell-“)
+mkdir -p "$HOME/.config/creative-os"
+printf '[Look]\ndesign=porzellan\naccent=blau\n' > "$HOME/.config/creative-os/look.conf"
+for page in look system updates; do
+    shot "hell-einstellungen-$page" /usr/bin/creative-settings --page "$page"
+done
+for app in files mail claude welcome taskmanager calculator software notes; do
+    bin="/usr/bin/creative-$app"
+    [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
+    shot "hell-$app" "$bin"
+done
+rm -f "$HOME/.config/creative-os/look.conf"
 python3 /tools/contact.py "$out"

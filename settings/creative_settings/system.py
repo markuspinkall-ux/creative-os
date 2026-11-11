@@ -11,7 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QProcess, QProcessEnvironment, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QCoreApplication, QFileSystemWatcher, QObject, QProcess, QProcessEnvironment, QTimer, QUrl, Signal, Slot
 
 from creative_shell import config as shell_config
 from creative_shell.runner import Runner, spawn_detached
@@ -94,6 +94,31 @@ def _save_update_history(data):
         UPDATE_HISTORY.write_text(json.dumps(data))
     except OSError:
         pass
+
+MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
+          "November", "Dezember"]
+CHANGELOG = Path(__file__).resolve().parent / "neuerungen.json"
+
+
+def load_changelog(path=CHANGELOG):
+    """Neuerungen (neueste zuerst) mit lesbarem Datum: [{datum, tag, titel, neu, verbessert, behoben}]."""
+    try:
+        entries = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    result = []
+    for e in entries:
+        if not isinstance(e, dict) or not e.get("datum"):
+            continue
+        try:
+            y, m, d = (int(x) for x in str(e["datum"]).split("-"))
+            tag = f"{d}. {MONTHS[m - 1]} {y}"
+        except (ValueError, IndexError):
+            tag = str(e["datum"])
+        result.append({"datum": str(e["datum"]), "tag": tag, "titel": str(e.get("titel") or ""),
+                       **{k: [str(x) for x in e.get(k) or []] for k in ("neu", "verbessert", "behoben")}})
+    return sorted(result, key=lambda e: e["datum"], reverse=True)
+
 
 class SystemModel(QObject):
     changed = Signal()
@@ -406,6 +431,7 @@ class SystemModel(QObject):
     secureBoot = Property("QVariantMap", lambda self: dict(self._sb), notify=sbChanged)
     secureBootMessage = Property(str, lambda self: self._sb_msg, notify=sbChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
+    changelog = Property("QVariantList", lambda self: load_changelog(), constant=True)
 
 
 class PrinterListModel(QObject):
@@ -480,17 +506,19 @@ class LookModel(QObject):
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
         self._login_sound = bool(cfg.get("loginSound", True))
+        from creative_shell import look as _look
+        self._design, self._accent = _look.read()
         self._images = []
         self.refresh()
 
     @Slot()
     def refresh(self):
         images = []
-        for f in sorted(self._builtin.glob("*")):
-            if f.suffix.lower() in IMAGE_EXT:
-                images.append({"path": "", "url": QUrl.fromLocalFile(str(f)).toString(),
-                               "label": "Graphit" if f.stem == "graphit" else f.stem.capitalize()})
-                break
+        from creative_shell import look as _look
+        default = _look.default_wallpaper(self._builtin.parent.parent)
+        if default.exists():
+            images.append({"path": "", "url": QUrl.fromLocalFile(str(default)).toString(),
+                           "label": "Planet (passt zum Design)"})
         home = Path.home()
         pics = home / "Bilder"
         if not pics.exists() and not pics.is_symlink():
@@ -567,6 +595,31 @@ class LookModel(QObject):
         self._current = path
         self.changed.emit()
 
+    # ---- Design (Graphit/Porzellan) und Akzentfarbe ------------------------------
+    @Slot(str)
+    def setDesign(self, name):
+        self._apply_look(design=name)
+
+    @Slot(str)
+    def setAccent(self, name):
+        self._apply_look(accent=name)
+
+    def _apply_look(self, design=None, accent=None):
+        from creative_shell import look as _look
+        new = _look.write(design, accent)
+        if new == (self._design, self._accent):
+            return
+        self._design, self._accent = new
+        self.changed.emit()
+        _look.apply_system()           # GTK-, KDE- und Terminal-Farben, Bildschirmsperre
+        # Anmeldebildschirm (läuft vor der Anmeldung): Design systemweit merken
+        spawn_detached(["pkexec", "/usr/libexec/creative-login-look", *new])
+        # Taskleiste lädt sich selbst neu; dieses Fenster startet mit dem neuen Design neu
+        spawn_detached(["creative-settings", "--page", "look"])
+        QTimer.singleShot(600, QCoreApplication.quit)
+
+    design = Property(str, lambda self: self._design, notify=changed)
+    accent = Property(str, lambda self: self._accent, notify=changed)
     images = Property("QVariantList", lambda self: self._images, notify=changed)
     visualizer = Property(bool, lambda self: self._viz_on, notify=changed)
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)

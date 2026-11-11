@@ -1,0 +1,23 @@
+#!/usr/bin/python3 -I
+"""Merkt sich das Design für den Anmeldebildschirm (der läuft vor der Anmeldung und kann
+die Einstellungen im Benutzerordner nicht lesen).
+
+  pkexec /usr/libexec/creative-login-look <graphit|porzellan> <blau|gruen|orange|lila>
+"""
+import json
+import os
+import sys
+
+DESIGNS = ("graphit", "porzellan")
+ACCENTS = ("blau", "gruen", "orange", "lila")
+TARGET = "/var/lib/creative-os/login-look.json"
+
+if len(sys.argv) != 3 or sys.argv[1] not in DESIGNS or sys.argv[2] not in ACCENTS:
+    print(__doc__)
+    sys.exit(2)
+os.makedirs(os.path.dirname(TARGET), mode=0o755, exist_ok=True)
+tmp = TARGET + ".neu"
+with open(tmp, "w") as f:
+    json.dump({"design": sys.argv[1], "accent": sys.argv[2]}, f)
+os.chmod(tmp, 0o644)
+os.replace(tmp, TARGET)

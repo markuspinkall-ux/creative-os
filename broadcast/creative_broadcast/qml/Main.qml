@@ -166,7 +166,7 @@ Window {
                         width: chipText.implicitWidth + 26
                         height: 32
                         radius: 16
-                        color: cur ? Theme.accent : (chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                        color: cur ? Theme.accent : (chipMouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
                         Text { id: chipText; anchors.centerIn: parent; text: modelData.t; color: parent.cur ? Theme.accentText : Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
                         MouseArea {
                             id: chipMouse
@@ -204,7 +204,7 @@ Window {
                         textRole: "name"
                         currentIndex: Math.max(0, model.findIndex(c => c.device === bc.cameraDevice))
                         onActivated: (i) => bc.setCameraDevice(model[i].device)
-                        background: Rectangle { radius: 8; color: Qt.rgba(1, 1, 1, 0.06) }
+                        background: Rectangle { radius: 8; color: Theme.tint(0.06) }
                         contentItem: Text { leftPadding: 12; text: camBox.displayText; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
                     }
                 }
@@ -221,7 +221,7 @@ Window {
                                 width: qText.implicitWidth + 24
                                 height: 32
                                 radius: 16
-                                color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : (qm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                                color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : (qm.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
                                 Text { id: qText; anchors.centerIn: parent; text: modelData.t; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: parent.cur }
                                 MouseArea { id: qm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: bc.setQuality(modelData.k) }
                             }
@@ -262,7 +262,7 @@ Window {
             spacing: 10
             Rectangle {
                 width: 32; height: 32; radius: 10
-                color: panel.on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22) : Qt.rgba(1, 1, 1, 0.06)
+                color: panel.on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22) : Theme.tint(0.06)
                 SvgIcon { anchors.centerIn: parent; name: panel.icon; size: 16 }
             }
             Text { anchors.verticalCenter: parent.verticalCenter; text: panel.title; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.bold: true }

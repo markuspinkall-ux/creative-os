@@ -24,7 +24,7 @@ Item {
         anchors.fill: parent
         visible: !tile.plain
         radius: 12
-        color: tile.selected ? Qt.rgba(1, 1, 1, 0.08) : (hover.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
+        color: tile.selected ? Theme.tint(0.08) : (hover.containsMouse ? Theme.tint(0.05) : "transparent")
         border.color: tile.selected ? Qt.rgba(tile.color.r, tile.color.g, tile.color.b, 0.45) : "transparent"
     }
 

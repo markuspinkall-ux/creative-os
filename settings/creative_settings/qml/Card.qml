@@ -11,7 +11,7 @@ Rectangle {
     width: parent ? parent.width : 600
     implicitHeight: inner.implicitHeight + (title.length ? 58 : 36)
     radius: 16
-    color: Qt.rgba(1, 1, 1, 0.03)
+    color: Theme.tint(0.03)
 
     Column {
         x: 18

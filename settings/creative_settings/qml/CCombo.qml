@@ -14,7 +14,7 @@ Rectangle {
     implicitHeight: 34
     radius: 8
     opacity: enabled ? 1 : 0.45
-    color: mouse.containsMouse && enabled ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06)
+    color: mouse.containsMouse && enabled ? Theme.tint(0.1) : Theme.tint(0.06)
 
     Text {
         id: valueText
@@ -63,7 +63,7 @@ Rectangle {
                         width: contentCol.width
                         height: 34
                         radius: 8
-                        color: im.containsMouse ? Qt.rgba(1, 1, 1, 0.08)
+                        color: im.containsMouse ? Theme.tint(0.08)
                                                 : (modelData === box.value ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : "transparent")
                         Text {
                             x: 12

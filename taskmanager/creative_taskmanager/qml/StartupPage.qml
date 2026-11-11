@@ -30,13 +30,13 @@ Item {
         spacing: 4
         model: tm.autostart
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.2) } }
+        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Theme.tint(0.2) } }
         delegate: Rectangle {
             required property var modelData
             width: ListView.view.width
             height: 58
             radius: 12
-            color: am.containsMouse ? Theme.hover : Qt.rgba(1, 1, 1, 0.025)
+            color: am.containsMouse ? Theme.hover : Theme.tint(0.025)
             MouseArea { id: am; anchors.fill: parent; hoverEnabled: true }
             Image {
                 id: ai

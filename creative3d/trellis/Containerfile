@@ -19,6 +19,7 @@ ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0+PTX" \
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3.10 python3.10-dev python3-pip git ninja-build build-essential \
       libgl1 libglib2.0-0 libegl1 libgomp1 libxrender1 libsm6 libxext6 ca-certificates \
+      libusb-1.0-0 libudev1 libx11-6 libxi6 libxxf86vm1 libxrandr2 libxcursor1 libxinerama1 \
  && ln -sf /usr/bin/python3.10 /usr/bin/python \
  && rm -rf /var/lib/apt/lists/*
 
@@ -48,7 +49,7 @@ RUN mkdir -p /tmp/ext && cd /tmp/ext \
 
 # TRELLIS selbst (fester Stand)
 RUN git clone https://github.com/microsoft/TRELLIS.git /opt/trellis \
- && cd /opt/trellis && git checkout -q "$TRELLIS_COMMIT" && rm -rf .git assets/example_*
+ && cd /opt/trellis && git checkout -q "$TRELLIS_COMMIT" && git submodule update -q --init --recursive && rm -rf .git assets/example_*
 
 COPY run.py /opt/creative/run.py
 ENV PYTHONPATH=/opt/trellis \
@@ -62,7 +63,8 @@ ENV PYTHONPATH=/opt/trellis \
 
 # Schneller Import-Test (ohne Grafikkarte): alle Bausteine sind da
 RUN python3 -c "import torch, xformers, spconv.pytorch, kaolin, nvdiffrast.torch, diff_gaussian_rasterization, \
-      trimesh, xatlas, pyvista, pymeshfix, rembg; print('TRELLIS-Bausteine ok, torch', torch.__version__)" \
+      trimesh, xatlas, pyvista, pymeshfix, rembg, open3d; print('TRELLIS-Bausteine ok, torch', torch.__version__)" \
+ && python3 -c "from trellis.pipelines import TrellisImageTo3DPipeline; from trellis.utils import postprocessing_utils; print('TRELLIS-Pipeline lässt sich laden')" \
  && python3 /opt/creative/run.py --selftest
 
 WORKDIR /opt/creative

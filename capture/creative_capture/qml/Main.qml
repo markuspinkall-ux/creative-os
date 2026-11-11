@@ -417,7 +417,7 @@ Window {
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
         font.family: Theme.fontFamily
         font.pixelSize: 13
-        background: Rectangle { radius: 12; color: dd.hovered ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06) }
+        background: Rectangle { radius: 12; color: dd.hovered ? Theme.tint(0.1) : Theme.tint(0.06) }
         contentItem: Text {
             leftPadding: 12
             rightPadding: 28
@@ -434,7 +434,7 @@ Window {
             width: dd.popup.width
             height: 36
             highlighted: dd.highlightedIndex === index
-            background: Rectangle { radius: 8; color: parent.highlighted ? Qt.rgba(1, 1, 1, 0.08) : "transparent" }
+            background: Rectangle { radius: 8; color: parent.highlighted ? Theme.tint(0.08) : "transparent" }
             contentItem: Text {
                 text: modelData
                 color: index === dd.currentIndex ? Theme.accent : Theme.text
