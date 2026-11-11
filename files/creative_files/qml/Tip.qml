@@ -16,7 +16,7 @@ Rectangle {
     width: label.implicitWidth + 16
     height: 26
     radius: 7
-    color: "#2a3040"
+    color: Theme.raised
     border.color: Theme.hairline
 
     Text {
