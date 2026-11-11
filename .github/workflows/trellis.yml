@@ -50,6 +50,7 @@ jobs:
             --label org.opencontainers.image.revision=${{ github.sha }} \
             -t "${{ steps.names.outputs.image }}:latest" \
             -t "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}" \
+            -f creative3d/trellis/Containerfile \
             creative3d/trellis
           docker image ls "${{ steps.names.outputs.image }}"
           df -h /
