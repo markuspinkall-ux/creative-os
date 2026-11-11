@@ -116,6 +116,35 @@ if [ ! -e "$steam_cfg" ]; then
 VDF
 fi
 
+# Brave im Graphit-Look: Brave übernimmt Farben und Menüs (auch das Rechtsklick-Menü)
+# vom GTK-Design von Creative OS. Einmalig je Profil umstellen – nur wenn Brave nicht läuft;
+# wer danach in Brave ein anderes Design wählt, behält es.
+if ! pgrep -u "$(id -u)" -x brave >/dev/null 2>&1; then
+python3 - "$conf" <<'PY'
+import json, sys
+from pathlib import Path
+base = Path(sys.argv[1]) / "BraveSoftware" / "Brave-Browser"
+marker = Path(sys.argv[1]) / "creative" / "brave-graphit-v1"
+if base.is_dir() and not marker.exists():
+    for prefs in list(base.glob("Default/Preferences")) + list(base.glob("Profile */Preferences")):
+        try:
+            data = json.loads(prefs.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        theme = data.setdefault("extensions", {}).setdefault("theme", {})
+        theme["system_theme"] = 1          # 1 = GTK (Creative-Graphit), 0 = Standard
+        theme.pop("id", None)              # eigenes Farbschema (alte Richtlinie) entfernen
+        theme.pop("pack", None)
+        data.setdefault("browser", {}).setdefault("theme", {}).pop("user_color", None)
+        data["browser"]["theme"].pop("color_variant", None)
+        tmp = prefs.with_name("Preferences.creative-tmp")
+        tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+        tmp.replace(prefs)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("1\n")
+PY
+fi
+
 # Einmalige Design-Migration; Sperrverhalten und Passwortprüfung bleiben unverändert.
 if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/null 2>&1; then
     konsole_style="$(kreadconfig6 --file konsolerc --group CreativeOS --key GraphitStyleVersion --default 0)"
