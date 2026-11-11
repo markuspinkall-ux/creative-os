@@ -65,7 +65,7 @@ boot() {  # $1 = ISO
         -drive file="$W/disk.qcow2",if=virtio,format=qcow2 \
         -cdrom "$1" -boot d \
         -nic user,model=virtio-net-pci \
-        -vga none -device VGA,edid=on,xres=1280,yres=800 -usb -device usb-tablet \
+        -vga none -device virtio-vga,xres=1280,yres=800 -usb -device usb-tablet \
         -display none -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" || return 1
     start=$(date +%s); last_sum=""; same=0
 }
