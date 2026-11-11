@@ -124,12 +124,16 @@ Popup {
                 contentItem: Rectangle { implicitWidth: 6; radius: 3; color: Theme.track }
             }
 
-            delegate: Rectangle {
-                id: day
-                required property var modelData
-                required property int index
+            delegate: Item {
+              id: day
+              required property var modelData
+              required property int index
+              width: list.width
+              height: card.height
+              Rectangle {
+                id: card
                 x: 22
-                width: list.width - 44
+                width: parent.width - 44
                 height: body.implicitHeight + 36
                 radius: 16
                 color: Qt.rgba(1, 1, 1, 0.03)
@@ -235,6 +239,7 @@ Popup {
                         }
                     }
                 }
+              }
             }
 
             Text {
