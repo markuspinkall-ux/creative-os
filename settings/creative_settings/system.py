@@ -95,6 +95,31 @@ def _save_update_history(data):
     except OSError:
         pass
 
+MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
+          "November", "Dezember"]
+CHANGELOG = Path(__file__).resolve().parent / "neuerungen.json"
+
+
+def load_changelog(path=CHANGELOG):
+    """Neuerungen (neueste zuerst) mit lesbarem Datum: [{datum, tag, titel, neu, verbessert, behoben}]."""
+    try:
+        entries = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    result = []
+    for e in entries:
+        if not isinstance(e, dict) or not e.get("datum"):
+            continue
+        try:
+            y, m, d = (int(x) for x in str(e["datum"]).split("-"))
+            tag = f"{d}. {MONTHS[m - 1]} {y}"
+        except (ValueError, IndexError):
+            tag = str(e["datum"])
+        result.append({"datum": str(e["datum"]), "tag": tag, "titel": str(e.get("titel") or ""),
+                       **{k: [str(x) for x in e.get(k) or []] for k in ("neu", "verbessert", "behoben")}})
+    return sorted(result, key=lambda e: e["datum"], reverse=True)
+
+
 class SystemModel(QObject):
     changed = Signal()
     updatesChanged = Signal()
@@ -406,6 +431,7 @@ class SystemModel(QObject):
     secureBoot = Property("QVariantMap", lambda self: dict(self._sb), notify=sbChanged)
     secureBootMessage = Property(str, lambda self: self._sb_msg, notify=sbChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
+    changelog = Property("QVariantList", lambda self: load_changelog(), constant=True)
 
 
 class PrinterListModel(QObject):

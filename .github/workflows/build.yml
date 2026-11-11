@@ -73,7 +73,7 @@ jobs:
         run: python3 -m unittest tests/test_mail.py
 
       - name: Update-Center – Fortschritt und Restzeit prüfen
-        run: python3 -m unittest tests/test_updateprogress.py
+        run: python3 -m unittest tests/test_updateprogress.py tests/test_neuerungen.py
 
       - name: Namen festlegen
         id: names
