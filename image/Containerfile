@@ -84,6 +84,20 @@ RUN --mount=type=secret,id=mokkey if [ "$NVIDIA" = "1" ]; then \
      && dnf clean all ; \
     fi
 
+# NVIDIA-Grafikkarte für Container (Creative 3D rechnet mit TRELLIS in einem Container).
+# nvidia-container-toolkit beschreibt die Karte per CDI; der Dienst erzeugt die
+# Beschreibung bei jedem Start passend zum Treiber.
+COPY image/nvidia/creative-nvidia-cdi.service /usr/lib/systemd/system/creative-nvidia-cdi.service
+RUN if [ "$NVIDIA" = "1" ]; then \
+        curl -fsSLo /etc/yum.repos.d/nvidia-container-toolkit.repo \
+            https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo \
+     && dnf install -y nvidia-container-toolkit \
+     && systemctl enable creative-nvidia-cdi.service \
+     && rm -f /etc/yum.repos.d/nvidia-container-toolkit.repo \
+     && dnf clean all ; \
+    else rm -f /usr/lib/systemd/system/creative-nvidia-cdi.service ; \
+    fi
+
 # ---------------------------------------------------------------------------
 # 5) Brave-Browser (offizielles Paket). Brave installiert nach /opt, das auf
 #    Atomic-Systemen beschreibbar ist – darum wird es nach /usr/lib verschoben
@@ -167,9 +181,6 @@ RUN site="$(python3 -c 'import sys; print(f"/usr/lib/python{sys.version_info[0]}
  && rm -rf /tmp/dlg-home
 COPY --chmod=755 software/creative-software /usr/bin/creative-software
 COPY software/creative-software.desktop /usr/share/applications/creative-software.desktop
-COPY --chmod=755 flatrules/creative-flatrules /usr/bin/creative-flatrules
-COPY flatrules/creative-flatrules.desktop /usr/share/applications/creative-flatrules.desktop
-COPY flatrules/creative-flatrules.svg /usr/share/icons/hicolor/scalable/apps/creative-flatrules.svg
 COPY --chmod=755 ftp/creative-ftp /usr/lib/creative-ftp/creative-ftp
 COPY ftp/ftp_session.py /usr/lib/creative-ftp/ftp_session.py
 COPY ftp/creative-ftp.desktop /usr/share/applications/creative-ftp.desktop
@@ -181,11 +192,12 @@ COPY cut/cut_project.py cut/cut_timeline.py /usr/lib/creative-cut/
 COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
 COPY cut/creative-cut.svg /usr/share/icons/hicolor/scalable/apps/creative-cut.svg
 RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
-# Creative 3D: Foto → 3D-Figur (TripoSR). Die KI (PyTorch, Modell ~5 GB) richtet die App
-# beim ersten Start im Benutzerordner ein – hier nur Oberfläche, Rechenteil und Vorschau.
+# Creative 3D: Foto → 3D-Figur mit TRELLIS (Microsoft, MIT). TRELLIS läuft in einem eigenen,
+# fertig kompilierten Container (ghcr.io/…/creative-trellis), den die App beim ersten Start lädt –
+# hier nur Oberfläche, Einrichtung, Skelett und Vorschau.
 COPY --chmod=755 creative3d/creative-3d /usr/lib/creative-3d/creative-3d
 COPY --chmod=755 creative3d/creative3d-setup /usr/lib/creative-3d/creative3d-setup
-COPY creative3d/creative3d_worker.py creative3d/torchmcubes_shim.py creative3d/viewer.html \
+COPY creative3d/viewer.html \
      creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py creative3d/creative3d_softview.py \
      /usr/lib/creative-3d/
 COPY creative3d/creative-3d.desktop /usr/share/applications/creative-3d.desktop

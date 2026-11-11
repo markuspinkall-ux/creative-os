@@ -7,5 +7,5 @@ Exec=creative-3d
 Icon=creative-3d
 Terminal=false
 Categories=Graphics;3DGraphics;
-Keywords=3D;Figur;Modell;GLB;OBJ;STL;PLY;3D-Druck;TripoSR;KI;
+Keywords=3D;Figur;Modell;GLB;OBJ;STL;PLY;3D-Druck;TRELLIS;KI;Textur;
 StartupWMClass=creative-3d
