@@ -7,7 +7,8 @@ from email.message import EmailMessage
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "mail"))
-import gmail  # noqa: E402
+import mailcore as gmail  # noqa: E402
+import mailcore  # noqa: E402
 
 
 def sample_mail():
@@ -69,52 +70,119 @@ class BuildTest(unittest.TestCase):
             self.assertEqual(gmail.parse_message(msg.as_bytes())["attachments"][0]["data"], b"inhalt")
 
 
-class SummaryTest(unittest.TestCase):
-    def test_summary(self):
-        message = {"id": "1", "threadId": "t", "internalDate": "1700000000000", "snippet": "Tom &amp; Jerry",
-                   "labelIds": ["UNREAD", "STARRED", "INBOX"],
-                   "payload": {"headers": [{"name": "From", "value": "A <a@x>"}, {"name": "To", "value": "B <b@x>"},
-                                           {"name": "Subject", "value": "Hi"}]}}
-        row = gmail.summary(message, "INBOX")
-        self.assertEqual((row["from"], row["subject"], row["snippet"]), ("A <a@x>", "Hi", "Tom & Jerry"))
-        self.assertTrue(row["unread"] and row["starred"])
-        self.assertEqual(row["date"], 1700000000)
-        self.assertEqual(gmail.summary(message, "SENT")["from"], "B <b@x>")
-        self.assertEqual(gmail.summary({"payload": {"headers": []}})["subject"], "(Ohne Betreff)")
+class ProviderTest(unittest.TestCase):
+    def test_detect(self):
+        self.assertEqual(mailcore.provider_for("Max@GMX.de"), "gmx")
+        self.assertEqual(mailcore.provider_for("a@web.de"), "webde")
+        self.assertEqual(mailcore.provider_for("a@googlemail.com"), "gmail")
+        self.assertEqual(mailcore.provider_for("a@hotmail.de"), "outlook")
+        self.assertEqual(mailcore.provider_for("a@firma.example"), "custom")
+        cfg = mailcore.account_settings("max@icloud.com")
+        self.assertEqual((cfg["user"], cfg["imap_host"], cfg["smtp_port"], cfg["smtp_mode"]),
+                         ("max", "imap.mail.me.com", 587, "starttls"))
+        cfg = mailcore.account_settings("a@gmail.com")
+        self.assertTrue(cfg["saves_sent"] and cfg["user"] == "a@gmail.com")
+        self.assertIn("unsupported", mailcore.PROVIDERS["outlook"])
+        for key in mailcore.ORDER:
+            self.assertIn(key, mailcore.PROVIDERS)
 
 
-class FakeApiTest(unittest.TestCase):
-    def test_labels_and_listing(self):
-        g = gmail.Gmail.__new__(gmail.Gmail)
-        g.address = "ich@example.org"
-        g.expires = float("inf")
-        import threading
-        g._lock = threading.Lock()
-        calls = []
+class ImapHelperTest(unittest.TestCase):
+    def test_utf7(self):
+        self.assertEqual(mailcore.utf7_decode("Entw&APw-rfe"), "Entwürfe")
+        self.assertEqual(mailcore.utf7_decode("A &- B"), "A & B")
+        for name in ("Entwürfe", "Gelöschte Elemente", "Tom & Jerry", "日本"):
+            self.assertEqual(mailcore.utf7_decode(mailcore.utf7_encode(name)), name)
 
-        def api(path, params=None, data=None):
-            calls.append((path, params, data))
-            if path == "labels":
-                return {"labels": [{"id": "Label_2", "name": "zeta", "type": "user"},
-                                   {"id": "Label_1", "name": "Alpha", "type": "user"},
-                                   {"id": "INBOX", "name": "INBOX", "type": "system"}]}
-            if path.startswith("labels/"):
-                return {"messagesUnread": 2, "threadsUnread": 5}
-            if path == "messages":
-                return {"messages": [{"id": "m1"}, {"id": "m2"}], "nextPageToken": "p2"}
-            if path.startswith("messages/"):
-                return {"id": path.split("/")[1], "labelIds": [], "payload": {"headers": []}}
-            return {}
+    def test_list_and_roles(self):
+        lines = [b'(\\HasNoChildren) "/" "INBOX"', b'(\\HasNoChildren \\Sent) "/" "[Gmail]/Gesendet"',
+                 b'(\\Noselect \\HasChildren) "/" "[Gmail]"', b'(\\HasNoChildren \\All) "/" "[Gmail]/Alle Nachrichten"',
+                 b'(\\HasNoChildren \\Flagged) "/" "[Gmail]/Markiert"', b'(\\HasNoChildren \\Trash) "/" "[Gmail]/Papierkorb"',
+                 b'(\\HasNoChildren) "/" "Entw&APw-rfe"', b'(\\HasNoChildren) "/" "Spamverdacht"',
+                 b'(\\HasNoChildren) "/" "Rechnungen"', b'(\\HasNoChildren) "/" Urlaub']
+        lines = [l.replace(b"\\\\", b"\\") for l in lines]
+        roles, rest = mailcore.folder_roles(mailcore.parse_list(lines))
+        self.assertEqual(roles["SENT"], "[Gmail]/Gesendet")
+        self.assertEqual(roles["ALL"], "[Gmail]/Alle Nachrichten")
+        self.assertEqual(roles["STARRED"], "[Gmail]/Markiert")
+        self.assertEqual(roles["DRAFT"], "Entw&APw-rfe")
+        self.assertEqual(roles["SPAM"], "Spamverdacht")
+        self.assertEqual(rest, ["Rechnungen", "Urlaub"])
 
-        g.api = api
-        labels = g.labels()
-        self.assertEqual(labels[0], ("INBOX", "Posteingang", 5, True))
-        self.assertEqual([l[1] for l in labels if not l[3]], ["Alpha", "zeta"])
-        rows, page = g.listing("TRASH", "", None)
-        self.assertEqual(([r["id"] for r in rows], page), (["m1", "m2"], "p2"))
-        self.assertIn(("messages", {"maxResults": 30, "labelIds": "TRASH", "includeSpamTrash": "true"}, None), calls)
-        g.modify("m1", add=["STARRED"])
-        self.assertIn(("messages/m1/modify", None, {"addLabelIds": ["STARRED"], "removeLabelIds": []}), calls)
+    def test_ids_and_snippet(self):
+        mid = mailcore.make_id("Ordner|mit Strich", 42)
+        self.assertEqual(mailcore.split_id(mid), ("Ordner|mit Strich", "42"))
+        raw = (b"--b1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n"
+               b"Hallo M=C3=BCnchen, <b>wie</b> geht's?\r\n--b1\r\n")
+        self.assertEqual(mailcore.snippet_from(raw), "Hallo München, wie geht's?")
+
+    def test_parse_fetch_and_row(self):
+        data = [(b'1 (UID 7 FLAGS (\\Seen \\Flagged) INTERNALDATE "17-Jul-2026 10:00:00 +0200" '
+                 b'BODY[HEADER.FIELDS (FROM TO SUBJECT DATE)] {60}',
+                 b"From: =?utf-8?q?J=C3=BCrgen?= <j@x.de>\r\nSubject: Hallo\r\nTo: ich@x.de\r\n\r\n"), b")"]
+        items = mailcore.parse_fetch(data)
+        self.assertEqual(items[0]["uid"], 7)
+        row = mailcore.summary_row("INBOX", 7, items[0]["flags"], items[0]["date"], items[0]["literal"])
+        self.assertEqual((row["from"], row["subject"], row["unread"], row["starred"]),
+                         ("Jürgen <j@x.de>", "Hallo", False, True))
+        self.assertEqual(row["id"], "7|INBOX")
+        self.assertGreater(row["date"], 0)
+
+
+class FakeConn:
+    def __init__(self):
+        self.calls = []
+        self.capabilities = ("IMAP4REV1", "MOVE", "UIDPLUS")
+        self.literal = None
+
+    def noop(self):
+        return "OK", [b""]
+
+    def capability(self):
+        return "OK", [b"IMAP4rev1 MOVE UIDPLUS"]
+
+    def list(self):
+        return "OK", [b'(\\HasNoChildren) "/" "INBOX"', b'(\\HasNoChildren \\Archive) "/" "Archiv"',
+                      b'(\\HasNoChildren \\Trash) "/" "Papierkorb"']
+
+    def select(self, name, readonly=False):
+        self.calls.append(("select", name, readonly))
+        return "OK", [b"3"]
+
+    def status(self, name, what):
+        return "OK", [name.encode() + b" (UNSEEN 2)"]
+
+    def uid(self, cmd, *args):
+        self.calls.append((cmd,) + args)
+        if cmd == "SEARCH":
+            return "OK", [b"1 2 3"]
+        if cmd == "FETCH" and "HEADER" in args[1]:
+            return "OK", [(f"{i} (UID {u} FLAGS () BODY[HEADER.FIELDS (FROM)] {{20}}".encode(), b"Subject: M%d\r\n\r\n" % u)
+                          for i, u in enumerate(int(x) for x in args[0].split(","))] + [b")"]
+        return "OK", [b""]
+
+
+class FakeAccountTest(unittest.TestCase):
+    def test_listing_paging_and_actions(self):
+        acc = mailcore.MailAccount(mailcore.account_settings("ich@gmx.de"), "pw")
+        conn = FakeConn()
+        acc._conn = conn
+        acc.caps = {"MOVE", "UIDPLUS"}
+        labels = acc.labels()
+        self.assertEqual(labels[0], ("INBOX", "Posteingang", 2, True))
+        self.assertIn(("ARCHIVE", "Archiv", 0, True), labels)
+        rows, page = acc.listing("INBOX", "", None, size=2)
+        self.assertEqual(([r["subject"] for r in rows], page), (["M3", "M2"], 2))
+        rows, page = acc.listing("INBOX", "", page, size=2)
+        self.assertEqual(([r["id"] for r in rows], page), (["1|INBOX"], None))
+        acc.modify("3|INBOX", add=["STARRED"], remove=["INBOX"])
+        self.assertIn(("STORE", "3", "+FLAGS.SILENT", "(\\Flagged)"), conn.calls)
+        self.assertIn(("MOVE", "3", '"Archiv"'), conn.calls)
+        acc.trash("2|INBOX")
+        self.assertIn(("MOVE", "2", '"Papierkorb"'), conn.calls)
+        acc.listing("INBOX", "Rechnung März", None)
+        self.assertEqual(conn.literal, "Rechnung März".encode())
+        self.assertIn(("SEARCH", "CHARSET", "UTF-8", "TEXT"), conn.calls)
 
 
 if __name__ == "__main__":

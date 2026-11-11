@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative Mail – nativer Gmail-Client für Creative OS im Graphit-Look.
+"""Creative Mail – E-Mail-Programm für Creative OS im Graphit-Look (IMAP/SMTP: Gmail, GMX, WEB.DE, T-Online, …).
 
 Drei Spalten wie in professionellen Mail-Programmen: Ordner und Labels,
 Nachrichtenliste, Lesebereich. HTML-Mails werden echt dargestellt; Bilder
@@ -7,6 +7,7 @@ von außen bleiben zum Schutz vor Tracking gesperrt, bis man sie freigibt.
 """
 
 import hashlib
+import json
 import html
 import os
 import re
@@ -23,7 +24,7 @@ from PySide6.QtGui import (
     QTextCharFormat, QTextListFormat,
 )
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFormLayout, QSpinBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton,
     QScrollArea, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTextBrowser, QTextEdit,
     QToolButton, QVBoxLayout, QWidget,
@@ -34,9 +35,8 @@ except ImportError:
     pass
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gmail import Gmail  # noqa: E402
+from mailcore import ORDER, PROVIDERS, MailAccount, account_settings, provider_for  # noqa: E402
 
-SYSTEM_CLIENT = "/usr/share/creative-mail/google-oauth.json"
 MONTHS = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."]
 AVATAR_COLORS = ["#8fb3ff", "#6fdcc0", "#ffb07a", "#d7a8ff", "#f29cc8", "#f2d58a", "#5ec8f0", "#ff8a8e"]
 C = {"ground": "#12151b", "surface": "#1c2029", "side": "#171a22", "raised": "#232836", "track": "#3a4252",
@@ -113,7 +113,7 @@ ICONS = {
     "close": '<path d="M6 6l12 12M18 6 6 18"/>',
 }
 FOLDER_ICONS = {"INBOX": "inbox", "STARRED": "star", "IMPORTANT": "important", "SENT": "sent", "DRAFT": "draft",
-                "": "all", "SPAM": "spam", "TRASH": "trash"}
+                "": "all", "ALL": "all", "ARCHIVE": "archive", "SPAM": "spam", "TRASH": "trash"}
 
 
 def icon(name, color=C["text"], size=20, fill="none"):
@@ -617,7 +617,7 @@ class ComposeWindow(QDialog):
             return
         total = sum(self.attachment_info(item)[1] for item in self.attachments)
         if total > 24 * 1024 * 1024:
-            self.status.setText("Anhänge sind zusammen größer als 25 MB – Gmail nimmt das nicht an.")
+            self.status.setText("Anhänge sind zusammen größer als 25 MB – das nehmen die meisten Mailserver nicht an.")
             return
         if not self.subject.text().strip() and QMessageBox.question(
                 self, "Ohne Betreff senden", "Diese E-Mail hat keinen Betreff. Trotzdem senden?") \
@@ -639,6 +639,149 @@ class ComposeWindow(QDialog):
 
         self.main.jobs.run(lambda: self.main.gmail.send(to, subject, text, cc, bcc, rich, attachments, reply),
                            done, failed)
+
+
+# ── Anmeldung ──────────────────────────────────────────────────────────────
+
+class LoginDialog(QDialog):
+    """E-Mail-Adresse + Passwort; Server der bekannten Anbieter werden selbst eingetragen."""
+
+    def __init__(self, main):
+        super().__init__(main)
+        self.main = main
+        self.account = None
+        self.setWindowTitle("E-Mail-Konto anmelden")
+        self.setMinimumWidth(520)
+        self.setStyleSheet(STYLE + f"QDialog {{ background: {C['surface']}; }}"
+                           f"QComboBox, QSpinBox {{ background: {C['raised']}; border-radius: 10px; padding: 7px 10px; }}"
+                           f"QComboBox QAbstractItemView {{ background: {C['raised']}; selection-background-color: {C['select']}; }}"
+                           f"QLabel#hint {{ background: {C['raised']}; border-radius: 10px; padding: 10px 12px; color: {C['muted']}; }}"
+                           f"QLabel#warn {{ color: {C['danger']}; }}")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(10)
+        layout.addWidget(QLabel("E-Mail-Konto anmelden", objectName="paneTitle"))
+        layout.addWidget(QLabel("Adresse und Passwort genügen – die Serverdaten trägt Creative Mail selbst ein.",
+                                objectName="muted"))
+        form = QFormLayout()
+        form.setSpacing(10)
+        self.address = QLineEdit(placeholderText="name@gmx.de")
+        self.provider = QComboBox()
+        for key in ORDER:
+            self.provider.addItem(PROVIDERS[key]["name"], key)
+        self.password = QLineEdit(placeholderText="Passwort bzw. App-Passwort")
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("E-Mail-Adresse", self.address)
+        form.addRow("Anbieter", self.provider)
+        form.addRow("Passwort", self.password)
+        layout.addLayout(form)
+        self.hint = QLabel(objectName="hint")
+        self.hint.setWordWrap(True)
+        self.hint.setOpenExternalLinks(True)
+        layout.addWidget(self.hint)
+
+        self.advanced_button = QPushButton("Servereinstellungen anzeigen")
+        self.advanced_button.setCheckable(True)
+        layout.addWidget(self.advanced_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.advanced = QWidget()
+        adv = QFormLayout(self.advanced)
+        adv.setContentsMargins(0, 0, 0, 0)
+        self.user = QLineEdit(placeholderText="meist die E-Mail-Adresse")
+        self.imap_host, self.smtp_host = QLineEdit(placeholderText="imap.beispiel.de"), QLineEdit(placeholderText="smtp.beispiel.de")
+        self.imap_port, self.smtp_port = QSpinBox(), QSpinBox()
+        for box in (self.imap_port, self.smtp_port):
+            box.setRange(1, 65535)
+        self.smtp_mode = QComboBox()
+        self.smtp_mode.addItem("SSL/TLS (meist Port 465)", "ssl")
+        self.smtp_mode.addItem("STARTTLS (meist Port 587)", "starttls")
+        adv.addRow("Benutzername", self.user)
+        adv.addRow("Posteingang (IMAP)", self.imap_host)
+        adv.addRow("IMAP-Port", self.imap_port)
+        adv.addRow("Postausgang (SMTP)", self.smtp_host)
+        adv.addRow("SMTP-Port", self.smtp_port)
+        adv.addRow("SMTP-Verschlüsselung", self.smtp_mode)
+        layout.addWidget(self.advanced)
+        self.advanced_button.toggled.connect(self.advanced.setVisible)
+
+        self.status = QLabel(objectName="warn")
+        self.status.setWordWrap(True)
+        layout.addWidget(self.status)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        cancel = QPushButton("Abbrechen")
+        cancel.clicked.connect(self.reject)
+        self.ok = QPushButton("Anmelden", objectName="primary")
+        self.ok.clicked.connect(self.login)
+        row.addWidget(cancel)
+        row.addWidget(self.ok)
+        layout.addLayout(row)
+
+        self.address.textEdited.connect(self.address_changed)
+        self.provider.currentIndexChanged.connect(lambda _i: self.fill_servers())
+        self.provider.setCurrentIndex(0)
+        self.fill_servers()
+        self.advanced.setVisible(False)
+
+    def address_changed(self, text):
+        if "@" in text:
+            key = provider_for(text)
+            index = self.provider.findData(key)
+            if index >= 0 and index != self.provider.currentIndex():
+                self.provider.setCurrentIndex(index)
+            else:
+                self.fill_servers()
+
+    def fill_servers(self):
+        key = self.provider.currentData()
+        p = PROVIDERS[key]
+        cfg = account_settings(self.address.text().strip() or "name@beispiel.de", key)
+        self.user.setText(cfg["user"] if "@" in self.address.text() else "")
+        self.imap_host.setText(cfg["imap_host"])
+        self.imap_port.setValue(cfg["imap_port"])
+        self.smtp_host.setText(cfg["smtp_host"])
+        self.smtp_port.setValue(cfg["smtp_port"])
+        self.smtp_mode.setCurrentIndex(max(0, self.smtp_mode.findData(cfg["smtp_mode"])))
+        text = p.get("unsupported") or p.get("help") or ""
+        if p.get("link") and not p.get("unsupported"):
+            text += f' <a href="{p["link"]}" style="color:{C["accent"]}">Seite öffnen</a>'
+        self.hint.setText(text)
+        self.hint.setVisible(bool(text))
+        self.ok.setEnabled(not p.get("unsupported"))
+        if key == "custom":
+            self.advanced_button.setChecked(True)
+
+    def login(self):
+        address = self.address.text().strip()
+        if "@" not in address or "." not in address.rsplit("@", 1)[-1]:
+            self.status.setText("Bitte eine vollständige E-Mail-Adresse eingeben.")
+            return
+        if not self.password.text():
+            self.status.setText("Bitte das Passwort eingeben.")
+            return
+        if not self.imap_host.text().strip() or not self.smtp_host.text().strip():
+            self.status.setText("Bitte Posteingangs- und Postausgangsserver eintragen.")
+            self.advanced_button.setChecked(True)
+            return
+        cfg = account_settings(address, self.provider.currentData(), self.imap_host.text().strip(),
+                               self.imap_port.value(), self.smtp_host.text().strip(), self.smtp_port.value(),
+                               self.smtp_mode.currentData())
+        if self.user.text().strip():
+            cfg["user"] = self.user.text().strip()
+        account = MailAccount(cfg, self.password.text())
+        self.ok.setEnabled(False)
+        self.status.setStyleSheet(f"color: {C['muted']};")
+        self.status.setText("Verbinde …")
+
+        def done(_address):
+            self.account = account
+            self.accept()
+
+        def failed(exc):
+            self.ok.setEnabled(True)
+            self.status.setStyleSheet("")
+            self.status.setText(str(exc))
+
+        self.main.jobs.run(account.connect, done, failed)
 
 
 # ── Hauptfenster ───────────────────────────────────────────────────────────
@@ -673,13 +816,15 @@ class MailWindow(QMainWindow):
         self.poll_timer = QTimer(self, interval=120_000)
         self.poll_timer.timeout.connect(self.check_new)
 
-        client = self.settings.value("client", SYSTEM_CLIENT, type=str) if not selftest else SYSTEM_CLIENT
-        address = self.settings.value("address", "", type=str) if not selftest else ""
-        if address:
+        stored = self.settings.value("account", "", type=str) if not selftest else ""
+        if stored:
             try:
-                self.gmail = Gmail(client, address)
-            except ValueError as exc:
-                self.statusBar().showMessage(str(exc))
+                self.gmail = MailAccount(json.loads(stored))
+            except (ValueError, TypeError) as exc:
+                self.statusBar().showMessage(f"Konto unlesbar: {exc}")
+        # Alte Google-Anmeldung (vor dem IMAP-Umbau) entfernen
+        for old in ("client", "address"):
+            self.settings.remove(old)
         self.update_account()
         if self.gmail:
             self.refresh_labels()
@@ -712,7 +857,7 @@ class MailWindow(QMainWindow):
         self.folders.setMouseTracking(True)
         self.folders.currentItemChanged.connect(self.pick_folder)
         layout.addWidget(self.folders, 1)
-        self.fill_folders([(lid, name, 0, True) for lid, name in Gmail.SYSTEM])
+        self.fill_folders([(lid, name, 0, True) for lid, name in MailAccount.SYSTEM if lid != "ALL"])
         # Konto
         account = QHBoxLayout()
         account.setContentsMargins(14, 0, 10, 0)
@@ -724,7 +869,7 @@ class MailWindow(QMainWindow):
         self.account_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(self)
         menu.addAction("Signatur bearbeiten …", self.edit_signature)
-        menu.addAction("Google-Konto verbinden …", self.connect_google)
+        menu.addAction("Konto anmelden …", self.connect_account)
         menu.addSeparator()
         menu.addAction("Abmelden", self.sign_out)
         self.account_menu_button.setMenu(menu)
@@ -752,7 +897,7 @@ class MailWindow(QMainWindow):
         layout.addLayout(head)
         search = QHBoxLayout()
         search.setContentsMargins(14, 0, 14, 0)
-        self.query = QLineEdit(placeholderText="Suchen – wie in Gmail, z. B. from:anna has:attachment")
+        self.query = QLineEdit(placeholderText="E-Mails durchsuchen")
         self.query.addAction(icon("search", C["dim"], 16), QLineEdit.ActionPosition.LeadingPosition)
         self.query.setClearButtonEnabled(True)
         self.query.returnPressed.connect(self.refresh)
@@ -793,8 +938,8 @@ class MailWindow(QMainWindow):
         self.empty_text = QLabel(objectName="muted")
         self.empty_text.setWordWrap(True)
         self.empty_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.login_button = QPushButton("Mit Google anmelden", objectName="primary")
-        self.login_button.clicked.connect(self.connect_google)
+        self.login_button = QPushButton("E-Mail-Konto anmelden", objectName="primary")
+        self.login_button.clicked.connect(self.connect_account)
         for w in (self.empty_icon, self.empty_title, self.empty_text, self.login_button):
             c.addWidget(w)
         row = QHBoxLayout()
@@ -921,8 +1066,8 @@ class MailWindow(QMainWindow):
             self.show_empty("Keine E-Mail ausgewählt", "Wähle links eine Nachricht aus.")
         else:
             self.show_empty("Willkommen bei Creative Mail",
-                            "Verbinde dein Gmail-Konto. Die Anmeldung läuft sicher über deinen Browser; "
-                            "Zugangsdaten bleiben im Schlüsselbund dieses PCs.")
+                            "Melde dich mit deiner E-Mail-Adresse an – Gmail, GMX, WEB.DE, T-Online, Yahoo, "
+                            "iCloud und viele mehr. Das Passwort bleibt im Schlüsselbund dieses PCs.")
 
     def show_empty(self, title, text):
         self.empty_title.setText(title)
@@ -937,7 +1082,7 @@ class MailWindow(QMainWindow):
         user_started = False
         for lid, name, unread, system in labels:
             if not system and not user_started:
-                header = QListWidgetItem("LABELS")
+                header = QListWidgetItem("ORDNER")
                 header.setData(Qt.ItemDataRole.UserRole + 3, True)
                 header.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.folders.addItem(header)
@@ -1254,46 +1399,30 @@ class MailWindow(QMainWindow):
         window.show()
 
     # Konto
-    def connect_google(self):
-        client = self.settings.value("client", SYSTEM_CLIENT, type=str)
-        if not Path(client).is_file():
-            QMessageBox.information(self, "Google-Anmeldung einrichten",
-                                    "Wähle die OAuth-JSON-Datei deiner Google-Desktop-App. "
-                                    "Die Gmail API muss im zugehörigen Google-Projekt aktiviert sein.")
-            client, _ = QFileDialog.getOpenFileName(self, "Google-OAuth-Datei auswählen", "", "JSON (*.json)")
-            if not client:
-                return
-        try:
-            gmail = Gmail(client)
-        except ValueError as exc:
-            self.settings.remove("client")
-            QMessageBox.warning(self, "Creative Mail", str(exc))
+    def connect_account(self):
+        dialog = LoginDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.account:
             return
-
-        def connected(address):
-            self.set_loading(False)
-            self.gmail = gmail
-            self.settings.setValue("client", client)
-            self.settings.setValue("address", address)
-            self.folder = "INBOX"
-            self.update_account()
-            self.refresh_labels()
-            self.refresh()
-            self.poll_timer.start()
-
-        self.set_loading(True, "Google-Anmeldung im Browser abschließen …")
-        self.jobs.run(gmail.connect, connected)
+        account = dialog.account
+        self.gmail = account
+        self.settings.setValue("account", json.dumps(account.cfg))
+        self.folder = "INBOX"
+        self.update_account()
+        self.refresh_labels()
+        self.refresh()
+        self.poll_timer.start()
 
     def sign_out(self):
         if not self.gmail or QMessageBox.question(
                 self, "Abmelden", f"{self.gmail.address} in Creative Mail abmelden?") != QMessageBox.StandardButton.Yes:
             return
-        self.settings.remove("address")
+        self.settings.remove("account")
+        self.gmail.forget()
         self.gmail = None
         self.current = None
         self.poll_timer.stop()
         self.messages.clear()
-        self.fill_folders([(lid, name, 0, True) for lid, name in Gmail.SYSTEM])
+        self.fill_folders([(lid, name, 0, True) for lid, name in MailAccount.SYSTEM if lid != "ALL"])
         self.update_account()
 
     def edit_signature(self):

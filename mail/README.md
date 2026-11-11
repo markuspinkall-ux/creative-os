@@ -1,6 +1,6 @@
 # Creative Mail
 
-Nativer Gmail-Client für Creative OS im Graphit-Look:
+E-Mail-Programm für Creative OS im Graphit-Look (IMAP/SMTP):
 
 - drei Spalten: Ordner und eigene Labels mit Ungelesen-Zählern, Nachrichtenliste
   mit Absender-Kürzel, Datum, Vorschau und Stern, Lesebereich
@@ -13,25 +13,20 @@ Nativer Gmail-Client für Creative OS im Graphit-Look:
   alle zwei Minuten neue Mails
 - Tastenkürzel: Strg+N neu, Strg+R antworten, Strg+Umschalt+R allen,
   Strg+Umschalt+F weiterleiten, E archivieren, Entf löschen, S markieren,
-  U ungelesen, F5 aktualisieren, Strg+Eingabe senden
+  U ungelesen, F5 aktualisieren, Strg+Eingabe s## Konto anmelden
 
-## Google-Konto verbinden
+**E-Mail-Konto anmelden** wählen, Adresse und Passwort eingeben – den Anbieter erkennt
+Creative Mail an der Adresse und trägt die Server selbst ein:
 
-Für einen privaten Test in der Google Cloud Console ein Projekt anlegen,
-die Gmail API aktivieren und unter Google Auth Platform einen OAuth-Client
-vom Typ **Desktop-App** erstellen. Bei einer externen App im Status **Testing**
-die eigene Gmail-Adresse als Testnutzer hinzufügen. Die JSON-Datei des
-Desktop-Clients herunterladen. Creative Mail öffnen, **Mit Google anmelden**
-wählen und die Datei auswählen. Die Anmeldung und Freigabe erfolgen im
-Standardbrowser. Creative Mail liest danach die Kontoadresse aus Gmail aus.
-Es braucht keine IMAP- oder SMTP-Einstellungen.
+| Anbieter | Hinweis |
+|---|---|
+| Gmail | App-Passwort nötig (Google-Konto → Sicherheit → Bestätigung in zwei Schritten → App-Passwörter) |
+| GMX, WEB.DE | IMAP-Zugriff einmalig in den Einstellungen des Postfachs erlauben |
+| T-Online | eigenes E-Mail-Passwort für Mailprogramme anlegen |
+| Yahoo, AOL, iCloud | App-Passwort bzw. app-spezifisches Passwort |
+| freenet, IONOS/1&1, Posteo, mailbox.org | normales Passwort |
+| Andere | Server unter „Servereinstellungen anzeigen“ von Hand eintragen |
+| Outlook/Hotmail | geht nicht: Microsoft erlaubt seit September 2024 keine Anmeldung mit Passwort mehr |
 
-Die OAuth-Datei am gewählten Ort behalten. Das Aktualisierungstoken liegt im
-System-Schlüsselbund. Die Testfreigabe kann nach sieben Tagen ablaufen. Für
-eine öffentliche Auslieferung mit Anmeldung ab Werk benötigt Creative OS
-einen eigenen für den Gmail-Zugriff freigegebenen Desktop-OAuth-Client.
-Ein vorhandener System-Client unter
-`/usr/share/creative-mail/google-oauth.json` wird automatisch verwendet.
-
-[Google-Dokumentation zu Desktop-OAuth](https://developers.google.com/identity/protocols/oauth2/native-app)
-und [Gmail-Berechtigungen](https://developers.google.com/workspace/gmail/api/auth/scopes).
+Das Passwort liegt im System-Schlüsselbund (Secret Service), die Serverdaten in den
+Einstellungen von Creative Mail. Gesendete E-Mails landen im Ordner „Gesendet“ des Postfachs.
