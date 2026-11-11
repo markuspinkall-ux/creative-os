@@ -50,21 +50,36 @@ def human_eta(seconds):
     return f"noch etwa {hours} Std. {rest} Min." if rest else f"noch etwa {hours} Std."
 
 
+def human_duration(seconds):
+    seconds = int(max(0, seconds))
+    if seconds < 60:
+        return f"{seconds} s"
+    return f"{seconds // 60}:{seconds % 60:02d} Min."
+
+
 class UpdateProgress:
     """Wertet die Ausgabe von rpm-ostree aus und schätzt die Restzeit.
 
-    feed(line)       – eine Zeile der Ausgabe
-    sample(t, rx)    – Zeitpunkt (s) und empfangene Bytes der Netzwerkkarte(n)
-    state()          – {"progress": 0–100 oder -1, "text": "…"}
+    feed(line)            – eine Zeile der Ausgabe
+    sample(t, rx, wx)     – Zeitpunkt (s), empfangene Bytes der Netzwerkkarte(n), geschriebene Bytes der Platten
+    state()               – {"progress": 0–100 oder -1, "text": "…"}
+    finish(t) / history() – gemessene Zeiten fürs nächste Update merken
+
+    Nach dem Herunterladen einer Schicht entpackt rpm-ostree sie noch und schreibt sie
+    auf die Platte – bei großen Schichten dauert das Minuten, obwohl das Netz schon still ist.
+    Dafür wird die Verarbeitungsgeschwindigkeit gemessen (und für das nächste Update gemerkt).
     """
 
-    DOWNLOAD_SHARE = 92          # Prozent des Balkens fürs Herunterladen, der Rest fürs Vorbereiten
+    DOWNLOAD_SHARE = 92          # Prozent des Balkens für Laden + Entpacken, der Rest fürs Vorbereiten
+    DEFAULT_PROC_RATE = 60e6     # Bytes/s beim Entpacken, bis es gemessen ist
+    DEFAULT_STAGE_SECS = 90
 
-    def __init__(self):
+    def __init__(self, history=None):
+        history = history or {}
         self.totals = {}         # "ostree chunk" / "custom" → Bytes
         self.layers_needed = 0
-        self.done_bytes = 0      # fertig geladene Schichten
-        self.current = 0         # Größe der Schicht, die gerade lädt
+        self.done_bytes = 0      # fertig geladene und entpackte Schichten
+        self.current = 0         # Größe der Schicht, die gerade lädt/entpackt wird
         self.layers_done = 0
         self.phase = "wait"      # wait → download → stage → done
         self.rx_start = None
@@ -74,6 +89,13 @@ class UpdateProgress:
         self.last_t = None
         self.no_update = False
         self._was_downloading = False
+        self.proc_rate = float(history.get("proc_rate") or self.DEFAULT_PROC_RATE)
+        self.stage_secs = float(history.get("stage_secs") or self.DEFAULT_STAGE_SECS)
+        self.net_done_t = None   # wann die laufende Schicht komplett übers Netz da war
+        self.stage_t = None
+        self.measured_stage = None
+        self.wx_last = None
+        self.write_speed = None
 
     # Ausgabe von rpm-ostree
     def feed(self, line):
@@ -89,21 +111,30 @@ class UpdateProgress:
             size = SIZE.search(line)
             if size and "done" not in low:
                 self.current = parse_size(size.group(1), size.group(2))
+                self.net_done_t = None
                 self.phase = "download"
             if "done" in low:
                 finished = parse_size(size.group(1), size.group(2)) if size else self.current
+                if self.net_done_t is not None and self.last_t is not None and finished >= 50e6:
+                    took = self.last_t - self.net_done_t
+                    if took > 2:
+                        measured = finished / took
+                        self.proc_rate += (measured - self.proc_rate) * 0.6
                 self.done_bytes += finished
                 self.layers_done += 1
                 self.current = 0
+                self.net_done_t = None
             return
         if "staging deployment" in low or "writing objects" in low or "checking out" in low:
+            if self.phase != "stage":
+                self.stage_t = self.last_t
             self.phase = "stage"
         elif "no upgrade available" in low or "no updates available" in low:
             self.no_update = True
             self.phase = "done"
 
-    # Messung an der Netzwerkkarte
-    def sample(self, t, rx):
+    # Messung an Netzwerkkarte und Platten
+    def sample(self, t, rx, wx=None):
         if self.rx_last is not None and rx < self.rx_last:      # Zähler zurückgesetzt (Karte neu)
             self.rx_start = rx - self.received
         if self.phase in ("wait", "download") and self.rx_start is None:
@@ -117,8 +148,31 @@ class UpdateProgress:
             # gleitender Mittelwert über ~8 s: Restzeit springt nicht
             weight = min(1.0, (t - self.last_t) / 8)
             self.speed = momentary if self.speed is None else self.speed + (momentary - self.speed) * weight
+        if wx is not None and self.wx_last is not None and self.last_t is not None and t > self.last_t:
+            momentary = max(0.0, (wx - self.wx_last) / (t - self.last_t))
+            weight = min(1.0, (t - self.last_t) / 5)
+            self.write_speed = momentary if self.write_speed is None else \
+                self.write_speed + (momentary - self.write_speed) * weight
+        if wx is not None:
+            self.wx_last = wx
+        # laufende Schicht ganz übers Netz da? Dann wird sie jetzt entpackt
+        if (downloading and self.current and self.net_done_t is None
+                and self.received >= self.done_bytes + self.current):
+            self.net_done_t = t
+        if self.phase == "stage" and self.stage_t is None:
+            self.stage_t = t
         self.rx_last, self.last_t = rx, t
         self._was_downloading = downloading
+
+    def finish(self, t):
+        if self.stage_t is not None:
+            self.measured_stage = max(1.0, t - self.stage_t)
+        self.phase = "done"
+
+    def history(self):
+        data = {"proc_rate": round(self.proc_rate)}
+        data["stage_secs"] = round(self.measured_stage if self.measured_stage else self.stage_secs)
+        return data
 
     @property
     def total(self):
@@ -134,20 +188,54 @@ class UpdateProgress:
             guess = max(self.done_bytes, min(self.received, self.total))
         return min(self.total, guess)
 
+    @property
+    def processed(self):
+        """Entpackte Bytes: fertige Schichten plus geschätzter Teil der laufenden."""
+        part = 0
+        if self.current and self.net_done_t is not None and self.last_t is not None:
+            part = min(self.current * 0.97, (self.last_t - self.net_done_t) * self.proc_rate)
+        return min(self.total, self.done_bytes + part)
+
+    @property
+    def unpacking(self):
+        return self.phase == "download" and self.net_done_t is not None
+
     def eta(self):
-        if self.phase != "download" or not self.total or not self.speed or self.speed < 2e4:
+        if self.phase != "download" or not self.total:
             return None
-        return (self.total - self.loaded) / self.speed
+        backlog = max(0, self.loaded - self.processed)
+        if self.unpacking:
+            return (self.total - self.processed) / self.proc_rate
+        if not self.speed or self.speed < 2e4:
+            return None
+        # Rest herunterladen, danach die letzte Schicht noch entpacken
+        return (self.total - self.loaded) / self.speed + max(backlog, self.current or 0) / self.proc_rate
 
     def state(self):
         if self.phase == "done":
             return {"progress": 100, "text": "Kein neues Update." if self.no_update else "Fertig."}
         if self.phase == "stage":
-            return {"progress": 96, "text": "Wird für den nächsten Neustart vorbereitet – dauert meist 1–3 Min. …"}
+            elapsed = (self.last_t or 0) - (self.stage_t if self.stage_t is not None else (self.last_t or 0))
+            share = min(1.0, elapsed / max(10.0, self.stage_secs))
+            parts = ["Wird für den nächsten Neustart eingerichtet", f"läuft seit {human_duration(elapsed)}"]
+            rest = self.stage_secs - elapsed
+            parts.append(human_eta(rest) if rest > 0 else "dauert etwas länger als sonst – bitte warten")
+            if self.write_speed and self.write_speed > 1e6:
+                parts.append(f"schreibt {human_bytes(self.write_speed)}/s")
+            return {"progress": self.DOWNLOAD_SHARE + int(share * (99 - self.DOWNLOAD_SHARE)),
+                    "text": "  ·  ".join(parts)}
         if self.phase == "wait" or not self.total:
             return {"progress": -1, "text": "Update wird gesucht …" if self.phase == "wait" else "Update wird geladen …"}
-        share = self.loaded / self.total
-        progress = int(share * self.DOWNLOAD_SHARE)
+        share = (self.loaded + self.processed) / 2 / self.total
+        progress = min(self.DOWNLOAD_SHARE - 1, int(share * self.DOWNLOAD_SHARE))
+        if self.unpacking:
+            n = self.layers_done + 1
+            parts = [f"Wird entpackt und gespeichert – Teil {n} von {self.layers_needed}" if self.layers_needed
+                     else "Wird entpackt und gespeichert"]
+            if self.write_speed and self.write_speed > 1e6:
+                parts.append(f"schreibt {human_bytes(self.write_speed)}/s")
+            parts.append(human_eta(self.eta()))
+            return {"progress": progress, "text": "  ·  ".join(p for p in parts if p)}
         parts = [f"{human_bytes(self.loaded)} von {human_bytes(self.total)}"]
         if self.speed and self.speed >= 2e4:
             parts.append(f"{human_bytes(self.speed)}/s")
@@ -173,4 +261,21 @@ def read_rx_bytes(root="/sys/class/net"):
                 total += int(f.read().strip() or 0)
         except (OSError, ValueError):
             continue
+    return total
+
+
+DISK = __import__("re").compile(r"^(sd[a-z]+|vd[a-z]+|xvd[a-z]+|nvme\d+n\d+|mmcblk\d+)$")
+
+
+def read_wx_bytes(path="/proc/diskstats"):
+    """Auf alle Festplatten geschriebene Bytes (ganze Platten, ohne Partitionen)."""
+    total = 0
+    try:
+        with open(path) as f:
+            for line in f:
+                cols = line.split()
+                if len(cols) > 9 and DISK.match(cols[2]):
+                    total += int(cols[9]) * 512
+    except (OSError, ValueError):
+        return None
     return total
