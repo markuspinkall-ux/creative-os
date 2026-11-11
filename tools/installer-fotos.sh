@@ -20,7 +20,7 @@ if [ "${1:-}" = build ]; then
         iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
         curl -fsSL -o /tmp/netinst.iso "$base/$iso"
         for k in umschauen automatisch; do
-            bash /src/image/netinstall/brand-iso.sh /tmp/netinst.iso "/out/$k.ks" "/out/$k.iso"
+            CREATIVE_GRUB_DEBUG=1 bash /src/image/netinstall/brand-iso.sh /tmp/netinst.iso "/out/$k.ks" "/out/$k.iso"
         done
         # zur Kontrolle: das umgebaute Startmenü
         xorriso -osirrox on -indev /out/umschauen.iso -extract /EFI/BOOT/grub.cfg /out/grub.cfg >/dev/null 2>&1 || true
@@ -74,7 +74,7 @@ stop() { kill "$(cat "$W/qemu.pid")" 2>/dev/null; sleep 3; }
 echo "=== 1) Startmenü und Übersicht des Installers"
 boot "$W/iso/umschauen.iso" || { echo "QEMU startet nicht"; exit 1; }
 # Startmenü abwarten (UEFI braucht ein paar Sekunden), dabei immer wieder fotografieren
-for i in $(seq 1 20); do sleep 2; shot startmenue; done
+for i in $(seq 1 40); do sleep 1; shot startmenue; done
 key down; sleep 1; shot startmenue-auswahl; key up; sleep 1
 key ret
 for i in $(seq 1 30); do sleep 10; shot installer; done

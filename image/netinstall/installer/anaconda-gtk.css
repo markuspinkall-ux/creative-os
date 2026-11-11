@@ -187,3 +187,5 @@ AnacondaSpokeSelector:hover { background-color: rgba(48, 55, 74, 0.92); }
 AnacondaSpokeSelector image { color: @creative_accent; -gtk-icon-style: symbolic; -gtk-icon-effect: none; opacity: 1; }
 #anaconda-spoke-selector-status { color: rgba(220, 230, 255, 0.6); }
 AnacondaHubWindow label, AnacondaStandaloneWindow label { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+
+AnacondaHubWindow button label, AnacondaStandaloneWindow button label { text-shadow: none; }

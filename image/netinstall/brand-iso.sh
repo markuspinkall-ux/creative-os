@@ -63,7 +63,10 @@ brand() {
     # Graphit-Startmenü: nur wenn GRUB Schrift und Thema findet, sonst bleibt das Textmenü
     case "$1" in *grub*.cfg)
         [ -n "$theme_dir" ] || return 0
-        awk -v block="$(cat "$here/grub-theme/grub-snippet.cfg")" '
+        snippet="$(cat "$here/grub-theme/grub-snippet.cfg")"
+        [ "${CREATIVE_GRUB_DEBUG:-}" = 1 ] && snippet="set creative_debug=1
+$snippet"
+        awk -v block="$snippet" '
             !done && /^(menuentry|submenu) / { print block; print ""; done=1 } { print }' "$1" > "$1.neu" && mv "$1.neu" "$1" ;;
     esac
 }
