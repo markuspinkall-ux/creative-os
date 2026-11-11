@@ -1,0 +1,62 @@
+# Baut den TRELLIS-Container für Creative 3D (Bild → 3D-Figur) und legt ihn in die
+# GitHub-Registry: ghcr.io/<besitzer>/creative-trellis:latest
+# Creative 3D lädt ihn beim „KI einrichten“ herunter. Nur nötig, wenn sich
+# creative3d/trellis/ ändert – das Creative-OS-Abbild selbst bleibt klein.
+name: TRELLIS-Container bauen
+
+on:
+  push:
+    branches: [main, "claude/trellis"]
+    paths:
+      - "creative3d/trellis/**"
+      - ".github/workflows/trellis.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: creative-trellis
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Platz schaffen (CUDA-Entwicklungsabbild ist groß)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/lib/jvm
+          sudo docker system prune -af >/dev/null
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Namen festlegen
+        id: names
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/creative-trellis" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Container bauen (kompiliert die CUDA-Erweiterungen, ohne Grafikkarte)
+        run: |
+          docker build \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            --label org.opencontainers.image.description="TRELLIS (Microsoft, MIT) für Creative 3D" \
+            --label org.opencontainers.image.licenses=MIT \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            -t "${{ steps.names.outputs.image }}:latest" \
+            -t "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}" \
+            -f creative3d/trellis/Containerfile \
+            creative3d/trellis
+          docker image ls "${{ steps.names.outputs.image }}"
+          df -h /
+
+      - name: In die GitHub-Registry hochladen
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "${{ steps.names.outputs.image }}:latest"
+          docker push "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}"

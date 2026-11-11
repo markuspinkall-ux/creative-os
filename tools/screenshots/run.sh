@@ -21,6 +21,8 @@ for page in network displays sound look updates system server backup; do
 done
 for app in art writer cut ftp 3d software notes mail claude iso broadcast pictures \
            taskmanager magazin podcast player calculator welcome files obs; do
-    shot "$app" "/usr/bin/creative-$app"
+    bin="/usr/bin/creative-$app"
+    [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
+    shot "$app" "$bin"
 done
 python3 /tools/contact.py "$out"

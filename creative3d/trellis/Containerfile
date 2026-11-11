@@ -1,0 +1,69 @@
+# Creative 3D – TRELLIS (Microsoft, MIT) fertig kompiliert für NVIDIA-Grafikkarten.
+# Gebaut von GitHub (.github/workflows/trellis.yml) → ghcr.io/<besitzer>/creative-trellis
+# Creative 3D startet es mit:  podman run --device nvidia.com/gpu=all …
+#
+# Die Modelle (≈ 4 GB) liegen nicht im Abbild, sondern werden beim Einrichten in
+# ~/.local/share/creative-3d/cache geladen (gemountet als /cache).
+FROM docker.io/nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+
+ARG TRELLIS_COMMIT=193e0502b5cb3eb5997ec457d5340e95d09b158e
+ARG NVDIFFRAST_COMMIT=253ac4fcea7de5f396371124af597e6cc957bfae
+ARG DIFFOCTREERAST_COMMIT=b09c20b84ec3aace4729e6e18a613112320eca3a
+ARG MIPSPLATTING_COMMIT=dda02ab5ecf45d6edb8c540d9bb65c7e451345a9
+# RTX 20/30/40, A-/H-Karten; PTX für Neueres
+ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0+PTX" \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.10 python3.10-dev python3-pip git ninja-build build-essential \
+      libgl1 libglib2.0-0 libegl1 libgomp1 libxrender1 libsm6 libxext6 ca-certificates \
+ && ln -sf /usr/bin/python3.10 /usr/bin/python \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip wheel setuptools \
+ && python3 -m pip install torch==2.4.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu121
+
+# Grundpakete wie in TRELLIS/setup.sh --basic (Fassung des festen Stands)
+RUN python3 -m pip install "numpy<2" pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless scipy ninja \
+      "rembg==2.0.59" onnxruntime trimesh open3d xatlas pyvista pymeshfix igraph "transformers<4.47" \
+      huggingface-hub safetensors \
+ && python3 -m pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8 \
+ && python3 -m pip install xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121 \
+ && python3 -m pip install kaolin -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu121.html \
+ && python3 -m pip install spconv-cu120
+
+# CUDA-Erweiterungen (werden hier ohne Grafikkarte für alle oben genannten Karten kompiliert)
+RUN mkdir -p /tmp/ext && cd /tmp/ext \
+ && git clone https://github.com/NVlabs/nvdiffrast.git && (cd nvdiffrast && git checkout -q "$NVDIFFRAST_COMMIT") \
+ && python3 -m pip install --no-build-isolation ./nvdiffrast \
+ && git clone https://github.com/JeffreyXiang/diffoctreerast.git \
+ && (cd diffoctreerast && git checkout -q "$DIFFOCTREERAST_COMMIT" && git submodule update -q --init --recursive) \
+ && python3 -m pip install --no-build-isolation ./diffoctreerast \
+ && git clone https://github.com/autonomousvision/mip-splatting.git \
+ && (cd mip-splatting && git checkout -q "$MIPSPLATTING_COMMIT" && git submodule update -q --init --recursive) \
+ && python3 -m pip install --no-build-isolation ./mip-splatting/submodules/diff-gaussian-rasterization/ \
+ && cd / && rm -rf /tmp/ext
+
+# TRELLIS selbst (fester Stand)
+RUN git clone https://github.com/microsoft/TRELLIS.git /opt/trellis \
+ && cd /opt/trellis && git checkout -q "$TRELLIS_COMMIT" && rm -rf .git assets/example_*
+
+COPY run.py /opt/creative/run.py
+ENV PYTHONPATH=/opt/trellis \
+    ATTN_BACKEND=xformers \
+    SPCONV_ALGO=native \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    HF_HOME=/cache/hf \
+    TORCH_HOME=/cache/torch \
+    U2NET_HOME=/cache/u2net \
+    TORCH_EXTENSIONS_DIR=/cache/torch_extensions
+
+# Schneller Import-Test (ohne Grafikkarte): alle Bausteine sind da
+RUN python3 -c "import torch, xformers, spconv.pytorch, kaolin, nvdiffrast.torch, diff_gaussian_rasterization, \
+      trimesh, xatlas, pyvista, pymeshfix, rembg; print('TRELLIS-Bausteine ok, torch', torch.__version__)" \
+ && python3 /opt/creative/run.py --selftest
+
+WORKDIR /opt/creative
+ENTRYPOINT ["python3", "/opt/creative/run.py"]

@@ -60,9 +60,10 @@ def _install():
             if original is None:
                 continue
 
-            def patched(self, *args, _original=original):
+            def patched(*args, _original=original):
+                # exec() ist in PySide statisch: Aufruf als app.exec() oder QApplication.exec()
                 arm()
-                return _original(self, *args)
+                return _original()
 
             setattr(cls, name, patched)
 
