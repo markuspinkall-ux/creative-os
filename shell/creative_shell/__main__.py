@@ -37,6 +37,7 @@ from .desktopstats import DesktopStats
 from .desktopwidgets import DesktopWidget
 from .widget_extras import WidgetExtras
 from .visualizer import Visualizer
+from .loginsound import play_login_sound
 from .nowplaying import NowPlaying
 from .broadcasttray import BroadcastTray
 from .shelf import ShelfModel
@@ -522,6 +523,8 @@ def main():
     for name, model in models.items():
         ctx.setContextProperty(name, model)
     shell.start()
+    # Anmelde-Ton, sobald der Desktop gezeichnet ist (einmal pro Sitzung)
+    QTimer.singleShot(1500, play_login_sound)
     models["assistant"].spoke.connect(shell.showBubble)
     models["assistant"].changed.connect(
         lambda: shell.hideBubble() if models["assistant"].muted else None)

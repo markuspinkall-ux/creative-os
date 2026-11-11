@@ -34,6 +34,30 @@ SettingsPage {
     }
 
     Card {
+        title: "Anmelde-Ton"
+        subtitle: "Ein kurzer Klang, sobald nach der Anmeldung der Desktop erscheint – wie beim Abmelden"
+        SettingRow {
+            label: "Ton beim Anmelden"
+            hint: "Spielt einmal pro Anmeldung"
+            last: true
+            Row {
+                spacing: 12
+                CButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Anhören"
+                    onClicked: look.testLoginSound()
+                }
+                CSwitch {
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: look.loginSound
+                    label: "Ton beim Anmelden abspielen"
+                    onToggled: (v) => look.setLoginSound(v)
+                }
+            }
+        }
+    }
+
+    Card {
         title: "Rauschfreies Mikrofon und virtueller Hintergrund"
         subtitle: "KI-Rauschentfernung fürs Mikrofon und Greenscreen für die Kamera – in Creative Broadcast"
         SettingRow {

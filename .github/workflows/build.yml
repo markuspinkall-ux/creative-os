@@ -191,6 +191,29 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+      - name: Bildschirmfotos im Branch „bildschirmfotos“ ablegen
+        if: matrix.variant == 'amd' && always()
+        continue-on-error: true
+        run: |
+          ls shots/*.png >/dev/null 2>&1 || exit 0
+          dir="$(mktemp -d)"
+          cp shots/*.png "$dir/"
+          {
+            echo "# Bildschirmfotos aller Creative-Apps"
+            echo
+            echo "Build: ${{ github.sha }} · $(date -u '+%Y-%m-%d %H:%M UTC') · automatisch erzeugt, ohne Bildschirm"
+            echo
+            [ -f "$dir/uebersicht.png" ] && echo '![Übersicht](uebersicht.png)' && echo
+            for f in "$dir"/*.png; do n="$(basename "$f" .png)"; [ "$n" = uebersicht ] && continue; echo "### $n"; echo "![$n]($n.png)"; echo; done
+          } > "$dir/README.md"
+          cd "$dir"
+          git init -q -b bildschirmfotos
+          git config user.name "Creative OS Build"
+          git config user.email "build@creative-os.invalid"
+          git add -A
+          git commit -q -m "Bildschirmfotos ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" bildschirmfotos
+
       - name: Abbild in wiederverwendbare Schichten aufteilen
         if: steps.base.outputs.image == ''
         run: |

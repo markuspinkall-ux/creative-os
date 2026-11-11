@@ -457,6 +457,7 @@ class LookModel(QObject):
         self._viz_opacity = float(cfg.get("visualizerOpacity", 0.1))
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
+        self._login_sound = bool(cfg.get("loginSound", True))
         self._images = []
         self.refresh()
 
@@ -517,6 +518,19 @@ class LookModel(QObject):
         self.changed.emit()
 
     @Slot(bool)
+    def setLoginSound(self, on):
+        self._login_sound = bool(on)
+        shell_config.set_value("loginSound", self._login_sound)
+        self.changed.emit()
+
+    @Slot()
+    def testLoginSound(self):
+        from creative_shell.loginsound import player, sound_file
+        path, program = sound_file(), player()
+        if path and program:
+            spawn_detached([program, "-f", path] if program == "canberra-gtk-play" else [program, path])
+
+    @Slot(bool)
     def setNowPlaying(self, on):
         self._np_on = bool(on)
         shell_config.set_value("taskbarNowPlaying", self._np_on)
@@ -536,4 +550,5 @@ class LookModel(QObject):
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
     desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
     nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
+    loginSound = Property(bool, lambda self: self._login_sound, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)
