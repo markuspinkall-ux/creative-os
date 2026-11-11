@@ -47,6 +47,6 @@ Item {
         anchors.bottom: parent.bottom
         width: parent.width
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.05)
+        color: Theme.tint(0.05)
     }
 }

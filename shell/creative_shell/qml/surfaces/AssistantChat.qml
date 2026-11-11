@@ -52,7 +52,7 @@ Item {
                 id: logo
                 anchors.verticalCenter: parent.verticalCenter
                 width: 34; height: 34; radius: 11
-                color: root.busy ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22) : Qt.rgba(1, 1, 1, 0.07)
+                color: root.busy ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22) : Theme.tint(0.07)
                 SvgIcon { anchors.centerIn: parent; visible: !root.busy; name: "mic"; size: 17 }
                 // kleiner Visualizer
                 Row {
@@ -199,7 +199,7 @@ Item {
                     anchors.rightMargin: 5
                     anchors.verticalCenter: parent.verticalCenter
                     width: 34; height: 34; radius: 17
-                    color: input.text.trim().length ? Theme.accent : Qt.rgba(1, 1, 1, 0.06)
+                    color: input.text.trim().length ? Theme.accent : Theme.tint(0.06)
                     Text {
                         anchors.centerIn: parent
                         text: "↑"
@@ -216,7 +216,7 @@ Item {
                 id: micBtn
                 anchors.right: parent.right
                 width: 44; height: 44; radius: 22
-                color: root.st === "listening" ? Theme.accent : (mm.containsMouse ? Theme.hover : Qt.rgba(1, 1, 1, 0.06))
+                color: root.st === "listening" ? Theme.accent : (mm.containsMouse ? Theme.hover : Theme.tint(0.06))
                 SvgIcon { anchors.centerIn: parent; name: root.st === "listening" ? "mic-dark" : "mic"; size: 18 }
                 MouseArea {
                     id: mm

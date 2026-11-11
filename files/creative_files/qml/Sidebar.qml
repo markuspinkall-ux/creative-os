@@ -5,7 +5,7 @@ import Creative
 Rectangle {
     color: "#171b22"
 
-    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.05) }
+    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.tint(0.05) }
 
     Flickable {
         id: flick

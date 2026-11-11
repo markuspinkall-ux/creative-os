@@ -104,7 +104,7 @@ Item {
             HeaderText { width: view.colUnit * 1.0; text: view.trash ? "Ursprünglicher Ort" : "Typ" }
             HeaderText { width: view.colUnit * 0.8; text: "Größe"; horizontalAlignment: Text.AlignRight }
         }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.tint(0.06) }
     }
 
     EmptyArea {}
@@ -278,7 +278,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             size: 56
             isDir: !view.trash
-            tint: Qt.rgba(1, 1, 1, 0.12)
+            tint: Theme.tint(0.12)
             visible: !view.trash
         }
         SvgIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "trash"; size: 48; visible: view.trash; opacity: 0.5 }

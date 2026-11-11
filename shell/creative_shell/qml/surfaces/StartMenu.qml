@@ -238,7 +238,7 @@ Item {
                 contentItem: Rectangle {
                     implicitWidth: 4
                     radius: 2
-                    color: Qt.rgba(1, 1, 1, 0.2)
+                    color: Theme.tint(0.2)
                 }
             }
 
@@ -393,7 +393,7 @@ Item {
                 x: 4; y: 4
                 width: parent.width - 8; height: 36
                 radius: 9
-                color: amMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                color: amMouse.containsMouse ? Theme.tint(0.08) : "transparent"
                 SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 15 }
                 Text {
                     x: 36

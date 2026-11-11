@@ -46,10 +46,13 @@ install -Dm644 breezerc "$XDG/breezerc"
 # Farben und Schrift
 install -Dm644 kdeglobals "$XDG/kdeglobals"
 install -Dm644 CreativeGraphit.colors /usr/share/color-schemes/CreativeGraphit.colors
+install -Dm644 CreativePorzellan.colors /usr/share/color-schemes/CreativePorzellan.colors
 
 # Terminal im Graphit-Look: Farben, Schrift, Ränder, Cursor, Reiter, Eingabezeile
 install -Dm644 konsole/CreativeGraphit.colorscheme /usr/share/konsole/CreativeGraphit.colorscheme
 install -Dm644 konsole/CreativeGraphit.profile /usr/share/konsole/CreativeGraphit.profile
+install -Dm644 konsole/CreativePorzellan.colorscheme /usr/share/konsole/CreativePorzellan.colorscheme
+install -Dm644 konsole/CreativePorzellan.profile /usr/share/konsole/CreativePorzellan.profile
 install -Dm644 konsole/creative-tabs.css /usr/share/konsole/creative-tabs.css
 install -Dm644 konsole/creative-prompt.sh /etc/profile.d/zz-creative-prompt.sh
 cat > "$XDG/konsolerc" <<'KONSOLERC'
@@ -84,6 +87,7 @@ KONSOLERC
 install -Dm644 gtk/gtk-3.0/settings.ini "$XDG/gtk-3.0/settings.ini"
 install -Dm644 gtk/gtk-4.0/settings.ini "$XDG/gtk-4.0/settings.ini"
 install -Dm644 gtk/gtk.css /usr/share/creative-os/gtk/gtk.css
+install -Dm644 gtk/gtk-light.css /usr/share/creative-os/gtk/gtk-light.css
 # KDE soll die GTK-Einstellungen nicht mit eigenen Farben überschreiben
 mkdir -p /etc/xdg
 cat > /etc/xdg/kded6rc <<'KDED'
@@ -91,6 +95,7 @@ cat > /etc/xdg/kded6rc <<'KDED'
 autoload=false
 KDED
 install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
+install -Dm755 apps/creative-look-apply /usr/libexec/creative-look-apply
 
 # Creative-Symbole für die mitgelieferten Apps
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"

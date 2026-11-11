@@ -84,7 +84,7 @@ Item {
                     anchors.centerIn: parent
                     width: 1
                     height: 28
-                    color: Qt.rgba(1, 1, 1, 0.1)
+                    color: Theme.tint(0.1)
                 }
             }
 
@@ -385,7 +385,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 1
                     height: 20
-                    color: Qt.rgba(1, 1, 1, 0.1)
+                    color: Theme.tint(0.1)
                 }
 
                 SvgIcon {

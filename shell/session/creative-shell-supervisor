@@ -128,6 +128,10 @@ while true; do
     wait "$spid"
     code=$?
     [ "$code" -eq 0 ] && exit 0          # regulär beendet (Abmelden) – cleanup läuft über trap
+    if [ "$code" -eq 75 ]; then          # Design gewechselt: einfach neu starten (kein Absturz)
+        logger -t creative-shell "Design gewechselt – Oberfläche wird neu geladen"
+        continue
+    fi
 
     now=$(date +%s)
     if [ $((now - window_start)) -gt 60 ]; then

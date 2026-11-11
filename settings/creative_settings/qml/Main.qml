@@ -45,7 +45,7 @@ ApplicationWindow {
         width: 250
         height: parent.height
         color: "#171b22"
-        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.05) }
+        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.tint(0.05) }
 
         Column {
             x: 12
@@ -93,7 +93,7 @@ ApplicationWindow {
                     width: parent.width
                     height: 38
                     radius: 10
-                    color: on ? Qt.rgba(1, 1, 1, 0.07) : (nm.containsMouse ? Theme.subtle : "transparent")
+                    color: on ? Theme.tint(0.07) : (nm.containsMouse ? Theme.subtle : "transparent")
                     Rectangle { x: 0; anchors.verticalCenter: parent.verticalCenter; width: 3; height: 14; radius: 2; color: Theme.accent; visible: parent.on }
                     SvgIcon { x: 14; anchors.verticalCenter: parent.verticalCenter; name: modelData.icon; size: 17 }
                     Text {

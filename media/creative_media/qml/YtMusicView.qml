@@ -29,7 +29,7 @@ Item {
                 height: 34
                 anchors.verticalCenter: parent.verticalCenter
                 radius: 17
-                color: cm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06)
+                color: cm.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06)
                 Row {
                     id: chartsRow
                     anchors.centerIn: parent
@@ -80,7 +80,7 @@ Item {
             width: favRow.implicitWidth + 24
             height: 34
             radius: 17
-            color: root.showFavs ? Theme.accent : (fm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+            color: root.showFavs ? Theme.accent : (fm.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
             Row {
                 id: favRow
                 anchors.centerIn: parent
@@ -175,7 +175,7 @@ Item {
             spacing: 4
             model: ytmusic
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) } }
+            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) } }
             delegate: Rectangle {
                 id: fr
                 required property string title

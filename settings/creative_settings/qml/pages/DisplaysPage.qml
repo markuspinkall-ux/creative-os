@@ -53,7 +53,7 @@ SettingsPage {
         height: 230
         radius: 16
         color: Theme.ground
-        border.color: Qt.rgba(1, 1, 1, 0.05)
+        border.color: Theme.tint(0.05)
 
         readonly property var list: displays.screens
         readonly property real totalW: {
@@ -82,7 +82,7 @@ SettingsPage {
                 radius: 10
                 opacity: modelData.enabled ? 1 : 0.4
                 color: sel ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.15) : Theme.raised
-                border.color: sel ? Theme.accent : Qt.rgba(1, 1, 1, 0.1)
+                border.color: sel ? Theme.accent : Theme.tint(0.1)
                 border.width: sel ? 2 : 1
                 z: dragArea.drag.active ? 10 : 1
 

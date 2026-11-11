@@ -18,7 +18,7 @@ Rectangle {
     height: 34
     radius: 9
     color: drop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22)
-           : current ? Qt.rgba(1, 1, 1, 0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
+           : current ? Theme.tint(0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
     border.color: drop.containsDrag ? Theme.accent : "transparent"
 
     DropArea {

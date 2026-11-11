@@ -70,7 +70,7 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {
                 policy: ScrollBar.AsNeeded
-                contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) }
+                contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) }
             }
 
             Column {
@@ -301,7 +301,7 @@ Item {
                         width: 40
                         height: 40
                         radius: 12
-                        color: Qt.rgba(1, 1, 1, 0.07)
+                        color: Theme.tint(0.07)
                         SvgIcon {
                             anchors.centerIn: parent
                             name: printers.attention ? "printer-alert" : "printer"

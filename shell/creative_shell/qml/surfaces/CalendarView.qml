@@ -111,7 +111,7 @@ Item {
                     width: todayText.implicitWidth + 18
                     height: 28
                     radius: 8
-                    color: tm.containsMouse ? Theme.hover : Qt.rgba(1, 1, 1, 0.06)
+                    color: tm.containsMouse ? Theme.hover : Theme.tint(0.06)
                     Text { id: todayText; anchors.centerIn: parent; text: "Heute"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
                     MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: cal.reset() }
                 }

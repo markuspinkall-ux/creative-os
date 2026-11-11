@@ -532,7 +532,8 @@ def main():
     def wallpaper_url():
         path = os.path.expanduser(config.load().get("wallpaper") or "")
         if not path or not os.path.exists(path):
-            path = str(QML_DIR / "Creative" / "wallpapers" / "graphit.svg")
+            from creative_shell import look
+            path = str(look.default_wallpaper(QML_DIR))
         return QUrl.fromLocalFile(path)
 
     ctx.setContextProperty("wallpaperUrl", wallpaper_url())
@@ -541,6 +542,15 @@ def main():
     cfg_dir.mkdir(parents=True, exist_ok=True)
     watcher = QFileSystemWatcher([str(cfg_dir)])
     watcher.directoryChanged.connect(lambda _p: ctx.setContextProperty("wallpaperUrl", wallpaper_url()))
+    # Design gewechselt (Einstellungen → Darstellung)? Dann die Oberfläche neu laden:
+    # Code 75 = der Supervisor startet sofort neu, ohne es als Absturz zu zählen.
+    from creative_shell import look as _look
+    started_look = _look.read()
+
+    def look_changed(_p=None):
+        if _look.read() != started_look:
+            QTimer.singleShot(400, lambda: app.exit(75))
+    watcher.directoryChanged.connect(look_changed)
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)

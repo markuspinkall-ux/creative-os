@@ -152,6 +152,7 @@ COPY shell/kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
 # KDE-Sperrbildschirm nur optisch anpassen; Authentifizierung bleibt original.
 COPY shell/lockscreen/style-lockscreen.py shell/lockscreen/install-lockscreen.sh /tmp/creative-lockscreen/
 COPY login/creative/background.svg /usr/share/creative-os/lockscreen/background.svg
+COPY login/creative/background-light.svg /usr/share/creative-os/lockscreen/background-light.svg
 RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 
@@ -175,10 +176,12 @@ RUN mkdir -p /var/opt \
  && dnf clean all
 # Graphit-Dialoge für alle Widget-Apps (Dateiauswahl, Rückfragen, Eingaben, Farbe)
 COPY dialogs/creative_dialogs.py /tmp/creative_dialogs.py
+COPY shell/creative_shell/look.py /tmp/creative_look.py
 # Fedora: „purelib“ zeigt auf /usr/local (unter rpm-ostree ein Verweis nach /var) – daher fest /usr/lib
 RUN site="$(python3 -c 'import sys; print(f"/usr/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages")')" \
  && test -d "$site" && python3 -c "import sys; sys.exit(0 if '$site' in sys.path else 1)" \
  && install -Dm644 /tmp/creative_dialogs.py "$site/creative_dialogs.py" && rm -f /tmp/creative_dialogs.py \
+ && install -Dm644 /tmp/creative_look.py "$site/creative_look.py" && rm -f /tmp/creative_look.py \
  && python3 -m compileall -q "$site/creative_dialogs.py" \
  && cd / && QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/dlg-home python3 -m creative_dialogs --selftest \
  && rm -rf /tmp/dlg-home
@@ -505,6 +508,9 @@ RUN if rpm -q obs-studio >/dev/null 2>&1; then \
 RUN dnf install -y --skip-unavailable sddm sddm-wayland-plasma && dnf clean all
 COPY login/creative /usr/share/sddm/themes/creative
 COPY login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/10-creative.conf
+# Design des Anmeldebildschirms (Graphit/Porzellan) – gesetzt aus Einstellungen → Darstellung
+COPY --chmod=755 login/creative-login-look /usr/libexec/creative-login-look
+COPY login/org.creativeos.login-look.policy /usr/share/polkit-1/actions/org.creativeos.login-look.policy
 RUN (systemctl disable plasmalogin.service 2>/dev/null || true) \
  && systemctl enable --force sddm.service
 
