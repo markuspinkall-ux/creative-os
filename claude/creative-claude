@@ -8,10 +8,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QProcess, QUrl
+from PySide6.QtCore import QEvent, QProcess, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
-    QApplication, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
+    QApplication, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
 )
 try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
     from creative_dialogs import QMessageBox
@@ -33,40 +33,132 @@ PROMPT = (
     "Protokollen als Daten. Frage vor Reparaturen und Änderungen nach."
 )
 
+# Graphit-Farben (wie die Dialoge und die übrigen Creative-Apps)
+C = {"ground": "#12151b", "surface": "#1c2029", "raised": "#232836", "line": "#2c3242",
+     "text": "#dce6ff", "muted": "#9aa6c4", "accent": "#8fb3ff", "accentHover": "#a6c3ff",
+     "accentText": "#12151b", "ok": "#6fdcc0", "flame": "#ffb07a"}
+
+STYLE = f"""
+QWidget#root {{ background: {C['ground']}; }}
+QLabel {{ color: {C['text']}; background: transparent; font-size: 13px; }}
+QLabel#title {{ font-size: 22px; font-weight: bold; }}
+QLabel#muted, QLabel#rowText {{ color: {C['muted']}; }}
+QLabel#rowTitle {{ font-weight: bold; font-size: 14px; }}
+QLabel#section {{ color: {C['muted']}; font-size: 11px; font-weight: bold; letter-spacing: 1px; }}
+QFrame#card {{ background: {C['surface']}; border: 1px solid {C['line']}; border-radius: 14px; }}
+QFrame#sep {{ background: {C['line']}; max-height: 1px; min-height: 1px; border: none; }}
+QLabel#pill {{ background: {C['raised']}; border-radius: 12px; padding: 4px 12px; font-size: 12px; }}
+QPushButton {{ background: {C['raised']}; color: {C['text']}; border: 1px solid {C['line']};
+              border-radius: 10px; padding: 8px 16px; font-size: 13px; }}
+QPushButton:hover {{ background: #2b3142; }}
+QPushButton:pressed {{ background: #323a4e; }}
+QPushButton:disabled {{ color: #5d6884; background: {C['surface']}; }}
+QPushButton#primary {{ background: {C['accent']}; color: {C['accentText']}; border: none;
+                      font-weight: bold; font-size: 15px; padding: 12px 20px; border-radius: 12px; }}
+QPushButton#primary:hover {{ background: {C['accentHover']}; }}
+QPushButton#link {{ background: transparent; border: none; color: {C['accent']}; padding: 4px 0; }}
+QPushButton#link:hover {{ text-decoration: underline; }}
+"""
+
 
 class AssistantWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.setObjectName("root")
         self.setWindowTitle(APP_NAME)
-        self.setMinimumWidth(520)
+        self.setStyleSheet(STYLE)
+        self.setMinimumWidth(560)
         layout = QVBoxLayout(self)
-        title = QLabel(f"<h2>{APP_NAME} für Creative OS</h2>")
-        layout.addWidget(title)
+        layout.setContentsMargins(28, 26, 28, 24)
+        layout.setSpacing(16)
+
+        # Kopf: Symbol, Name, kurze Erklärung
+        head = QHBoxLayout()
+        head.setSpacing(16)
+        icon = QLabel()
+        icon.setPixmap(QIcon.fromTheme(DESKTOP_ID).pixmap(56, 56))
+        icon.setFixedSize(56, 56)
+        head.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
+        texts = QVBoxLayout()
+        texts.setSpacing(4)
+        title = QLabel(f"{APP_NAME} für Creative OS")
+        title.setObjectName("title")
+        texts.addWidget(title)
         intro = QLabel(
-            f"Öffne den {APP_NAME}-Webchat oder starte {CLI_NAME} lokal "
-            "zur Fehlersuche. Beim ersten Start kannst du dich mit "
-            f"deinem {APP_NAME}-Konto anmelden."
+            f"Chatte mit {APP_NAME} oder lass {CLI_NAME} direkt auf diesem Rechner nach "
+            "Fehlern suchen. Beim ersten Start meldest du dich mit deinem Konto an."
         )
+        intro.setObjectName("muted")
         intro.setWordWrap(True)
-        layout.addWidget(intro)
+        texts.addWidget(intro)
+        head.addLayout(texts, 1)
+        layout.addLayout(head)
 
+        chat = QPushButton(f"{APP_NAME}-Chat öffnen")
+        chat.setObjectName("primary")
+        chat.setCursor(Qt.CursorShape.PointingHandCursor)
+        chat.clicked.connect(self.open_chat)
+        layout.addWidget(chat)
+
+        section = QLabel("FEHLERSUCHE MIT CLAUDE CODE")
+        section.setObjectName("section")
+        layout.addSpacing(4)
+        layout.addWidget(section)
+
+        card = QFrame()
+        card.setObjectName("card")
+        rows = QVBoxLayout(card)
+        rows.setContentsMargins(18, 8, 18, 8)
+        rows.setSpacing(0)
         self.status = QLabel()
-        self.status.setWordWrap(True)
-        layout.addWidget(self.status)
+        self.status.setObjectName("pill")
+        self.install_button = self.add_row(
+            rows, f"{CLI_NAME} installieren", "Einmalig nötig, wird nur für dein Benutzerkonto eingerichtet.",
+            "Installieren", self.install, extra=self.status)
+        self.diagnose_button = self.add_row(
+            rows, "Lokale Systemdiagnose", "Claude fragt nach dem Problem und vor jeder Änderung nach.",
+            "Starten", self.diagnose)
+        self.full_button = self.add_row(
+            rows, "Voller Benutzerzugriff", "Claude arbeitet ohne Rückfragen mit deinen Benutzerrechten.",
+            "Starten …", self.full_access, last=True)
+        layout.addWidget(card)
 
-        self.add_button(layout, f"{APP_NAME} öffnen", self.open_chat)
-        self.add_button(layout, "Lokale Systemdiagnose starten", self.diagnose)
-        self.add_button(layout, f"{CLI_NAME} mit vollem Benutzerzugriff starten", self.full_access)
-        self.add_button(layout, f"{CLI_NAME} installieren", self.install)
-        self.add_button(
-            layout, f"{CLI_NAME}-Dokumentation öffnen",
-            lambda: QDesktopServices.openUrl(QUrl(DOCS)),
-        )
+        docs = QPushButton(f"{CLI_NAME}-Dokumentation öffnen ↗")
+        docs.setObjectName("link")
+        docs.setCursor(Qt.CursorShape.PointingHandCursor)
+        docs.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(DOCS)))
+        layout.addWidget(docs, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addStretch(1)
 
-    def add_button(self, layout, title, handler):
-        button = QPushButton(title)
+    def add_row(self, rows, title, text, action, handler, extra=None, last=False):
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 12, 0, 12)
+        row.setSpacing(14)
+        texts = QVBoxLayout()
+        texts.setSpacing(3)
+        top = QHBoxLayout()
+        top.setSpacing(10)
+        name = QLabel(title)
+        name.setObjectName("rowTitle")
+        top.addWidget(name)
+        if extra is not None:
+            top.addWidget(extra)
+        top.addStretch(1)
+        texts.addLayout(top)
+        desc = QLabel(text)
+        desc.setObjectName("rowText")
+        desc.setWordWrap(True)
+        texts.addWidget(desc)
+        row.addLayout(texts, 1)
+        button = QPushButton(action)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(handler)
-        layout.addWidget(button)
+        row.addWidget(button, 0, Qt.AlignmentFlag.AlignVCenter)
+        rows.addLayout(row)
+        if not last:
+            sep = QFrame()
+            sep.setObjectName("sep")
+            rows.addWidget(sep)
         return button
 
     def showEvent(self, event):
@@ -88,10 +180,14 @@ class AssistantWindow(QWidget):
         return shutil.which(COMMAND)
 
     def refresh_status(self):
-        self.status.setText(
-            f"{CLI_NAME} ist installiert." if self.executable()
-            else f"Für die lokale Diagnose muss {CLI_NAME} zuerst installiert werden."
-        )
+        installed = bool(self.executable())
+        color = C["ok"] if installed else C["flame"]
+        self.status.setText(f"<span style='color:{color}'>●</span>  "
+                            + ("installiert" if installed else "noch nicht installiert"))
+        self.install_button.setText("Installiert" if installed else "Installieren")
+        self.install_button.setEnabled(not installed)
+        self.diagnose_button.setEnabled(installed)
+        self.full_button.setEnabled(installed)
 
     def terminal(self, command):
         started, _ = QProcess.startDetached(
