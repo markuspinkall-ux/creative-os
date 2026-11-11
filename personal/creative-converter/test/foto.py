@@ -8,6 +8,7 @@ here = Path(__file__).resolve().parent.parent
 loader = importlib.machinery.SourceFileLoader("cc", str(here / "creative-converter"))
 spec = importlib.util.spec_from_loader("cc", loader)
 cc = importlib.util.module_from_spec(spec)
+sys.modules["cc"] = cc
 loader.exec_module(cc)
 
 app = QApplication(sys.argv)
