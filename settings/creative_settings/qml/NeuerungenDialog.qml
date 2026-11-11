@@ -136,7 +136,7 @@ Popup {
                 width: parent.width - 44
                 height: body.implicitHeight + 36
                 radius: 16
-                color: Qt.rgba(1, 1, 1, 0.03)
+                color: Theme.tint(0.03)
                 border.color: index === 0 ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35) : "transparent"
 
                 Column {

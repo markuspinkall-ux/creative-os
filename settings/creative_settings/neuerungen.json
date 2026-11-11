@@ -1,20 +1,38 @@
 [
   {
+    "datum": "2026-11-12",
+    "titel": "Helles Design, Ziehen & Ablegen und neue Installation",
+    "neu": [
+      "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
+      "Dateien: Ziehen & Ablegen – auf Ordner, in die Seitenleiste, zwischen Fenstern und in andere Programme (Strg = kopieren, Umschalt = verschieben)",
+      "Schreibtisch: Symbole auf Ordner, in „Dateien“ oder andere Programme ziehen und Dateien von außen ablegen",
+      "Taskleiste: Rechtsklick auf ein Programm → „Neues Fenster“ oder „Fenster schließen“",
+      "Installation im Graphit-Look – vom Startmenü bis „Fertig“",
+      "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
+    ],
+    "verbessert": [
+      "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
+      "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
+    ],
+    "behoben": [
+      "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
+      "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab"
+    ]
+  },
+  {
     "datum": "2026-11-11",
     "titel": "Mail-Anmeldung, Restzeit beim Update und Feinschliff",
     "neu": [
       "Creative Mail: Anmeldung mit E-Mail-Adresse und Passwort bei Gmail, GMX, WEB.DE, T-Online, Yahoo, iCloud und anderen – ohne Google-Datei",
       "Update-Center: Restzeit auch beim Entpacken und Einrichten, mit Schreibgeschwindigkeit der Festplatte",
       "Anmelde-Ton, sobald der Desktop erscheint",
-      "Creative 3D: TRELLIS statt TripoSR – deutlich bessere 3D-Figuren aus Fotos",
-      "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
+      "Creative 3D: TRELLIS statt TripoSR – deutlich bessere 3D-Figuren aus Fotos"
     ],
     "verbessert": [
       "Update-Center: genaue Restzeit beim Herunterladen",
       "Claude-Fenster im Graphit-Look",
       "OBS behält bei jedem Update sein Creative-Symbol",
-      "Der Passwortspeicher (KWallet) fragt nicht mehr nach einem eigenen Passwort",
-      "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
+      "Der Passwortspeicher (KWallet) fragt nicht mehr nach einem eigenen Passwort"
     ],
     "behoben": [
       "Update blieb scheinbar bei 92 % stehen – jetzt ist zu sehen, was passiert und wie lange es noch dauert",
