@@ -69,6 +69,9 @@ jobs:
       - name: Creative Mail – Nachrichten, Anhänge und Antworten prüfen
         run: python3 -m unittest tests/test_mail.py
 
+      - name: Update-Center – Fortschritt und Restzeit prüfen
+        run: python3 -m unittest tests/test_updateprogress.py
+
       - name: Namen festlegen
         id: names
         run: |
