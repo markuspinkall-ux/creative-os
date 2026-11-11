@@ -73,7 +73,7 @@ Item {
                     width: chipText.implicitWidth + 24
                     height: 30
                     radius: 15
-                    color: current ? Theme.accent : (chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                    color: current ? Theme.accent : (chipMouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
                     Text {
                         id: chipText
                         anchors.centerIn: parent
@@ -107,7 +107,7 @@ Item {
             spacing: 2
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {
-                contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) }
+                contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) }
             }
             delegate: Rectangle {
                 id: ch
@@ -219,7 +219,7 @@ Item {
                     width: 74
                     height: 74
                     radius: 37
-                    color: Qt.rgba(1, 1, 1, 0.08)
+                    color: Theme.tint(0.08)
                     SvgIcon { anchors.centerIn: parent; name: "play"; size: 28 }
                 }
                 Text {

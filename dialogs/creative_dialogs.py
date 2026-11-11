@@ -35,6 +35,14 @@ C = {
     "danger": "#e5484d", "dangerHover": "#ec5d62", "dangerBg": "#3a1d22", "dangerText": "#ff8a8e",
     "infoBg": "#23304a",
 }
+try:  # helles oder dunkles Design (Einstellungen → Darstellung)
+    from creative_look import is_light as _is_light, palette as _palette
+    C = _palette(C)
+    LIGHT = _is_light()
+except ImportError:
+    LIGHT = False
+if LIGHT:
+    C.update(dangerBg="#fbe3e4", dangerText="#c4313a", infoBg="#dfe8fb")
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
 _last_dir = {"path": ""}
 
@@ -77,8 +85,9 @@ QColorDialog {{ background: transparent; }}
 
 
 def _icon(name):
-    for base in (Path(__file__).resolve().parent.parent / "shell" / "creative_shell" / "qml" / "Creative" / "icons",
-                 Path("/usr/lib/creative-shell/creative_shell/qml/Creative/icons")):
+    folder = "icons-light" if LIGHT else "icons"
+    for base in (Path(__file__).resolve().parent.parent / "shell" / "creative_shell" / "qml" / "Creative" / folder,
+                 Path("/usr/lib/creative-shell/creative_shell/qml/Creative/" + folder)):
         path = base / f"{name}.svg"
         if path.exists():
             return QIcon(str(path))

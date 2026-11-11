@@ -102,7 +102,7 @@ Item {
         spacing: 2
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {
-            contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) }
+            contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) }
         }
 
         delegate: Rectangle {

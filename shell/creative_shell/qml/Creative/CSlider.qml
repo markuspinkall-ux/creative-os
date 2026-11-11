@@ -17,7 +17,7 @@ Slider {
         width: control.availableWidth
         height: 6
         radius: 3
-        color: Qt.rgba(1, 1, 1, 0.12)
+        color: Theme.tint(0.12)
 
         Rectangle {
             width: control.visualPosition * parent.width

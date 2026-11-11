@@ -1,0 +1,42 @@
+#!/bin/sh
+# Wendet das gewählte Design (graphit/porzellan) auf GTK-, KDE- und Terminal-Programme an.
+# Aufruf aus den Einstellungen nach dem Umschalten und bei jeder Anmeldung (--no-gtk:
+# GTK erledigt dann creative-theme-user selbst).
+conf="${XDG_CONFIG_HOME:-$HOME/.config}"
+design=$(sed -n 's/^design=//p' "$conf/creative-os/look.conf" 2>/dev/null | head -1)
+[ "$design" = porzellan ] || design=graphit
+if [ "$design" = porzellan ]; then
+    scheme=CreativePorzellan; css=/usr/share/creative-os/gtk/gtk-light.css; dark=false; gtk=Adwaita; cs=prefer-light
+else
+    scheme=CreativeGraphit; css=/usr/share/creative-os/gtk/gtk.css; dark=true; gtk=Adwaita-dark; cs=prefer-dark
+fi
+
+if [ "$1" != --no-gtk ]; then
+    for v in gtk-3.0 gtk-4.0; do
+        dst="$conf/$v/gtk.css"
+        if [ -f "$css" ] && { [ ! -e "$dst" ] || head -n1 "$dst" | grep -qF "/* Creative OS – "; }; then
+            mkdir -p "$conf/$v"; cp "$css" "$dst"
+        fi
+        ini="$conf/$v/settings.ini"
+        if [ -f "$ini" ]; then
+            sed -i "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$dark/; s/^gtk-theme-name=.*/gtk-theme-name=$gtk/" "$ini"
+        fi
+    done
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface gtk-theme "$gtk" 2>/dev/null
+        gsettings set org.gnome.desktop.interface color-scheme "$cs" 2>/dev/null
+    fi
+fi
+
+# KDE-/Qt-Programme (Dolphin, Kate, Systemeinstellungen …)
+current=$(kreadconfig6 --file kdeglobals --group General --key ColorScheme 2>/dev/null)
+if [ "$design" = porzellan ] || [ -n "$current" ]; then
+    if [ "$current" != "$scheme" ] && command -v plasma-apply-colorscheme >/dev/null 2>&1; then
+        plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
+    fi
+fi
+# Terminal
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+    kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile "$scheme.profile"
+fi
+exit 0

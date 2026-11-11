@@ -147,7 +147,7 @@ Window {
                     anchors.margins: 8
                     width: 22; height: 22; radius: 11
                     visible: hover.containsMouse || closeMouse.containsMouse
-                    color: closeMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.07)
+                    color: closeMouse.containsMouse ? Theme.tint(0.14) : Theme.tint(0.07)
                     Text { anchors.centerIn: parent; text: "×"; color: Theme.text; font.pixelSize: 15 }
                     MouseArea {
                         id: closeMouse

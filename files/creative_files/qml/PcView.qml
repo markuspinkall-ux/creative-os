@@ -29,7 +29,7 @@ Flickable {
                     width: (folderGrid.width - (folderGrid.columns - 1) * 12) / folderGrid.columns
                     height: 56
                     radius: 12
-                    color: m.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.03)
+                    color: m.containsMouse ? Theme.tint(0.07) : Theme.tint(0.03)
                     Row {
                         x: 12
                         anchors.verticalCenter: parent.verticalCenter
@@ -65,8 +65,8 @@ Flickable {
                     width: (driveGrid.width - (driveGrid.columns - 1) * 12) / driveGrid.columns
                     height: 84
                     radius: 14
-                    color: dm.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : (usb ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.03))
-                    border.color: usb ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : Qt.rgba(1, 1, 1, 0.06)
+                    color: dm.containsMouse ? Theme.tint(0.06) : (usb ? Theme.tint(0.05) : Theme.tint(0.03))
+                    border.color: usb ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : Theme.tint(0.06)
 
                     MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: fm.openDrive(index) }
 
@@ -74,7 +74,7 @@ Flickable {
                         x: 18
                         anchors.verticalCenter: parent.verticalCenter
                         width: 48; height: 48; radius: 12
-                        color: Qt.rgba(1, 1, 1, 0.06)
+                        color: Theme.tint(0.06)
                         SvgIcon { anchors.centerIn: parent; name: card.usb ? "usb" : "drive"; size: 24 }
                     }
                     Column {
@@ -104,7 +104,7 @@ Flickable {
                                 width: tagText.implicitWidth + 16
                                 height: 22
                                 radius: 6
-                                color: eject ? (tm.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : Qt.rgba(1, 1, 1, 0.08)
+                                color: eject ? (tm.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : Theme.tint(0.08)
                                 Text {
                                     id: tagText
                                     anchors.centerIn: parent
@@ -128,7 +128,7 @@ Flickable {
                             width: parent.width
                             height: 6
                             radius: 3
-                            color: Qt.rgba(1, 1, 1, 0.1)
+                            color: Theme.tint(0.1)
                             Rectangle {
                                 width: parent.width * Math.min(1, modelData.usedFraction)
                                 height: parent.height

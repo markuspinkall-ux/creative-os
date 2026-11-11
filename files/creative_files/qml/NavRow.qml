@@ -16,7 +16,7 @@ Rectangle {
     width: parent ? parent.width : 210
     height: 34
     radius: 9
-    color: current ? Qt.rgba(1, 1, 1, 0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
+    color: current ? Theme.tint(0.07) : (mouse.containsMouse ? Theme.subtle : "transparent")
 
     Row {
         x: 12 + r.indent

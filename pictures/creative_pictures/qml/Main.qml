@@ -141,7 +141,7 @@ Window {
             model: pics.groups
             boundsBehavior: Flickable.StopAtBounds
             cacheBuffer: 1200
-            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.2) } }
+            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Theme.tint(0.2) } }
             delegate: Column {
                 required property var modelData
                 width: months.width - 12
@@ -180,7 +180,7 @@ Window {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: 10
-                                color: tm.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                                color: tm.containsMouse ? Theme.tint(0.08) : "transparent"
                                 border.color: tm.containsMouse ? Theme.accent : "transparent"
                                 border.width: 2
                             }

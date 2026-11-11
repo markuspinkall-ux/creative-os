@@ -70,7 +70,7 @@ Item {
         model: tm.details
         reuseItems: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.2) } }
+        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Theme.tint(0.2) } }
         delegate: Rectangle {
             id: row
             required property string key

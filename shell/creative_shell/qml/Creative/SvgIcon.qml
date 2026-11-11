@@ -1,4 +1,5 @@
 import QtQuick
+import Creative
 
 // Eigene Creative-Symbole aus dem Ordner icons/ (einheitlich weiß-blau).
 Image {
@@ -7,7 +8,7 @@ Image {
 
     width: size
     height: size
-    source: name ? Qt.resolvedUrl("icons/" + name + ".svg") : ""
+    source: name ? Qt.resolvedUrl((name.endsWith("-dark") ? "icons/" : Theme.iconDir) + name + ".svg") : ""
     sourceSize.width: size * 2
     sourceSize.height: size * 2
     fillMode: Image.PreserveAspectFit

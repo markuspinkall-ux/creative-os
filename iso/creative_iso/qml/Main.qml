@@ -156,7 +156,7 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 20; height: 20; radius: 6
                     color: win.usbConfirm ? "#e5484d" : "transparent"
-                    border.color: win.usbConfirm ? "#e5484d" : Qt.rgba(1, 1, 1, 0.35)
+                    border.color: win.usbConfirm ? "#e5484d" : Theme.tint(0.35)
                     border.width: 1.5
                     Text { anchors.centerIn: parent; visible: win.usbConfirm; text: "✓"; color: "white"; font.pixelSize: 14; font.bold: true }
                     MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: win.usbConfirm = !win.usbConfirm }
@@ -271,7 +271,7 @@ Window {
                 width: parent.width
                 height: 8
                 radius: 4
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Theme.tint(0.08)
                 Rectangle {
                     width: parent.width * Math.max(0.02, iso.percent / 100)
                     height: parent.height
@@ -350,7 +350,7 @@ Window {
         readonly property bool cur: win.mode === key
         height: 140
         radius: 18
-        color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (mcMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : Theme.raised)
+        color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (mcMouse.containsMouse ? Theme.tint(0.05) : Theme.raised)
         border.color: cur ? Theme.accent : Theme.hairline
         border.width: cur ? 2 : 1
         Row {
@@ -358,7 +358,7 @@ Window {
             spacing: 10
             Rectangle {
                 width: 32; height: 32; radius: 10
-                color: mc.cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : Qt.rgba(1, 1, 1, 0.06)
+                color: mc.cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : Theme.tint(0.06)
                 SvgIcon { anchors.centerIn: parent; name: mc.icon; size: 16 }
             }
             Text { anchors.verticalCenter: parent.verticalCenter; text: mc.title; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.bold: true }
@@ -400,7 +400,7 @@ Window {
                 width: Math.min(chText.implicitWidth + 28, 320)
                 height: 32
                 radius: 16
-                color: cur ? Theme.accent : (cm.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.06))
+                color: cur ? Theme.accent : (cm.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
                 Text {
                     id: chText
                     anchors.centerIn: parent

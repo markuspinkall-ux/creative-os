@@ -50,7 +50,7 @@ Popup {
                     anchors.fill: parent
                     radius: 9
                     opacity: on ? 1 : 0.4
-                    color: rowMouse.containsMouse && on ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                    color: rowMouse.containsMouse && on ? Theme.tint(0.08) : "transparent"
                     SvgIcon {
                         x: 12
                         anchors.verticalCenter: parent.verticalCenter

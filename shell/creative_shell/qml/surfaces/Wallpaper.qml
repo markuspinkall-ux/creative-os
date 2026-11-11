@@ -702,7 +702,7 @@ Item {
                 anchors.margins: 3
                 radius: 10
                 color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
-                                      : (m.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                                      : (m.containsMouse ? Theme.tint(0.1) : "transparent")
                 border.color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.7) : "transparent"
             }
             FileIcon {
@@ -886,7 +886,7 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: 14
-                        color: sm.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+                        color: sm.containsMouse ? Theme.tint(0.09) : "transparent"
                     }
                     Item {
                         id: slotIcon
@@ -1191,7 +1191,7 @@ Item {
                         visible: !modelData.sep
                         anchors.fill: parent
                         radius: 9
-                        color: rm.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                        color: rm.containsMouse ? Theme.tint(0.08) : "transparent"
                         SvgIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: modelData.icon || ""; size: 15 }
                         Text {
                             x: 39

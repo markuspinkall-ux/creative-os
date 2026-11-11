@@ -112,7 +112,7 @@ Window {
                 width: modeRow.implicitWidth + 8
                 height: 38
                 radius: 12
-                color: Qt.rgba(1, 1, 1, 0.05)
+                color: Theme.tint(0.05)
                 Row {
                     id: modeRow
                     anchors.centerIn: parent
@@ -143,7 +143,7 @@ Window {
                 width: delayRow.implicitWidth + 22
                 height: 38
                 radius: 12
-                color: dm.containsMouse ? Theme.hover : Qt.rgba(1, 1, 1, 0.05)
+                color: dm.containsMouse ? Theme.hover : Theme.tint(0.05)
                 Row {
                     id: delayRow
                     anchors.centerIn: parent
@@ -288,7 +288,7 @@ Window {
                     width: 26; height: 26; radius: 13
                     anchors.verticalCenter: parent.verticalCenter
                     color: modelData
-                    border.color: Qt.colorEqual(win.penColor, modelData) ? Theme.accent : Qt.rgba(1, 1, 1, 0.25)
+                    border.color: Qt.colorEqual(win.penColor, modelData) ? Theme.accent : Theme.tint(0.25)
                     border.width: Qt.colorEqual(win.penColor, modelData) ? 3 : 1
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.penColor = modelData }
                     Accessible.role: Accessible.Button

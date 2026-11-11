@@ -75,7 +75,7 @@ Item {
                     width: parent.width
                     height: 52
                     radius: 12
-                    color: Qt.rgba(1, 1, 1, 0.05)
+                    color: Theme.tint(0.05)
                     SvgIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: "music"; size: 18 }
                     Text {
                         x: 40
@@ -101,7 +101,7 @@ Item {
                     width: parent.width
                     height: 52
                     radius: 12
-                    color: assistant.state === "alarm" ? Qt.rgba(1, 0.69, 0.48, 0.15) : Qt.rgba(1, 1, 1, 0.05)
+                    color: assistant.state === "alarm" ? Qt.rgba(1, 0.69, 0.48, 0.15) : Theme.tint(0.05)
                     SvgIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: "clock"; size: 18 }
                     Text {
                         x: 40

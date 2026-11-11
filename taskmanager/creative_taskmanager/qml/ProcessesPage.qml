@@ -83,7 +83,7 @@ Item {
         model: tm.processes
         boundsBehavior: Flickable.StopAtBounds
         reuseItems: true
-        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Qt.rgba(1, 1, 1, 0.2) } }
+        ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 5; radius: 3; color: Theme.tint(0.2) } }
 
         delegate: Item {
             id: row
@@ -181,7 +181,7 @@ Item {
                             anchors.fill: parent
                             visible: !appIcon.visible
                             radius: 6
-                            color: row.kind === "sys" ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
+                            color: row.kind === "sys" ? Theme.tint(0.07) : Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
                             Text {
                                 anchors.centerIn: parent
                                 text: row.name.length ? row.name.charAt(0).toUpperCase() : "?"

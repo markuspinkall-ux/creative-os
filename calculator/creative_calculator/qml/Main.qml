@@ -183,7 +183,7 @@ Window {
                     color: eq ? (km.pressed || flash ? Qt.darker(Theme.accent, 1.15) : (km.containsMouse ? Qt.lighter(Theme.accent, 1.06) : Theme.accent))
                          : (km.pressed || flash ? Theme.pressed
                             : (km.containsMouse ? Qt.rgba(1, 1, 1, modelData.kind === "num" ? 0.11 : 0.09)
-                               : (modelData.kind === "num" ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.035))))
+                               : (modelData.kind === "num" ? Theme.tint(0.07) : Theme.tint(0.035))))
                     border.color: op ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.22) : "transparent"
                     scale: km.pressed || flash ? 0.96 : 1
                     Behavior on scale { NumberAnimation { duration: 70 } }
@@ -270,7 +270,7 @@ Window {
             spacing: 4
             model: calc.history
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Qt.rgba(1, 1, 1, 0.2) } }
+            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) } }
             delegate: Rectangle {
                 required property var modelData
                 required property int index

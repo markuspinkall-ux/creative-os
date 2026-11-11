@@ -40,7 +40,7 @@ ApplicationWindow {
         width: Math.min(parent.width - 60, 760)
         height: Math.min(parent.height - 60, 520)
         radius: 22
-        color: Qt.rgba(28 / 255, 32 / 255, 41 / 255, 0.96)
+        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.96)
         border.color: Theme.hairline
 
         // Fortschritt
@@ -54,7 +54,7 @@ ApplicationWindow {
                     width: index === win.step ? 26 : 8
                     height: 8
                     radius: 4
-                    color: index <= win.step ? Theme.accent : Qt.rgba(1, 1, 1, 0.15)
+                    color: index <= win.step ? Theme.accent : Theme.tint(0.15)
                     Behavior on width { NumberAnimation { duration: 160 } }
                 }
             }
@@ -134,7 +134,7 @@ ApplicationWindow {
                                     height: 48
                                     radius: 12
                                     color: modelData.inUse ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
-                                                           : (wm.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.03))
+                                                           : (wm.containsMouse ? Theme.tint(0.06) : Theme.tint(0.03))
                                     SvgIcon { x: 14; anchors.verticalCenter: parent.verticalCenter; name: "wifi"; size: 18; opacity: 0.35 + 0.65 * modelData.strength / 100 }
                                     Text {
                                         x: 46
@@ -217,7 +217,7 @@ ApplicationWindow {
                             readonly property bool current: modelData.path === look.current
                             width: 210; height: 132; radius: 14
                             color: Theme.ground
-                            border.color: current ? Theme.accent : (im.containsMouse ? Qt.rgba(1, 1, 1, 0.3) : Theme.hairline)
+                            border.color: current ? Theme.accent : (im.containsMouse ? Theme.tint(0.3) : Theme.hairline)
                             border.width: current ? 3 : 1
                             Image {
                                 anchors.fill: parent
@@ -258,7 +258,7 @@ ApplicationWindow {
                         spacing: 14
                         Rectangle {
                             width: 42; height: 42; radius: 12
-                            color: modelData.icon === "rocket" ? Theme.accent : Qt.rgba(1, 1, 1, 0.07)
+                            color: modelData.icon === "rocket" ? Theme.accent : Theme.tint(0.07)
                             SvgIcon { anchors.centerIn: parent; name: modelData.icon; size: modelData.icon === "rocket" ? 26 : 20 }
                         }
                         Column {
@@ -315,7 +315,7 @@ ApplicationWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 20; height: 20; radius: 6
                     color: win.dontShow ? Theme.accent : "transparent"
-                    border.color: win.dontShow ? Theme.accent : Qt.rgba(1, 1, 1, 0.35)
+                    border.color: win.dontShow ? Theme.accent : Theme.tint(0.35)
                     border.width: 1.5
                     Text {
                         anchors.centerIn: parent
