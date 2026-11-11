@@ -67,7 +67,7 @@ class AssistantWindow(QWidget):
         self.setObjectName("root")
         self.setWindowTitle(APP_NAME)
         self.setStyleSheet(STYLE)
-        self.setMinimumWidth(560)
+        self.setMinimumWidth(640)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(28, 26, 28, 24)
         layout.setSpacing(16)
@@ -76,7 +76,10 @@ class AssistantWindow(QWidget):
         head = QHBoxLayout()
         head.setSpacing(16)
         icon = QLabel()
-        icon.setPixmap(QIcon.fromTheme(DESKTOP_ID).pixmap(56, 56))
+        theme_icon = QIcon.fromTheme(DESKTOP_ID)
+        if theme_icon.isNull():  # ohne Symbolthema direkt die Datei aus dem Abbild nehmen
+            theme_icon = QIcon(f"/usr/share/icons/hicolor/scalable/apps/{DESKTOP_ID}.svg")
+        icon.setPixmap(theme_icon.pixmap(56, 56))
         icon.setFixedSize(56, 56)
         head.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
         texts = QVBoxLayout()
@@ -113,13 +116,13 @@ class AssistantWindow(QWidget):
         self.status = QLabel()
         self.status.setObjectName("pill")
         self.install_button = self.add_row(
-            rows, f"{CLI_NAME} installieren", "Einmalig nötig, wird nur für dein Benutzerkonto eingerichtet.",
+            rows, f"{CLI_NAME} installieren", "Einmalig nötig, nur für dein Benutzerkonto.",
             "Installieren", self.install, extra=self.status)
         self.diagnose_button = self.add_row(
-            rows, "Lokale Systemdiagnose", "Claude fragt nach dem Problem und vor jeder Änderung nach.",
+            rows, "Lokale Systemdiagnose", "Claude fragt vor jeder Änderung nach.",
             "Starten", self.diagnose)
         self.full_button = self.add_row(
-            rows, "Voller Benutzerzugriff", "Claude arbeitet ohne Rückfragen mit deinen Benutzerrechten.",
+            rows, "Voller Benutzerzugriff", "Ohne Rückfragen, mit deinen Benutzerrechten.",
             "Starten …", self.full_access, last=True)
         layout.addWidget(card)
 
@@ -147,7 +150,6 @@ class AssistantWindow(QWidget):
         texts.addLayout(top)
         desc = QLabel(text)
         desc.setObjectName("rowText")
-        desc.setWordWrap(True)
         texts.addWidget(desc)
         row.addLayout(texts, 1)
         button = QPushButton(action)
