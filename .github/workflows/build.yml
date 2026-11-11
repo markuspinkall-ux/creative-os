@@ -55,6 +55,9 @@ jobs:
       - name: Creative Magazin – Feeds und Artikeltext prüfen
         run: python3 -m unittest tests/test_magazin.py
 
+      - name: Containerfile – alle kopierten Dateien vorhanden?
+        run: python3 image/check-copy-sources.py image/Containerfile image/Containerfile.apps
+
       - name: Creative Cut – Zeitleiste, Projektformat und Export prüfen
         run: python3 -m unittest tests/test_cut.py
 
