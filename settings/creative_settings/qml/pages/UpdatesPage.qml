@@ -196,7 +196,7 @@ SettingsPage {
         SettingRow {
             label: "Was ist neu?"
             hint: "Alle Neuerungen jeder freigegebenen Version"
-            CButton { text: "Neuerungen ansehen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os/releases") }
+            CButton { text: "Neuerungen ansehen"; onClicked: news.open() }
         }
         SettingRow {
             label: "Apps aktualisieren"
@@ -204,5 +204,12 @@ SettingsPage {
             last: true
             CButton { text: "Software öffnen"; onClicked: system.openSoftware() }
         }
+    }
+
+    NeuerungenDialog {
+        id: news
+        entries: system.changelog
+        version: u.version || ""
+        Component.onCompleted: if (showNews) Qt.callLater(open)
     }
 }

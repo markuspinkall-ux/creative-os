@@ -1,0 +1,147 @@
+[
+  {
+    "datum": "2026-11-11",
+    "titel": "Mail-Anmeldung, Restzeit beim Update und Feinschliff",
+    "neu": [
+      "Creative Mail: Anmeldung mit E-Mail-Adresse und Passwort bei Gmail, GMX, WEB.DE, T-Online, Yahoo, iCloud und anderen – ohne Google-Datei",
+      "Update-Center: Restzeit auch beim Entpacken und Einrichten, mit Schreibgeschwindigkeit der Festplatte",
+      "Anmelde-Ton, sobald der Desktop erscheint",
+      "Creative 3D: TRELLIS statt TripoSR – deutlich bessere 3D-Figuren aus Fotos",
+      "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
+    ],
+    "verbessert": [
+      "Update-Center: genaue Restzeit beim Herunterladen",
+      "Claude-Fenster im Graphit-Look",
+      "OBS behält bei jedem Update sein Creative-Symbol",
+      "Der Passwortspeicher (KWallet) fragt nicht mehr nach einem eigenen Passwort"
+    ],
+    "behoben": [
+      "Update blieb scheinbar bei 92 % stehen – jetzt ist zu sehen, was passiert und wie lange es noch dauert",
+      "Creative Mail wollte eine Anmeldedatei von Google"
+    ]
+  },
+  {
+    "datum": "2026-11-10",
+    "titel": "Creative 3D, Server-Modus und Graphit überall",
+    "neu": [
+      "Creative 3D: aus einem Foto wird eine 3D-Figur, auf Wunsch mit Skelett",
+      "Server-Modus im Ein/Aus-Menü: nur „Mein Server“ bleibt online",
+      "Creative Cut: magnetische Zeitleiste, Übergänge, Looks, Tempo, Titel und Musik",
+      "Creative Art: Photoshop-Pinsel laden",
+      "Neue Creative Mail"
+    ],
+    "verbessert": [
+      "Graphit-Dialoge für alle Apps (Öffnen, Speichern, Rückfragen)",
+      "Terminal und Taskleiste im Graphit-Look",
+      "Startmenü: Graphit-Kacheln für alle Apps, FTP und Cut sichtbar",
+      "Profilbild im runden Avatar",
+      "Mein Server: echte Heimnetz-Adresse und Verbindungsprüfung",
+      "Tray zeigt die Symbole aller Hintergrund-Apps richtig"
+    ],
+    "behoben": [
+      "DuckDNS-Fehler bei „Mein Server“",
+      "Hintergrundbilder nur noch aus dem Ordner „Bilder“, nicht aus Unterordnern"
+    ]
+  },
+  {
+    "datum": "2026-11-09",
+    "titel": "Cut, FTP, Magazin und mehr",
+    "neu": [
+      "Creative Cut – Videoschnitt",
+      "Creative FTP – Dateien auf den eigenen Webspace laden",
+      "Creative Magazin – Nachrichten als Standard-App",
+      "Creative Art: Ebenenmasken, weiche Auswahl und freie Transformation",
+      "ChatGPT als offizielle OpenAI-App"
+    ],
+    "verbessert": [
+      "Creative Software: Entdecken alphabetisch in Zehnerseiten",
+      "Dateien: Kopiertes lässt sich in anderen Fenstern einfügen",
+      "Schreibtisch-Symbole lassen sich zwischen Monitoren verschieben",
+      "Google-Drive-Konten werden beim Anmelden eingebunden"
+    ],
+    "behoben": []
+  },
+  {
+    "datum": "2026-11-08",
+    "titel": "Creative Software und neue Apps",
+    "neu": [
+      "Creative Software ersetzt Discover als Software-Shop – mit eigenen Apps und Flatpak-Import",
+      "Creative Podcast",
+      "Brave-Knopf: YouTube-Videos direkt auf dem Desktop ansehen",
+      "Claude als App im Startmenü"
+    ],
+    "verbessert": [
+      "Updates laden nur noch die geänderten Teile – deutlich kleinere Downloads",
+      "Installations-ISOs werden nur noch bei Bedarf gebaut"
+    ],
+    "behoben": [
+      "MariaDB-Einrichtung brach bei der Rechtevergabe ab",
+      "Einige Creative-Apps starteten nicht aus dem Startmenü"
+    ]
+  },
+  {
+    "datum": "2026-11-07",
+    "titel": "Writer, Art und Widgets",
+    "neu": [
+      "Creative Writer – Textverarbeitung",
+      "Creative Art – Bildbearbeitung mit Ebenen",
+      "Creative Widgets mit Uhr zum Herunterladen und Twitch-Favoriten",
+      "Wikipedia-Suche und Systemlautstärke im Tray"
+    ],
+    "verbessert": [
+      "Desktop-Widgets lassen sich zwischen Monitoren verschieben",
+      "Papierkorb im Tray und in Dateien vollständig leeren",
+      "Mein Server: MariaDB lässt sich starten"
+    ],
+    "behoben": [
+      "Eingaben in den RSS- und Wetter-Widgets kamen nicht an"
+    ]
+  },
+  {
+    "datum": "2026-11-06",
+    "titel": "Widgets und OBS",
+    "neu": [
+      "Verschiebbare RSS- und Wetter-Gadgets auf dem Desktop"
+    ],
+    "verbessert": [
+      "OBS: Bildschirmaufnahme unter Wayland",
+      "Broadcast merkt sich das Mikrofon für die Rauschunterdrückung"
+    ],
+    "behoben": []
+  },
+  {
+    "datum": "2026-11-05",
+    "titel": "Google Drive und Benutzerkonten",
+    "neu": [
+      "Google Drive in Systemsteuerung und Dateien",
+      "Benutzerkonten und Desktop-Auswahl",
+      "MariaDB für „Mein Server“"
+    ],
+    "verbessert": [
+      "Capture: Wiedergabekanal wählbar"
+    ],
+    "behoben": [
+      "Ablage: App-Symbole luden manchmal nicht"
+    ]
+  },
+  {
+    "datum": "2026-11-04",
+    "titel": "Graphit-Sperrbildschirm und Laufwerke",
+    "neu": [
+      "Sperrbildschirm im Creative-Graphit-Stil",
+      "Tray: „Nicht stören“ und Bluetooth-Steuerung"
+    ],
+    "verbessert": [
+      "Laufwerke: sichere Reihenfolge beim Formatieren, ehrliche Fehlermeldungen",
+      "Datei-Dialoge anderer Programme im lesbaren Graphit-Stil",
+      "Dezente Transparenz im Terminal",
+      "Broadcast: CUDA für flüssige 30 Bilder pro Sekunde"
+    ],
+    "behoben": [
+      "Desktop fehlte nach dem Entsperren",
+      "Speicheranzeige zeigte falsche Werte",
+      "Capture nahm das Kameramikrofon statt des HDMI-Tons",
+      "Schwarze Zwischenbilder in der Broadcast-Vorschau"
+    ]
+  }
+]

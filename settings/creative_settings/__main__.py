@@ -45,6 +45,7 @@ PAGES = {
 def main():
     parser = argparse.ArgumentParser(prog="creative-settings")
     parser.add_argument("--page", default="network")
+    parser.add_argument("--neuerungen", action="store_true", help="Update-Center mit „Was ist neu?“ öffnen")
     args, _rest = parser.parse_known_args()
 
     QQuickStyle.setStyle("Basic")
@@ -78,7 +79,8 @@ def main():
     ctx = engine.rootContext()
     for name, model in models.items():
         ctx.setContextProperty(name, model)
-    ctx.setContextProperty("startPage", PAGES.get(args.page.lower(), "network"))
+    ctx.setContextProperty("startPage", "updates" if args.neuerungen else PAGES.get(args.page.lower(), "network"))
+    ctx.setContextProperty("showNews", args.neuerungen)
 
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
