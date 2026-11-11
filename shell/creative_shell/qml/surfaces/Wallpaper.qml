@@ -25,6 +25,12 @@ Item {
         }
     }
 
+    // Tastatur holen (Entf, Strg+C …): Fenster aktivieren + Fokus aufs Schreibtisch-Element
+    function takeKeyboard() {
+        if (root.Window.window && !root.Window.window.active) root.Window.window.requestActivate()
+        root.forceActiveFocus()
+    }
+
     property string screenName
     readonly property string iconDragFormat: "application/x-creative-desktop-icon"
     readonly property int barSpace: 74
@@ -76,6 +82,15 @@ Item {
     property string dragExt: ""
     property string dragShelfKey: ""
     property var dragShelfItem: null
+    property string dragUris: ""        // text/uri-list für andere Programme (Dateien, Brave …)
+    property int pendingRow: -1          // Klick auf Ausgewähltes: erst beim Loslassen nur dieses wählen
+
+    // Strg = kopieren, Umschalt = verschieben, sonst gleiches Laufwerk → verschieben
+    function dropMode(drop) {
+        if ((drop.modifiers & Qt.ControlModifier) || drop.proposedAction === Qt.CopyAction) return "copy"
+        if (drop.modifiers & Qt.ShiftModifier) return "move"
+        return "auto"
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -109,7 +124,7 @@ Item {
             if (!(mouse.buttons & Qt.LeftButton)) return
             if (!selecting && Math.abs(mouse.x - origin.x) + Math.abs(mouse.y - origin.y) < 6) return
             if (!selecting) {
-                root.forceActiveFocus()
+                root.takeKeyboard()
                 shell.closePopups()
                 selecting = true
             }
@@ -139,7 +154,7 @@ Item {
                 marquee.height = 0
                 if (mouse.button === Qt.LeftButton) return
             }
-            root.forceActiveFocus()
+            root.takeKeyboard()
             shell.closePopups()
             if (mouse.button === Qt.RightButton) {
                 if (desktop.selectedCount > 0) itemMenu.openAt(mouse.x, mouse.y)
@@ -152,13 +167,20 @@ Item {
         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) tasks.showDesktop() }
     }
 
+    // Ablegen auf dem Schreibtisch: eigene Symbole wandern auf diesen Monitor,
+    // Dateien aus anderen Programmen (z. B. „Dateien“) landen im Ordner „Schreibtisch“.
     DropArea {
+        id: desktopDrop
         anchors.fill: parent
-        onEntered: (drag) => { drag.accepted = drag.formats.includes(root.iconDragFormat) }
+        onEntered: (drag) => { drag.accepted = drag.formats.includes(root.iconDragFormat) || drag.hasUrls }
         onDropped: (drop) => {
-            if (!drop.formats.includes(root.iconDragFormat)) return
-            desktop.moveToScreen([drop.getDataAsString(root.iconDragFormat)], root.screenName)
-            drop.acceptProposedAction()
+            if (drop.formats.includes(root.iconDragFormat)) {
+                desktop.moveDraggedToScreen(drop.getDataAsString(root.iconDragFormat), root.screenName)
+                drop.accept(Qt.MoveAction)
+            } else if (drop.hasUrls) {
+                desktop.dropUrls(drop.urls, "", root.dropMode(drop))
+                drop.accept(Qt.CopyAction)   // wir erledigen das selbst – die Quelle löscht nichts
+            }
         }
     }
 
@@ -701,9 +723,22 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 3
                 radius: 10
-                color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
-                                      : (m.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
-                border.color: model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.7) : "transparent"
+                color: folderDrop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4)
+                       : model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
+                                        : (m.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                border.color: folderDrop.containsDrag ? Theme.accent
+                              : (model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.7) : "transparent")
+            }
+            // Auf einen Ordner ziehen: hinein verschieben (Strg: kopieren)
+            DropArea {
+                id: folderDrop
+                anchors.fill: parent
+                enabled: model.isDir
+                onEntered: (drag) => { drag.accepted = drag.hasUrls && root.dragPath !== model.path }
+                onDropped: (drop) => {
+                    desktop.dropUrls(drop.urls, model.path, root.dropMode(drop))
+                    drop.accept(Qt.CopyAction)
+                }
             }
             FileIcon {
                 y: 12
@@ -738,6 +773,8 @@ Item {
                     if (!(mouse.buttons & Qt.LeftButton) || root.dragPath !== ""
                             || Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) <= 12)
                         return
+                    root.pendingRow = -1
+                    root.dragUris = desktop.dragUris(model.path)
                     root.dragPath = model.path
                     root.dragIsDir = model.isDir
                     root.dragTint = model.tint
@@ -749,15 +786,23 @@ Item {
                 }
                 onPressed: (mouse) => {
                     pressPos = Qt.point(mouse.x, mouse.y)
-                    root.forceActiveFocus()
+                    root.takeKeyboard()
                     shell.closePopups()
                     if (mouse.button === Qt.RightButton) {
                         desktop.selectKeep(icons.model.sourceRow(index))
                         const p = cell.mapToItem(root, mouse.x, mouse.y)
                         itemMenu.openAt(p.x, p.y)
+                    } else if (model.selected && !(mouse.modifiers & Qt.ControlModifier) && desktop.selectedCount > 1) {
+                        root.pendingRow = icons.model.sourceRow(index)   // Auswahl zum Ziehen behalten
                     } else {
+                        root.pendingRow = -1
                         desktop.select(icons.model.sourceRow(index), (mouse.modifiers & Qt.ControlModifier) !== 0)
                     }
+                }
+                onReleased: (mouse) => {
+                    if (mouse.button === Qt.LeftButton && root.pendingRow === icons.model.sourceRow(index) && root.dragPath === "")
+                        desktop.select(root.pendingRow, false)
+                    root.pendingRow = -1
                 }
                 onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) desktop.open(icons.model.sourceRow(index)) }
             }
@@ -1025,9 +1070,12 @@ Item {
     // Was gerade gezogen wird
     Item {
         id: ghost
-        Drag.mimeData: ({ [root.iconDragFormat]: root.dragPath })
-        Drag.supportedActions: Qt.MoveAction
-        Drag.onDragFinished: root.dragPath = ""
+        Drag.mimeData: root.dragPath !== ""
+            ? ({ [root.iconDragFormat]: root.dragPath, "text/uri-list": root.dragUris })
+            : ({ [root.iconDragFormat]: root.dragPath })
+        Drag.supportedActions: root.dragPath !== "" ? (Qt.MoveAction | Qt.CopyAction) : Qt.MoveAction
+        Drag.proposedAction: Qt.MoveAction
+        Drag.onDragFinished: { root.dragPath = ""; root.dragUris = "" }
         visible: root.dragPath !== "" || root.dragShelfKey !== ""
         z: 20
         width: 52; height: 52

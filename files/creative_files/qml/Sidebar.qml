@@ -26,6 +26,7 @@ Rectangle {
             NavRow {
                 text: "Persönlicher Ordner"
                 icon: "home"
+                dropTarget: fm.homePath
                 current: fm.page === "folder" && fm.currentPath === fm.homePath
                 onClicked: fm.navigate(fm.homePath)
             }
@@ -34,6 +35,7 @@ Rectangle {
                 delegate: NavRow {
                     text: modelData.name
                     chip: modelData.color
+                    dropTarget: modelData.path
                     current: fm.page === "folder" && fm.currentPath === modelData.path
                     onClicked: fm.navigate(modelData.path)
                 }
@@ -53,6 +55,7 @@ Rectangle {
                     text: modelData.name
                     icon: modelData.removable ? "usb" : "drive"
                     ejectable: modelData.removable && modelData.mounted
+                    dropTarget: !modelData.system && modelData.mounted && modelData.mountPath ? modelData.mountPath : ""
                     current: fm.page === "folder" && !modelData.system && modelData.mountPath.length > 0
                              && fm.currentPath.indexOf(modelData.mountPath) === 0
                     onClicked: fm.openDrive(index)
@@ -70,6 +73,7 @@ Rectangle {
         width: parent.width - 20
         text: "Papierkorb"
         icon: "trash"
+        dropTarget: "trash"
         current: fm.page === "trash"
         onClicked: fm.openPage("trash")
     }

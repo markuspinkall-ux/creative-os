@@ -1,0 +1,22 @@
+name: QML prüfen
+# Lädt alle QML-Dateien (Shell, Dateien, Systemsteuerung) – findet Tippfehler vor dem Mergen.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: ["**.qml", tools/qml-check.py, .github/workflows/qml-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1
+          pip install -q PySide6
+      - name: Prüfen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 tools/qml-check.py

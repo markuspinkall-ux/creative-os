@@ -509,6 +509,57 @@ class FileManager(QObject):
         self._run_bg("Verschiebe …" if cut else "Kopiere …",
                      lambda: ("move" if cut else "copy", (fsops.move_into if cut else fsops.copy_into)(sources, target)))
 
+    # ---- Ziehen & Ablegen -----------------------------------------------------
+    def _selection_uris(self):
+        return "\r\n".join(QUrl.fromLocalFile(p).toString() for p in self._selected_paths())
+
+    @staticmethod
+    def _local_paths(urls):
+        paths = []
+        for u in urls or []:
+            url = u if isinstance(u, QUrl) else QUrl(str(u))
+            if url.isLocalFile() and url.host() in ("", "localhost") and os.path.isabs(url.toLocalFile()):
+                paths.append(os.path.normpath(url.toLocalFile()))
+        return list(dict.fromkeys(paths))
+
+    @Slot("QVariantList", str, str)
+    def dropUrls(self, urls, target, mode):
+        """Abgelegte Dateien: target = Zielordner ("" = aktueller Ordner, "trash" = Papierkorb).
+        mode: auto (gleiches Laufwerk → verschieben, sonst kopieren) | copy | move."""
+        if self._busy:
+            self._show_toast("Bitte warten – es läuft noch etwas.")
+            return
+        sources = self._local_paths(urls)
+        if target == "trash":
+            sources = [s for s in sources if not s.startswith(str(fsops.trash_dir()))]
+            if sources:
+                self._run_bg("In den Papierkorb …",
+                             lambda: ("trash", [(p, fsops.move_to_trash(p)) for p in sources]))
+            return
+        target = target or (self._path if self._page == "folder" else "")
+        if not target or not sources:
+            return
+        target = os.path.normpath(target)
+        sources = [s for s in sources if s != target]
+        if not sources:
+            return
+        gdrive = any(fsops.is_google_drive(p) for p in [target, *sources])
+        if mode == "copy" or gdrive:
+            copy = True
+        elif mode == "move":
+            copy = False
+        else:
+            try:
+                dev = os.stat(target).st_dev
+                copy = any(os.lstat(s).st_dev != dev for s in sources)
+            except OSError:
+                copy = True
+        if not copy and all(os.path.dirname(s) == target for s in sources):
+            return  # liegt schon hier
+        self._run_bg("Kopiere …" if copy else "Verschiebe …",
+                     lambda: ("copy" if copy else "move",
+                              (fsops.copy_into if copy else fsops.move_into)(sources, target)))
+
     # ---- Papierkorb -----------------------------------------------------------
     @Slot()
     def trashSelection(self):
@@ -817,6 +868,7 @@ class FileManager(QObject):
     drives = Property("QVariantList", lambda self: self._drives, notify=drivesChanged)
     status = Property(str, _status, notify=selectionChanged)
     selectedCount = Property(int, lambda self: len(self.files.selected()), notify=selectionChanged)
+    selectionUris = Property(str, _selection_uris, notify=selectionChanged)
     selectedName = Property(str, lambda self: (self.files.selected() or [{"name": ""}])[0]["name"],
                             notify=selectionChanged)
     toast = Property(str, lambda self: self._toast, notify=toastChanged)
