@@ -1,0 +1,13 @@
+[Unit]
+Description=Creative OS Live-Umgebung vorbereiten
+After=livesys.service livesys-late.service systemd-udev-settle.service
+Before=display-manager.service sddm.service
+ConditionKernelCommandLine=rd.live.image
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/creative-live-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target graphical.target

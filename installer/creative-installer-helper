@@ -1,0 +1,175 @@
+#!/usr/bin/python3 -I
+"""Root-Teil der Creative-Installation (wird über pkexec gestartet).
+
+  creative-installer-helper install   – liest die Auswahl als JSON von stdin,
+                                         prüft sie, erzeugt die Kickstart-Datei
+                                         und lässt Anaconda installieren
+Ausgabe zeilenweise:  P <prozent> <text>  ·  L <protokollzeile>  ·  OK  ·  ERR <meldung>
+
+CREATIVE_INSTALLER_DRYRUN=1 spielt die Installation nur vor (für Tests und Fotos).
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import threading
+import time
+
+for base in ("/usr/lib/creative-installer", os.path.join(os.path.dirname(os.path.abspath(__file__)))):
+    if os.path.isdir(os.path.join(base, "creative_installer")):
+        sys.path.insert(0, base)
+        break
+from creative_installer import plan  # noqa: E402
+
+WORK = "/run/creative-installer"
+KS = os.path.join(WORK, "creative.ks")
+LOG = "/tmp/creative-installer.log"
+
+
+def out(line):
+    print(line, flush=True)
+
+
+def lsblk():
+    res = subprocess.run(["lsblk", "--json", "--bytes", "--paths", "-o",
+                          "NAME,PATH,SIZE,MODEL,TRAN,TYPE,RM,RO,FSTYPE,LABEL"],
+                         capture_output=True, text=True, check=True)
+    return res.stdout
+
+
+def live_disks():
+    """Geräte, von denen die Live-Umgebung gestartet wurde (der USB-Stick)."""
+    found = set()
+    for mnt in ("/run/initramfs/live", "/run/rootfsbase"):
+        src = subprocess.run(["findmnt", "-n", "-o", "SOURCE", mnt], capture_output=True, text=True).stdout.strip()
+        if src.startswith("/dev/"):
+            parent = subprocess.run(["lsblk", "-n", "-p", "-o", "PKNAME", src], capture_output=True, text=True).stdout.split()
+            found.add(parent[0] if parent else src)
+    for label_dev in subprocess.run(["blkid", "-t", "TYPE=iso9660", "-o", "device"], capture_output=True, text=True).stdout.split():
+        parent = subprocess.run(["lsblk", "-n", "-p", "-o", "PKNAME", label_dev], capture_output=True, text=True).stdout.split()
+        found.add(parent[0] if parent else label_dev)
+    return found
+
+
+def password_hash(pw):
+    res = subprocess.run(["openssl", "passwd", "-6", "-stdin"], input=pw + "\n",
+                         capture_output=True, text=True, check=True)
+    return res.stdout.strip()
+
+
+def source_ref(variant):
+    """Abbild im Speicher der Live-Umgebung (beim Bau der ISO hineingelegt)."""
+    want = f"{plan.IMAGE_REPO}:{variant}"
+    res = subprocess.run(["podman", "images", "--format", "{{.Repository}}:{{.Tag}}"],
+                         capture_output=True, text=True)
+    names = res.stdout.split()
+    if want in names:
+        return want
+    other = next((n for n in names if n.startswith(plan.IMAGE_REPO + ":")), None)
+    return other or want
+
+
+def dry_run():
+    for key, pct, text in plan.STAGES:
+        out(f"P {pct} {text}")
+        out(f"L {key} …")
+        time.sleep(0.6 if pct < 14 or pct > 75 else 2.5)
+    out("OK")
+    return 0
+
+
+def install(cfg):
+    if os.environ.get("CREATIVE_INSTALLER_DRYRUN") == "1":
+        err = plan.validate(cfg)        # Vorführung: echte Platten spielen keine Rolle
+        if err:
+            out("ERR " + err)
+            return 2
+        return dry_run()
+    disks = plan.parse_disks(lsblk(), live_disks())
+    err = plan.validate(cfg, disks)
+    if err:
+        out("ERR " + err)
+        return 2
+
+    os.makedirs(WORK, mode=0o700, exist_ok=True)
+    ks = plan.kickstart(cfg, password_hash(cfg["password"]), source_ref(cfg.get("variant", "amd")))
+    fd = os.open(KS, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(ks)
+
+    out("P 1 Installation wird vorbereitet")
+    # wie liveinst: SELinux für die Dauer der Installation auf permissive
+    if shutil.which("setenforce"):
+        subprocess.run(["setenforce", "0"], capture_output=True)
+    env = dict(os.environ)
+    env.update({"ANACONDA_PRODUCTNAME": "Creative OS", "ANACONDA_ISFINAL": "true",
+                "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8"})
+    try:
+        ver = open("/etc/os-release").read()
+        m = re.search(r'^VERSION_ID="?([0-9.]+)', ver, re.M)
+        env["ANACONDA_PRODUCTVERSION"] = m.group(1) if m else ""
+    except OSError:
+        pass
+    cmd = ["anaconda", "--liveinst", "--cmdline", "--kickstart=" + KS]
+    log = open(LOG, "w")
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, bufsize=1)
+
+    state = {"pct": 1, "text": "Installation wird vorbereitet", "copy_since": None}
+
+    def creep():
+        # Während Creative OS kopiert wird, meldet Anaconda lange nichts – langsam weiterzählen,
+        # damit man sieht, dass es läuft (nie über 72 %).
+        while proc.poll() is None:
+            time.sleep(6)
+            if state["copy_since"] and 14 <= state["pct"] < 72:
+                state["pct"] += 1
+                out(f"P {state['pct']} {state['text']}")
+
+    threading.Thread(target=creep, daemon=True).start()
+    tail = []
+    for line in proc.stdout:
+        line = line.rstrip()
+        if not line:
+            continue
+        log.write(line + "\n")
+        log.flush()
+        tail = (tail + [line])[-12:]
+        out("L " + line[:300])
+        hit = plan.stage_for(line, state["pct"])
+        if hit:
+            state["pct"], state["text"] = hit
+            if 12 <= state["pct"] < 75 and not state["copy_since"]:
+                state["copy_since"] = time.time()
+            if state["pct"] >= 75:
+                state["copy_since"] = None
+            out(f"P {state['pct']} {state['text']}")
+    code = proc.wait()
+    if code != 0:
+        reason = next((t for t in reversed(tail) if re.search(r"error|fehler|failed|traceback", t, re.I)), tail[-1] if tail else "")
+        out(f"ERR Anaconda hat mit Fehler {code} abgebrochen. {reason}".strip())
+        return 1
+    out("P 100 Fertig")
+    out("OK")
+    return 0
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] != "install":
+        print(__doc__)
+        return 2
+    if os.geteuid() != 0 and os.environ.get("CREATIVE_INSTALLER_DRYRUN") != "1":
+        out("ERR Die Installation braucht Administratorrechte.")
+        return 2
+    try:
+        cfg = json.loads(sys.stdin.readline() or "{}")
+    except ValueError:
+        out("ERR Ungültige Eingabe.")
+        return 2
+    return install(cfg)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,20 @@
+# Creative OS – Live-Umgebung für die große Installations-ISO (eigener Graphit-Installer).
+# Bauen (braucht diese Rechte, weil das Abbild für die Installation hineingeladen wird):
+#   sudo podman build --cap-add sys_admin --security-opt label=disable --squash \
+#        -f image/live/Containerfile --build-arg VARIANT=amd -t localhost/creative-live:amd .
+# Daraus macht Titanoboa (ublue-os/titanoboa) die ISO.
+ARG VARIANT=amd
+FROM ghcr.io/markuspinkall-ux/creative-os:${VARIANT}
+ARG VARIANT=amd
+
+COPY image/live /src/live
+COPY image/netinstall/installer /src/anaconda-look
+COPY installer/creative_installer /usr/lib/creative-installer/creative_installer
+COPY installer/bin/creative-installer /usr/bin/creative-installer
+COPY installer/creative-installer-helper /usr/libexec/creative-installer-helper
+COPY installer/org.creativeos.installer.policy /usr/share/polkit-1/actions/org.creativeos.installer.policy
+COPY installer/creative-installer.desktop /usr/share/applications/creative-installer.desktop
+COPY shell/creative_shell/qml/Creative/icons/rocket.svg /usr/share/icons/hicolor/scalable/apps/creative-installer.svg
+COPY shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor
+
+RUN bash /src/live/build.sh "$VARIANT" && rm -rf /src

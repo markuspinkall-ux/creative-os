@@ -1,0 +1,8 @@
+// Live-Umgebung: der Live-Benutzer darf ohne Passwort installieren
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.creativeos.installer" ||
+         action.id == "org.fedoraproject.pkexec.liveinst") &&
+        subject.user == "liveuser" && subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

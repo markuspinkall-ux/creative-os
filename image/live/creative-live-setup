@@ -1,0 +1,12 @@
+#!/bin/sh
+# Live-Umgebung vorbereiten: Markierung für die Sitzung, automatische Anmeldung in Creative
+touch /run/creative-live
+# Test in der virtuellen Maschine: ein Datenträger mit dem Namen CRTEST startet den automatischen Durchlauf
+[ -e /dev/disk/by-label/CRTEST ] && touch /run/creative-live-autotest
+cat > /etc/sddm.conf <<CONF
+[Autologin]
+User=liveuser
+Session=creative.desktop
+Relogin=false
+CONF
+exit 0
