@@ -37,7 +37,7 @@ printf '[User Interface]\ncustom_stylesheet = /usr/share/anaconda/creative-gtk.c
 echo "Creative OS release $(. /etc/os-release; echo "$VERSION_ID")" > /etc/system-release
 
 # 5) Selbsttest der Installations-Oberfläche
-QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/live-home timeout 60 /usr/bin/creative-installer --selftest
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_RUNTIME_DIR=/tmp HOME=/tmp/live-home timeout 90 /usr/bin/creative-installer --selftest 2>&1
 
 # 6) Was Titanoboa/image-builder zum Bauen der ISO braucht
 dnf install -y grub2-efi-x64-cdboot xorriso isomd5sum

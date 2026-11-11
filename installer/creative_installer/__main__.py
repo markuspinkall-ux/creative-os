@@ -247,12 +247,19 @@ def main():
             start_step = int(arg.split("=", 1)[1])
     ctx.setContextProperty("startStep", start_step)
     ctx.setContextProperty("autoMode", "--auto" in sys.argv)
+    if "--selftest" in sys.argv:
+        # nur übersetzen (ohne Fenster) – Fenster im Bau-Container können hängen
+        from PySide6.QtQml import QQmlComponent
+        comp = QQmlComponent(engine, QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
+        if comp.isError():
+            for err in comp.errors():
+                print("QML-FEHLER", err.toString(), flush=True)
+            os._exit(1)
+        print("Creative-Installation: Selbsttest bestanden", flush=True)
+        os._exit(0)
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
         return 1
-    if "--selftest" in sys.argv:
-        print("Creative-Installation: Selbsttest bestanden")
-        return 0
     ticker = QTimer()
     ticker.start(300)
     ticker.timeout.connect(lambda: None)
