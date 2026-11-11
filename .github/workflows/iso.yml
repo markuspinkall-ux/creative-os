@@ -114,7 +114,7 @@ jobs:
             sed "s|@IMAGE@|ghcr.io/${owner}/creative-os:${v}|" image/netinstall/creative.ks.in > "out/creative-${v}.ks"
           done
           sudo podman run --rm --privileged -v "$PWD/out:/out" -v "$PWD:/src:ro" registry.fedoraproject.org/fedora:44 bash -euxc '
-            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl cpio gzip mtools >/dev/null
+            dnf install -y --setopt=install_weak_deps=False lorax xorriso curl cpio gzip mtools grub2-tools-extra liberation-sans-fonts fontconfig >/dev/null
             base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
             iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
             curl -fsSL -o /tmp/netinst.iso "$base/$iso"
