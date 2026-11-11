@@ -285,7 +285,7 @@ ApplicationWindow {
             width: Math.min(parent.width - 40, toastRow.implicitWidth + 28)
             height: 50
             radius: 12
-            color: "#2a3040"
+            color: Theme.raised
             border.color: Theme.hairline
             Behavior on anchors.bottomMargin { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -322,7 +322,7 @@ ApplicationWindow {
             width: busyRow.implicitWidth + 24
             height: 36
             radius: 10
-            color: "#2a3040"
+            color: Theme.raised
             border.color: Theme.hairline
             Row {
                 id: busyRow
@@ -340,7 +340,7 @@ ApplicationWindow {
                             color: "transparent"
                             border.width: 2
                             border.color: Theme.accent
-                            Rectangle { width: 6; height: 6; radius: 3; color: "#2a3040"; x: parent.width / 2 - 3; y: -2 }
+                            Rectangle { width: 6; height: 6; radius: 3; color: Theme.raised; x: parent.width / 2 - 3; y: -2 }
                         }
                     }
                 }

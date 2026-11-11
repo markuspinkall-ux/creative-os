@@ -44,7 +44,7 @@ ApplicationWindow {
         id: nav
         width: 250
         height: parent.height
-        color: "#171b22"
+        color: Theme.footer
         Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.tint(0.05) }
 
         Column {
