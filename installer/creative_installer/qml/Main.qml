@@ -250,7 +250,7 @@ ApplicationWindow {
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: "Sprache: Deutsch"; color: Theme.text; font.pixelSize: 14; font.bold: true }
-                            Text { text: "Tastatur und Zeitzone (Europa/Berlin) lassen sich später in den Einstellungen ändern."; color: Theme.textMuted; font.pixelSize: 12 }
+                            Text { text: "Zeitzone: Europa/Berlin – beides lässt sich später ändern."; color: Theme.textMuted; font.pixelSize: 12 }
                         }
                     }
                     ComboBox {
