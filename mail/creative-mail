@@ -1478,6 +1478,14 @@ class MailWindow(QMainWindow):
             window.grab()
             window.reject()
         self.gmail = None
+        login = LoginDialog(self)
+        login.address.setText("max@gmx.de")
+        login.address_changed("max@gmx.de")
+        assert login.provider.currentData() == "gmx" and login.imap_host.text() == "imap.gmx.net"
+        login.address_changed("max@hotmail.com")
+        assert not login.ok.isEnabled()
+        login.grab()
+        login.reject()
         print("Creative Mail: Selbsttest bestanden")
 
 
