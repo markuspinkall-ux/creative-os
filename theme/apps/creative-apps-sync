@@ -33,7 +33,6 @@ VISIBLE = {
     "creative-cut.desktop": (None, None),
     "creative-3d.desktop": (None, None),
     "creative-ftp.desktop": (None, None),
-    "creative-flatrules.desktop": ("Creative FlatRules", "creative-flatrules"),
     "creative-widgets.desktop": (None, None),
     "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),
     "systemsettings.desktop": ("Systemsteuerung", "creative-settings"),

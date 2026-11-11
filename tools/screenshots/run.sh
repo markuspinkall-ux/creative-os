@@ -19,7 +19,7 @@ shot() {   # shot <name> <programm> [argumente …]
 for page in network displays sound look updates system server backup; do
     shot "einstellungen-$page" /usr/bin/creative-settings --page "$page"
 done
-for app in art writer cut ftp 3d software flatrules notes mail claude iso broadcast pictures \
+for app in art writer cut ftp 3d software notes mail claude iso broadcast pictures \
            taskmanager magazin podcast player calculator welcome files obs; do
     shot "$app" "/usr/bin/creative-$app"
 done
