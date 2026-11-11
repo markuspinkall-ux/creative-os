@@ -18,7 +18,7 @@ if [ "${1:-}" = build ]; then
         dnf install -y -q --setopt=install_weak_deps=False lorax xorriso curl cpio gzip mtools grub2-tools-extra liberation-sans-fonts fontconfig >/dev/null
         base=https://download.fedoraproject.org/pub/fedora/linux/releases/44/Everything/x86_64/iso
         iso=$(curl -fsSL "$base/" | grep -o "Fedora-Everything-netinst-x86_64-[0-9.-]*\.iso" | head -n1)
-        curl -fsSL -o /tmp/netinst.iso "$base/$iso"
+        for try in 1 2 3 4; do curl -fsSL --retry 3 -o /tmp/netinst.iso "$base/$iso" && [ "$(dd if=/tmp/netinst.iso bs=1 skip=32769 count=5 2>/dev/null)" = CD001 ] && break; echo "Download unvollständig – neuer Versuch"; sleep 20; done; [ "$(dd if=/tmp/netinst.iso bs=1 skip=32769 count=5 2>/dev/null)" = CD001 ]
         for k in umschauen automatisch; do
             CREATIVE_GRUB_DEBUG=1 bash /src/image/netinstall/brand-iso.sh /tmp/netinst.iso "/out/$k.ks" "/out/$k.iso"
         done
