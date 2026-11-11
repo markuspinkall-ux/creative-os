@@ -94,3 +94,6 @@ class KWinBridge(QObject):
 
     def minimize(self, window_id):
         self._with_window(window_id, "w.minimized = true;")
+
+    def close(self, window_id):
+        self._with_window(window_id, "w.closeWindow();")

@@ -107,6 +107,10 @@ Item {
                         tasks.activate(root.screenName, modelData.key, modelData.desktopId)
                     }
                     onMiddleClicked: tasks.launchNew(modelData.desktopId)
+                    onRightClicked: shell.toggleTaskMenu(root.screenName, {
+                        key: modelData.key, desktopId: modelData.desktopId, name: modelData.name,
+                        running: modelData.running, count: modelData.count
+                    }, mapToItem(null, width / 2, 0).x)
                 }
             }
         }

@@ -68,6 +68,40 @@ def unique_path(folder, name):
     return folder / f"{stem} ({n}){suffix}"
 
 
+def transfer(sources, target_dir, mode="auto"):
+    """Dateien in target_dir ablegen – nie überschreiben, nie in sich selbst.
+    mode: auto (gleiches Laufwerk → verschieben, sonst kopieren) | copy | move.
+    Gibt (erledigt, fehlgeschlagen) zurück."""
+    target_dir = Path(target_dir)
+    try:
+        target_real, target_dev = target_dir.resolve(), target_dir.stat().st_dev
+    except OSError:
+        return 0, len(sources)
+    done = failed = 0
+    for path in sources:
+        src = Path(path)
+        try:
+            src_real = src.resolve()
+            if src_real == target_real or (src.is_dir() and not src.is_symlink()
+                                           and target_real.is_relative_to(src_real)):
+                continue  # nicht in sich selbst
+            copy = mode == "copy" or (mode == "auto" and src.lstat().st_dev != target_dev)
+            if not copy and src.parent.resolve() == target_real:
+                continue  # liegt schon hier
+            dst = unique_path(target_dir, src.name)
+            if copy:
+                if src.is_dir() and not src.is_symlink():
+                    shutil.copytree(src, dst, symlinks=True)
+                else:
+                    shutil.copy2(src, dst, follow_symlinks=False)
+            else:
+                shutil.move(str(src), str(dst))
+            done += 1
+        except (OSError, shutil.Error):
+            failed += 1
+    return done, failed
+
+
 class ScreenIcons(QSortFilterProxyModel):
     def __init__(self, desktop, screen):
         super().__init__(desktop)
@@ -97,12 +131,14 @@ class DesktopModel(QAbstractListModel):
     selectionChanged = Signal()
     clipboardChanged = Signal()
     pasteFinished = Signal(bool)
+    dropFinished = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._pasting = False
         QGuiApplication.clipboard().dataChanged.connect(self.clipboardChanged.emit)
         self.pasteFinished.connect(self._finishPaste)
+        self.dropFinished.connect(self._finishDrop)
         self._dir = desktop_dir()
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
@@ -192,6 +228,12 @@ class DesktopModel(QAbstractListModel):
             for model in self._screen_models.values():
                 model.invalidateFilter()
 
+    @Slot(str, str)
+    def moveDraggedToScreen(self, path, screen):
+        """Gezogenes Symbol (samt Auswahl, wenn es dazugehört) auf einen Monitor."""
+        paths = self.selectedPaths()
+        self.moveToScreen(paths if path in paths else [path], screen)
+
     # ---- Auswahl --------------------------------------------------------------
     @Slot(int, bool)
     def select(self, row, toggle):
@@ -279,6 +321,40 @@ class DesktopModel(QAbstractListModel):
         self.refresh()
         if not ok:
             spawn_detached(["notify-send", "Schreibtisch", "Einige Dateien konnten nicht kopiert werden."])
+
+    # ---- Ziehen & Ablegen ------------------------------------------------------
+    @Slot("QVariantList", str, str)
+    def dropUrls(self, urls, target, mode):
+        """Auf den Schreibtisch (target = "") oder auf einen Ordner darauf abgelegte Dateien."""
+        sources = []
+        for u in urls or []:
+            url = u if isinstance(u, QUrl) else QUrl(str(u))
+            if url.isLocalFile() and url.toLocalFile():
+                sources.append(url.toLocalFile())
+        sources = list(dict.fromkeys(sources))
+        if not sources:
+            return
+        target = target or str(self._dir)
+
+        def work():
+            _done, failed = transfer(sources, target, mode)
+            self.dropFinished.emit(failed)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _finishDrop(self, failed):
+        self.refresh()
+        if failed:
+            spawn_detached(["notify-send", "Schreibtisch",
+                            f"{failed} {'Element konnte' if failed == 1 else 'Elemente konnten'} nicht abgelegt werden."])
+
+    @Slot(str, result=str)
+    def dragUris(self, path):
+        """Was beim Ziehen mitgeht: die Auswahl (wenn das Symbol dazugehört), sonst nur dieses."""
+        paths = self.selectedPaths()
+        if path not in paths:
+            paths = [path]
+        return "\r\n".join(QUrl.fromLocalFile(p).toString() for p in paths)
 
     # ---- Aktionen -------------------------------------------------------------
     @Slot(int)

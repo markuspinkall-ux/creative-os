@@ -186,6 +186,13 @@ class TaskModel(QObject):
                 return True
         return False
 
+    @Slot(str, str)
+    def closeApp(self, screen, key):
+        """Rechtsklick → Schließen: alle Fenster dieses Programms auf diesem Monitor."""
+        for w in self._windows:
+            if self._window_key(w) == key and (w.get("output") == screen or not w.get("output")):
+                self._kwin.close(w["id"])
+
     @Slot(str)
     def launchNew(self, desktop_id):
         if desktop_id:
