@@ -88,6 +88,12 @@ if command -v creative-notifyd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Passwortspeicher (KWallet) ohne Nachfrage: leeres Passwort, wird bei der Anmeldung geöffnet
+if [ -x /usr/libexec/creative-wallet-setup ] && [ ! -e /run/creative-live ]; then
+    mkdir -p "$HOME/.cache"
+    /usr/libexec/creative-wallet-setup >"$HOME/.cache/creative-wallet.log" 2>&1 &
+fi
+
 # Datensicherung: stündlich prüfen, ob eine automatische Sicherung fällig ist
 if command -v creative-backup >/dev/null 2>&1; then
     ( sleep 300; while true; do creative-backup --auto >/dev/null 2>&1; sleep 3600; done ) &
