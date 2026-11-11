@@ -72,7 +72,7 @@ jobs:
           retention-days: 7
           compression-level: 0
       - name: KVM freischalten
-        if: ${{ inputs.test != false }}
+        if: ${{ github.event_name == 'push' || inputs.test }}
         timeout-minutes: 15
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -83,10 +83,10 @@ jobs:
           sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat python3-pil dosfstools >/dev/null
           sudo chmod 666 /dev/kvm
       - name: In der VM installieren und fotografieren
-        if: ${{ inputs.test != false }}
+        if: ${{ github.event_name == 'push' || inputs.test }}
         run: bash tools/live-fotos.sh "$PWD/creative-os-$VARIANT-live.iso"
       - name: Fotos im Branch „live-fotos“ ablegen
-        if: ${{ always() && inputs.test != false }}
+        if: ${{ always() && (github.event_name == 'push' || inputs.test) }}
         run: |
           cd live-fotos 2>/dev/null || exit 0
           ls *.png >/dev/null 2>&1 || exit 0
