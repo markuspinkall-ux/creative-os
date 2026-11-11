@@ -19,6 +19,12 @@ if [ "${1:-}" = "--entfernen" ]; then
     echo "Creative-3D-KI entfernt."
     exit 0
 fi
+# Solange geladen wird, geht der PC nicht von selbst in den Standby
+# (selbst in den Standby schicken geht weiterhin).
+if [ -z "${CREATIVE_WACH:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 && systemd-inhibit --list >/dev/null 2>&1; then
+    export CREATIVE_WACH=1
+    exec systemd-inhibit --what=idle --mode=block --who="Creative 3D" --why="KI wird eingerichtet" "$0" "$@"
+fi
 rm -f "$DATA/trellis-ready" "$DATA/ready"
 
 # Reste der früheren TripoSR-Einrichtung (≈ 5 GB) aufräumen
