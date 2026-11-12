@@ -121,6 +121,23 @@ def install(cfg):
         env["ANACONDA_PRODUCTVERSION"] = m.group(1) if m else ""
     except OSError:
         pass
+    # Mit --liveinst liest Anaconda NUR /usr/share/anaconda/interactive-defaults.ks
+    # (--kickstart wird ignoriert). Darum legen wir unseren Kickstart für die Dauer
+    # der Installation per bind-mount darüber.
+    defaults_ks = "/usr/share/anaconda/interactive-defaults.ks"
+    bound = False
+    if os.path.exists(defaults_ks):
+        bound = subprocess.run(["mount", "--bind", KS, defaults_ks], capture_output=True).returncode == 0
+    if not bound:
+        journal("Kickstart konnte nicht über interactive-defaults.ks gelegt werden")
+    try:
+        return run_anaconda(env, bound)
+    finally:
+        if bound:
+            subprocess.run(["umount", defaults_ks], capture_output=True)
+
+
+def run_anaconda(env, bound):
     cmd = ["anaconda", "--liveinst", "--cmdline", "--kickstart=" + KS]
     log = open(LOG, "w")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, bufsize=1)
