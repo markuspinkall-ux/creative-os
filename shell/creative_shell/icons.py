@@ -10,6 +10,15 @@ FALLBACK = "application-x-executable"
 # Creative-Symbole haben immer Vorrang – auch wenn eine App (z. B. ein OBS-Update oder
 # eine Flatpak-Version) ihr eigenes Symbol mitbringt oder ihr Symbol als Dateipfad angibt.
 CREATIVE_DIRS = ("/usr/share/icons/Creative/apps/scalable",)
+PORZELLAN_DIRS = ("/usr/share/icons/CreativePorzellan/apps/scalable",) + CREATIVE_DIRS
+
+
+def _light():
+    try:
+        from creative_shell import look
+        return look.is_light() and os.path.isdir(PORZELLAN_DIRS[0])
+    except Exception:  # noqa: BLE001
+        return False
 ALIASES = {
     "com.obsproject.studio": "com.obsproject.Studio",
     "obs": "com.obsproject.Studio",
@@ -21,7 +30,7 @@ def creative_icon(icon_id):
     """Pfad des Creative-Symbols für einen Symbolnamen oder Symbolpfad – sonst None."""
     stem = os.path.splitext(os.path.basename(icon_id or ""))[0]
     for name in dict.fromkeys((stem, ALIASES.get(stem.lower(), stem))):
-        for folder in CREATIVE_DIRS:
+        for folder in (PORZELLAN_DIRS if _LIGHT else CREATIVE_DIRS):
             for ext in (".svg", ".png"):
                 path = os.path.join(folder, name + ext)
                 if name and os.path.exists(path):
@@ -29,9 +38,16 @@ def creative_icon(icon_id):
     return None
 
 
+_LIGHT = False
+
+
 class IconProvider(QQuickImageProvider):
     def __init__(self):
         super().__init__(QQuickImageProvider.ImageType.Pixmap)
+        # Die Shell startet beim Wechsel des Designs neu – hier einmal festlegen
+        global _LIGHT
+        _LIGHT = _light()
+        QIcon.setThemeName("CreativePorzellan" if _LIGHT else "Creative")
 
     def requestPixmap(self, icon_id, size, requested_size):
         edge = max(requested_size.width(), requested_size.height(), 0) or 64

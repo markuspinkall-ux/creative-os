@@ -7,9 +7,13 @@ design=$(sed -n 's/^design=//p' "$conf/creative-os/look.conf" 2>/dev/null | head
 [ "$design" = porzellan ] || design=graphit
 if [ "$design" = porzellan ]; then
     scheme=CreativePorzellan; css=/usr/share/creative-os/gtk/gtk-light.css; dark=false; gtk=Adwaita; cs=prefer-light
+    icons=CreativePorzellan
 else
     scheme=CreativeGraphit; css=/usr/share/creative-os/gtk/gtk.css; dark=true; gtk=Adwaita-dark; cs=prefer-dark
+    icons=Creative
 fi
+# Symbol-Design nur, wenn es im System steckt (ältere Abbilder haben nur „Creative“)
+[ -d "/usr/share/icons/$icons" ] || icons=Creative
 
 if [ "$1" != --no-gtk ]; then
     for v in gtk-3.0 gtk-4.0; do
@@ -19,12 +23,22 @@ if [ "$1" != --no-gtk ]; then
         fi
         ini="$conf/$v/settings.ini"
         if [ -f "$ini" ]; then
-            sed -i "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$dark/; s/^gtk-theme-name=.*/gtk-theme-name=$gtk/" "$ini"
+            sed -i "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$dark/; s/^gtk-theme-name=.*/gtk-theme-name=$gtk/; s/^gtk-icon-theme-name=.*/gtk-icon-theme-name=$icons/" "$ini"
         fi
     done
     if command -v gsettings >/dev/null 2>&1; then
         gsettings set org.gnome.desktop.interface gtk-theme "$gtk" 2>/dev/null
         gsettings set org.gnome.desktop.interface color-scheme "$cs" 2>/dev/null
+    fi
+fi
+# Symbole (Startmenü, Taskleiste, Titelleisten, KDE- und GTK-Programme)
+command -v gsettings >/dev/null 2>&1 && gsettings set org.gnome.desktop.interface icon-theme "$icons" 2>/dev/null
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+    if [ "$(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null)" != "$icons" ]; then
+        kwriteconfig6 --file kdeglobals --group Icons --key Theme "$icons"
+        # laufende KDE-Programme benachrichtigen
+        command -v dbus-send >/dev/null 2>&1 && dbus-send --session --type=signal /KIconLoader \
+            org.kde.KIconLoader.iconChanged int32:0 2>/dev/null
     fi
 fi
 
