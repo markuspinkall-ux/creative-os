@@ -398,6 +398,10 @@ class Creative3D(QMainWindow):
         self.preview_stack.setCurrentWidget(self.soft if self.web_failed else self.view)
         self.stack.addWidget(self.preview_stack)
         self.settings = QSettings("Creative OS", "Creative 3D")
+        if not self.settings.value("vorschauV2", False, type=bool):
+            # Früher blieb die einfache Vorschau nach einem einzigen Aussetzer dauerhaft an – einmal zurücksetzen
+            self.settings.setValue("simplePreview", False)
+            self.settings.setValue("vorschauV2", True)
         self.simple.setChecked(self.web_failed or self.settings.value("simplePreview", False, type=bool))
         self.simple.setEnabled(self.view is not None)
         self.simple.toggled.connect(self.set_simple)
