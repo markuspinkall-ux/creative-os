@@ -8,8 +8,10 @@
       "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
       "Creative Software → „Eigene Apps“: die Creative Engine zum Herunterladen – Spiele per Klick bauen, mit Charakter-Editor",
       "Systemsteuerung → Benutzerkonten: Konten hinzufügen und löschen (auf Wunsch mit Sicherung der Dateien), Passwort ändern, Konten ohne Passwort, Administrator-Rechte vergeben",
+      "Benutzerkonten ohne Passwort (nur Standardkonten) – am Anmelde- und Sperrbildschirm genügt Enter",
       "Creative Engine: Sprechblasen-Dialoge für NPCs, freie Seiten in der Timeline mit Anzeigedauer in Sekunden und eigene Bilder oder Videos – auch im Vollbild",
       "Creative Engine: mehrere Angriffe mit eigener Taste und Bewegung, Lebensanzeige (Herzen, Balken oder Zahl), Gegner mit Lebensbalken und eigene Grafiken für Anzeige und Sprechblasen",
+      "Creative 3D: neue Qualität „Sehr hoch“ – Textur per KI (Real-ESRGAN) auf 4096 × 4096 hochgerechnet",
       "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
       "Dateien: Ziehen & Ablegen – auf Ordner, in die Seitenleiste, zwischen Fenstern und in andere Programme (Strg = kopieren, Umschalt = verschieben)",
       "Schreibtisch: Symbole auf Ordner, in „Dateien“ oder andere Programme ziehen und Dateien von außen ablegen",
@@ -20,10 +22,17 @@
     "verbessert": [
       "Helles Design „Porzellan“ jetzt auch in Art, Cut, FTP, 3D, Notes, Software, Widgets, OBS und auf der Brave-Startseite",
       "Porzellan: Programmsymbole im Startmenü, in der Taskleiste und in den Titelleisten jetzt hell mit dunklen Strichen (eigenes Symbol-Design „Creative Porzellan“)",
+      "Creative 3D: KI-Einrichtung prüft Speicherplatz und Grafikkarte vorab, versucht das Laden bis zu dreimal und erkennt Abstürze von podman",
+      "Creative 3D: Bildverständnis (DINOv2) kommt jetzt von Hugging Face – unabhängig von Metas Download-Server",
+      "Creative 3D: Verbesserungen am Rechenteil kommen mit dem System-Update, ohne den 14-GB-Container neu zu laden",
       "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
       "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
     ],
     "behoben": [
+      "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
+      "Creative 3D: Die einfache Vorschau war oft dauerhaft an – jetzt startet die echte 3D-Vorschau notfalls per Software",
+      "Creative 3D und Creative Cut: aufgeklappte Auswahllisten waren durchsichtig",
+      "Benutzerkonten: Die Schalter „Kein Passwort?“ und „Administrator?“ hatten keine Beschriftung",
       "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
       "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab"
     ]
