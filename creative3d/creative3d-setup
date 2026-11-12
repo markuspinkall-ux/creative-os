@@ -40,15 +40,48 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1 | sed '
 mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
 [ "${mem:-0}" -lt 11000 ] 2>/dev/null && echo "Hinweis: Unter 12 GB Grafikspeicher kann TRELLIS zu wenig Speicher haben."
 
+# podman selbst prüfen: stürzt es schon beim Start ab, hilft kein erneuter Download
+podman_ok() {
+    out=$(podman --version 2>&1) && return 0
+    case "$out" in
+        *"fatal error"*|*SIGSEGV*|*"unexpected fault"*)
+            fail "Das Container-Programm (podman) stürzt beim Start ab. Das liegt nicht am Download, sondern meist an einem Speicherfehler im laufenden System. Bitte den PC neu starten und Creative 3D erneut einrichten – bereits geladene Teile bleiben erhalten." ;;
+    esac
+    fail "podman funktioniert nicht: $(echo "$out" | head -1)"
+}
+
 step 2 "Prüfe den Container-Zugriff auf die Grafikkarte …"
 command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Creative OS aktualisieren."
+podman_ok
+# Platz: Container ≈ 14 GB gepackt + ≈ 18 GB entpackt, Modelle ≈ 4 GB
+store="$HOME/.local/share/containers"
+mkdir -p "$store"
+free_gb=$(df -Pk "$store" | awk 'NR==2 {print int($4/1024/1024)}')
+if podman image exists "$IMAGE" 2>/dev/null; then need=6; else need=${CREATIVE3D_MIN_GB:-32}; fi
+[ "${free_gb:-0}" -lt "$need" ] && fail "Zu wenig Speicherplatz: frei sind ${free_gb} GB, gebraucht werden etwa ${need} GB. Bitte Platz schaffen (z. B. Papierkorb leeren) und erneut versuchen."
+echo "Freier Speicher: ${free_gb} GB"
 if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
     fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Creative OS aktualisieren und neu starten."
 fi
 
 step 3 "Lade den TRELLIS-Container (≈ 14 GB, das dauert eine Weile) …"
-podman pull "$IMAGE" 2>&1 | grep -v '^Writing manifest' || fail "Der TRELLIS-Container ließ sich nicht laden."
-podman image exists "$IMAGE" || fail "Der TRELLIS-Container fehlt nach dem Laden."
+# Bis zu drei Versuche – bereits geladene Teile bleiben erhalten
+log="$DATA/laden.log"
+ok=0
+for try in 1 2 3; do
+    if [ "$try" -gt 1 ]; then
+        echo "Neuer Versuch ($try von 3) …"
+        # halb entpackte Teile aufräumen, damit der nächste Versuch sauber startet
+        podman system check --repair >/dev/null 2>&1 || true
+        sleep 5
+    fi
+    { podman pull "$IMAGE" 2>&1; echo "PULL-ENDE $?"; } | tee "$log" | grep -v '^Writing manifest\|^PULL-ENDE\|^ *[0-9a-f]\{16\}:\|^goroutine\|^\s' || true
+    if grep -q '^PULL-ENDE 0$' "$log"; then ok=1; break; fi
+    if grep -q 'fatal error\|SIGSEGV\|unexpected fault' "$log"; then podman_ok; fi
+    grep -qi 'no space left' "$log" && fail "Der Speicherplatz ist beim Entpacken ausgegangen. Bitte Platz schaffen und erneut versuchen."
+done
+[ "$ok" = 1 ] || fail "Der TRELLIS-Container ließ sich nicht laden (Details: $log)."
+podman image exists "$IMAGE" 2>/dev/null || { podman_ok; fail "Der TRELLIS-Container fehlt nach dem Laden."; }
 
 step 4 "Lade die KI-Modelle (≈ 4 GB) …"
 podman run --rm --security-opt label=disable -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
