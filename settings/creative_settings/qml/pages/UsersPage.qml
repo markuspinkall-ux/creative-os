@@ -48,6 +48,52 @@ SettingsPage {
         font.pixelSize: 12
     }
 
+    // Schalter mit sichtbarer Frage links und Erklärung darunter
+    component SwitchRow: Item {
+        id: srow
+        property alias checked: sw.checked
+        property string text
+        property string hint
+        property bool enabledRow: true
+        signal toggled(bool value)
+        width: parent ? parent.width : 400
+        height: Math.max(sw.height, col.implicitHeight) + 4
+        opacity: enabledRow ? 1 : 0.45
+        Column {
+            id: col
+            anchors.left: parent.left
+            anchors.right: sw.left
+            anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            Text {
+                width: parent.width
+                text: srow.text
+                wrapMode: Text.WordWrap
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 14
+            }
+            Text {
+                visible: srow.hint.length > 0
+                width: parent.width
+                text: srow.hint
+                wrapMode: Text.WordWrap
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+            }
+        }
+        CSwitch {
+            id: sw
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            label: srow.text
+            enabled: srow.enabledRow
+            onToggled: value => { if (srow.enabledRow) srow.toggled(value) }
+        }
+    }
+
     component Badge: Rectangle {
         property string text
         property color tint: Theme.accent
@@ -211,9 +257,10 @@ SettingsPage {
                 input.onTextEdited: addPopup.loginTouched = true
             }
             FieldLabel { visible: addPopup.loginHint !== ""; text: addPopup.loginHint; color: "#ff8a8e" }
-            CSwitch {
+            SwitchRow {
                 id: noPw
-                label: "Ohne Passwort – Anmelden mit einem Klick (gut für Kinder oder einen Familien-PC)"
+                text: "Kein Passwort?"
+                hint: "Anmelden mit einem Klick – gut für Kinder oder einen Familien-PC"
                 onToggled: value => { noPw.checked = value; if (value) adminSwitch.checked = false }
             }
             FieldLabel { visible: !noPw.checked; text: "Passwort" }
@@ -228,10 +275,12 @@ SettingsPage {
             }
             FieldLabel { visible: !noPw.checked && pw2.text.length > 0 && pw2.text !== pw1.text; text: "Die Passwörter sind verschieden."; color: "#ff8a8e" }
             Item { width: 1; height: 2 }
-            CSwitch {
+            SwitchRow {
                 id: adminSwitch
-                visible: !noPw.checked
-                label: "Administrator (darf Programme installieren und Konten verwalten)"
+                text: "Administrator?"
+                hint: noPw.checked ? "Geht nur mit Passwort – Administratoren dürfen alles am PC ändern"
+                                   : "Darf Programme installieren, Updates einspielen und Konten verwalten"
+                enabledRow: !noPw.checked
                 onToggled: value => adminSwitch.checked = value
             }
             Item { width: 1; height: 6 }
@@ -338,9 +387,10 @@ SettingsPage {
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
             }
-            CSwitch {
+            SwitchRow {
                 id: keepSwitch
-                label: "Persönliche Dateien behalten (kommen in /var/home/geloeschte-konten)"
+                text: "Persönliche Dateien behalten?"
+                hint: "Sie kommen in /var/home/geloeschte-konten"
                 onToggled: value => keepSwitch.checked = value
             }
             Text {
