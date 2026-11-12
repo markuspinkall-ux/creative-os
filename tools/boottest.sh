@@ -58,6 +58,7 @@ if [ "${BRANCH_EINSPIELEN:-1}" = 1 ] && [ -d shell/creative_shell ]; then
     scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/branch.tgz" tester@127.0.0.1:/tmp/branch.tgz
     $SSH "echo creative-test | sudo -S sh -c 'rpm-ostree usroverlay >/dev/null 2>&1 || ostree admin unlock >/dev/null 2>&1; mkdir -p /tmp/b && tar -xzf /tmp/branch.tgz -C /tmp/b && rm -rf /usr/lib/creative-shell/creative_shell && cp -r /tmp/b/shell/creative_shell /usr/lib/creative-shell/ && install -m755 /tmp/b/shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor && install -m755 /tmp/b/users/creative-users-helper /usr/libexec/creative-users-helper && cp /tmp/b/login/creative/Main.qml /usr/share/sddm/themes/creative/Main.qml && echo eingespielt'" 2>&1 | tail -2
 fi
+$SSH "echo creative-test | sudo -S sh -c 'python3 -m venv /tmp/ps >/dev/null 2>&1 && /tmp/ps/bin/pip -q install py-spy >/dev/null 2>&1; ls /tmp/ps/bin/py-spy'" 2>&1 | tail -1
 echo "System läuft. Anmeldung wird automatisch durchgeführt …"
 $SSH "echo creative-test | sudo -S sh -c 'mkdir -p /etc/sddm.conf.d && printf \"[Autologin]\nUser=tester\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -3
 sleep 100
@@ -112,7 +113,15 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
         shot desktop-frau-$runde
         zeichnet=$($SSH "$R sh -c 'p=\$(pgrep -u frau -f \"python3 -m creative_shell\" | head -1); cat /proc/\$p/task/*/comm 2>/dev/null | grep -c QSGRenderThr; echo; cat /proc/\$p/wchan'" 2>/dev/null | grep -v password | tr '\n' ' ')
         echo "Runde $runde: Render-Threads/Haupt-Thread: $zeichnet"
-        case "$zeichnet" in 0*) haenger=$((haenger + 1)) ;; esac
+        case "$zeichnet" in 0*)
+            haenger=$((haenger + 1))
+            echo "--- Runde $runde hängt – Python-Stapel (py-spy):"
+            $SSH "$R sh -c 'p=\$(pgrep -u frau -f \"python3 -m creative_shell\" | head -1); for t in /proc/\$p/task/*; do echo \$(cat \$t/comm) \$(cat \$t/wchan); done; /tmp/ps/bin/py-spy dump --native --pid \$p 2>&1 | head -120'" 2>&1 | grep -v "password for" | head -150
+            sleep 60
+            echo "--- 60 s später:"
+            $SSH "$R sh -c 'p=\$(pgrep -u frau -f \"python3 -m creative_shell\" | head -1); cat /proc/\$p/task/*/comm | sort | uniq -c; /tmp/ps/bin/py-spy dump --pid \$p 2>&1 | head -40'" 2>&1 | grep -v "password for" | head -60
+            ;;
+        esac
         $SSH "$R journalctl -b --no-pager -t creative-shell _UID=\$(id -u frau) | tail -15" 2>&1 | grep -v "password for\|MESA\|portal" | tail -15
     done
     echo "Zweitkonto: $haenger von 3 Anmeldungen ohne gezeichnete Oberfläche"
