@@ -49,7 +49,7 @@ Item {
                     font.bold: true
                 }
                 Text {
-                    visible: trayApps.menu.length === 0
+                    visible: trayApps.menu.length === 0 && trayApps.menuHasItems
                     leftPadding: 10
                     bottomPadding: 8
                     text: "Wird geladen …"
@@ -103,6 +103,40 @@ Item {
                             }
                         }
                     }
+                }
+
+                // Programm beenden – nicht bei Systemprogrammen, die ab dem Start immer laufen
+                Item {
+                    visible: trayApps.menuCanQuit
+                    width: col.width
+                    height: trayApps.menu.length ? 9 : 0
+                    Rectangle { anchors.centerIn: parent; width: parent.width - 16; height: 1; color: Theme.hairline; visible: parent.height > 0 }
+                }
+                Rectangle {
+                    visible: trayApps.menuCanQuit
+                    width: col.width
+                    height: 36
+                    radius: 9
+                    color: quitMouse.containsMouse ? Theme.hover : "transparent"
+                    SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "power"; size: 15 }
+                    Text {
+                        x: 34
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Beenden"
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                    MouseArea {
+                        id: quitMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: { trayApps.quit(trayApps.menuKey); shell.closePopups() }
+                    }
+                    Accessible.role: Accessible.MenuItem
+                    Accessible.name: "Beenden"
+                    Accessible.onPressAction: { trayApps.quit(trayApps.menuKey); shell.closePopups() }
                 }
             }
         }

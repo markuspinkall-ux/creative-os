@@ -208,7 +208,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: (mouse) => {
                                 shell.noteScreen(root.screenName)
-                                if (mouse.button === Qt.RightButton && modelData.hasMenu) {
+                                if (mouse.button === Qt.RightButton && (modelData.hasMenu || modelData.canQuit)) {
                                     trayApps.loadMenu(modelData.key)
                                     shell.toggleTrayAppMenu(root.screenName, modelData.key)
                                 } else {

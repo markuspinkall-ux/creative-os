@@ -30,7 +30,8 @@
       "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby",
       "KI-Helfer: Antworten auf Wissensfragen stützen sich auf passende Wikipedia-Artikel (mit Quellen-Link); das Modell wird einmal für alle Konten geladen und gibt den Grafikspeicher nach 10 Minuten Ruhe wieder für Spiele frei",
       "Anmeldebildschirm: Konten ohne Passwort zeigen kein Passwortfeld mehr – ein Klick auf das Profilbild (oder „Anmelden“) genügt",
-      "Neu angelegte Konten bekommen den Willkommens-Assistenten nicht mehr – das System ist ja schon eingerichtet"
+      "Neu angelegte Konten bekommen den Willkommens-Assistenten nicht mehr – das System ist ja schon eingerichtet",
+      "Tray: Programme wie Steam oder Discord lassen sich per Rechtsklick → „Beenden“ schließen (Systemprogramme, die immer laufen, ausgenommen)"
     ],
     "behoben": [
       "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
