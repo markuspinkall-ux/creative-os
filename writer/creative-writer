@@ -649,7 +649,7 @@ class StyleTile(QToolButton):
         super().__init__()
         key, name, size, bold, italic, color, *_ = style
         self.setObjectName("styleTile")
-        self.setFixedSize(80, 62)
+        self.setFixedSize(84, 62)
         self.setToolTip(f"Formatvorlage „{name}“")
         self.clicked.connect(lambda: on_click(key))
         self.style_data = (SHORT_NAMES.get(key, name), size, bold, italic, color)
@@ -670,10 +670,11 @@ class StyleTile(QToolButton):
         p.setPen(QColor(color if color != "#ffffff" else INK))
         p.drawText(QRectF(8, 5, self.width() - 16, 32), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, "AaBbCc")
         f2 = QFont(self.font())
-        f2.setPointSizeF(7.5)
+        f2.setPixelSize(10)
         p.setFont(f2)
         p.setPen(QColor(C["muted"]))
-        p.drawText(QRectF(4, 39, self.width() - 8, 18), Qt.AlignmentFlag.AlignCenter, name)
+        label = p.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, self.width() - 6)
+        p.drawText(QRectF(3, 39, self.width() - 6, 18), Qt.AlignmentFlag.AlignCenter, label)
         p.end()
 
 
