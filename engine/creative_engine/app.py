@@ -753,7 +753,7 @@ def main():
     app.setApplicationName(APP_NAME)
     app.setDesktopFileName("org.creativeos.Engine")
     from PySide6.QtCore import QLocale
-    QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Territory.Germany))
+    QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Country.Germany))
     app.setStyle("Fusion")
     apply_palette(app)
     app.setStyleSheet(stylesheet())

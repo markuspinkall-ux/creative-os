@@ -19,8 +19,7 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --socket=pulseaudio         # Ton beim Testspielen
-  - --device=dri                # 3D-Beschleunigung für Godot
-  - --device=input              # Gamepads beim Testspielen
+  - --device=all                # 3D-Beschleunigung (Godot) und Gamepads beim Testspielen
   - --filesystem=home           # Projekte (~/Creative Engine) und Exporte (~/Spiele)
   - --filesystem=xdg-config/creative-os:ro   # Graphit/Porzellan und Akzentfarbe
   - --talk-name=org.freedesktop.Flatpak      # Claude (Creative Claude) für KI-Bewegungen, Bereitschaft verhindern
