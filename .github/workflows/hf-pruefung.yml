@@ -1,0 +1,46 @@
+name: TRELLIS-Modelle prüfen
+# Prüft, ob alle Modelle, die Creative 3D beim Einrichten lädt, ohne Anmeldung erreichbar sind.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [.github/workflows/hf-pruefung.yml, creative3d/trellis/**]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: pip install -q huggingface_hub
+      - name: Erreichbarkeit
+        shell: python
+        run: |
+          import json, sys
+          from huggingface_hub import hf_hub_download, model_info
+          ok = True
+          repo = "microsoft/TRELLIS-image-large"
+          try:
+              info = model_info(repo)
+              print("Repo", repo, "gated:", info.gated, "private:", info.private)
+          except Exception as e:
+              print("Repo-Info FEHLER", repo, type(e).__name__, e)
+          try:
+              cfg = json.load(open(hf_hub_download(repo, "pipeline.json")))
+              print(json.dumps(cfg, indent=1)[:2000])
+          except Exception as e:
+              print("pipeline.json FEHLER", type(e).__name__, e); sys.exit(1)
+          for k, v in cfg["args"]["models"].items():
+              for path in (f"{repo}/{v}", v):
+                  parts = path.split("/")
+                  if len(parts) < 3:
+                      continue
+                  rid, name = "/".join(parts[:2]), "/".join(parts[2:])
+                  try:
+                      hf_hub_download(rid, f"{name}.json")
+                      print("OK  ", k, rid, name)
+                      break
+                  except Exception as e:
+                      print("FEHL", k, rid, name, type(e).__name__, str(e)[:200])
+              else:
+                  ok = False
+          sys.exit(0 if ok else 1)
