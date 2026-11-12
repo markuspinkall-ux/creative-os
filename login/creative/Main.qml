@@ -123,9 +123,12 @@ Item {
         }
         return sessionModel.lastIndex
     }
+    property bool triedEmpty: false
     function login() {
-        if (busy || password.text.length === 0)
+        if (busy)
             return
+        // Leeres Feld: Konten ohne Passwort melden sich so an (Enter oder Pfeil)
+        triedEmpty = password.text.length === 0
         busy = true
         message = ""
         sddm.login(userName(), password.text, sessionIndex())
@@ -135,10 +138,10 @@ Item {
         target: sddm
         function onLoginFailed() {
             root.busy = false
-            root.message = "Falsches Passwort. Bitte noch einmal versuchen."
+            root.message = root.triedEmpty ? "Bitte dein Passwort eingeben." : "Falsches Passwort. Bitte noch einmal versuchen."
             password.text = ""
             password.forceActiveFocus()
-            shake.restart()
+            if (!root.triedEmpty) shake.restart()
         }
         function onLoginSucceeded() {
             root.message = ""
@@ -272,7 +275,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 38; height: 38; radius: 19
                 color: goMouse.pressed ? Qt.darker(root.accent, 1.15) : root.accent
-                opacity: password.text.length ? 1 : 0.5
+                opacity: password.text.length ? 1 : 0.75
                 Text {
                     anchors.centerIn: parent
                     text: root.busy ? "…" : "→"
