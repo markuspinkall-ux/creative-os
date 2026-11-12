@@ -59,6 +59,10 @@ STYLE = """
                   color:rgba(220,230,255,0.6); }
     QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
     QFrame#panel QWidget { background:transparent; }
+    QFrame#panel QComboBox QFrame { background:#232836; border:1px solid rgba(255,255,255,0.10); border-radius:8px; }
+    QFrame#panel QComboBox QAbstractItemView, QFrame#panel QComboBox QAbstractItemView QWidget {
+        background:#232836; color:#dce6ff; selection-background-color:#3a4252; selection-color:#dce6ff; outline:0; border:none; }
+    QFrame#panel QComboBox QAbstractItemView::item { min-height:28px; padding:2px 8px; }
     QFrame#panel QLabel#drop { background:#12151b; }
     QComboBox, QPlainTextEdit { background:#232836; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:7px 9px; }
     QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
