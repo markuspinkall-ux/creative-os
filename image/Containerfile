@@ -438,6 +438,10 @@ COPY settings/bin/creative-backup /usr/bin/creative-backup
 RUN chmod 755 /usr/bin/creative-backup && (command -v rsync >/dev/null || dnf install -y rsync) && dnf clean all
 COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
 RUN chmod 755 /usr/bin/creative-settings
+# Benutzerkonten anlegen/löschen (Systemsteuerung → Benutzerkonten), root-Teil über pkexec
+COPY users/creative-users-helper /usr/libexec/creative-users-helper
+COPY users/org.creativeos.users.policy /usr/share/polkit-1/actions/org.creativeos.users.policy
+RUN chmod 755 /usr/libexec/creative-users-helper
 
 # ---------------------------------------------------------------------------
 # 8b3) Mein Server – Webseite im Heimnetz (Caddy + PHP), Schalter in der Systemsteuerung
