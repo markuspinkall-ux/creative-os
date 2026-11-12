@@ -23,14 +23,23 @@ try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
 except ImportError:
     pass
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 DEMO = [
-    ("org.gimp.GIMP", "GIMP", "Fotos bearbeiten und Grafiken gestalten", "G", "#a998d9"),
-    ("org.blender.Blender", "Blender", "3D-Modelle, Animation und Rendering", "B", "#f5a567"),
-    ("com.obsproject.Studio", "OBS Studio", "Bildschirm aufnehmen und live streamen", "O", "#8aa9f2"),
-    ("org.videolan.VLC", "VLC", "Videos, Musik und Streams abspielen", "V", "#efb477"),
-    ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", "#8fc6af"),
+    ("org.gimp.GIMP", "GIMP", "Fotos bearbeiten und Grafiken gestalten", "G", T("#a998d9")),
+    ("org.blender.Blender", "Blender", "3D-Modelle, Animation und Rendering", "B", T("#f5a567")),
+    ("com.obsproject.Studio", "OBS Studio", "Bildschirm aufnehmen und live streamen", "O", T("#8aa9f2")),
+    ("org.videolan.VLC", "VLC", "Videos, Musik und Streams abspielen", "V", T("#efb477")),
+    ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", T("#8fc6af")),
 ]
 FEATURED = {row[0]: row for row in DEMO}
+FEATURED["org.creativeos.Engine"] = ("org.creativeos.Engine", "Creative Engine", "Spiele bauen per Klick", "E", "#8fb3ff")
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """
@@ -513,7 +522,7 @@ class Store(QWidget):
         icon = QLabel(featured[3] if featured else name[:1].upper())
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setFixedSize(43, 43)
-        color = featured[4] if featured else "#a9b6d6"
+        color = featured[4] if featured else T("#a9b6d6")
         icon.setStyleSheet(f"background:#30384f; color:{color}; border-radius:10px; font-size:19px; font-weight:700;")
         layout.addWidget(icon)
         labels = QVBoxLayout()

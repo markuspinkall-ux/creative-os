@@ -1,0 +1,29 @@
+@OBSThemeMeta {
+    name: 'Creative Porzellan';
+    id: 'com.obsproject.Yami.CreativePorzellan';
+    extends: 'com.obsproject.Yami';
+    author: 'Creative OS';
+    dark: 'false';
+}
+
+/* Helles Design „Porzellan“ von Creative OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
+@OBSThemeVars {
+    --grey1: #9aa5b8;
+    --grey2: #b5bfd0;
+    --grey3: #cdd5e2;
+    --grey4: #d9dfe9;
+    --grey5: #e3e8f0;
+    --grey6: #ffffff;
+    --grey7: #f4f6fa;
+    --grey8: #e9eef6;
+
+    --primary: #3d6fe0;
+    --primary_light: #5a86ea;
+    --primary_lighter: #2f5fcf;
+    --primary_dark: #2f5fcf;
+    --primary_darker: #244ba8;
+
+    --text: #1c2433;
+    --text_light: #ffffff;
+    --text_muted: #5d6884;
+}

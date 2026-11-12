@@ -17,15 +17,22 @@ from PySide6.QtWidgets import QWidget
 
 from cut_project import LOOKS, layout, transition_lengths
 
-GROUND = QColor("#12151b")
-SURFACE = QColor("#1c2029")
-RAISED = QColor("#232836")
-TRACK = QColor("#3a4252")
-TEXT = QColor("#dce6ff")
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
+GROUND = QColor(T("#12151b"))
+SURFACE = QColor(T("#1c2029"))
+RAISED = QColor(T("#232836"))
+TRACK = QColor(T("#3a4252"))
+TEXT = QColor(T("#dce6ff"))
 MUTED = QColor(220, 230, 255, 150)
-ACCENT = QColor("#8fb3ff")
-TITLE_COLOR = QColor("#ffb07a")
-MUSIC_COLOR = QColor("#6fdcc0")
+ACCENT = QColor(T("#8fb3ff"))
+TITLE_COLOR = QColor(T("#ffb07a"))
+MUSIC_COLOR = QColor(T("#6fdcc0"))
 HAIR = QColor(255, 255, 255, 22)
 
 RULER = 24

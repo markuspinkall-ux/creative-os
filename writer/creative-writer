@@ -1,30 +1,131 @@
 #!/usr/bin/python3
-"""Creative Writer, a rich-text editor for Creative OS."""
+"""Creative Writer – Textverarbeitung für Creative OS im Stil von Word, im Graphit-Look.
 
+Menüband (Start, Einfügen, Layout, Überprüfen, Ansicht) und Datei-Bereich, echte Seiten
+mit Rändern, Zoom, Formatvorlagen, Navigationsbereich, Rechtschreibprüfung,
+Kopf-/Fußzeilen mit Seitenzahlen, Inhaltsverzeichnis, Word-Dateien (.docx), PDF, ODT.
+"""
+
+import json
+import os
+import re
 import sys
+import time
+from html import escape
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QSaveFile, Qt, QTemporaryFile
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from PySide6.QtCore import (
+    QByteArray, QBuffer, QDate, QDateTime, QEvent, QIODevice, QLocale, QMarginsF, QPointF, QRectF, QSaveFile,
+    QSettings, QSize, QSizeF, Qt, QTimer, Signal,
+)
 from PySide6.QtGui import (
-    QAction, QColor, QFont, QIcon, QImageReader, QKeySequence, QPageSize, QPalette, QPixmap,
-    QTextBlockFormat, QTextCharFormat, QTextCursor, QTextImageFormat, QTextListFormat, QTextTableFormat,
+    QAbstractTextDocumentLayout, QAction, QActionGroup, QBrush, QColor, QFont, QFontDatabase, QIcon,
+    QImageReader, QKeySequence, QPageLayout, QPageSize, QPainter, QPalette, QPen, QPixmap,
+    QShortcut, QSyntaxHighlighter, QTextBlockFormat, QTextCharFormat, QTextCursor, QTextDocument,
+    QTextDocumentWriter, QTextFormat, QTextImageFormat, QTextLength, QTextListFormat, QTextOption,
+    QTextTableFormat, QTransform,
 )
 from PySide6.QtPrintSupport import QPrintDialog, QPrinter, QPrintPreviewDialog
 from PySide6.QtWidgets import (
-    QApplication, QColorDialog, QComboBox, QFileDialog, QFontComboBox, QHBoxLayout,
-    QInputDialog, QMainWindow, QMessageBox, QTextEdit, QWidget,
+    QApplication, QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+    QFileDialog, QFontComboBox, QFormLayout, QFrame, QGraphicsDropShadowEffect, QGraphicsRectItem,
+    QGraphicsScene, QGraphicsView, QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy,
+    QSlider, QSpinBox, QStackedWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget, QWidgetAction,
 )
 try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
-    from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox
+    from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox  # noqa: F811
 except ImportError:
     pass
+try:
+    from creative_look import palette as look_palette
+except ImportError:
+    look_palette = None
 
-OPEN_FILTER = "Dokumente (*.html *.htm *.txt);;HTML-Dokument (*.html *.htm);;Textdatei (*.txt)"
-HTML_FILTER = "HTML-Dokument (*.html *.htm)"
-PAPER_WIDTH = 794
-PAPER_MARGIN = 65
+import writer_icons as icons
+import writer_docx
+
+try:
+    import enchant
+except ImportError:
+    enchant = None
+
+APP = "Creative Writer"
+STYLE_KEY = QTextFormat.Property.UserProperty + 1   # „titel“, „untertitel“, „zitat“, „toc“
+MM = 96 / 25.4                                      # Pixel je Millimeter (Layout in 96 dpi)
+
+PAGE_SIZES = {"A4": (210, 297), "A5": (148, 210), "A3": (297, 420), "Letter": (215.9, 279.4),
+              "Legal": (215.9, 355.6)}
+MARGIN_PRESETS = [
+    ("Normal", "Oben/Unten 2,5 cm · Links/Rechts 2,5 cm", (25, 25, 20, 25)),
+    ("Schmal", "Alle Seiten 1,27 cm", (12.7, 12.7, 12.7, 12.7)),
+    ("Mittel", "Oben/Unten 2,54 cm · Links/Rechts 1,91 cm", (25.4, 19.1, 25.4, 19.1)),
+    ("Breit", "Oben/Unten 2,54 cm · Links/Rechts 5,08 cm", (25.4, 50.8, 25.4, 50.8)),
+    ("DIN 5008", "Links 2,5 cm · Rechts 2 cm", (20, 20, 20, 25)),
+]
+
+GRAPHIT = {"ground": "#12151b", "surface": "#1c2029", "side": "#171a22", "raised": "#232836",
+           "track": "#3a4252", "line": "#2a303d", "text": "#dce6ff", "muted": "#9aa6c4", "dim": "#6f7a92",
+           "accent": "#8fb3ff", "accentText": "#12151b", "accentHover": "#a6c3ff", "select": "#2a3a5c",
+           "danger": "#ff8a8e", "view": "#161920"}
 
 
+def colors():
+    pal = dict(GRAPHIT)
+    if look_palette is not None:
+        try:
+            pal = look_palette(pal)
+        except Exception:
+            pass
+    pal["light"] = QColor(pal["ground"]).lightness() > 128
+    pal["desk"] = "#dfe4ec" if pal["light"] else "#0d1015"
+    return pal
+
+
+C = colors()
+
+
+def default_family():
+    families = set(QFontDatabase.families())
+    for name in ("Carlito", "Calibri", "Liberation Sans", "DejaVu Sans"):
+        if name in families:
+            return name
+    return QFont().family()
+
+
+# ---------------------------------------------------------------------------------------------
+# Formatvorlagen (wie in Word: Standard, Kein Abstand, Titel, Überschriften …)
+# ---------------------------------------------------------------------------------------------
+INK = "#20232c"
+STYLES = [
+    # key, Name, Schriftgröße, fett, kursiv, Farbe, Abstand vor/nach (pt), Überschriftsebene, Ausrichtung
+    ("standard", "Standard", 11, False, False, INK, 0, 8, 0, None),
+    ("kein", "Kein Abstand", 11, False, False, INK, 0, 0, 0, None),
+    ("h1", "Überschrift 1", 16, False, False, "#2b4f9e", 18, 6, 1, None),
+    ("h2", "Überschrift 2", 13, False, False, "#2b4f9e", 10, 4, 2, None),
+    ("h3", "Überschrift 3", 12, False, False, "#1f3763", 8, 4, 3, None),
+    ("titel", "Titel", 28, False, False, "#1d2433", 0, 4, 0, None),
+    ("untertitel", "Untertitel", 14, False, False, "#5d6884", 0, 12, 0, None),
+    ("zitat", "Zitat", 11, False, True, "#5d6884", 10, 10, 0, Qt.AlignmentFlag.AlignHCenter),
+    ("betont", "Intensiv", 11, True, False, "#2b4f9e", 0, 8, 0, None),
+]
+STYLE_BY_KEY = {s[0]: s for s in STYLES}
+SHORT_NAMES = {"standard": "Standard", "kein": "Ohne Abst.", "h1": "Überschr. 1", "h2": "Überschr. 2",
+               "h3": "Überschr. 3", "titel": "Titel", "untertitel": "Untertitel", "zitat": "Zitat", "betont": "Intensiv"}
+
+SYMBOLS = "€ £ ¥ © ® ™ § ¶ ° ± × ÷ ≈ ≠ ≤ ≥ ∞ √ ∑ π µ α β γ Δ Ω → ← ↑ ↓ ⇒ ✓ ✗ • · – — „ “ ‚ ‘ « » … ½ ¼ ¾ ² ³ ★ ☆ ♥ ☺".split()
+HIGHLIGHTS = ["#fff176", "#a5e7a0", "#9de5f2", "#f3a6e6", "#9cb8ff", "#ff9a9a", "#ffd59a", "#d9dce3"]
+TEXT_COLORS = ["#20232c", "#5d6884", "#c0392b", "#d9773a", "#c99a1e", "#1f9e7f", "#2b4f9e", "#7c4ddb",
+               "#e74c3c", "#f39c12", "#27ae60", "#2980b9", "#8e44ad", "#7f8c8d", "#ffffff", "#000000"]
+
+
+# ---------------------------------------------------------------------------------------------
+# Hilfen ohne Oberfläche
+# ---------------------------------------------------------------------------------------------
 def save_bytes(path, data):
     target = QSaveFile(str(path))
     if not target.open(QIODevice.OpenModeFlag.WriteOnly):
@@ -33,31 +134,233 @@ def save_bytes(path, data):
         raise OSError(target.errorString())
 
 
-def make_printer():
+def default_page():
+    return {"size": "A4", "landscape": False, "width_mm": 210, "height_mm": 297,
+            "margins_mm": [25, 25, 20, 25], "header": "", "footer": "", "numbers": "", "color": "#ffffff"}
+
+
+def page_from(meta):
+    page = default_page()
+    if isinstance(meta, dict):
+        for key in page:
+            if key in meta:
+                page[key] = meta[key]
+    try:
+        page["margins_mm"] = [float(v) for v in page["margins_mm"]][:4]
+        if len(page["margins_mm"]) != 4:
+            raise ValueError
+    except (TypeError, ValueError):
+        page["margins_mm"] = default_page()["margins_mm"]
+    w, h = float(page["width_mm"]), float(page["height_mm"])
+    page["width_mm"], page["height_mm"] = w, h
+    page["landscape"] = w > h
+    return page
+
+
+META_RE = re.compile(r'<meta name="creative-writer" content="([^"]*)"\s*/?>')
+
+
+def html_with_meta(html, page):
+    meta = '<meta name="creative-writer" content="%s" />' % escape(json.dumps(page, ensure_ascii=False), quote=True)
+    if "<head>" in html:
+        return html.replace("<head>", "<head>" + meta, 1)
+    return meta + html
+
+
+def meta_from_html(html):
+    import html as htmllib
+    m = META_RE.search(html)
+    if not m:
+        return {}
+    try:
+        return json.loads(htmllib.unescape(m.group(1)))
+    except ValueError:
+        return {}
+
+
+def fill_placeholders(text, page_no, pages, title):
+    return (text.replace("{seite}", str(page_no)).replace("{seiten}", str(pages))
+            .replace("{titel}", title).replace("{datum}", QDate.currentDate().toString("dd.MM.yyyy")))
+
+
+def paginate(document, page):
+    """Kopie des Dokuments, auf Seiten umbrochen (96-dpi-Pixel). Rückgabe: (Kopie, Seitenbreite, -höhe)."""
+    pw, ph = page["width_mm"] * MM, page["height_mm"] * MM
+    clone = document.clone()
+    top, right, bottom, left = (v * MM for v in page["margins_mm"])
+    root = clone.rootFrame()
+    ff = root.frameFormat()
+    ff.setTopMargin(top)
+    ff.setBottomMargin(bottom)
+    ff.setLeftMargin(left)
+    ff.setRightMargin(right)
+    ff.setPadding(0)
+    root.setFrameFormat(ff)
+    clone.setDocumentMargin(0)
+    clone.setPageSize(QSizeF(pw, ph))
+    return clone, pw, ph
+
+
+def render_pages(document, page, printer, title=""):
+    """Druckt/exportiert mit Seitenrändern, Kopf-/Fußzeile und Seitenzahlen."""
+    clone, pw, ph = paginate(document, page)
+    printer.setFullPage(True)
+    layout = QPageLayout(QPageSize(QSizeF(page["width_mm"], page["height_mm"]), QPageSize.Unit.Millimeter),
+                         QPageLayout.Orientation.Portrait, QMarginsF(0, 0, 0, 0))
+    printer.setPageLayout(layout)
+    painter = QPainter()
+    if not painter.begin(printer):
+        raise OSError("Drucker oder PDF konnte nicht geöffnet werden.")
+    target = printer.pageRect(QPrinter.Unit.DevicePixel)
+    scale = target.width() / pw
+    pages = max(1, clone.pageCount())
+    top, right, bottom, left = (v * MM for v in page["margins_mm"])
+    small = QFont(clone.defaultFont())
+    small.setPointSizeF(9)
+    for index in range(pages):
+        if index:
+            printer.newPage()
+        painter.save()
+        painter.scale(scale, scale)
+        if page.get("color") and page["color"].lower() != "#ffffff":
+            painter.fillRect(QRectF(0, 0, pw, ph), QColor(page["color"]))
+        painter.save()
+        painter.translate(0, -index * ph)
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+        ctx.clip = QRectF(0, index * ph, pw, ph)
+        painter.setClipRect(ctx.clip)
+        clone.documentLayout().draw(painter, ctx)
+        painter.restore()
+        painter.setFont(small)
+        painter.setPen(QColor("#5d6884"))
+        if page.get("header"):
+            painter.drawText(QRectF(left, top * 0.35, pw - left - right, top * 0.5),
+                             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                             fill_placeholders(page["header"], index + 1, pages, title))
+        footer = fill_placeholders(page.get("footer", ""), index + 1, pages, title)
+        foot_rect = QRectF(left, ph - bottom * 0.85, pw - left - right, bottom * 0.5)
+        if footer:
+            painter.drawText(foot_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, footer)
+        numbers = page.get("numbers", "")
+        if numbers:
+            align = {"rechts": Qt.AlignmentFlag.AlignRight, "links": Qt.AlignmentFlag.AlignLeft}.get(
+                numbers, Qt.AlignmentFlag.AlignHCenter)
+            text = f"Seite {index + 1} von {pages}" if numbers.endswith("von") else str(index + 1)
+            if numbers.startswith("mitte"):
+                align = Qt.AlignmentFlag.AlignHCenter
+            painter.drawText(foot_rect, align | Qt.AlignmentFlag.AlignVCenter, text)
+        painter.restore()
+    painter.end()
+    return pages
+
+
+def export_pdf(document, page, path, title=""):
+    tmp = Path(str(path) + ".teil")
     printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-    printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-    return printer
-
-
-def export_pdf(document, path):
-    # Write beside the destination so replacing it is atomic and existing PDFs
-    # survive a failed export.
-    temporary = QTemporaryFile(str(path.parent / ".creative-writer-XXXXXX"))
-    if not temporary.open():
-        raise OSError(temporary.errorString())
-    filename = Path(temporary.fileName())
-    temporary.close()
-    printer = make_printer()
     printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
-    printer.setOutputFileName(str(filename))
-    document.print_(printer)
-    with filename.open("rb") as handle:
-        if handle.read(5) != b"%PDF-" or printer.printerState() == QPrinter.PrinterState.Error:
-            raise OSError("Qt konnte die PDF-Datei nicht erstellen.")
-    filename.replace(path)
+    printer.setOutputFileName(str(tmp))
+    printer.setDocName(title or "Dokument")
+    render_pages(document, page, printer, title)
+    with tmp.open("rb") as handle:
+        if handle.read(5) != b"%PDF-":
+            raise OSError("Die PDF-Datei konnte nicht erstellt werden.")
+    tmp.replace(path)
 
 
+def page_breaks(document, page):
+    """Für jede Seite ab 2 die Blocknummer, mit der sie beginnt (für die Markierungen im Editor)."""
+    clone, pw, ph = paginate(document, page)
+    layout = clone.documentLayout()
+    starts = []
+    block = clone.begin()
+    next_page = 1
+    while block.isValid():
+        rect = layout.blockBoundingRect(block)
+        while rect.top() >= next_page * ph - 0.5:
+            starts.append(block.blockNumber())
+            next_page += 1
+        block = block.next()
+    return starts, max(1, clone.pageCount())
+
+
+# ---------------------------------------------------------------------------------------------
+# Rechtschreibung
+# ---------------------------------------------------------------------------------------------
+WORD_RE = re.compile(r"[^\W\d_](?:[^\W\d_]|['’-](?=[^\W\d_]))*", re.UNICODE)
+
+
+class Speller(QSyntaxHighlighter):
+    def __init__(self, document, language="de_DE"):
+        super().__init__(document)
+        self.dictionary = None
+        self.ignored = set()
+        self.enabled = False
+        self.language = None
+        if enchant is not None:
+            for lang in (language, "de_DE", "de", "en_US"):
+                try:
+                    self.dictionary = enchant.Dict(lang)
+                    self.language = lang
+                    break
+                except Exception:
+                    continue
+        self.fmt = QTextCharFormat()
+        self.fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
+        self.fmt.setUnderlineColor(QColor("#e5484d"))
+
+    @property
+    def available(self):
+        return self.dictionary is not None
+
+    def set_enabled(self, on):
+        self.enabled = bool(on) and self.available
+        self.rehighlight()
+
+    def wrong(self, word):
+        if not self.dictionary or len(word) < 2 or word in self.ignored or word.isupper():
+            return False
+        try:
+            return not self.dictionary.check(word)
+        except Exception:
+            return False
+
+    def suggest(self, word):
+        try:
+            return self.dictionary.suggest(word)[:6]
+        except Exception:
+            return []
+
+    def add(self, word):
+        try:
+            self.dictionary.add(word)
+        except Exception:
+            self.ignored.add(word)
+        self.rehighlight()
+
+    def highlightBlock(self, text):
+        if not self.enabled:
+            return
+        for m in WORD_RE.finditer(text):
+            if self.wrong(m.group()):
+                self.setFormat(m.start(), m.end() - m.start(), self.fmt)
+
+
+# ---------------------------------------------------------------------------------------------
+# Editor (eine Seite Papier) und Ansicht mit Zoom
+# ---------------------------------------------------------------------------------------------
 class Editor(QTextEdit):
+    def __init__(self, writer):
+        super().__init__()
+        self.writer = writer
+        self.breaks = []         # (y, Seitennummer)
+        self.header_text = ""
+        self.footer_text = ""
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setAcceptRichText(True)
+        self.setTabChangesFocus(False)
+
     def canInsertFromMimeData(self, source):
         return source.hasImage() or super().canInsertFromMimeData(source)
 
@@ -68,10 +371,11 @@ class Editor(QTextEdit):
         else:
             super().insertFromMimeData(source)
 
-    def insert_image(self, image):
+    def insert_image(self, image, max_width=None):
         if image.isNull():
             return False
-        width = min(image.width(), PAPER_WIDTH - 2 * PAPER_MARGIN)
+        max_width = max_width or self.writer.content_width()
+        width = min(image.width(), int(max_width))
         if width < image.width():
             image = image.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
         data = QByteArray()
@@ -86,406 +390,2520 @@ class Editor(QTextEdit):
         self.textCursor().insertImage(fmt)
         return True
 
+    def wheelEvent(self, event):
+        event.ignore()   # die Ansicht scrollt bzw. zoomt (Strg)
 
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if not self.writer.print_layout:
+            return
+        p = QPainter(self.viewport())
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor(0, 0, 0, 40), 1, Qt.PenStyle.DashLine)
+        small = QFont(self.font())
+        small.setPointSizeF(7.5)
+        p.setFont(small)
+        w = self.viewport().width()
+        for y, number in self.breaks:
+            p.fillRect(QRectF(0, y - 7, w, 14), QColor(self.writer.desk_color))
+            p.setPen(QPen(QColor(0, 0, 0, 30), 1))
+            p.drawLine(QPointF(0, y - 7), QPointF(w, y - 7))
+            p.drawLine(QPointF(0, y + 7), QPointF(w, y + 7))
+            p.setPen(QColor(C["dim"]))
+            p.drawText(QRectF(0, y - 7, w - 10, 14), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                       f"Seite {number}")
+        p.setPen(QColor("#8a93a8"))
+        top, right, bottom, left = (v * MM for v in self.writer.page["margins_mm"])
+        if self.header_text:
+            p.drawText(QRectF(left, top * 0.3, w - left - right, top * 0.5),
+                       Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.header_text)
+        if self.footer_text:
+            h = self.viewport().height()
+            p.drawText(QRectF(left, h - bottom * 0.85, w - left - right, bottom * 0.5),
+                       Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.footer_text)
+        p.end()
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu(event.pos())
+        speller = self.writer.speller
+        if speller.enabled:
+            cursor = self.cursorForPosition(event.pos())
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word = cursor.selectedText()
+            if word and speller.wrong(word):
+                first = menu.actions()[0] if menu.actions() else None
+                suggestions = speller.suggest(word)
+                for s in suggestions:
+                    act = QAction(s, menu)
+                    f = act.font()
+                    f.setBold(True)
+                    act.setFont(f)
+                    act.triggered.connect(lambda _=False, c=QTextCursor(cursor), s=s: c.insertText(s))
+                    menu.insertAction(first, act)
+                if not suggestions:
+                    none = QAction("(keine Vorschläge)", menu)
+                    none.setEnabled(False)
+                    menu.insertAction(first, none)
+                add = QAction("Zum Wörterbuch hinzufügen", menu)
+                add.triggered.connect(lambda: speller.add(word))
+                menu.insertAction(first, add)
+                ignore = QAction("Alle ignorieren", menu)
+                ignore.triggered.connect(lambda: (speller.ignored.add(word), speller.rehighlight()))
+                menu.insertAction(first, ignore)
+                menu.insertSeparator(first)
+        menu.exec(event.globalPos())
+
+
+class PageView(QGraphicsView):
+    zoomRequested = Signal(int)
+
+    def wheelEvent(self, event):
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.zoomRequested.emit(10 if event.angleDelta().y() > 0 else -10)
+            event.accept()
+            return
+        super().wheelEvent(event)
+
+
+# ---------------------------------------------------------------------------------------------
+# Menüband
+# ---------------------------------------------------------------------------------------------
+class Group(QWidget):
+    def __init__(self, title):
+        super().__init__()
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(6, 4, 6, 2)
+        outer.setSpacing(2)
+        self.body = QHBoxLayout()
+        self.body.setSpacing(2)
+        outer.addLayout(self.body, 1)
+        label = QLabel(title)
+        label.setObjectName("groupLabel")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(label)
+
+    def add(self, widget):
+        self.body.addWidget(widget)
+        return widget
+
+    def column(self, *rows):
+        """Mehrere Zeilen kleiner Knöpfe übereinander (wie Word)."""
+        box = QVBoxLayout()
+        box.setSpacing(2)
+        for row in rows:
+            line = QHBoxLayout()
+            line.setSpacing(1)
+            for w in row:
+                line.addWidget(w)
+            line.addStretch(1)
+            box.addLayout(line)
+        box.addStretch(1)
+        self.body.addLayout(box)
+
+
+def vline():
+    line = QFrame()
+    line.setObjectName("groupLine")
+    line.setFixedWidth(1)
+    return line
+
+
+class Ribbon(QWidget):
+    fileRequested = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("ribbon")
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+        self.tabs_row = QHBoxLayout()
+        self.tabs_row.setContentsMargins(10, 4, 10, 0)
+        self.tabs_row.setSpacing(2)
+        v.addLayout(self.tabs_row)
+        self.stack = QStackedWidget()
+        self.stack.setObjectName("ribbonBody")
+        self.stack.setFixedHeight(104)
+        v.addWidget(self.stack)
+        self.buttons = []
+        file_tab = QToolButton(text="Datei")
+        file_tab.setObjectName("fileTab")
+        file_tab.clicked.connect(self.fileRequested)
+        self.tabs_row.addWidget(file_tab)
+        self.tail = QHBoxLayout()
+        self.collapsed = False
+
+    def add_tab(self, name):
+        page = QWidget()
+        h = QHBoxLayout(page)
+        h.setContentsMargins(8, 2, 8, 2)
+        h.setSpacing(0)
+        index = self.stack.addWidget(page)
+        tab = QToolButton(text=name, checkable=True)
+        tab.setObjectName("ribbonTab")
+        tab.clicked.connect(lambda: self.show_tab(index))
+        self.tabs_row.addWidget(tab)
+        self.buttons.append(tab)
+        if index == 0:
+            tab.setChecked(True)
+        page.groups = h
+        return page
+
+    def finish(self):
+        self.tabs_row.addStretch(1)
+        self.tabs_row.addLayout(self.tail)
+        for i in range(self.stack.count()):
+            self.stack.widget(i).groups.addStretch(1)
+
+    def show_tab(self, index):
+        if self.collapsed:
+            self.stack.setVisible(True)
+            self.collapsed = False
+        self.stack.setCurrentIndex(index)
+        for i, b in enumerate(self.buttons):
+            b.setChecked(i == index)
+
+    def toggle_collapsed(self):
+        self.collapsed = not self.collapsed
+        self.stack.setVisible(not self.collapsed)
+
+    @staticmethod
+    def add_group(page, group):
+        if page.groups.count():
+            page.groups.addWidget(vline())
+        page.groups.addWidget(group)
+        return group
+
+
+# ---------------------------------------------------------------------------------------------
+# Kleine Auswahl-Fenster (Farben, Tabelle, Symbole)
+# ---------------------------------------------------------------------------------------------
+class ColorGrid(QWidget):
+    picked = Signal(QColor)
+
+    def __init__(self, colors_list, extra=None):
+        super().__init__()
+        grid = QGridLayout(self)
+        grid.setContentsMargins(8, 8, 8, 8)
+        grid.setSpacing(4)
+        for i, color in enumerate(colors_list):
+            b = QToolButton()
+            b.setFixedSize(22, 22)
+            b.setStyleSheet(f"QToolButton{{background:{color};border:1px solid rgba(128,128,128,0.45);border-radius:5px}}"
+                            f"QToolButton:hover{{border:2px solid {C['accent']}}}")
+            b.clicked.connect(lambda _=False, c=color: self.picked.emit(QColor(c)))
+            grid.addWidget(b, i // 8, i % 8)
+        row = (len(colors_list) + 7) // 8
+        if extra:
+            for j, (label, slot) in enumerate(extra):
+                btn = QPushButton(label)
+                btn.setObjectName("flat")
+                btn.clicked.connect(slot)
+                grid.addWidget(btn, row + j, 0, 1, 8)
+
+
+class TableGrid(QWidget):
+    picked = Signal(int, int)
+
+    def __init__(self):
+        super().__init__()
+        self.rows, self.cols = 0, 0
+        self.setMouseTracking(True)
+        self.setFixedSize(10 * 20 + 16, 8 * 20 + 40)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QColor(C["text"]))
+        p.drawText(QRectF(8, 4, self.width() - 16, 22), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                   f"Tabelle {self.cols} × {self.rows}" if self.rows else "Tabelle einfügen")
+        for r in range(8):
+            for c in range(10):
+                rect = QRectF(8 + c * 20, 30 + r * 20, 17, 17)
+                on = r < self.rows and c < self.cols
+                p.setPen(QPen(QColor(C["accent"] if on else C["track"]), 1))
+                p.setBrush(QColor(C["select"]) if on else Qt.BrushStyle.NoBrush)
+                p.drawRoundedRect(rect, 3, 3)
+
+    def mouseMoveEvent(self, event):
+        x, y = event.position().x() - 8, event.position().y() - 30
+        self.cols = max(0, min(10, int(x // 20) + 1)) if x >= 0 else 0
+        self.rows = max(0, min(8, int(y // 20) + 1)) if y >= 0 else 0
+        self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.rows and self.cols:
+            self.picked.emit(self.rows, self.cols)
+
+
+def popup_menu(parent, widget):
+    menu = QMenu(parent)
+    act = QWidgetAction(menu)
+    act.setDefaultWidget(widget)
+    menu.addAction(act)
+    return menu
+
+
+class StyleTile(QToolButton):
+    def __init__(self, style, on_click):
+        super().__init__()
+        key, name, size, bold, italic, color, *_ = style
+        self.setObjectName("styleTile")
+        self.setFixedSize(82, 62)
+        self.setToolTip(f"Formatvorlage „{name}“")
+        self.clicked.connect(lambda: on_click(key))
+        self.style_data = (SHORT_NAMES.get(key, name), size, bold, italic, color)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        name, size, bold, italic, color = self.style_data
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor("#ffffff"))
+        p.drawRoundedRect(QRectF(5, 5, self.width() - 10, 32), 4, 4)
+        f = QFont(default_family())
+        f.setPointSizeF(min(15, max(9, size * 0.75)))
+        f.setBold(bold)
+        f.setItalic(italic)
+        p.setFont(f)
+        p.setPen(QColor(color if color != "#ffffff" else INK))
+        p.drawText(QRectF(8, 5, self.width() - 16, 32), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, "AaBbCc")
+        f2 = QFont(self.font())
+        f2.setPixelSize(10)
+        p.setFont(f2)
+        p.setPen(QColor(C["muted"]))
+        label = p.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, self.width() - 6)
+        p.drawText(QRectF(3, 39, self.width() - 6, 18), Qt.AlignmentFlag.AlignCenter, label)
+        p.end()
+
+
+# ---------------------------------------------------------------------------------------------
+# Hauptfenster
+# ---------------------------------------------------------------------------------------------
 class Writer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.path = None
+        self.page = default_page()
+        self.zoom = 100
+        self.print_layout = True
         self.find_term = ""
-        self.resize(1060, 760)
-        self.editor = Editor()
-        self.editor.setMaximumWidth(PAPER_WIDTH)
-        self.editor.setFrameShape(QTextEdit.Shape.NoFrame)
-        self.editor.document().setDefaultFont(QFont("Liberation Sans", 12))
-        self.editor.document().setDocumentMargin(PAPER_MARGIN)
+        self.painter_format = None
+        self.settings = QSettings("CreativeOS", "Writer")
+        self.desk_color = C["desk"]
+        self.resize(1320, 880)
+        self.setMinimumSize(900, 600)
+
+        self.editor = Editor(self)
+        doc = self.editor.document()
+        base = QFont(default_family())
+        base.setPointSizeF(11)
+        doc.setDefaultFont(base)
+        doc.setDocumentMargin(0)
+        doc.setUndoRedoEnabled(True)
         paper = self.editor.palette()
-        paper.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
-        paper.setColor(QPalette.ColorRole.Text, QColor("#20232c"))
+        paper.setColor(QPalette.ColorRole.Base, QColor(self.page["color"]))
+        paper.setColor(QPalette.ColorRole.Text, QColor(INK))
+        paper.setColor(QPalette.ColorRole.Highlight, QColor("#b8cdfa"))
+        paper.setColor(QPalette.ColorRole.HighlightedText, QColor(INK))
         self.editor.setPalette(paper)
-        workspace = QWidget()
-        layout = QHBoxLayout(workspace)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.addStretch(1)
-        layout.addWidget(self.editor, 100)
-        layout.addStretch(1)
-        self.setCentralWidget(workspace)
+        self.speller = Speller(doc)
 
-        self.menus()
+        self.scene = QGraphicsScene(self)
+        self.view = PageView(self.scene)
+        self.view.setObjectName("desk")
+        self.view.setFrameShape(QFrame.Shape.NoFrame)
+        self.view.setBackgroundBrush(QColor(self.desk_color))
+        self.view.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self.view.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.TextAntialiasing
+                                 | QPainter.RenderHint.SmoothPixmapTransform)
+        self.view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        self.view.zoomRequested.connect(lambda d: self.set_zoom(self.zoom + d))
+        self.shadow = QGraphicsRectItem()
+        self.shadow.setPen(Qt.PenStyle.NoPen)
+        self.shadow.setBrush(QColor(self.page["color"]))
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(24)
+        effect.setOffset(0, 3)
+        effect.setColor(QColor(0, 0, 0, 90 if not C["light"] else 45))
+        self.shadow.setGraphicsEffect(effect)
+        self.scene.addItem(self.shadow)
+        self.proxy = self.scene.addWidget(self.editor)
+
+        self.page_count = 1
+        self.page_timer = QTimer(self, singleShot=True, interval=350, timeout=self.update_pages)
+        self.nav_timer = QTimer(self, singleShot=True, interval=500, timeout=self.update_navigation)
+        self.backup_timer = QTimer(self, interval=90_000, timeout=self.backup)
+        self.build_ui()
+        self.apply_page()
+
+        doc.documentLayout().documentSizeChanged.connect(lambda _s: self.relayout())
+        doc.contentsChanged.connect(self.schedule_pages)
+        doc.modificationChanged.connect(self.setWindowModified)
+        doc.modificationChanged.connect(lambda _m: self.update_title())
         self.editor.currentCharFormatChanged.connect(self.update_format_controls)
-        self.editor.cursorPositionChanged.connect(self.update_format_controls)
-        self.editor.document().modificationChanged.connect(self.setWindowModified)
-        self.editor.textChanged.connect(self.update_status)
-        self.update_title()
-        self.update_format_controls(self.editor.currentCharFormat())
-        self.update_status()
-        self.editor.document().setModified(False)
-        self.editor.setFocus()
+        self.editor.cursorPositionChanged.connect(self.cursor_moved)
+        self.editor.selectionChanged.connect(self.update_status)
+        self.editor.viewport().installEventFilter(self)
+        self.backup_timer.start()
 
-    def action(self, menu, name, slot, shortcut=None, toolbar=None, checkable=False):
-        action = QAction(name, self, checkable=checkable)
-        action.triggered.connect(slot)
+        self.new_document(ask=False)
+        self.update_title()
+        QTimer.singleShot(0, self.focus_editor)
+
+    # ---- Aufbau --------------------------------------------------------------------------
+    def ic(self, name, accent=None):
+        return icons.icon(name, C["text"], accent or C["accent"], disabled=C["dim"])
+
+    def act(self, text, slot, icon=None, shortcut=None, checkable=False, tip=None):
+        action = QAction(text, self, checkable=checkable)
+        if icon:
+            action.setIcon(self.ic(icon))
         if shortcut:
             action.setShortcut(shortcut)
-        menu.addAction(action)
-        if toolbar:
-            toolbar.addAction(action)
+            action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+            self.addAction(action)
+        if slot:
+            action.triggered.connect(slot)
+        action.setToolTip((tip or text) + (f"  ({QKeySequence(shortcut).toString(QKeySequence.SequenceFormat.NativeText)})"
+                                           if shortcut else ""))
         return action
 
-    def menus(self):
-        file = self.menuBar().addMenu("&Datei")
-        edit = self.menuBar().addMenu("&Bearbeiten")
-        format_menu = self.menuBar().addMenu("F&ormat")
-        insert = self.menuBar().addMenu("&Einfügen")
-        toolbar = self.addToolBar("Formatierung")
-        toolbar.setMovable(False)
-        standard = QKeySequence.StandardKey
-        self.action(file, "Neu", self.new, standard.New)
-        self.action(file, "Öffnen …", self.open_dialog, standard.Open)
-        self.action(file, "Speichern", self.save, standard.Save)
-        self.action(file, "Speichern unter …", self.save_as, standard.SaveAs)
-        file.addSeparator()
-        self.action(file, "Druckvorschau …", self.preview)
-        self.action(file, "Drucken …", self.print_document, standard.Print)
-        self.action(file, "Als PDF speichern …", self.pdf_dialog, "Ctrl+Shift+P")
+    def big(self, action, menu=None, popup=False):
+        b = QToolButton()
+        b.setObjectName("big")
+        b.setDefaultAction(action)
+        b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        b.setIconSize(QSize(26, 26))
+        text = action.text().replace("\u00ad", "")
+        extra = 22 if menu else 16
+        b.setMinimumWidth(max(52, b.fontMetrics().horizontalAdvance(text) + extra))
+        b.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        if menu:
+            b.setMenu(menu)
+            b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup if popup
+                           else QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        return b
 
-        for label, slot, shortcut in (
-            ("Rückgängig", self.editor.undo, standard.Undo),
-            ("Wiederholen", self.editor.redo, standard.Redo),
-            ("Ausschneiden", self.editor.cut, standard.Cut),
-            ("Kopieren", self.editor.copy, standard.Copy),
-            ("Einfügen", self.editor.paste, standard.Paste),
-            ("Alles auswählen", self.editor.selectAll, standard.SelectAll),
-            ("Suchen …", self.find_dialog, standard.Find),
-            ("Weitersuchen", self.find_next, standard.FindNext),
-            ("Ersetzen …", self.replace_dialog, "Ctrl+H"),
-        ):
-            self.action(edit, label, slot, shortcut)
+    def small(self, action, text=False, menu=None, popup=False):
+        b = QToolButton()
+        b.setObjectName("small")
+        b.setDefaultAction(action)
+        b.setIconSize(QSize(17, 17))
+        b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon if text else Qt.ToolButtonStyle.ToolButtonIconOnly)
+        if menu:
+            b.setMenu(menu)
+            b.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup if popup
+                           else QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        return b
 
+    def glyph(self, text, slot, tip, checkable=False, shortcut=None, font=None):
+        action = self.act(text, slot, shortcut=shortcut, checkable=checkable, tip=tip)
+        b = QToolButton()
+        b.setObjectName("glyph")
+        b.setDefaultAction(action)
+        b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        if font:
+            b.setFont(font)
+        b.setFixedSize(28, 26)
+        return action, b
+
+    def build_ui(self):
+        root = QWidget()
+        root.setObjectName("root")
+        main = QVBoxLayout(root)
+        main.setContentsMargins(0, 0, 0, 0)
+        main.setSpacing(0)
+        self.setCentralWidget(root)
+
+        # Titelzeile mit Schnellzugriff und Suche
+        title = QWidget()
+        title.setObjectName("titleBar")
+        th = QHBoxLayout(title)
+        th.setContentsMargins(12, 6, 12, 4)
+        th.setSpacing(4)
+        badge = QLabel()
+        badge.setPixmap(QIcon.fromTheme("creative-writer").pixmap(22, 22))
+        th.addWidget(badge)
+        self.a_save = self.act("Speichern", self.save, "save", QKeySequence.StandardKey.Save)
+        self.a_undo = self.act("Rückgängig", lambda: self.editor.undo(), "undo", QKeySequence.StandardKey.Undo)
+        self.a_redo = self.act("Wiederholen", lambda: self.editor.redo(), "redo", QKeySequence.StandardKey.Redo)
+        std = QKeySequence.StandardKey
+        self.act("Neu", lambda: self.new_document(), None, std.New)
+        self.act("Öffnen", self.open_dialog, None, std.Open)
+        self.act("Speichern unter", self.save_as, None, std.SaveAs)
+        self.act("Drucken", self.print_document, None, std.Print)
+        self.act("Als PDF speichern", self.pdf_dialog, None, "Ctrl+Shift+P")
+        for a in (self.a_save, self.a_undo, self.a_redo):
+            b = self.small(a)
+            b.setObjectName("quick")
+            th.addWidget(b)
+        th.addStretch(1)
+        self.title_label = QLabel()
+        self.title_label.setObjectName("docTitle")
+        th.addWidget(self.title_label)
+        th.addStretch(1)
+        self.search = QLineEdit()
+        self.search.setObjectName("search")
+        self.search.setPlaceholderText("Suchen (Strg+F)")
+        self.search.addAction(self.ic("search"), QLineEdit.ActionPosition.LeadingPosition)
+        self.search.setFixedWidth(260)
+        self.search.returnPressed.connect(lambda: self.find_text(self.search.text()))
+        th.addWidget(self.search)
+        main.addWidget(title)
+
+        self.ribbon = Ribbon()
+        self.ribbon.fileRequested.connect(lambda: self.show_backstage("info"))
+        main.addWidget(self.ribbon)
+        self.build_home()
+        self.build_insert()
+        self.build_layout()
+        self.build_review()
+        self.build_view()
+        self.ribbon.finish()
+        collapse = QToolButton()
+        collapse.setObjectName("small")
+        collapse.setIcon(self.ic("chevron"))
+        collapse.setToolTip("Menüband ein-/ausblenden (Strg+F1)")
+        collapse.clicked.connect(self.ribbon.toggle_collapsed)
+        self.ribbon.tail.addWidget(collapse)
+        QShortcut(QKeySequence("Ctrl+F1"), self, self.ribbon.toggle_collapsed)
+
+        # Arbeitsfläche: Navigationsbereich | Seite
+        self.pages = QStackedWidget()
+        work = QWidget()
+        wh = QHBoxLayout(work)
+        wh.setContentsMargins(0, 0, 0, 0)
+        wh.setSpacing(0)
+        self.nav = QWidget()
+        self.nav.setObjectName("nav")
+        self.nav.setFixedWidth(250)
+        nv = QVBoxLayout(self.nav)
+        nv.setContentsMargins(12, 12, 8, 12)
+        head = QHBoxLayout()
+        nl = QLabel("Navigation")
+        nl.setObjectName("navTitle")
+        head.addWidget(nl)
+        head.addStretch(1)
+        close_nav = QToolButton()
+        close_nav.setObjectName("small")
+        close_nav.setIcon(self.ic("close"))
+        close_nav.clicked.connect(lambda: self.a_nav.setChecked(False) or self.toggle_nav(False))
+        head.addWidget(close_nav)
+        nv.addLayout(head)
+        hint = QLabel("Überschriften im Dokument")
+        hint.setObjectName("navHint")
+        nv.addWidget(hint)
+        self.nav_list = QListWidget()
+        self.nav_list.setObjectName("navList")
+        self.nav_list.itemClicked.connect(self.jump_to_heading)
+        self.nav_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.nav_list.setTextElideMode(Qt.TextElideMode.ElideRight)
+        nv.addWidget(self.nav_list, 1)
+        self.nav.hide()
+        wh.addWidget(self.nav)
+        wh.addWidget(self.view, 1)
+        self.pages.addWidget(work)
+        self.backstage = self.build_backstage()
+        self.pages.addWidget(self.backstage)
+        main.addWidget(self.pages, 1)
+
+        # Statusleiste wie bei Word
+        bar = QWidget()
+        bar.setObjectName("statusBar")
+        sh = QHBoxLayout(bar)
+        sh.setContentsMargins(14, 3, 10, 3)
+        sh.setSpacing(14)
+        self.st_page = QLabel()
+        self.st_words = QPushButton()
+        self.st_words.setObjectName("statusButton")
+        self.st_words.clicked.connect(self.word_count)
+        self.st_lang = QLabel("Deutsch (Deutschland)")
+        self.st_spell = QLabel()
+        for w in (self.st_page, self.st_words, self.st_lang, self.st_spell):
+            sh.addWidget(w)
+        sh.addStretch(1)
+        for icon_name, tip, slot in (("printlayout", "Drucklayout", lambda: self.set_layout(True)),
+                                     ("weblayout", "Weblayout", lambda: self.set_layout(False)),
+                                     ("focus", "Fokusmodus", self.toggle_focus)):
+            b = QToolButton()
+            b.setObjectName("small")
+            b.setIcon(self.ic(icon_name))
+            b.setToolTip(tip)
+            b.clicked.connect(slot)
+            sh.addWidget(b)
+        minus = QToolButton(text="−")
+        minus.setObjectName("glyphFlat")
+        minus.clicked.connect(lambda: self.set_zoom(self.zoom - 10))
+        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        self.zoom_slider.setRange(25, 300)
+        self.zoom_slider.setFixedWidth(130)
+        self.zoom_slider.valueChanged.connect(self.set_zoom)
+        plus = QToolButton(text="+")
+        plus.setObjectName("glyphFlat")
+        plus.clicked.connect(lambda: self.set_zoom(self.zoom + 10))
+        self.zoom_label = QPushButton("100 %")
+        self.zoom_label.setObjectName("statusButton")
+        self.zoom_label.clicked.connect(self.zoom_dialog)
+        for w in (minus, self.zoom_slider, plus, self.zoom_label):
+            sh.addWidget(w)
+        main.addWidget(bar)
+        self.apply_style()
+
+    # ---- Start ---------------------------------------------------------------------------
+    def build_home(self):
+        page = self.ribbon.add_tab("Start")
+        ed = self.editor
+        std = QKeySequence.StandardKey
+
+        g = Ribbon.add_group(page, Group("Zwischenablage"))
+        self.a_paste = self.act("Einfügen", lambda: ed.paste(), "paste", std.Paste)
+        paste_menu = QMenu(self)
+        paste_menu.addAction(self.act("Einfügen", lambda: ed.paste(), "paste"))
+        paste_menu.addAction(self.act("Nur den Text übernehmen", self.paste_plain, "page", "Ctrl+Shift+V"))
+        g.add(self.big(self.a_paste, paste_menu))
+        self.a_cut = self.act("Ausschneiden", lambda: ed.cut(), "cut", std.Cut)
+        self.a_copy = self.act("Kopieren", lambda: ed.copy(), "copy", std.Copy)
+        self.a_painter = self.act("Format übertragen", self.format_painter, "brush", "Ctrl+Shift+C", checkable=True,
+                                  tip="Format übertragen – danach Text markieren")
+        g.column([self.small(self.a_cut, True)], [self.small(self.a_copy, True)], [self.small(self.a_painter, True)])
+
+        g = Ribbon.add_group(page, Group("Schriftart"))
         self.family = QFontComboBox()
+        self.family.setFixedWidth(170)
         self.family.setToolTip("Schriftart")
         self.family.currentFontChanged.connect(lambda font: self.apply_text(fontFamilies=[font.family()]))
-        toolbar.addWidget(self.family)
         self.size = QComboBox(editable=True)
-        self.size.setToolTip("Schriftgröße in Punkt")
-        self.size.addItems([str(size) for size in (8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72)])
+        self.size.setFixedWidth(62)
+        self.size.setToolTip("Schriftgrad")
+        self.size.addItems([str(s) for s in (8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72)])
         self.size.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.size.activated.connect(lambda: self.apply_size())
         self.size.lineEdit().returnPressed.connect(self.apply_size)
-        toolbar.addWidget(self.size)
-        toolbar.addSeparator()
+        grow = self.glyph("A⁺", lambda: self.step_size(+1), "Schrift vergrößern", shortcut="Ctrl+>")[1]
+        shrink = self.glyph("A⁻", lambda: self.step_size(-1), "Schrift verkleinern", shortcut="Ctrl+<")[1]
+        case_menu = QMenu(self)
+        for label, mode in (("Satzanfang groß.", "satz"), ("kleinbuchstaben", "klein"), ("GROSSBUCHSTABEN", "gross"),
+                            ("Jedes Wort Groß", "wort"), ("gROSS-/kLEINSCHREIBUNG umkehren", "umkehren")):
+            case_menu.addAction(label, lambda m=mode: self.change_case(m))
+        case_act = self.act("Aa", None, tip="Groß-/Kleinschreibung")
+        case_btn = QToolButton()
+        case_btn.setObjectName("glyph")
+        case_btn.setDefaultAction(case_act)
+        case_btn.setMenu(case_menu)
+        case_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        case_btn.setFixedSize(36, 26)
+        clear = self.small(self.act("Formatierung löschen", self.clear_format, "eraser", "Ctrl+Space"))
+        bf = QFont()
+        bf.setBold(True)
+        itf = QFont()
+        itf.setItalic(True)
+        itf.setFamily("serif")
+        uf = QFont()
+        uf.setUnderline(True)
+        sf = QFont()
+        sf.setStrikeOut(True)
+        self.bold, b1 = self.glyph("F", lambda on: self.apply_text(fontWeight=QFont.Weight.Bold if on else QFont.Weight.Normal),
+                                   "Fett", True, std.Bold, bf)
+        self.italic, b2 = self.glyph("K", lambda on: self.apply_text(fontItalic=on), "Kursiv", True, std.Italic, itf)
+        self.underline, b3 = self.glyph("U", lambda on: self.apply_text(fontUnderline=on), "Unterstrichen", True,
+                                        std.Underline, uf)
+        self.strike, b4 = self.glyph("ab", lambda on: self.apply_text(fontStrikeOut=on), "Durchgestrichen", True, None, sf)
+        self.sub, b5 = self.glyph("x₂", lambda on: self.set_valign(on, QTextCharFormat.VerticalAlignment.AlignSubScript),
+                                  "Tiefgestellt", True, "Ctrl+#")
+        self.sup, b6 = self.glyph("x²", lambda on: self.set_valign(on, QTextCharFormat.VerticalAlignment.AlignSuperScript),
+                                  "Hochgestellt", True, "Ctrl++")
+        self.highlight_color = QColor("#fff176")
+        self.font_color = QColor("#c0392b")
+        self.a_highlight = self.act("Texthervorhebungsfarbe", lambda: self.apply_text(background=self.highlight_color))
+        self.a_fontcolor = self.act("Schriftfarbe", lambda: self.apply_text(foreground=self.font_color))
+        self.hl_btn = self.small(self.a_highlight, menu=self.color_menu(HIGHLIGHTS, self.pick_highlight, True))
+        self.fc_btn = self.small(self.a_fontcolor, menu=self.color_menu(TEXT_COLORS, self.pick_fontcolor, False))
+        self.refresh_color_icons()
+        g.column([self.family, self.size, grow, shrink, case_btn, clear], [b1, b2, b3, b4, b5, b6, self.hl_btn, self.fc_btn])
 
-        self.bold = self.action(format_menu, "Fett", lambda on: self.apply_text(
-            fontWeight=QFont.Weight.Bold if on else QFont.Weight.Normal), standard.Bold, toolbar, True)
-        self.italic = self.action(format_menu, "Kursiv", lambda on: self.apply_text(
-            fontItalic=on), standard.Italic, toolbar, True)
-        self.underline = self.action(format_menu, "Unterstrichen", lambda on: self.apply_text(
-            fontUnderline=on), standard.Underline, toolbar, True)
-        self.action(format_menu, "Textfarbe …", self.text_color)
-        self.action(format_menu, "Markierung …", self.highlight)
-        format_menu.addSeparator()
-        for label, alignment, shortcut in (
-            ("Linksbündig", Qt.AlignmentFlag.AlignLeft, "Ctrl+L"),
-            ("Zentriert", Qt.AlignmentFlag.AlignHCenter, "Ctrl+E"),
-            ("Rechtsbündig", Qt.AlignmentFlag.AlignRight, "Ctrl+R"),
-            ("Blocksatz", Qt.AlignmentFlag.AlignJustify, "Ctrl+J"),
-        ):
-            self.action(format_menu, label, lambda checked, value=alignment:
-                        self.editor.setAlignment(value), shortcut)
-        toolbar.addSeparator()
-        self.action(insert, "Aufzählung", lambda: self.toggle_list(QTextListFormat.Style.ListDisc), toolbar=toolbar)
-        self.action(insert, "Nummerierung", lambda: self.toggle_list(QTextListFormat.Style.ListDecimal), toolbar=toolbar)
-        self.action(insert, "Tabelle …", self.insert_table)
-        self.action(insert, "Bild …", self.insert_picture)
-        self.action(insert, "Seitenumbruch", self.page_break, "Ctrl+Return")
+        g = Ribbon.add_group(page, Group("Absatz"))
+        bullets_menu = QMenu(self)
+        for label, style in (("●  Punkt", QTextListFormat.Style.ListDisc), ("○  Kreis", QTextListFormat.Style.ListCircle),
+                             ("■  Quadrat", QTextListFormat.Style.ListSquare)):
+            bullets_menu.addAction(label, lambda s=style: self.set_list(s))
+        numbers_menu = QMenu(self)
+        for label, style in (("1. 2. 3.", QTextListFormat.Style.ListDecimal), ("a. b. c.", QTextListFormat.Style.ListLowerAlpha),
+                             ("A. B. C.", QTextListFormat.Style.ListUpperAlpha), ("i. ii. iii.", QTextListFormat.Style.ListLowerRoman),
+                             ("I. II. III.", QTextListFormat.Style.ListUpperRoman)):
+            numbers_menu.addAction(label, lambda s=style: self.set_list(s))
+        bullets = self.small(self.act("Aufzählungszeichen", lambda: self.toggle_list(QTextListFormat.Style.ListDisc), "bullets"),
+                             menu=bullets_menu)
+        numbers = self.small(self.act("Nummerierung", lambda: self.toggle_list(QTextListFormat.Style.ListDecimal), "numbers"),
+                             menu=numbers_menu)
+        outdent = self.small(self.act("Einzug verkleinern", lambda: self.change_indent(-1), "outdent"))
+        indent = self.small(self.act("Einzug vergrößern", lambda: self.change_indent(+1), "indent"))
+        self.a_marks = self.act("Alle anzeigen (¶)", self.toggle_marks, "pilcrow", "Ctrl+*", checkable=True,
+                                tip="Formatierungszeichen anzeigen")
+        marks = self.small(self.a_marks)
+        group = QActionGroup(self)
+        self.align_actions = {}
+        aligns = []
+        for name, icon_name, flag, key in (("Linksbündig", "alignleft", Qt.AlignmentFlag.AlignLeft, "Ctrl+L"),
+                                           ("Zentriert", "aligncenter", Qt.AlignmentFlag.AlignHCenter, "Ctrl+E"),
+                                           ("Rechtsbündig", "alignright", Qt.AlignmentFlag.AlignRight, "Ctrl+R"),
+                                           ("Blocksatz", "justify", Qt.AlignmentFlag.AlignJustify, "Ctrl+J")):
+            a = self.act(name, lambda _=False, f=flag: self.set_alignment(f), icon_name, key, checkable=True)
+            group.addAction(a)
+            self.align_actions[flag] = a
+            aligns.append(self.small(a))
+        spacing_menu = QMenu(self)
+        for value in (1.0, 1.15, 1.5, 2.0, 2.5, 3.0):
+            spacing_menu.addAction(f"{value:g}".replace(".", ","), lambda v=value: self.set_line_spacing(v))
+        spacing_menu.addSeparator()
+        spacing_menu.addAction("Abstand vor Absatz hinzufügen", lambda: self.set_para_space(top=12))
+        spacing_menu.addAction("Abstand nach Absatz entfernen", lambda: self.set_para_space(bottom=0))
+        spacing_menu.addAction("Absatzoptionen …", self.paragraph_dialog)
+        spacing = self.small(self.act("Zeilen- und Absatzabstand", None, "spacing"), menu=spacing_menu, popup=True)
+        shading = self.small(self.act("Schattierung", None, "shading"),
+                             menu=self.color_menu(["#ffffff", "#f2f4f8", "#e3e8f2", "#dbe6fb", "#e5f6ef", "#fff5d6",
+                                                   "#fde4e4", "#efe6ff"], self.set_shading, True), popup=True)
+        g.column([bullets, numbers, outdent, indent, marks], aligns + [spacing, shading])
 
+        g = Ribbon.add_group(page, Group("Formatvorlagen"))
+        gallery = QWidget()
+        gl = QHBoxLayout(gallery)
+        gl.setContentsMargins(0, 0, 0, 0)
+        gl.setSpacing(3)
+        for style in STYLES[:5]:
+            gl.addWidget(StyleTile(style, self.apply_style_key))
+        more = QMenu(self)
+        for style in STYLES:
+            more.addAction(style[1], lambda k=style[0]: self.apply_style_key(k))
+        more_btn = QToolButton()
+        more_btn.setObjectName("small")
+        more_btn.setIcon(self.ic("chevron"))
+        more_btn.setToolTip("Alle Formatvorlagen")
+        more_btn.setMenu(more)
+        more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        more_btn.setFixedSize(22, 62)
+        gl.addWidget(more_btn)
+        g.add(gallery)
+
+        g = Ribbon.add_group(page, Group("Bearbeiten"))
+        self.a_find = self.act("Suchen", self.find_focus, "search", std.Find)
+        self.a_replace = self.act("Ersetzen", self.replace_dialog, "replace", "Ctrl+H")
+        self.a_select = self.act("Markieren", lambda: ed.selectAll(), "select", std.SelectAll, tip="Alles markieren")
+        self.act("Weitersuchen", self.find_next, None, std.FindNext)
+        g.column([self.small(self.a_find, True)], [self.small(self.a_replace, True)], [self.small(self.a_select, True)])
+
+    # ---- Einfügen ------------------------------------------------------------------------
+    def build_insert(self):
+        page = self.ribbon.add_tab("Einfügen")
+        g = Ribbon.add_group(page, Group("Seiten"))
+        g.add(self.big(self.act("Leere Seite", self.blank_page, "page")))
+        g.add(self.big(self.act("Seiten­umbruch", self.page_break, "pagebreak", "Ctrl+Return")))
+        g = Ribbon.add_group(page, Group("Tabellen"))
+        grid = TableGrid()
+        menu = popup_menu(self, grid)
+        grid.picked.connect(lambda r, c: (menu.close(), self.insert_table(r, c)))
+        menu.addSeparator()
+        menu.addAction(self.ic("table"), "Tabelle einfügen …", self.table_dialog)
+        menu.addAction("Zeile darunter einfügen", lambda: self.table_edit("row"))
+        menu.addAction("Spalte rechts einfügen", lambda: self.table_edit("col"))
+        menu.addAction("Zeile löschen", lambda: self.table_edit("delrow"))
+        menu.addAction("Spalte löschen", lambda: self.table_edit("delcol"))
+        g.add(self.big(self.act("Tabelle", None, "table"), menu, popup=True))
+        g = Ribbon.add_group(page, Group("Illustrationen"))
+        g.add(self.big(self.act("Bilder", self.insert_picture, "image")))
+        g = Ribbon.add_group(page, Group("Links"))
+        g.add(self.big(self.act("Link", self.insert_link, "link", "Ctrl+K")))
+        g = Ribbon.add_group(page, Group("Kopf- und Fußzeile"))
+        g.add(self.big(self.act("Kopfzeile", lambda: self.header_footer_dialog("header"), "header")))
+        g.add(self.big(self.act("Fußzeile", lambda: self.header_footer_dialog("footer"), "footer")))
+        num_menu = QMenu(self)
+        for label, value in (("Unten mittig", "mitte"), ("Unten rechts", "rechts"), ("Unten links", "links"),
+                             ("„Seite X von Y“ unten mittig", "mitte-von"), ("Keine Seitenzahlen", "")):
+            num_menu.addAction(label, lambda v=value: self.set_numbers(v))
+        g.add(self.big(self.act("Seitenzahl", None, "pagenum"), num_menu, popup=True))
+        g = Ribbon.add_group(page, Group("Text"))
+        date_menu = QMenu(self)
+        now = QDateTime.currentDateTime()
+        for fmt in ("dd.MM.yyyy", "d. MMMM yyyy", "dddd, d. MMMM yyyy", "dd.MM.yyyy HH:mm", "HH:mm"):
+            label = now.toString(fmt)
+            date_menu.addAction(label, lambda f=fmt: self.editor.textCursor().insertText(
+                QDateTime.currentDateTime().toString(f)))
+        g.add(self.big(self.act("Datum und Uhrzeit", None, "date"), date_menu, popup=True))
+        g.add(self.big(self.act("Horizontale Linie", self.insert_rule, "rule")))
+        g = Ribbon.add_group(page, Group("Symbole"))
+        sym = QWidget()
+        sg = QGridLayout(sym)
+        sg.setContentsMargins(8, 8, 8, 8)
+        sg.setSpacing(3)
+        sym_menu = popup_menu(self, sym)
+        for i, ch in enumerate(SYMBOLS):
+            b = QToolButton(text=ch)
+            b.setObjectName("symbol")
+            b.setFixedSize(30, 30)
+            b.clicked.connect(lambda _=False, c=ch: (self.editor.textCursor().insertText(c), sym_menu.close()))
+            sg.addWidget(b, i // 10, i % 10)
+        g.add(self.big(self.act("Symbol", None, "symbol"), sym_menu, popup=True))
+        g = Ribbon.add_group(page, Group("Verzeichnisse"))
+        g.add(self.big(self.act("Inhalts­verzeichnis", self.insert_toc, "toc")))
+        g.add(self.big(self.act("Verzeichnis aktualisieren", self.update_toc, "recent")))
+
+    # ---- Layout --------------------------------------------------------------------------
+    def build_layout(self):
+        page = self.ribbon.add_tab("Layout")
+        g = Ribbon.add_group(page, Group("Seite einrichten"))
+        margins = QMenu(self)
+        for name, desc, values in MARGIN_PRESETS:
+            a = margins.addAction(f"{name}\n{desc}")
+            a.triggered.connect(lambda _=False, v=values: self.set_margins(v))
+        margins.addSeparator()
+        margins.addAction("Benutzerdefinierte Seitenränder …", self.page_dialog)
+        g.add(self.big(self.act("Seiten­ränder", None, "margins"), margins, popup=True))
+        orient = QMenu(self)
+        orient.addAction("Hochformat", lambda: self.set_orientation(False))
+        orient.addAction("Querformat", lambda: self.set_orientation(True))
+        g.add(self.big(self.act("Ausrichtung", None, "orientation"), orient, popup=True))
+        size_menu = QMenu(self)
+        for name, (w, h) in PAGE_SIZES.items():
+            size_menu.addAction(f"{name}  ({w:g} × {h:g} mm)".replace(".", ","), lambda n=name: self.set_size(n))
+        size_menu.addSeparator()
+        size_menu.addAction("Weitere Papierformate …", self.page_dialog)
+        g.add(self.big(self.act("Format", None, "size"), size_menu, popup=True))
+        g.add(self.big(self.act("Seitenfarbe", None, "pagecolor"),
+                       self.color_menu(["#ffffff", "#fbf8f1", "#f4f6fa", "#eef6f1", "#fdf2f2", "#f5f0ff", "#fffbe6", "#eaf2ff"],
+                                       self.set_page_color, True), popup=True))
+        g = Ribbon.add_group(page, Group("Absatz"))
+        form = QWidget()
+        fl = QGridLayout(form)
+        fl.setContentsMargins(0, 0, 0, 0)
+        fl.setHorizontalSpacing(6)
+        fl.setVerticalSpacing(2)
+        self.sp_left = self.spin(" cm", 0, 15, 0.1)
+        self.sp_right = self.spin(" cm", 0, 15, 0.1)
+        self.sp_before = self.spin(" pt", 0, 96, 1, decimals=0)
+        self.sp_after = self.spin(" pt", 0, 96, 1, decimals=0)
+        for i, (label, spin) in enumerate((("Einzug links", self.sp_left), ("Einzug rechts", self.sp_right))):
+            fl.addWidget(QLabel(label), i, 0)
+            fl.addWidget(spin, i, 1)
+        for i, (label, spin) in enumerate((("Abstand vor", self.sp_before), ("Abstand nach", self.sp_after))):
+            fl.addWidget(QLabel(label), i, 2)
+            fl.addWidget(spin, i, 3)
+        for spin in (self.sp_left, self.sp_right, self.sp_before, self.sp_after):
+            spin.editingFinished.connect(self.apply_paragraph_spins)
+        g.add(form)
+
+    def spin(self, suffix, lo, hi, step, decimals=1):
+        s = QDoubleSpinBox()
+        s.setRange(lo, hi)
+        s.setSingleStep(step)
+        s.setDecimals(decimals)
+        s.setSuffix(suffix)
+        s.setFixedWidth(84)
+        return s
+
+    # ---- Überprüfen ----------------------------------------------------------------------
+    def build_review(self):
+        page = self.ribbon.add_tab("Überprüfen")
+        g = Ribbon.add_group(page, Group("Rechtschreibung"))
+        self.a_spell = self.act("Rechtschreibung", self.toggle_spell, "spell", "F7", checkable=True,
+                                tip="Rechtschreibung prüfen (rote Wellenlinien)")
+        if not self.speller.available:
+            self.a_spell.setEnabled(False)
+            self.a_spell.setToolTip("Rechtschreibprüfung nicht verfügbar (Wörterbuch fehlt)")
+        g.add(self.big(self.a_spell))
+        g.add(self.big(self.act("Wörter zählen", self.word_count, "count", "Ctrl+Shift+G")))
+        g = Ribbon.add_group(page, Group("Sprache"))
+        g.add(self.big(self.act("Vorlesen", self.read_aloud, "read", "Ctrl+Alt+Space",
+                                tip="Markierten Text vorlesen (braucht espeak oder spd-say)")))
+
+    # ---- Ansicht -------------------------------------------------------------------------
+    def build_view(self):
+        page = self.ribbon.add_tab("Ansicht")
+        g = Ribbon.add_group(page, Group("Ansichten"))
+        self.a_print_layout = self.act("Drucklayout", lambda: self.set_layout(True), "printlayout", checkable=True)
+        self.a_web_layout = self.act("Weblayout", lambda: self.set_layout(False), "weblayout", checkable=True)
+        grp = QActionGroup(self)
+        grp.addAction(self.a_print_layout)
+        grp.addAction(self.a_web_layout)
+        self.a_print_layout.setChecked(True)
+        g.add(self.big(self.a_print_layout))
+        g.add(self.big(self.a_web_layout))
+        g.add(self.big(self.act("Fokus", self.toggle_focus, "focus", "F11", tip="Fokusmodus: nur das Dokument")))
+        g = Ribbon.add_group(page, Group("Anzeigen"))
+        self.a_nav = self.act("Navigationsbereich", self.toggle_nav, "navpane", "Ctrl+Shift+N", checkable=True)
+        g.add(self.big(self.a_nav))
+        g = Ribbon.add_group(page, Group("Zoom"))
+        g.add(self.big(self.act("Zoom", self.zoom_dialog, "zoom")))
+        g.add(self.big(self.act("100 %", lambda: self.set_zoom(100), "zoom100", "Ctrl+0")))
+        g.add(self.big(self.act("Seitenbreite", self.fit_width, "pagewidth")))
+
+    # ---- Datei-Bereich (Backstage) -------------------------------------------------------
+    def build_backstage(self):
+        w = QWidget()
+        w.setObjectName("backstage")
+        h = QHBoxLayout(w)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
+        side = QWidget()
+        side.setObjectName("backSide")
+        side.setFixedWidth(220)
+        sv = QVBoxLayout(side)
+        sv.setContentsMargins(10, 14, 10, 14)
+        sv.setSpacing(2)
+        back = QPushButton("  Zurück")
+        back.setIcon(self.ic("back"))
+        back.setObjectName("backItem")
+        back.clicked.connect(self.hide_backstage)
+        sv.addWidget(back)
+        sv.addSpacing(10)
+        self.back_stack = QStackedWidget()
+        self.back_pages = {}
+        self.back_buttons = {}
+        for key, label, icon_name in (("info", "Start", "info"), ("new", "Neu", "new"), ("open", "Öffnen", "open")):
+            self.add_back_item(sv, key, label, icon_name)
+        sv.addSpacing(8)
+        for label, icon_name, slot in (("Speichern", "save", self.save), ("Speichern unter", "saveas", self.save_as)):
+            b = QPushButton("  " + label)
+            b.setIcon(self.ic(icon_name))
+            b.setObjectName("backItem")
+            b.clicked.connect(lambda _=False, s=slot: (s(), self.hide_backstage()))
+            sv.addWidget(b)
+        for key, label, icon_name in (("export", "Exportieren", "export"), ("print", "Drucken", "print")):
+            self.add_back_item(sv, key, label, icon_name)
+        sv.addStretch(1)
+        close = QPushButton("  Schließen")
+        close.setIcon(self.ic("close"))
+        close.setObjectName("backItem")
+        close.clicked.connect(self.close)
+        sv.addWidget(close)
+        h.addWidget(side)
+        h.addWidget(self.back_stack, 1)
+        self.back_pages["info"] = self.back_info()
+        self.back_pages["new"] = self.back_new()
+        self.back_pages["open"] = self.back_open()
+        self.back_pages["export"] = self.back_export()
+        self.back_pages["print"] = self.back_print()
+        for key, page in self.back_pages.items():
+            self.back_stack.addWidget(page)
+        return w
+
+    def add_back_item(self, layout, key, label, icon_name):
+        b = QPushButton("  " + label)
+        b.setIcon(self.ic(icon_name))
+        b.setObjectName("backItem")
+        b.setCheckable(True)
+        b.clicked.connect(lambda: self.show_backstage(key))
+        layout.addWidget(b)
+        self.back_buttons[key] = b
+
+    def back_panel(self, heading):
+        page = QWidget()
+        v = QVBoxLayout(page)
+        v.setContentsMargins(48, 36, 48, 36)
+        v.setSpacing(14)
+        title = QLabel(heading)
+        title.setObjectName("backHeading")
+        v.addWidget(title)
+        return page, v
+
+    def card_button(self, title, desc, icon_name, slot):
+        b = QPushButton()
+        b.setObjectName("card")
+        b.setMinimumHeight(66)
+        lay = QHBoxLayout(b)
+        lay.setContentsMargins(14, 10, 14, 10)
+        lay.setSpacing(14)
+        ic = QLabel()
+        ic.setPixmap(icons.pixmap(icon_name, C["accent"], 28))
+        ic.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        lay.addWidget(ic)
+        tv = QVBoxLayout()
+        tv.setSpacing(1)
+        t = QLabel(title)
+        t.setObjectName("cardTitle")
+        d = QLabel(desc)
+        d.setObjectName("cardDesc")
+        d.setWordWrap(True)
+        for lab in (t, d):
+            lab.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            tv.addWidget(lab)
+        lay.addLayout(tv, 1)
+        b.clicked.connect(slot)
+        return b
+
+    def back_info(self):
+        page, v = self.back_panel("Guten Tag")
+        self.info_label = QLabel()
+        self.info_label.setObjectName("cardDesc")
+        self.info_label.setWordWrap(True)
+        v.addWidget(self.info_label)
+        row = QHBoxLayout()
+        for title, desc, icon_name, slot in (
+                ("Leeres Dokument", "Neu anfangen", "new", lambda: self.new_from_template("leer")),
+                ("Öffnen", "Word, HTML, Text oder Markdown", "open", self.open_dialog),
+                ("Als PDF speichern", "Zum Verschicken", "pdf", self.pdf_dialog)):
+            row.addWidget(self.card_button(title, desc, icon_name, slot))
+        v.addLayout(row)
+        recent_title = QLabel("Zuletzt verwendet")
+        recent_title.setObjectName("backSub")
+        v.addWidget(recent_title)
+        self.recent_list_info = QListWidget()
+        self.recent_list_info.setObjectName("recent")
+        self.recent_list_info.itemActivated.connect(self.open_recent_item)
+        self.recent_list_info.itemClicked.connect(self.open_recent_item)
+        v.addWidget(self.recent_list_info, 1)
+        return page
+
+    def back_new(self):
+        page, v = self.back_panel("Neu")
+        grid = QGridLayout()
+        grid.setSpacing(12)
+        templates = (("leer", "Leeres Dokument", "Eine weiße Seite", "new"),
+                     ("brief", "Brief (DIN 5008)", "Absender, Empfänger, Betreff, Grußformel", "word"),
+                     ("bericht", "Bericht", "Titel, Inhaltsverzeichnis und Kapitel", "toc"),
+                     ("notizen", "Besprechungsnotizen", "Datum, Teilnehmer, Punkte, Aufgaben", "comment"),
+                     ("lebenslauf", "Lebenslauf", "Persönliche Daten, Werdegang, Kenntnisse", "info"))
+        for i, (key, title, desc, icon_name) in enumerate(templates):
+            grid.addWidget(self.card_button(title, desc, icon_name, lambda _=False, k=key: self.new_from_template(k)),
+                           i // 2, i % 2)
+        v.addLayout(grid)
+        v.addStretch(1)
+        return page
+
+    def back_open(self):
+        page, v = self.back_panel("Öffnen")
+        v.addWidget(self.card_button("Durchsuchen", "Datei auf diesem PC auswählen (.docx, .html, .txt, .md)", "open",
+                                     self.open_dialog))
+        sub = QLabel("Zuletzt verwendet")
+        sub.setObjectName("backSub")
+        v.addWidget(sub)
+        self.recent_list = QListWidget()
+        self.recent_list.setObjectName("recent")
+        self.recent_list.itemActivated.connect(self.open_recent_item)
+        self.recent_list.itemClicked.connect(self.open_recent_item)
+        v.addWidget(self.recent_list, 1)
+        return page
+
+    def back_export(self):
+        page, v = self.back_panel("Exportieren")
+        word_desc = "Für Microsoft Word und LibreOffice" if writer_docx.AVAILABLE else "Nicht verfügbar – python3-docx fehlt"
+        for title, desc, icon_name, slot in (
+                ("PDF", "Sieht überall gleich aus – ideal zum Verschicken", "pdf", self.pdf_dialog),
+                ("Word-Dokument (.docx)", word_desc, "word", lambda: self.export_as("docx")),
+                ("OpenDocument-Text (.odt)", "Für LibreOffice", "page", lambda: self.export_as("odt")),
+                ("Webseite (.html)", "Mit allen Formatierungen", "weblayout", lambda: self.export_as("html")),
+                ("Markdown (.md)", "Überschriften, Listen, fett/kursiv", "toc", lambda: self.export_as("md")),
+                ("Nur Text (.txt)", "Ohne Formatierung", "alignleft", lambda: self.export_as("txt"))):
+            v.addWidget(self.card_button(title, desc, icon_name, slot))
+        v.addStretch(1)
+        return page
+
+    def back_print(self):
+        page, v = self.back_panel("Drucken")
+        v.addWidget(self.card_button("Drucken", "Drucker auswählen und drucken (Strg+P)", "print", self.print_document))
+        v.addWidget(self.card_button("Druckvorschau", "Alle Seiten mit Kopf- und Fußzeile ansehen", "preview", self.preview))
+        v.addWidget(self.card_button("Seite einrichten", "Format, Ausrichtung und Ränder", "margins", self.page_dialog))
+        v.addStretch(1)
+        return page
+
+    def show_backstage(self, key="info"):
+        self.refresh_recent()
+        self.update_info()
+        self.back_stack.setCurrentWidget(self.back_pages[key])
+        for k, b in self.back_buttons.items():
+            b.setChecked(k == key)
+        self.pages.setCurrentIndex(1)
+        self.ribbon.hide()
+
+    def hide_backstage(self):
+        self.pages.setCurrentIndex(0)
+        self.ribbon.show()
+        self.focus_editor()
+
+    # ---- Aussehen ------------------------------------------------------------------------
+    def arrow_files(self):
+        cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "creative-writer"
+        out = {}
+        for name, d in (("down", "M6 9l6 6 6-6"), ("up", "M6 15l6-6 6 6")):
+            path = cache / f"pfeil-{name}-{C['muted'].lstrip('#')}.svg"
+            try:
+                cache.mkdir(parents=True, exist_ok=True)
+                if not path.exists():
+                    path.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="%s" fill="none" '
+                                    'stroke="%s" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                                    % (d, C["muted"]))
+            except OSError:
+                pass
+            out[name] = path.as_posix()
+        return out
+
+    def apply_style(self):
+        c = C
+        arrows = self.arrow_files()
+        self.setStyleSheet(f"""
+            QWidget#root, QWidget#titleBar {{ background:{c['ground']}; color:{c['text']}; }}
+            QLabel {{ color:{c['text']}; background:transparent; }}
+            QLabel#docTitle {{ color:{c['muted']}; font-size:13px; }}
+            QLineEdit#search {{ background:{c['surface']}; color:{c['text']}; border:1px solid {c['line']};
+                border-radius:15px; padding:5px 10px; }}
+            QLineEdit#search:focus {{ border-color:{c['accent']}; }}
+            QWidget#ribbon {{ background:{c['ground']}; }}
+            QStackedWidget#ribbonBody {{ background:{c['surface']}; border:1px solid {c['line']}; border-radius:12px;
+                margin:0 8px 6px 8px; }}
+            QToolButton#ribbonTab, QToolButton#fileTab {{ color:{c['muted']}; background:transparent; border:none;
+                padding:6px 12px 7px 12px; font-size:13px; border-radius:8px; }}
+            QToolButton#ribbonTab:hover {{ color:{c['text']}; background:{c['raised']}; }}
+            QToolButton#ribbonTab:checked {{ color:{c['accent']}; font-weight:600; border-bottom:2px solid {c['accent']};
+                border-bottom-left-radius:0; border-bottom-right-radius:0; }}
+            QToolButton#fileTab {{ color:{c['accentText']}; background:{c['accent']}; font-weight:600; margin-right:6px; }}
+            QToolButton#fileTab:hover {{ background:{c['accentHover']}; }}
+            QLabel#groupLabel {{ color:{c['dim']}; font-size:11px; }}
+            QFrame#groupLine {{ background:{c['line']}; margin:6px 2px 8px 2px; }}
+            QToolButton {{ color:{c['text']}; background:transparent; border:1px solid transparent; border-radius:6px; }}
+            QToolButton:hover {{ background:{c['raised']}; }}
+            QToolButton:pressed, QToolButton:checked {{ background:{c['select']}; border-color:{c['accent']}; }}
+            QToolButton:disabled {{ color:{c['dim']}; }}
+            QToolButton#big {{ padding:4px 6px 2px 6px; font-size:12px; }}
+            QToolButton#small, QToolButton#quick {{ padding:3px; font-size:12px; }}
+            QToolButton#glyph {{ font-size:14px; padding:0; }}
+            QToolButton#glyphFlat {{ font-size:15px; padding:0 4px; }}
+            QToolButton#styleTile {{ background:{c['raised']}; border:1px solid {c['line']}; border-radius:8px; }}
+            QToolButton#styleTile:hover {{ border-color:{c['accent']}; }}
+            QToolButton#symbol {{ background:{c['raised']}; font-size:15px; }}
+            QToolButton::menu-indicator {{ image:none; width:0; }}
+            QToolButton[popupMode="1"] {{ padding-right:12px; }}
+            QToolButton::menu-button {{ border:none; width:12px; }}
+            QComboBox, QFontComboBox, QDoubleSpinBox, QSpinBox {{ background:{c['raised']}; color:{c['text']};
+                border:1px solid {c['line']}; border-radius:6px; padding:2px 6px; min-height:22px; }}
+            QComboBox:hover, QDoubleSpinBox:hover {{ border-color:{c['track']}; }}
+            QComboBox QAbstractItemView {{ background:{c['raised']}; color:{c['text']}; selection-background-color:{c['select']};
+                border:1px solid {c['line']}; outline:none; }}
+            QComboBox::drop-down {{ border:none; width:18px; }}
+            QComboBox::down-arrow {{ image:url({arrows['down']}); width:10px; height:10px; }}
+            QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {{ border:none; background:transparent; width:16px; }}
+            QAbstractSpinBox::up-arrow {{ image:url({arrows['up']}); width:9px; height:9px; }}
+            QAbstractSpinBox::down-arrow {{ image:url({arrows['down']}); width:9px; height:9px; }}
+            QMenu {{ background:{c['surface']}; color:{c['text']}; border:1px solid {c['line']}; border-radius:10px; padding:6px; }}
+            QMenu::item {{ padding:6px 22px 6px 12px; border-radius:6px; }}
+            QMenu::item:selected {{ background:{c['select']}; }}
+            QMenu::item:disabled {{ color:{c['dim']}; }}
+            QMenu::separator {{ height:1px; background:{c['line']}; margin:5px 6px; }}
+            QMenu::icon {{ padding-left:6px; }}
+            QToolTip {{ background:{c['raised']}; color:{c['text']}; border:1px solid {c['line']}; border-radius:6px; padding:5px 8px; }}
+            QGraphicsView#desk {{ background:{self.desk_color}; border:none; }}
+            QScrollBar:vertical {{ background:transparent; width:12px; margin:2px; }}
+            QScrollBar::handle:vertical {{ background:{c['track']}; border-radius:4px; min-height:40px; }}
+            QScrollBar:horizontal {{ background:transparent; height:12px; margin:2px; }}
+            QScrollBar::handle:horizontal {{ background:{c['track']}; border-radius:4px; min-width:40px; }}
+            QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{ background:none; border:none; }}
+            QWidget#nav {{ background:{c['side']}; border-right:1px solid {c['line']}; }}
+            QLabel#navTitle {{ font-size:15px; font-weight:600; }}
+            QLabel#navHint {{ color:{c['dim']}; font-size:11px; }}
+            QListWidget {{ background:transparent; color:{c['text']}; border:none; outline:none; }}
+            QListWidget::item {{ padding:6px 8px; border-radius:6px; }}
+            QListWidget::item:hover {{ background:{c['raised']}; }}
+            QListWidget::item:selected {{ background:{c['select']}; color:{c['text']}; }}
+            QWidget#statusBar {{ background:{c['ground']}; border-top:1px solid {c['line']}; }}
+            QWidget#statusBar QLabel {{ color:{c['muted']}; font-size:12px; }}
+            QPushButton#statusButton {{ color:{c['muted']}; background:transparent; border:none; font-size:12px; padding:2px 4px; }}
+            QPushButton#statusButton:hover {{ color:{c['text']}; }}
+            QSlider::groove:horizontal {{ height:4px; background:{c['track']}; border-radius:2px; }}
+            QSlider::handle:horizontal {{ background:{c['accent']}; width:12px; height:12px; margin:-4px 0; border-radius:6px; }}
+            QWidget#backstage {{ background:{c['surface']}; }}
+            QWidget#backSide {{ background:{c['side']}; border-right:1px solid {c['line']}; }}
+            QPushButton#backItem {{ color:{c['text']}; background:transparent; border:none; text-align:left; padding:10px 12px;
+                border-radius:8px; font-size:14px; }}
+            QPushButton#backItem:hover {{ background:{c['raised']}; }}
+            QPushButton#backItem:checked {{ background:{c['select']}; color:{c['accent']}; font-weight:600; }}
+            QLabel#backHeading {{ font-size:28px; font-weight:600; }}
+            QLabel#backSub {{ font-size:15px; font-weight:600; margin-top:8px; }}
+            QPushButton#card {{ background:{c['raised']}; border:1px solid {c['line']}; border-radius:12px; text-align:left; }}
+            QPushButton#card:hover {{ border-color:{c['accent']}; }}
+            QLabel#cardTitle {{ font-size:14px; font-weight:600; }}
+            QLabel#cardDesc {{ color:{c['muted']}; font-size:12px; }}
+            QListWidget#recent::item {{ padding:9px 10px; }}
+            QPushButton#flat {{ background:transparent; color:{c['text']}; border:none; text-align:left; padding:6px; border-radius:6px; }}
+            QPushButton#flat:hover {{ background:{c['raised']}; }}
+            QDialog {{ background:{c['surface']}; color:{c['text']}; }}
+            QDialog QLineEdit, QDialog QPlainTextEdit {{ background:{c['raised']}; color:{c['text']}; border:1px solid {c['line']};
+                border-radius:6px; padding:5px; }}
+            QDialog QPushButton {{ background:{c['raised']}; color:{c['text']}; border:1px solid {c['line']}; border-radius:8px; padding:6px 14px; }}
+            QDialog QPushButton:default {{ background:{c['accent']}; color:{c['accentText']}; border:none; }}
+            QCheckBox {{ color:{c['text']}; }}
+        """)
+
+    # ---- Seite, Zoom, Ansicht -----------------------------------------------------------
+    def content_width(self):
+        top, right, bottom, left = self.page["margins_mm"]
+        return (self.page["width_mm"] - left - right) * MM
+
+    def apply_page(self):
+        top, right, bottom, left = (v * MM for v in self.page["margins_mm"])
+        doc = self.editor.document()
+        root = doc.rootFrame()
+        ff = root.frameFormat()
+        ff.setTopMargin(top)
+        ff.setBottomMargin(bottom)
+        ff.setLeftMargin(left)
+        ff.setRightMargin(right)
+        root.setFrameFormat(ff)
+        paper = self.editor.palette()
+        paper.setColor(QPalette.ColorRole.Base, QColor(self.page.get("color", "#ffffff")))
+        self.editor.setPalette(paper)
+        self.shadow.setBrush(QColor(self.page.get("color", "#ffffff")))
+        self.relayout()
+        self.schedule_pages()
+
+    def relayout(self):
+        if self.print_layout:
+            width = self.page["width_mm"] * MM
+            min_h = self.page["height_mm"] * MM
+        else:
+            width = max(400, self.view.viewport().width() / (self.zoom / 100) - 40)
+            min_h = self.view.viewport().height() / (self.zoom / 100) - 40
+        doc = self.editor.document()
+        if abs(self.editor.width() - width) > 0.5:
+            self.editor.setFixedWidth(int(width))
+        height = max(min_h, doc.size().height() + 2)
+        if abs(self.editor.height() - height) > 0.5:
+            self.editor.setFixedHeight(int(height))
+        self.proxy.setPos(0, 0)
+        self.shadow.setRect(QRectF(0, 0, self.editor.width(), self.editor.height()))
+        gap = 28
+        self.scene.setSceneRect(QRectF(-gap, -gap, self.editor.width() + 2 * gap, self.editor.height() + 2 * gap))
+
+    def set_zoom(self, value):
+        value = max(25, min(300, int(value)))
+        self.zoom = value
+        self.view.setTransform(QTransform.fromScale(value / 100, value / 100))
+        if self.zoom_slider.value() != value:
+            self.zoom_slider.blockSignals(True)
+            self.zoom_slider.setValue(value)
+            self.zoom_slider.blockSignals(False)
+        self.zoom_label.setText(f"{value} %")
+        if not self.print_layout:
+            self.relayout()
+        self.ensure_cursor_visible()
+
+    def fit_width(self):
+        width = self.view.viewport().width() - 60
+        self.set_zoom(int(width / (self.page["width_mm"] * MM) * 100))
+
+    def zoom_dialog(self):
+        value, ok = QInputDialog.getInt(self, "Zoom", "Zoomfaktor in Prozent", self.zoom, 25, 300, 10)
+        if ok:
+            self.set_zoom(value)
+
+    def set_layout(self, print_layout):
+        self.print_layout = print_layout
+        self.a_print_layout.setChecked(print_layout)
+        self.a_web_layout.setChecked(not print_layout)
+        self.shadow.setVisible(True)
+        self.relayout()
+        self.update_pages()
+
+    def toggle_focus(self):
+        focus = self.ribbon.isVisible() and self.pages.currentIndex() == 0
+        self.ribbon.setVisible(not focus)
+        self.centralWidget().findChild(QWidget, "titleBar").setVisible(not focus)
+        self.centralWidget().findChild(QWidget, "statusBar").setVisible(not focus)
+        if focus:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            if self.isFullScreen():
+                self.toggle_focus()
+                return
+            if self.pages.currentIndex() == 1:
+                self.hide_backstage()
+                return
+            if self.painter_format:
+                self.a_painter.setChecked(False)
+                self.painter_format = None
+                return
+        super().keyPressEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not self.print_layout:
+            QTimer.singleShot(0, self.relayout)
+
+    def focus_editor(self):
+        self.view.setFocus()
+        self.scene.setFocusItem(self.proxy)
+        self.editor.setFocus()
+
+    def cursor_moved(self):
+        self.update_format_controls()
+        self.update_status()
+        self.ensure_cursor_visible()
+
+    def ensure_cursor_visible(self):
+        rect = QRectF(self.editor.cursorRect())
+        scene_rect = self.proxy.mapRectToScene(rect)
+        self.view.ensureVisible(scene_rect, 30, 60)
+
+    def schedule_pages(self):
+        self.page_timer.start()
+        self.nav_timer.start()
+
+    def update_pages(self):
+        doc = self.editor.document()
+        try:
+            starts, count = page_breaks(doc, self.page)
+        except Exception:
+            starts, count = [], 1
+        layout = doc.documentLayout()
+        breaks = []
+        if self.print_layout:
+            for n, number in enumerate(starts, start=2):
+                block = doc.findBlockByNumber(number)
+                if block.isValid():
+                    y = layout.blockBoundingRect(block).top()
+                    breaks.append((y - 4, n))
+        self.editor.breaks = breaks
+        title = self.path.stem if self.path else "Dokument"
+        self.editor.header_text = fill_placeholders(self.page.get("header", ""), 1, count, title) if self.print_layout else ""
+        footer = fill_placeholders(self.page.get("footer", ""), count, count, title)
+        if self.page.get("numbers"):
+            number = f"Seite {count} von {count}" if self.page["numbers"].endswith("von") else str(count)
+            footer = f"{footer}      {number}" if footer else number
+        self.editor.footer_text = footer if self.print_layout else ""
+        self.page_count = count
+        self.editor.viewport().update()
+        self.update_status()
+
+    # ---- Titel, Status ------------------------------------------------------------------
+    def update_title(self):
+        name = self.path.name if self.path else "Dokument1"
+        self.title_label.setText(f"{name}{' •' if self.editor.document().isModified() else ''}  –  {APP}")
+        self.setWindowTitle(f"{name}[*] – {APP}")
+
+    def update_status(self):
+        cursor = self.editor.textCursor()
+        doc = self.editor.document()
+        count = getattr(self, "page_count", 1)
+        current = 1
+        y = doc.documentLayout().blockBoundingRect(cursor.block()).top()
+        for by, n in self.editor.breaks:
+            if y >= by:
+                current = n
+        self.st_page.setText(f"Seite {current} von {count}")
+        if cursor.hasSelection():
+            sel = cursor.selectedText()
+            words = len(WORD_RE.findall(sel))
+            self.st_words.setText(f"{words} von {self.total_words()} Wörtern")
+        else:
+            self.st_words.setText(f"{self.total_words()} Wörter")
+        self.st_spell.setText(("Rechtschreibung: an" if self.speller.enabled else "")
+                              if self.speller.available else "")
+
+    def total_words(self):
+        return len(WORD_RE.findall(self.editor.toPlainText()))
+
+    def update_info(self):
+        name = self.path.name if self.path else "noch nicht gespeichert"
+        text = self.editor.toPlainText()
+        self.info_label.setText(
+            f"Dokument: {name}   ·   {getattr(self, 'page_count', 1)} Seite(n)   ·   {self.total_words()} Wörter   ·   "
+            f"{len(text)} Zeichen   ·   Format {self.page_name()}")
+
+    def page_name(self):
+        w, h = self.page["width_mm"], self.page["height_mm"]
+        for name, (pw, ph) in PAGE_SIZES.items():
+            if {round(w), round(h)} == {round(pw), round(ph)}:
+                return name + (" quer" if w > h else "")
+        return f"{w:g} × {h:g} mm"
+
+    # ---- Formatieren --------------------------------------------------------------------
     def apply_text(self, **properties):
         fmt = QTextCharFormat()
         for name, value in properties.items():
-            setter = getattr(fmt, "set" + name[0].upper() + name[1:])
-            setter(value)
+            getattr(fmt, "set" + name[0].upper() + name[1:])(value)
         self.editor.mergeCurrentCharFormat(fmt)
-        self.editor.setFocus()
+        self.focus_editor()
 
     def apply_size(self):
         try:
             size = float(self.size.currentText().replace(",", "."))
         except ValueError:
             size = 0
-        if 1 <= size <= 144:
-            if size != self.editor.currentCharFormat().fontPointSize():
-                self.apply_text(fontPointSize=size)
+        if 1 <= size <= 400:
+            self.apply_text(fontPointSize=size)
         else:
-            self.update_format_controls(self.editor.currentCharFormat())
+            self.update_format_controls()
+
+    def step_size(self, direction):
+        sizes = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]
+        current = self.current_font().pointSizeF()
+        if direction > 0:
+            nxt = next((s for s in sizes if s > current + 0.01), current + 10)
+        else:
+            nxt = next((s for s in reversed(sizes) if s < current - 0.01), max(1, current - 1))
+        self.apply_text(fontPointSize=nxt)
+
+    def set_valign(self, on, align):
+        self.apply_text(verticalAlignment=align if on else QTextCharFormat.VerticalAlignment.AlignNormal)
+
+    def current_font(self):
+        return self.editor.currentCharFormat().font().resolve(self.editor.document().defaultFont())
 
     def update_format_controls(self, fmt=None):
-        fmt = fmt if fmt is not None else self.editor.currentCharFormat()
+        fmt = fmt if isinstance(fmt, QTextCharFormat) else self.editor.currentCharFormat()
         font = fmt.font().resolve(self.editor.document().defaultFont())
-        for widget, value in ((self.family, font), (self.size, f"{font.pointSizeF():g}")):
-            previous = widget.blockSignals(True)
-            if widget is self.family:
-                widget.setCurrentFont(value)
-            else:
-                widget.setCurrentText(value)
-            widget.blockSignals(previous)
+        for widget in (self.family, self.size):
+            widget.blockSignals(True)
+        self.family.setCurrentFont(font)
+        self.size.setCurrentText(f"{font.pointSizeF():g}".replace(".", ","))
+        for widget in (self.family, self.size):
+            widget.blockSignals(False)
         self.bold.setChecked(font.bold())
         self.italic.setChecked(font.italic())
         self.underline.setChecked(font.underline())
+        self.strike.setChecked(font.strikeOut())
+        va = fmt.verticalAlignment()
+        self.sub.setChecked(va == QTextCharFormat.VerticalAlignment.AlignSubScript)
+        self.sup.setChecked(va == QTextCharFormat.VerticalAlignment.AlignSuperScript)
+        align = self.editor.alignment()
+        for flag, action in self.align_actions.items():
+            action.setChecked(bool(align & flag) if flag != Qt.AlignmentFlag.AlignLeft
+                              else not (align & (Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignRight
+                                                 | Qt.AlignmentFlag.AlignJustify)))
+        bf = self.editor.textCursor().blockFormat()
+        for spin, value in ((self.sp_left, bf.leftMargin() / MM / 10), (self.sp_right, bf.rightMargin() / MM / 10),
+                            (self.sp_before, bf.topMargin() * 0.75), (self.sp_after, bf.bottomMargin() * 0.75)):
+            spin.blockSignals(True)
+            spin.setValue(value)
+            spin.blockSignals(False)
 
-    def text_color(self):
-        color = QColorDialog.getColor(self.editor.textColor(), self, "Textfarbe")
-        if color.isValid():
-            self.apply_text(foreground=color)
+    def color_menu(self, palette_list, slot, with_none):
+        grid = ColorGrid(palette_list, extra=[("Keine Farbe", lambda: slot(None))] if with_none else
+                         [("Weitere Farben …", lambda: slot("dialog"))])
+        menu = popup_menu(self, grid)
+        grid.picked.connect(lambda c: (menu.close(), slot(c)))
+        return menu
 
-    def highlight(self):
-        color = QColorDialog.getColor(QColor("#ffe38a"), self, "Markierung")
-        if color.isValid():
-            self.apply_text(background=color)
+    def refresh_color_icons(self):
+        self.a_highlight.setIcon(icons.color_bar_icon("highlight", C["text"], self.highlight_color.name()))
+        self.a_fontcolor.setIcon(icons.color_bar_icon("fontcolor", C["text"], self.font_color.name()))
+
+    def pick_highlight(self, color):
+        if color is None:
+            self.remove_char_property(QTextFormat.Property.BackgroundBrush)
+            return
+        self.highlight_color = color
+        self.refresh_color_icons()
+        self.apply_text(background=color)
+
+    def pick_fontcolor(self, color):
+        if color == "dialog":
+            color = QColorDialog.getColor(self.font_color, self, "Schriftfarbe")
+            if not color.isValid():
+                return
+        self.font_color = color
+        self.refresh_color_icons()
+        self.apply_text(foreground=color)
+
+    def remove_char_property(self, prop):
+        cursor = self.editor.textCursor()
+        if not cursor.hasSelection():
+            return
+        start, end = cursor.selectionStart(), cursor.selectionEnd()
+        cursor.beginEditBlock()
+        pos = start
+        while pos < end:
+            c = QTextCursor(self.editor.document())
+            c.setPosition(pos)
+            c.setPosition(pos + 1, QTextCursor.MoveMode.KeepAnchor)
+            fmt = c.charFormat()
+            fmt.clearProperty(prop)
+            c.setCharFormat(fmt)
+            pos += 1
+        cursor.endEditBlock()
+
+    def clear_format(self):
+        cursor = self.editor.textCursor()
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
+        cursor.setCharFormat(QTextCharFormat())
+        self.focus_editor()
+
+    def change_case(self, mode):
+        cursor = self.editor.textCursor()
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        text = cursor.selectedText()
+        if mode == "klein":
+            new = text.lower()
+        elif mode == "gross":
+            new = text.upper()
+        elif mode == "wort":
+            new = re.sub(r"\b(\w)(\w*)", lambda m: m.group(1).upper() + m.group(2).lower(), text)
+        elif mode == "umkehren":
+            new = text.swapcase()
+        else:
+            new = text[:1].upper() + text[1:].lower()
+        start = cursor.selectionStart()
+        fmt = cursor.charFormat()
+        cursor.insertText(new, fmt)
+        cursor.setPosition(start)
+        cursor.setPosition(start + len(new), QTextCursor.MoveMode.KeepAnchor)
+        self.editor.setTextCursor(cursor)
+
+    def format_painter(self, on):
+        if on:
+            self.painter_format = (self.editor.currentCharFormat(), self.editor.textCursor().blockFormat())
+            self.editor.viewport().setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            self.painter_format = None
+            self.editor.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonRelease and self.painter_format and obj is self.editor.viewport():
+            cursor = self.editor.textCursor()
+            if cursor.hasSelection():
+                char, block = self.painter_format
+                cursor.beginEditBlock()
+                cursor.setCharFormat(char)
+                cursor.endEditBlock()
+                self.painter_format = None
+                self.a_painter.setChecked(False)
+                self.editor.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+        return super().eventFilter(obj, event)
+
+    def set_alignment(self, flag):
+        self.editor.setAlignment(flag)
+        self.focus_editor()
+
+    def set_list(self, style):
+        cursor = self.editor.textCursor()
+        lst = cursor.currentList()
+        if lst:
+            fmt = lst.format()
+            fmt.setStyle(style)
+            lst.setFormat(fmt)
+        else:
+            cursor.createList(style)
+        self.focus_editor()
 
     def toggle_list(self, style):
         cursor = self.editor.textCursor()
         current = cursor.currentList()
-        if current and current.format().style() == style:
-            first = cursor.selectionStart()
-            last = cursor.selectionEnd()
-            block = self.editor.document().findBlock(first)
+        bullets = (QTextListFormat.Style.ListDisc, QTextListFormat.Style.ListCircle, QTextListFormat.Style.ListSquare)
+        same_kind = current and ((current.format().style() in bullets) == (style in bullets))
+        if same_kind:
+            doc = self.editor.document()
+            first, last = cursor.selectionStart(), cursor.selectionEnd()
+            block = doc.findBlock(first)
             cursor.beginEditBlock()
             while block.isValid():
-                block_cursor = QTextCursor(block)
-                item_list = block_cursor.currentList()
-                if item_list:
-                    item_list.remove(block)
-                    fmt = block_cursor.blockFormat()
-                    fmt.setIndent(0)
-                    block_cursor.setBlockFormat(fmt)
-                block = block.next()
-                if block.position() >= last:
+                lst = block.textList()
+                if lst:
+                    lst.remove(block)
+                    bc = QTextCursor(block)
+                    bf = bc.blockFormat()
+                    bf.setIndent(0)
+                    bc.setBlockFormat(bf)
+                if block.position() + block.length() > last:
                     break
+                block = block.next()
             cursor.endEditBlock()
+        elif current:
+            self.set_list(style)
         else:
             cursor.createList(style)
+        self.focus_editor()
 
-    def insert_table(self):
-        rows, ok = QInputDialog.getInt(self, "Tabelle", "Zeilen", 3, 1, 50)
-        if not ok:
-            return
-        columns, ok = QInputDialog.getInt(self, "Tabelle", "Spalten", 3, 1, 10)
-        if ok:
-            fmt = QTextTableFormat()
-            fmt.setBorder(1)
-            fmt.setCellPadding(6)
-            fmt.setCellSpacing(0)
-            cursor = self.editor.textCursor()
-            cursor.insertTable(rows, columns, fmt)
-            self.editor.setTextCursor(cursor)
+    def change_indent(self, delta):
+        cursor = self.editor.textCursor()
+        lst = cursor.currentList()
+        if lst:
+            fmt = QTextListFormat(lst.format())
+            fmt.setIndent(max(1, fmt.indent() + delta))
+            cursor.createList(fmt)
+        else:
+            bf = cursor.blockFormat()
+            bf.setLeftMargin(max(0, bf.leftMargin() + delta * 1.25 * 10 * MM))
+            cursor.setBlockFormat(bf)
+        self.focus_editor()
 
-    def insert_picture(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Bild einfügen", "", "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)")
-        if filename:
-            reader = QImageReader(filename)
-            reader.setAutoTransform(True)
-            if not self.editor.insert_image(reader.read()):
-                self.error("Bild konnte nicht geladen werden.")
+    def set_line_spacing(self, value):
+        cursor = self.editor.textCursor()
+        bf = QTextBlockFormat()
+        bf.setLineHeight(value * 100, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+        cursor.mergeBlockFormat(bf)
+        self.focus_editor()
 
+    def set_para_space(self, top=None, bottom=None):
+        bf = QTextBlockFormat()
+        if top is not None:
+            bf.setTopMargin(top / 0.75)
+        if bottom is not None:
+            bf.setBottomMargin(bottom / 0.75)
+        self.editor.textCursor().mergeBlockFormat(bf)
+
+    def set_shading(self, color):
+        cursor = self.editor.textCursor()
+        bf = cursor.blockFormat()
+        if color is None:
+            bf.clearBackground()
+            cursor.setBlockFormat(bf)
+        else:
+            bf.setBackground(color)
+            cursor.setBlockFormat(bf)
+
+    def apply_paragraph_spins(self):
+        bf = QTextBlockFormat()
+        bf.setLeftMargin(self.sp_left.value() * 10 * MM)
+        bf.setRightMargin(self.sp_right.value() * 10 * MM)
+        bf.setTopMargin(self.sp_before.value() / 0.75)
+        bf.setBottomMargin(self.sp_after.value() / 0.75)
+        self.editor.textCursor().mergeBlockFormat(bf)
+
+    def paragraph_dialog(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Absatz")
+        form = QFormLayout(dlg)
+        bf = self.editor.textCursor().blockFormat()
+        left = self.spin(" cm", 0, 15, 0.1)
+        left.setValue(bf.leftMargin() / MM / 10)
+        first = self.spin(" cm", -5, 5, 0.1)
+        first.setValue(bf.textIndent() / MM / 10)
+        before = self.spin(" pt", 0, 96, 1, 0)
+        before.setValue(bf.topMargin() * 0.75)
+        after = self.spin(" pt", 0, 96, 1, 0)
+        after.setValue(bf.bottomMargin() * 0.75)
+        line = self.spin("", 0.8, 4, 0.05, 2)
+        line.setValue(bf.lineHeight() / 100 if bf.lineHeight() else 1.15)
+        keep = QCheckBox("Absatz nicht trennen (vor Seitenumbruch)")
+        for label, w in (("Einzug links", left), ("Erste Zeile", first), ("Abstand vor", before),
+                         ("Abstand nach", after), ("Zeilenabstand", line)):
+            form.addRow(label, w)
+        form.addRow(keep)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec():
+            nf = QTextBlockFormat()
+            nf.setLeftMargin(left.value() * 10 * MM)
+            nf.setTextIndent(first.value() * 10 * MM)
+            nf.setTopMargin(before.value() / 0.75)
+            nf.setBottomMargin(after.value() / 0.75)
+            nf.setLineHeight(line.value() * 100, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+            if keep.isChecked():
+                nf.setNonBreakableLines(True)
+            self.editor.textCursor().mergeBlockFormat(nf)
+
+    def apply_style_key(self, key):
+        _key, name, size, bold, italic, color, before, after, level, align = STYLE_BY_KEY[key]
+        cursor = self.editor.textCursor()
+        doc = self.editor.document()
+        start, end = cursor.selectionStart(), cursor.selectionEnd()
+        block = doc.findBlock(start)
+        cursor.beginEditBlock()
+        while block.isValid():
+            bc = QTextCursor(block)
+            bf = bc.blockFormat()
+            bf.setHeadingLevel(level)
+            bf.setProperty(STYLE_KEY, key if key in ("titel", "untertitel", "zitat") else "")
+            bf.setTopMargin(before / 0.75)
+            bf.setBottomMargin(after / 0.75)
+            bf.setAlignment(align if align is not None else Qt.AlignmentFlag.AlignLeft)
+            if key == "kein":
+                bf.setLineHeight(100, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+            else:
+                bf.setLineHeight(115, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+            if key == "zitat":
+                bf.setLeftMargin(10 * MM)
+                bf.setRightMargin(10 * MM)
+            elif bf.leftMargin() == 10 * MM:
+                bf.setLeftMargin(0)
+                bf.setRightMargin(0)
+            bc.setBlockFormat(bf)
+            cf = QTextCharFormat()
+            cf.setFontPointSize(size)
+            cf.setFontWeight(QFont.Weight.Bold if bold else QFont.Weight.Normal)
+            cf.setFontItalic(italic)
+            cf.setForeground(QColor(color))
+            sel = QTextCursor(block)
+            sel.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            sel.mergeCharFormat(cf)
+            bc.mergeBlockCharFormat(cf)
+            if block.position() + block.length() > end:
+                break
+            block = block.next()
+        cursor.endEditBlock()
+        self.nav_timer.start()
+        self.focus_editor()
+
+    def toggle_marks(self, on):
+        opt = self.editor.document().defaultTextOption()
+        flags = opt.flags()
+        marks = QTextOption.Flag.ShowTabsAndSpaces | QTextOption.Flag.ShowLineAndParagraphSeparators
+        opt.setFlags(flags | marks if on else flags & ~marks)
+        self.editor.document().setDefaultTextOption(opt)
+
+    def paste_plain(self):
+        text = QApplication.clipboard().text()
+        if text:
+            self.editor.textCursor().insertText(text)
+
+    # ---- Einfügen -----------------------------------------------------------------------
     def page_break(self):
         cursor = self.editor.textCursor()
         cursor.beginEditBlock()
         cursor.removeSelectedText()
         paragraph = cursor.blockFormat()
         boundary = QTextBlockFormat(paragraph)
-        boundary.setPageBreakPolicy(paragraph.pageBreakPolicy() | paragraph.PageBreakFlag.PageBreak_AlwaysAfter)
+        boundary.setPageBreakPolicy(paragraph.pageBreakPolicy() | QTextFormat.PageBreakFlag.PageBreak_AlwaysAfter)
         cursor.setBlockFormat(boundary)
-        paragraph.setPageBreakPolicy(paragraph.PageBreakFlag.PageBreak_Auto)
+        paragraph.setPageBreakPolicy(QTextFormat.PageBreakFlag.PageBreak_Auto)
         cursor.insertBlock(paragraph)
         cursor.endEditBlock()
         self.editor.setTextCursor(cursor)
+        self.schedule_pages()
 
-    def update_status(self):
-        content = self.editor.toPlainText()
-        self.statusBar().showMessage(f"{len(content.split())} Wörter  ·  {len(content)} Zeichen")
+    def blank_page(self):
+        self.page_break()
+        cursor = self.editor.textCursor()
+        self.page_break()
+        cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+        self.editor.setTextCursor(cursor)
 
-    def update_title(self):
-        name = self.path.name if self.path else "Unbenannt"
-        self.setWindowTitle(f"{name}[*] – Creative Writer")
+    def insert_table(self, rows, cols):
+        fmt = QTextTableFormat()
+        fmt.setBorder(1)
+        fmt.setBorderBrush(QColor("#9aa3b5"))
+        fmt.setBorderCollapse(True)
+        fmt.setCellPadding(5)
+        fmt.setCellSpacing(0)
+        fmt.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+        cursor = self.editor.textCursor()
+        cursor.insertTable(rows, cols, fmt)
+        self.editor.setTextCursor(cursor)
+        self.focus_editor()
 
+    def table_dialog(self):
+        rows, ok = QInputDialog.getInt(self, "Tabelle einfügen", "Zeilen", 3, 1, 200)
+        if not ok:
+            return
+        cols, ok = QInputDialog.getInt(self, "Tabelle einfügen", "Spalten", 3, 1, 30)
+        if ok:
+            self.insert_table(rows, cols)
+
+    def table_edit(self, what):
+        cursor = self.editor.textCursor()
+        table = cursor.currentTable()
+        if not table:
+            self.flash("Der Cursor steht in keiner Tabelle.")
+            return
+        cell = table.cellAt(cursor)
+        if what == "row":
+            table.insertRows(cell.row() + 1, 1)
+        elif what == "col":
+            table.insertColumns(cell.column() + 1, 1)
+        elif what == "delrow":
+            table.removeRows(cell.row(), 1)
+        elif what == "delcol":
+            table.removeColumns(cell.column(), 1)
+
+    def insert_picture(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Bild einfügen", str(Path.home() / "Bilder"),
+                                                  "Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.gif)")
+        if filename:
+            reader = QImageReader(filename)
+            reader.setAutoTransform(True)
+            if not self.editor.insert_image(reader.read()):
+                self.error("Das Bild konnte nicht geladen werden.")
+
+    def insert_link(self):
+        cursor = self.editor.textCursor()
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Link einfügen")
+        form = QFormLayout(dlg)
+        text = QLineEdit(cursor.selectedText())
+        url = QLineEdit(cursor.charFormat().anchorHref() if cursor.charFormat().isAnchor() else "https://")
+        form.addRow("Anzuzeigender Text", text)
+        form.addRow("Adresse", url)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec() and url.text().strip():
+            fmt = QTextCharFormat()
+            fmt.setAnchor(True)
+            fmt.setAnchorHref(url.text().strip())
+            fmt.setForeground(QColor("#2b5fd9"))
+            fmt.setFontUnderline(True)
+            cursor.insertText(text.text() or url.text().strip(), fmt)
+            cursor.setCharFormat(QTextCharFormat())
+            self.editor.setTextCursor(cursor)
+
+    def insert_rule(self):
+        cursor = self.editor.textCursor()
+        cursor.insertHtml("<hr/>")
+        cursor.insertBlock()
+
+    def header_footer_dialog(self, which):
+        label = "Kopfzeile" if which == "header" else "Fußzeile"
+        text, ok = QInputDialog.getText(
+            self, label, f"{label} (auf jeder Seite). Platzhalter: {{seite}}, {{seiten}}, {{titel}}, {{datum}}",
+            text=self.page.get(which, ""))
+        if ok:
+            self.page[which] = text
+            self.editor.document().setModified(True)
+            self.update_pages()
+
+    def set_numbers(self, value):
+        self.page["numbers"] = value
+        self.editor.document().setModified(True)
+        self.flash("Seitenzahlen erscheinen beim Drucken und im PDF." if value else "Seitenzahlen entfernt.")
+        self.update_pages()
+
+    def headings(self):
+        out = []
+        block = self.editor.document().begin()
+        while block.isValid():
+            level = block.blockFormat().headingLevel()
+            if level and block.blockFormat().property(STYLE_KEY) != "toc" and block.text().strip():
+                out.append((level, block.text().strip(), block.blockNumber()))
+            block = block.next()
+        return out
+
+    def heading_pages(self):
+        doc = self.editor.document()
+        starts, _count = page_breaks(doc, self.page)
+        pages = {}
+        for level, text, number in self.headings():
+            pages[number] = 1 + sum(1 for s in starts if s <= number)
+        return pages
+
+    def insert_toc(self, at_cursor=None):
+        heads = self.headings()
+        if not heads:
+            self.flash("Erst Überschriften setzen (Start → Formatvorlagen → Überschrift 1/2/3).")
+            return
+        pages = self.heading_pages()
+        cursor = at_cursor or self.editor.textCursor()
+        cursor.beginEditBlock()
+        tab_pos = self.content_width()
+        title_bf = QTextBlockFormat()
+        title_bf.setProperty(STYLE_KEY, "toc")
+        title_bf.setBottomMargin(8)
+        title_cf = QTextCharFormat()
+        title_cf.setFontPointSize(16)
+        title_cf.setForeground(QColor("#2b4f9e"))
+        if cursor.block().text():
+            cursor.insertBlock()
+        cursor.setBlockFormat(title_bf)
+        cursor.insertText("Inhaltsverzeichnis", title_cf)
+        for level, text, number in heads:
+            bf = QTextBlockFormat()
+            bf.setProperty(STYLE_KEY, "toc")
+            bf.setLeftMargin((level - 1) * 6 * MM)
+            bf.setBottomMargin(3)
+            bf.setTabPositions([QTextOption.Tab(tab_pos - (level - 1) * 6 * MM, QTextOption.TabType.RightTab)])
+            cf = QTextCharFormat()
+            cf.setFontPointSize(11)
+            cf.setForeground(QColor(INK))
+            cf.setFontWeight(QFont.Weight.DemiBold if level == 1 else QFont.Weight.Normal)
+            cursor.insertBlock(bf, cf)
+            cursor.insertText(f"{text}\t{pages.get(number, 1)}", cf)
+        end_bf = QTextBlockFormat()
+        end_bf.setPageBreakPolicy(QTextFormat.PageBreakFlag.PageBreak_Auto)
+        cursor.insertBlock(end_bf, QTextCharFormat())
+        cursor.endEditBlock()
+        self.flash("Inhaltsverzeichnis eingefügt – nach Änderungen „Verzeichnis aktualisieren“.")
+
+    def update_toc(self):
+        doc = self.editor.document()
+        block = doc.begin()
+        first = last = None
+        while block.isValid():
+            if block.blockFormat().property(STYLE_KEY) == "toc":
+                first = first if first is not None else block.position()
+                last = block.position() + block.length() - 1
+            block = block.next()
+        if first is None:
+            self.insert_toc()
+            return
+        cursor = QTextCursor(doc)
+        cursor.beginEditBlock()
+        cursor.setPosition(first)
+        cursor.setPosition(min(last + 1, doc.characterCount() - 1), QTextCursor.MoveMode.KeepAnchor)
+        cursor.removeSelectedText()
+        cursor.endEditBlock()
+        self.insert_toc(cursor)
+
+    # ---- Layout -------------------------------------------------------------------------
+    def set_margins(self, values):
+        self.page["margins_mm"] = list(values)
+        self.page_changed()
+
+    def set_orientation(self, landscape):
+        w, h = sorted((self.page["width_mm"], self.page["height_mm"]))
+        self.page["width_mm"], self.page["height_mm"] = (h, w) if landscape else (w, h)
+        self.page["landscape"] = landscape
+        self.page_changed()
+
+    def set_size(self, name):
+        w, h = PAGE_SIZES[name]
+        if self.page.get("landscape"):
+            w, h = h, w
+        self.page["size"] = name
+        self.page["width_mm"], self.page["height_mm"] = w, h
+        self.page_changed()
+
+    def set_page_color(self, color):
+        self.page["color"] = color.name() if color else "#ffffff"
+        self.page_changed()
+
+    def page_changed(self):
+        self.editor.document().setModified(True)
+        self.apply_page()
+
+    def page_dialog(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Seite einrichten")
+        form = QFormLayout(dlg)
+        size = QComboBox()
+        size.addItems(list(PAGE_SIZES) + ["Benutzerdefiniert"])
+        width = self.spin(" mm", 50, 1000, 1, 1)
+        height = self.spin(" mm", 50, 1000, 1, 1)
+        width.setValue(self.page["width_mm"])
+        height.setValue(self.page["height_mm"])
+        current = self.page_name().split()[0]
+        size.setCurrentText(current if current in PAGE_SIZES else "Benutzerdefiniert")
+
+        def size_changed(name):
+            if name in PAGE_SIZES:
+                w, h = PAGE_SIZES[name]
+                if width.value() > height.value():
+                    w, h = h, w
+                width.setValue(w)
+                height.setValue(h)
+        size.currentTextChanged.connect(size_changed)
+        orient = QComboBox()
+        orient.addItems(["Hochformat", "Querformat"])
+        orient.setCurrentIndex(1 if self.page["width_mm"] > self.page["height_mm"] else 0)
+
+        def orient_changed(i):
+            w, h = sorted((width.value(), height.value()))
+            width.setValue(h if i else w)
+            height.setValue(w if i else h)
+        orient.currentIndexChanged.connect(orient_changed)
+        margins = []
+        for label, value in zip(("Oben", "Rechts", "Unten", "Links"), self.page["margins_mm"]):
+            s = self.spin(" mm", 0, 100, 0.5, 1)
+            s.setValue(value)
+            margins.append((label, s))
+        form.addRow("Papierformat", size)
+        form.addRow("Breite", width)
+        form.addRow("Höhe", height)
+        form.addRow("Ausrichtung", orient)
+        for label, s in margins:
+            form.addRow(f"Rand {label.lower()}", s)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec():
+            self.page["width_mm"], self.page["height_mm"] = width.value(), height.value()
+            self.page["landscape"] = width.value() > height.value()
+            self.page["margins_mm"] = [s.value() for _l, s in margins]
+            self.page_changed()
+
+    # ---- Überprüfen ---------------------------------------------------------------------
+    def toggle_spell(self, on):
+        self.speller.set_enabled(on)
+        self.update_status()
+
+    def word_count(self):
+        text = self.editor.toPlainText()
+        words = len(WORD_RE.findall(text))
+        paragraphs = sum(1 for line in text.split("\n") if line.strip())
+        QMessageBox.information(
+            self, "Wörter zählen",
+            f"Seiten: {getattr(self, 'page_count', 1)}\nWörter: {words}\n"
+            f"Zeichen (ohne Leerzeichen): {len(re.sub(r'\s', '', text))}\n"
+            f"Zeichen (mit Leerzeichen): {len(text)}\nAbsätze: {paragraphs}")
+
+    def read_aloud(self):
+        import shutil
+        import subprocess
+        cursor = self.editor.textCursor()
+        text = cursor.selectedText() if cursor.hasSelection() else self.editor.toPlainText()
+        text = text.replace(" ", "\n")[:5000]
+        for cmd in (["spd-say", "-l", "de", "-w"], ["espeak-ng", "-v", "de"], ["espeak", "-v", "de"]):
+            if shutil.which(cmd[0]):
+                subprocess.Popen(cmd + [text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                return
+        self.flash("Vorlesen braucht „speech-dispatcher“ oder „espeak-ng“.")
+
+    # ---- Ansicht ------------------------------------------------------------------------
+    def toggle_nav(self, on):
+        self.nav.setVisible(bool(on))
+        if on:
+            self.update_navigation()
+
+    def update_navigation(self):
+        if not self.nav.isVisible():
+            return
+        self.nav_list.clear()
+        for level, text, number in self.headings():
+            item = QListWidgetItem(("    " * (level - 1)) + text)
+            item.setData(Qt.ItemDataRole.UserRole, number)
+            f = item.font()
+            f.setBold(level == 1)
+            item.setFont(f)
+            self.nav_list.addItem(item)
+        if not self.nav_list.count():
+            item = QListWidgetItem("Noch keine Überschriften")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.nav_list.addItem(item)
+
+    def jump_to_heading(self, item):
+        number = item.data(Qt.ItemDataRole.UserRole)
+        if number is None:
+            return
+        block = self.editor.document().findBlockByNumber(number)
+        cursor = QTextCursor(block)
+        self.editor.setTextCursor(cursor)
+        rect = self.proxy.mapRectToScene(QRectF(self.editor.cursorRect()))
+        self.view.centerOn(rect.center().x(), rect.top() + self.view.viewport().height() / 2.4 / (self.zoom / 100))
+        self.focus_editor()
+
+    # ---- Suchen -------------------------------------------------------------------------
+    def find_focus(self):
+        cursor = self.editor.textCursor()
+        if cursor.hasSelection():
+            self.search.setText(cursor.selectedText())
+        self.search.setFocus()
+        self.search.selectAll()
+
+    def find_text(self, term):
+        if not term:
+            return
+        self.find_term = term
+        self.find_next()
+
+    def find_next(self):
+        if not self.find_term:
+            return self.find_focus()
+        if self.editor.find(self.find_term):
+            self.ensure_cursor_visible()
+            return
+        previous = self.editor.textCursor()
+        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
+        if not self.editor.find(self.find_term):
+            self.editor.setTextCursor(previous)
+            self.flash("Kein Treffer.")
+        self.ensure_cursor_visible()
+
+    def replace_dialog(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Suchen und Ersetzen")
+        form = QFormLayout(dlg)
+        find = QLineEdit(self.editor.textCursor().selectedText() or self.find_term)
+        repl = QLineEdit()
+        case = QCheckBox("Groß-/Kleinschreibung beachten")
+        whole = QCheckBox("Nur ganzes Wort")
+        form.addRow("Suchen nach", find)
+        form.addRow("Ersetzen durch", repl)
+        form.addRow(case)
+        form.addRow(whole)
+        buttons = QDialogButtonBox()
+        all_btn = buttons.addButton("Alle ersetzen", QDialogButtonBox.ButtonRole.AcceptRole)
+        all_btn.setDefault(True)
+        buttons.addButton("Abbrechen", QDialogButtonBox.ButtonRole.RejectRole)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if not dlg.exec() or not find.text():
+            return
+        flags = QTextDocument.FindFlag(0)
+        if case.isChecked():
+            flags |= QTextDocument.FindFlag.FindCaseSensitively
+        if whole.isChecked():
+            flags |= QTextDocument.FindFlag.FindWholeWords
+        doc = self.editor.document()
+        group = self.editor.textCursor()
+        group.beginEditBlock()
+        count = 0
+        cursor = doc.find(find.text(), 0, flags)
+        while not cursor.isNull():
+            cursor.insertText(repl.text())
+            count += 1
+            cursor = doc.find(find.text(), cursor, flags)
+        group.endEditBlock()
+        self.find_term = find.text()
+        self.flash(f"{count} Ersetzung(en) vorgenommen.")
+
+    # ---- Dateien ------------------------------------------------------------------------
     def error(self, message):
-        QMessageBox.warning(self, "Creative Writer", str(message))
+        QMessageBox.warning(self, APP, str(message))
+
+    def flash(self, text):
+        self.st_spell.setText(text)
+        QTimer.singleShot(4000, self.update_status)
 
     def can_discard(self):
         if not self.editor.document().isModified():
             return True
         buttons = QMessageBox.StandardButton
         reply = QMessageBox.question(self, "Änderungen speichern?",
-                                     "Das Dokument enthält ungespeicherte Änderungen.",
+                                     f"Möchten Sie die Änderungen an „{self.path.name if self.path else 'Dokument1'}“ speichern?",
                                      buttons.Save | buttons.Discard | buttons.Cancel, buttons.Save)
         return reply == buttons.Discard or (reply == buttons.Save and self.save())
 
-    def new(self):
-        if self.can_discard():
-            self.editor.clear()
-            self.path = None
-            self.editor.document().setModified(False)
-            self.update_title()
+    def new_document(self, ask=True):
+        if ask and not self.can_discard():
+            return False
+        doc = self.editor.document()
+        doc.clear()
+        self.path = None
+        self.page = default_page()
+        self.apply_page()
+        cursor = QTextCursor(doc)
+        bf = QTextBlockFormat()
+        bf.setBottomMargin(8 / 0.75)
+        bf.setLineHeight(115, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)
+        cf = QTextCharFormat()
+        cf.setForeground(QColor(INK))
+        cursor.setBlockFormat(bf)
+        cursor.setBlockCharFormat(cf)
+        self.editor.setTextCursor(cursor)
+        doc.clearUndoRedoStacks()
+        doc.setModified(False)
+        self.update_title()
+        self.update_pages()
+        return True
+
+    def new_from_template(self, key):
+        if not self.new_document():
+            return
+        self.hide_backstage()
+        if key == "leer":
+            return
+        ed = self.editor
+        today = QDate.currentDate().toString("dd.MM.yyyy")
+
+        def para(text, style="standard", **char):
+            cursor = ed.textCursor()
+            if cursor.block().text() or cursor.block().blockNumber():
+                cursor.insertBlock()
+                ed.setTextCursor(cursor)
+            self.apply_style_key(style)
+            cf = QTextCharFormat()
+            for k, v in char.items():
+                getattr(cf, "set" + k[0].upper() + k[1:])(v)
+            ed.textCursor().insertText(text, cf if char else ed.currentCharFormat())
+
+        if key == "brief":
+            self.set_margins((20, 20, 20, 25))
+            para("Max Mustermann · Musterstraße 1 · 12345 Musterstadt", "kein", fontPointSize=8)
+            for line in ("Firma Beispiel GmbH", "Frau Erika Beispiel", "Beispielweg 2", "54321 Beispielstadt"):
+                para(line, "kein")
+            para("", "kein")
+            para(f"Musterstadt, {today}", "standard")
+            ed.setAlignment(Qt.AlignmentFlag.AlignRight)
+            para("Betreff: Ihr Angebot vom …", "standard", fontWeight=QFont.Weight.Bold)
+            para("Sehr geehrte Frau Beispiel,", "standard")
+            para("hier steht der Text Ihres Briefes.", "standard")
+            para("Mit freundlichen Grüßen", "standard")
+            para("", "kein")
+            para("Max Mustermann", "standard")
+        elif key == "bericht":
+            para("Titel des Berichts", "titel")
+            para(f"Untertitel · {today}", "untertitel")
+            para("Einleitung", "h1")
+            para("Worum geht es? Beschreiben Sie kurz Ziel und Hintergrund.")
+            para("Ergebnisse", "h1")
+            para("Erste Erkenntnis", "h2")
+            para("Text …")
+            para("Fazit", "h1")
+            para("Zusammenfassung und nächste Schritte.")
+            self.page["numbers"] = "mitte-von"
+        elif key == "notizen":
+            para("Besprechung", "titel")
+            para(f"{today} · Teilnehmer: …", "untertitel")
+            para("Themen", "h2")
+            for t in ("Punkt 1", "Punkt 2"):
+                para(t)
+            ed.textCursor().createList(QTextListFormat.Style.ListDisc)
+            para("Aufgaben", "h2")
+            para("Wer macht was bis wann")
+        elif key == "lebenslauf":
+            para("Vorname Nachname", "titel")
+            para("E-Mail · Telefon · Ort", "untertitel")
+            para("Berufserfahrung", "h1")
+            para("Seit 2020 · Position, Firma", "standard", fontWeight=QFont.Weight.Bold)
+            para("Aufgaben und Erfolge")
+            para("Ausbildung", "h1")
+            para("2015–2019 · Abschluss, Schule/Hochschule")
+            para("Kenntnisse", "h1")
+            para("Sprachen, Programme, Führerschein …")
+        ed.moveCursor(QTextCursor.MoveOperation.Start)
+        ed.document().clearUndoRedoStacks()
+        ed.document().setModified(False)
+        self.update_pages()
 
     def open_dialog(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Dokument öffnen", "", OPEN_FILTER)
-        if filename and self.can_discard():
-            self.open_document(Path(filename))
-
-    def open_document(self, path):
-        try:
-            if path.suffix.lower() not in (".html", ".htm", ".txt"):
-                raise ValueError("Bitte ein HTML- oder Textdokument auswählen.")
-            content = path.read_text(encoding="utf-8-sig")
-        except (ValueError, OSError) as error:
-            self.error(error)
+        if not self.can_discard():
             return
-        if path.suffix.lower() == ".txt":
-            self.editor.setPlainText(content)
-            self.path = None
-        else:
-            self.editor.setHtml(content)
-            self.path = path
-        self.editor.document().setModified(False)
+        start = str(self.path.parent if self.path else Path.home() / "Dokumente")
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Dokument öffnen", start,
+            "Alle Dokumente (*.docx *.html *.htm *.txt *.md);;Word-Dokument (*.docx);;Webseite (*.html *.htm);;"
+            "Text (*.txt);;Markdown (*.md)")
+        if filename:
+            self.open_document(Path(filename), ask=False)
+
+    def open_document(self, path, ask=True):
+        if ask and not self.can_discard():
+            return False
+        path = Path(path)
+        suffix = path.suffix.lower()
+        doc = self.editor.document()
+        page = default_page()
+        try:
+            if suffix == ".docx":
+                page.update(writer_docx.import_docx(path, doc))
+                page = page_from(page)
+            elif suffix in (".html", ".htm"):
+                content = path.read_text(encoding="utf-8-sig")
+                doc.setHtml(content)
+                page = page_from(meta_from_html(content))
+            elif suffix == ".md":
+                doc.setMarkdown(path.read_text(encoding="utf-8-sig"))
+            elif suffix in (".txt", ""):
+                doc.setPlainText(path.read_text(encoding="utf-8-sig", errors="replace"))
+            elif suffix == ".odt":
+                raise ValueError("OpenDocument-Dateien kann Creative Writer exportieren, aber noch nicht öffnen.")
+            else:
+                raise ValueError("Dieses Dateiformat kann Creative Writer nicht öffnen.")
+        except Exception as error:
+            self.error(f"„{path.name}“ konnte nicht geöffnet werden:\n{error}")
+            return False
+        self.page = page
+        self.apply_page()
+        self.path = path if suffix in (".docx", ".html", ".htm") else None
+        if self.path is None:
+            self.import_name = path.stem
+        self.add_recent(path)
+        doc.clearUndoRedoStacks()
+        doc.setModified(False)
+        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
         self.update_title()
+        self.update_pages()
+        self.update_navigation()
+        self.hide_backstage()
+        return True
 
     def save(self):
-        if self.path is None:
+        if self.path is None or self.path.suffix.lower() not in (".docx", ".html", ".htm"):
             return self.save_as()
         return self.save_document(self.path)
 
     def save_as(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Dokument speichern",
-                                                 str(self.path or Path("Dokument.html")), HTML_FILTER)
+        name = (self.path.stem if self.path else getattr(self, "import_name", "Dokument"))
+        start = (self.path.parent if self.path else Path.home() / "Dokumente")
+        if writer_docx.AVAILABLE:
+            filters = "Word-Dokument (*.docx);;Webseite (*.html)"
+            default = start / (name + ".docx")
+        else:
+            filters = "Webseite (*.html)"
+            default = start / (name + ".html")
+        filename, chosen = QFileDialog.getSaveFileName(self, "Speichern unter", str(default), filters)
         if not filename:
             return False
         path = Path(filename)
-        if path.suffix.lower() not in (".html", ".htm"):
-            path = path.with_name(path.name + ".html")
-            if not self.confirm_overwrite(path):
+        if path.suffix.lower() not in (".docx", ".html", ".htm"):
+            path = path.with_name(path.name + (".docx" if "docx" in (chosen or "") else ".html"))
+            if path.exists() and not self.confirm_overwrite(path):
                 return False
         return self.save_document(path)
 
     def confirm_overwrite(self, path):
-        if not path.exists():
-            return True
-        return QMessageBox.question(self, "Datei ersetzen?", f"„{path.name}“ existiert bereits. Ersetzen?") == QMessageBox.StandardButton.Yes
+        return QMessageBox.question(self, "Datei ersetzen?", f"„{path.name}“ ist bereits vorhanden. Ersetzen?") \
+            == QMessageBox.StandardButton.Yes
 
     def save_document(self, path):
         try:
-            save_bytes(path, self.editor.toHtml().encode("utf-8"))
-        except OSError as error:
-            self.error(error)
+            self.write_file(path, path.suffix.lower().lstrip("."))
+        except Exception as error:
+            self.error(f"Speichern fehlgeschlagen:\n{error}")
             return False
         self.path = path
+        self.add_recent(path)
         self.editor.document().setModified(False)
+        self.remove_backup()
         self.update_title()
+        self.flash(f"Gespeichert: {path.name}")
         return True
 
-    def find_dialog(self):
-        term, ok = QInputDialog.getText(self, "Suchen", "Suchbegriff", text=self.find_term)
-        if ok and term:
-            self.find_term = term
-            self.find_next()
+    def write_file(self, path, kind):
+        doc = self.editor.document()
+        title = path.stem
+        if kind == "docx":
+            tmp = path.with_name(f".{path.name}.teil")
+            writer_docx.export_docx(doc, tmp, self.page, title)
+            tmp.replace(path)
+        elif kind in ("html", "htm"):
+            save_bytes(path, html_with_meta(doc.toHtml(), self.page).encode("utf-8"))
+        elif kind == "odt":
+            tmp = path.with_name(f".{path.name}.teil")
+            writer = QTextDocumentWriter(str(tmp), QByteArray(b"odf"))
+            if not writer.write(doc):
+                raise OSError("OpenDocument-Datei konnte nicht geschrieben werden.")
+            tmp.replace(path)
+        elif kind == "md":
+            save_bytes(path, doc.toMarkdown().encode("utf-8"))
+        elif kind == "txt":
+            save_bytes(path, doc.toPlainText().encode("utf-8"))
+        elif kind == "pdf":
+            export_pdf(doc, self.page, path, title)
+        else:
+            raise ValueError(kind)
 
-    def find_next(self):
-        if not self.find_term:
-            return self.find_dialog()
-        if self.editor.find(self.find_term):
+    def export_as(self, kind):
+        if kind == "docx" and not writer_docx.AVAILABLE:
+            self.error("Für Word-Dateien fehlt python3-docx.")
             return
-        previous = self.editor.textCursor()
-        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
-        if not self.editor.find(self.find_term):
-            self.editor.setTextCursor(previous)
-            self.statusBar().showMessage("Kein Treffer.", 3000)
-
-    def replace_dialog(self):
-        term, ok = QInputDialog.getText(self, "Alle Treffer ersetzen", "Suchbegriff", text=self.find_term)
-        if not ok or not term:
-            return
-        replacement, ok = QInputDialog.getText(self, "Alle Treffer ersetzen", "Ersetzen durch")
-        if not ok:
-            return
-        self.find_term = term
-        document = self.editor.document()
-        group = self.editor.textCursor()
-        group.beginEditBlock()
-        count = 0
-        cursor = document.find(term, 0)
-        while not cursor.isNull():
-            cursor.insertText(replacement)
-            count += 1
-            cursor = document.find(term, cursor)
-        group.endEditBlock()
-        self.statusBar().showMessage(f"{count} Treffer ersetzt.", 3000)
-
-    def print_copy(self):
-        document = self.editor.document().clone()
-        document.setDocumentMargin(4)
-        return document
-
-    def preview(self):
-        printer = make_printer()
-        document = self.print_copy()
-        dialog = QPrintPreviewDialog(printer, self)
-        dialog.paintRequested.connect(document.print_)
-        dialog.exec()
-
-    def print_document(self):
-        printer = make_printer()
-        if QPrintDialog(printer, self).exec():
-            self.print_copy().print_(printer)
-
-    def pdf_dialog(self):
-        filename, _ = QFileDialog.getSaveFileName(
-            self, "Als PDF speichern", str((self.path or Path("Dokument")).with_suffix(".pdf")), "PDF (*.pdf)"
-        )
+        names = {"docx": "Word-Dokument (*.docx)", "odt": "OpenDocument-Text (*.odt)", "html": "Webseite (*.html)",
+                 "md": "Markdown (*.md)", "txt": "Text (*.txt)", "pdf": "PDF (*.pdf)"}
+        name = self.path.stem if self.path else "Dokument"
+        start = self.path.parent if self.path else Path.home() / "Dokumente"
+        filename, _ = QFileDialog.getSaveFileName(self, "Exportieren", str(start / f"{name}.{kind}"), names[kind])
         if not filename:
             return
         path = Path(filename)
-        if path.suffix.lower() != ".pdf":
-            path = path.with_name(path.name + ".pdf")
-            if not self.confirm_overwrite(path):
+        if path.suffix.lower() != "." + kind:
+            path = path.with_name(path.name + "." + kind)
+            if path.exists() and not self.confirm_overwrite(path):
                 return
         try:
-            export_pdf(self.print_copy(), path)
-        except OSError as error:
-            self.error(error)
-        else:
-            self.statusBar().showMessage("PDF gespeichert.", 3000)
+            self.write_file(path, kind)
+        except Exception as error:
+            self.error(f"Export fehlgeschlagen:\n{error}")
+            return
+        self.flash(f"Exportiert: {path.name}")
+        self.hide_backstage()
+
+    def pdf_dialog(self):
+        self.export_as("pdf")
+
+    def make_printer(self):
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setDocName(self.path.stem if self.path else "Dokument")
+        return printer
+
+    def preview(self):
+        printer = self.make_printer()
+        dialog = QPrintPreviewDialog(printer, self)
+        dialog.setWindowTitle("Druckvorschau")
+        dialog.resize(1000, 800)
+        title = self.path.stem if self.path else "Dokument"
+        dialog.paintRequested.connect(lambda p: render_pages(self.editor.document(), self.page, p, title))
+        dialog.exec()
+
+    def print_document(self):
+        printer = self.make_printer()
+        dialog = QPrintDialog(printer, self)
+        dialog.setWindowTitle("Drucken")
+        if dialog.exec():
+            try:
+                render_pages(self.editor.document(), self.page, printer, self.path.stem if self.path else "")
+            except OSError as error:
+                self.error(error)
+
+    # ---- Zuletzt verwendet und Wiederherstellung ---------------------------------------
+    def add_recent(self, path):
+        items = [str(path)] + [p for p in self.recent() if p != str(path)]
+        self.settings.setValue("recent", items[:15])
+
+    def recent(self):
+        value = self.settings.value("recent", [])
+        if isinstance(value, str):
+            value = [value]
+        return [p for p in (value or []) if p]
+
+    def refresh_recent(self):
+        for lst in (self.recent_list, self.recent_list_info):
+            lst.clear()
+            for p in self.recent():
+                path = Path(p)
+                item = QListWidgetItem(icons.icon("word" if path.suffix == ".docx" else "page", C["muted"]),
+                                       f"{path.name}\n{path.parent}")
+                item.setData(Qt.ItemDataRole.UserRole, p)
+                if not path.exists():
+                    item.setFlags(Qt.ItemFlag.NoItemFlags)
+                lst.addItem(item)
+            if not lst.count():
+                item = QListWidgetItem("Noch keine Dokumente geöffnet.")
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+                lst.addItem(item)
+
+    def open_recent_item(self, item):
+        p = item.data(Qt.ItemDataRole.UserRole)
+        if p and Path(p).exists():
+            self.open_document(Path(p))
+
+    def backup_dir(self):
+        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "creative-writer" / "wiederherstellung"
+        return base
+
+    def backup(self):
+        doc = self.editor.document()
+        if not doc.isModified() or doc.isEmpty():
+            return
+        folder = self.backup_dir()
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            name = (self.path.stem if self.path else "Dokument1") + f"-{os.getpid()}.html"
+            meta = dict(self.page, original=str(self.path) if self.path else "")
+            save_bytes(folder / name, html_with_meta(doc.toHtml(), meta).encode("utf-8"))
+            self.backup_file = folder / name
+        except OSError:
+            pass
+
+    def remove_backup(self):
+        f = getattr(self, "backup_file", None)
+        if f:
+            try:
+                f.unlink()
+            except OSError:
+                pass
+            self.backup_file = None
+
+    def offer_recovery(self):
+        folder = self.backup_dir()
+        if not folder.is_dir():
+            return
+        files = sorted(folder.glob("*.html"), key=lambda p: p.stat().st_mtime, reverse=True)
+        def running(f):
+            pid = f.stem.rsplit("-", 1)[-1]
+            return pid.isdigit() and Path(f"/proc/{pid}").exists()
+        files = [f for f in files if not running(f)]
+        if not files:
+            return
+        newest = files[0]
+        when = time.strftime("%d.%m. %H:%M", time.localtime(newest.stat().st_mtime))
+        reply = QMessageBox.question(
+            self, "Dokument wiederherstellen?",
+            f"Creative Writer wurde nicht richtig beendet. Es gibt eine automatische Sicherung "
+            f"von {when} („{newest.name.rsplit('-', 1)[0]}“). Wiederherstellen?")
+        if reply == QMessageBox.StandardButton.Yes:
+            content = newest.read_text(encoding="utf-8")
+            meta = meta_from_html(content)
+            self.editor.document().setHtml(content)
+            self.page = page_from(meta)
+            self.apply_page()
+            original = meta.get("original")
+            self.path = Path(original) if original else None
+            self.editor.document().setModified(True)
+            self.update_title()
+            self.update_pages()
+        for f in files:
+            try:
+                f.unlink()
+            except OSError:
+                pass
 
     def closeEvent(self, event):
-        event.setAccepted(self.can_discard())
+        if self.can_discard():
+            self.remove_backup()
+            event.accept()
+        else:
+            event.ignore()
+
+
+# ---------------------------------------------------------------------------------------------
+def demo(window):
+    """Beispieldokument (für Bildschirmfotos: --beispiel)."""
+    window.new_from_template("bericht")
+    ed = window.editor
+    cursor = ed.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.End)
+    cursor.insertBlock()
+    ed.setTextCursor(cursor)
+    window.apply_style_key("h2")
+    ed.textCursor().insertText("Zahlen im Überblick")
+    c = ed.textCursor()
+    c.insertBlock()
+    ed.setTextCursor(c)
+    window.apply_style_key("standard")
+    window.insert_table(3, 3)
+    t = ed.textCursor().currentTable()
+    for r, row in enumerate((("Quartal", "Umsatz", "Plus"), ("Q1", "12.400 €", "+8 %"), ("Q2", "15.100 €", "+22 %"))):
+        for col, text in enumerate(row):
+            cell = t.cellAt(r, col).firstCursorPosition()
+            fmt = QTextCharFormat()
+            if r == 0:
+                fmt.setFontWeight(QFont.Weight.Bold)
+            cell.insertText(text, fmt)
+    ed.moveCursor(QTextCursor.MoveOperation.Start)
+    ed.document().setModified(False)
+    window.a_nav.setChecked(True)
+    window.toggle_nav(True)
+    window.update_pages()
+
+
+def selftest(window):
+    import tempfile
+    demo(window)
+    tmp = Path(tempfile.mkdtemp(prefix="writer-test-"))
+    window.apply_style_key("h1")
+    window.insert_toc()
+    window.update_toc()
+    for kind in ("html", "odt", "md", "txt", "pdf") + (("docx",) if writer_docx.AVAILABLE else ()):
+        path = tmp / f"test.{kind}"
+        window.write_file(path, kind)
+        assert path.stat().st_size > 0, kind
+    if writer_docx.AVAILABLE:
+        assert window.open_document(tmp / "test.docx", ask=False)
+        assert "Einleitung" in window.editor.toPlainText(), "docx-Rückweg"
+    assert window.open_document(tmp / "test.html", ask=False)
+    print(f"Selbsttest ok ({'mit' if writer_docx.AVAILABLE else 'ohne'} Word, "
+          f"Rechtschreibung {'ja' if window.speller.available else 'nein'})")
 
 
 def main():
     arguments = sys.argv[1:]
+    QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Country.Germany))
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("Creative Writer")
+    app.setApplicationName(APP)
+    app.setOrganizationName("CreativeOS")
     app.setDesktopFileName("creative-writer")
     app.setWindowIcon(QIcon.fromTheme("creative-writer"))
     app.setStyle("Fusion")
     palette = app.palette()
-    for role, color in {
-        QPalette.ColorRole.Window: "#12151b",
-        QPalette.ColorRole.WindowText: "#dce6ff",
-        QPalette.ColorRole.Base: "#1c2029",
-        QPalette.ColorRole.AlternateBase: "#232836",
-        QPalette.ColorRole.Text: "#dce6ff",
-        QPalette.ColorRole.Button: "#232836",
-        QPalette.ColorRole.ButtonText: "#dce6ff",
-        QPalette.ColorRole.Highlight: "#8fb3ff",
-        QPalette.ColorRole.HighlightedText: "#12151b",
-    }.items():
-        palette.setColor(role, QColor(color))
+    for role, key in ((QPalette.ColorRole.Window, "ground"), (QPalette.ColorRole.WindowText, "text"),
+                      (QPalette.ColorRole.Base, "surface"), (QPalette.ColorRole.AlternateBase, "raised"),
+                      (QPalette.ColorRole.Text, "text"), (QPalette.ColorRole.Button, "raised"),
+                      (QPalette.ColorRole.ButtonText, "text"), (QPalette.ColorRole.Highlight, "accent"),
+                      (QPalette.ColorRole.HighlightedText, "accentText"), (QPalette.ColorRole.ToolTipBase, "raised"),
+                      (QPalette.ColorRole.ToolTipText, "text"), (QPalette.ColorRole.PlaceholderText, "dim")):
+        palette.setColor(role, QColor(C[key]))
     app.setPalette(palette)
     window = Writer()
     if arguments == ["--selftest"]:
-        window.show()
-        app.processEvents()
+        selftest(window)
         return 0
-    if arguments:
-        window.open_document(Path(arguments[0]))
+    if arguments == ["--beispiel"]:
+        demo(window)
+    elif arguments:
+        window.open_document(Path(arguments[0]), ask=False)
     window.show()
+    if not arguments:
+        QTimer.singleShot(300, window.offer_recovery)
     return app.exec()
 
 

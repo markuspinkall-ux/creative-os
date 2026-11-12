@@ -15,6 +15,14 @@ from PySide6.QtWidgets import (
 from .dbus_service import PATH, SERVICE
 from .widget_extras import CLOCK_URL, clock_descriptor, read_small
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 
 class WidgetWindow(QMainWindow):
     downloaded = Signal(str, str)
@@ -214,10 +222,10 @@ def main():
     app.setStyle("Fusion")
     palette = app.palette()
     for role, color in {
-        QPalette.ColorRole.Window: "#161922", QPalette.ColorRole.WindowText: "#dce6ff",
-        QPalette.ColorRole.Base: "#131722", QPalette.ColorRole.Text: "#dce6ff",
-        QPalette.ColorRole.Button: "#293246", QPalette.ColorRole.ButtonText: "#dce6ff",
-        QPalette.ColorRole.Highlight: "#84a9f7", QPalette.ColorRole.HighlightedText: "#111827",
+        QPalette.ColorRole.Window: T("#161922"), QPalette.ColorRole.WindowText: T("#dce6ff"),
+        QPalette.ColorRole.Base: T("#131722"), QPalette.ColorRole.Text: T("#dce6ff"),
+        QPalette.ColorRole.Button: T("#293246"), QPalette.ColorRole.ButtonText: T("#dce6ff"),
+        QPalette.ColorRole.Highlight: T("#84a9f7"), QPalette.ColorRole.HighlightedText: T("#111827"),
     }.items():
         palette.setColor(role, QColor(color))
     app.setPalette(palette)

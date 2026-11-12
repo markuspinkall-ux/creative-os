@@ -1,0 +1,41 @@
+# Creative Engine als Flatpak – wird NICHT ins Creative-OS-Abbild gebaut, sondern über
+# Creative Software → „Eigene Apps“ angeboten (Workflow „Eigene Apps veröffentlichen“).
+# Die Version von KDE-Laufzeit und PySide-Basis setzt der Workflow (@VERSION@).
+id: org.creativeos.Engine
+runtime: org.kde.Platform
+runtime-version: '@VERSION@'
+sdk: org.kde.Sdk
+base: io.qt.PySide.BaseApp
+base-version: '@VERSION@'
+command: creative-engine
+build-options:
+  env:
+    - BASEAPP_REMOVE_WEBENGINE=1
+cleanup-commands:
+  - /app/cleanup-BaseApp.sh
+finish-args:
+  - --share=network            # Spiel-Motor einmalig herunterladen
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio         # Ton beim Testspielen
+  - --device=all                # 3D-Beschleunigung (Godot) und Gamepads beim Testspielen
+  - --filesystem=home           # Projekte (~/Creative Engine) und Exporte (~/Spiele)
+  - --filesystem=xdg-config/creative-os:ro   # Graphit/Porzellan und Akzentfarbe
+  - --talk-name=org.freedesktop.Flatpak      # Claude (Creative Claude) für KI-Bewegungen, Bereitschaft verhindern
+modules:
+  - name: creative-engine
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/creative-engine
+      - cp -r creative_engine /app/lib/creative-engine/
+      - rm -rf /app/lib/creative-engine/creative_engine/__pycache__ /app/lib/creative-engine/creative_engine/flatpak
+      - install -Dm644 creative_look.py creative3d_rig.py creative3d_rigeditor.py -t /app/lib/creative-engine/
+      - install -Dm755 creative-engine.sh /app/bin/creative-engine
+      - install -Dm644 org.creativeos.Engine.desktop -t /app/share/applications/
+      - install -Dm644 org.creativeos.Engine.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 org.creativeos.Engine.svg -t /app/share/icons/hicolor/scalable/apps/
+      - PYTHONPATH=/app/lib/creative-engine python3 -c "from creative_engine import selftest; selftest.run()"
+    sources:
+      - type: dir
+        path: quelle

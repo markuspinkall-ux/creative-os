@@ -20,6 +20,20 @@ class LookTest(unittest.TestCase):
         self.tmp.cleanup()
         os.environ.pop("XDG_CONFIG_HOME", None)
 
+    def test_themed(self):
+        css = "background:#12151b; color:#DCE6FF; border:1px solid rgba(255,255,255,0.1); a:#8fb3ff; x:#123456"
+        self.assertEqual(look.themed(css), css)            # Graphit + Blau: unverändert
+        look.write("porzellan", "blau")
+        out = look.themed(css)
+        self.assertIn("#e9eef6", out)
+        self.assertIn("#1c2433", out)
+        self.assertIn("rgba(28,36,51,0.1)", out)
+        self.assertIn("#3d6fe0", out)
+        self.assertIn("#123456", out)                      # unbekannte Farben bleiben
+        look.write("graphit", "gruen")
+        self.assertEqual(look.themed("#8fb3ff"), "#6fdcc0")
+        self.assertEqual(look.themed(None), None)
+
     def test_default_and_write(self):
         self.assertEqual(look.read(), ("graphit", "blau"))
         self.assertEqual(look.write("porzellan"), ("porzellan", "blau"))

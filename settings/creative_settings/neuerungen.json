@@ -1,8 +1,12 @@
 [
   {
     "datum": "2026-11-12",
-    "titel": "Helles Design, Ziehen & Ablegen und neue Installation",
+    "titel": "Creative Writer wie Word, helles Design für alle Apps und Ziehen & Ablegen",
     "neu": [
+      "Creative Writer im Stil von Word: Menüband, Datei-Bereich mit Vorlagen, Formatvorlagen, Inhaltsverzeichnis, Kopf- und Fußzeile mit Seitenzahlen, Zoom und Seitenansicht",
+      "Creative Writer öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown – mit Rechtschreibprüfung auf Deutsch",
+      "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
+      "Creative Software → „Eigene Apps“: die Creative Engine zum Herunterladen – Spiele per Klick bauen, mit Charakter-Editor",
       "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
       "Dateien: Ziehen & Ablegen – auf Ordner, in die Seitenleiste, zwischen Fenstern und in andere Programme (Strg = kopieren, Umschalt = verschieben)",
       "Schreibtisch: Symbole auf Ordner, in „Dateien“ oder andere Programme ziehen und Dateien von außen ablegen",
@@ -11,6 +15,7 @@
       "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
     ],
     "verbessert": [
+      "Helles Design „Porzellan“ jetzt auch in Art, Cut, FTP, 3D, Notes, Software, Widgets, OBS und auf der Brave-Startseite",
       "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
       "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
     ],

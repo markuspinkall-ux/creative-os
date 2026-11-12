@@ -25,6 +25,14 @@ except ImportError:
 
 from ftp_session import Session, UnknownHostKey, safe_name
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 
 CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os/ftp"
 PORTS = {"SFTP": 22, "FTPS": 21, "FTP": 21}

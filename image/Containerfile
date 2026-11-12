@@ -246,10 +246,15 @@ COPY art/creative-art.svg /usr/share/icons/hicolor/scalable/apps/creative-art.sv
 RUN chmod 755 /usr/bin/creative-art
 
 # Creative Writer – formatierte Dokumente, Druckvorschau und PDF.
-COPY writer/creative-writer /usr/bin/creative-writer
+# Word-Dateien (python3-docx) und Rechtschreibprüfung (Enchant + deutsches Hunspell-Wörterbuch).
+RUN dnf install -y --skip-unavailable python3-docx python3-enchant hunspell-de && dnf clean all
+COPY writer/creative-writer writer/writer_docx.py writer/writer_icons.py /usr/lib/creative-writer/
 COPY writer/creative-writer.desktop /usr/share/applications/creative-writer.desktop
 COPY writer/creative-writer.svg /usr/share/icons/hicolor/scalable/apps/creative-writer.svg
-RUN chmod 755 /usr/bin/creative-writer
+RUN chmod 755 /usr/lib/creative-writer/creative-writer \
+ && ln -sf /usr/lib/creative-writer/creative-writer /usr/bin/creative-writer \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/writer-home XDG_RUNTIME_DIR=/tmp timeout 60 /usr/lib/creative-writer/creative-writer --selftest \
+ && rm -rf /tmp/writer-home
 
 # Creative Podcast nutzt dieselbe Qt-Multimedia-Laufzeit wie Creative Player.
 COPY podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
@@ -380,7 +385,7 @@ RUN chmod 755 /usr/bin/creative-iso /usr/libexec/creative-iso-helper /usr/share/
 # Look: Graphit-Variante des OBS-Designs „Yami“; eigene virtuelle Kamera „OBS Virtuelle Kamera“ (/dev/video43)
 RUN dnf install -y --skip-unavailable obs-studio && dnf clean all \
  && (rpm -q obs-studio >/dev/null && echo "OBS: $(rpm -q --qf '%{VERSION}' obs-studio)" || echo "OBS FEHLT")
-COPY obs/Yami_CreativeGraphit.ovt /usr/share/obs/obs-studio/themes/Yami_CreativeGraphit.ovt
+COPY obs/Yami_CreativeGraphit.ovt obs/Yami_CreativePorzellan.ovt /usr/share/obs/obs-studio/themes/
 COPY obs/creative-obs /usr/bin/creative-obs
 RUN chmod 755 /usr/bin/creative-obs \
  && f=/usr/share/applications/com.obsproject.Studio.desktop; if [ -f "$f" ]; then \

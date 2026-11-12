@@ -13,11 +13,18 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButt
 
 import creative3d_rig as R
 
-GROUND = QColor("#12151b")
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
+GROUND = QColor(T("#12151b"))
 SIL = QColor(220, 230, 255, 60)
-LEFT = QColor("#8fb3ff")
-RIGHT = QColor("#ffb07a")
-MID = QColor("#dce6ff")
+LEFT = QColor(T("#8fb3ff"))
+RIGHT = QColor(T("#ffb07a"))
+MID = QColor(T("#dce6ff"))
 BONE = QColor(220, 230, 255, 150)
 HIT = 13
 

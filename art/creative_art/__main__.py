@@ -21,6 +21,14 @@ from .canvas import Canvas
 from .document import Document, MAX_SIDE, apply_alpha, check_size, read_image, transparent
 from .transform import TransformDialog
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 PROJECT = "Creative Art (*.cart)"
 IMAGES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff *.gif)"
 HANDLED_ERRORS = (OSError, ValueError, RuntimeError)
@@ -127,7 +135,7 @@ class Window(QMainWindow):
                    '<g fill="none" stroke="#dce6ff" stroke-width="1.7" stroke-linejoin="round" '
                    f'stroke-linecap="round">{shape}</g></svg>')
             icon = QPixmap()
-            icon.loadFromData(svg.encode(), "SVG")
+            icon.loadFromData(T(svg).encode(), "SVG")
             action.setIcon(QIcon(icon))
             action.setToolTip(f"{label} ({shortcut})" if shortcut else label)
             action.setCheckable(True)
@@ -379,11 +387,11 @@ class Window(QMainWindow):
             image = self.doc.layer.image
             for preset in library.presets:
                 for mode in ("paint", "erase", "smudge"):
-                    stroke = Stroke(image, preset.copy(size=min(preset.size, 40)), "#8fb3ff", library, mode)
+                    stroke = Stroke(image, preset.copy(size=min(preset.size, 40)), T("#8fb3ff"), library, mode)
                     for i in range(12):
                         stroke.add(QPointF(50 + i * 9, 60 + (i % 3) * 7), .3 + i / 20)
-            bucket_fill(image, 5, 5, "#ff0000", 40)
-            gradient_fill(image, QPointF(0, 0), QPointF(200, 100), "#00ff00", "radial", opacity=.5)
+            bucket_fill(image, 5, 5, T("#ff0000"), 40)
+            gradient_fill(image, QPointF(0, 0), QPointF(200, 100), T("#00ff00"), "radial", opacity=.5)
             self.brush_panel.library.presets.append(added[0])
             self.brush_panel.populate()
             self.brush_panel.library.presets.remove(added[0])
@@ -393,7 +401,7 @@ class Window(QMainWindow):
 
     def update_color(self):
         swatch = QPixmap(18, 18)
-        swatch.fill(QColor("#8993a6"))
+        swatch.fill(QColor(T("#8993a6")))
         with QPainter(swatch) as painter:
             painter.fillRect(1, 1, 16, 16, self.canvas.color)
         self.color_button.setIcon(QIcon(swatch))
@@ -679,15 +687,15 @@ def main():
     app.setStyle("Fusion")
     palette = app.palette()
     for role, color in {
-        QPalette.ColorRole.Window: "#1c2029",
-        QPalette.ColorRole.WindowText: "#dce6ff",
-        QPalette.ColorRole.Base: "#12151b",
-        QPalette.ColorRole.AlternateBase: "#232836",
-        QPalette.ColorRole.Text: "#dce6ff",
-        QPalette.ColorRole.Button: "#232836",
-        QPalette.ColorRole.ButtonText: "#dce6ff",
-        QPalette.ColorRole.Highlight: "#8fb3ff",
-        QPalette.ColorRole.HighlightedText: "#12151b",
+        QPalette.ColorRole.Window: T("#1c2029"),
+        QPalette.ColorRole.WindowText: T("#dce6ff"),
+        QPalette.ColorRole.Base: T("#12151b"),
+        QPalette.ColorRole.AlternateBase: T("#232836"),
+        QPalette.ColorRole.Text: T("#dce6ff"),
+        QPalette.ColorRole.Button: T("#232836"),
+        QPalette.ColorRole.ButtonText: T("#dce6ff"),
+        QPalette.ColorRole.Highlight: T("#8fb3ff"),
+        QPalette.ColorRole.HighlightedText: T("#12151b"),
     }.items():
         palette.setColor(role, QColor(color))
     app.setPalette(palette)
