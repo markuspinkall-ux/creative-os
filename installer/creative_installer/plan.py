@@ -192,6 +192,8 @@ clearpart --all --initlabel --drives={disk}
 autopart --type=btrfs --noswap
 bootloader --boot-drive={disk}
 rootpw --lock
+# Grafische Anmeldung nach dem Start (sonst setzt die Kommandozeilen-Installation multi-user)
+xconfig --startxonboot
 user --name={cfg["userName"]} --gecos="{gecos}" --groups=wheel --iscrypted --password={password_hash}
 # Creative OS kommt vom Stick (ohne Internet) …
 ostreecontainer --url={source} --transport=containers-storage --no-signature-verification
@@ -252,6 +254,20 @@ STAGES = [
     ("Running post-installation", 92, "Letzte Schritte"),
     ("Storing configuration", 96, "Einstellungen werden gespeichert"),
     ("Installation complete", 100, "Fertig"),
+    # Anaconda spricht Deutsch, sobald der Kickstart „lang de_DE“ setzt
+    ("Speicher konfigurieren", 6, "Festplatte wird eingerichtet"),
+    ("Vor-Installations-Aufgaben", 11, "Installation wird vorbereitet"),
+    ("Installieren der Software", 12, "Creative OS wird kopiert"),
+    ("Deployment startet", 14, "Creative OS wird kopiert"),
+    ("Deployment abgeschlossen", 75, "Creative OS ist kopiert"),
+    ("Bootloader installieren", 78, "Startmenü wird eingerichtet"),
+    ("Post-Installationsaufgaben", 80, "System wird eingerichtet"),
+    ("Installiertes System konfigurieren", 82, "System wird eingerichtet"),
+    ("Erstelle Benutzer", 84, "Dein Benutzerkonto wird angelegt"),
+    ("erzeuge initramfs", 88, "Startdateien werden erzeugt"),
+    ("Speichere Kickstart", 92, "Einstellungen werden gespeichert"),
+    ("Post-Installationsskripte", 94, "Letzte Schritte"),
+    ("Fertig!", 100, "Fertig"),
 ]
 
 
