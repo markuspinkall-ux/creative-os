@@ -121,3 +121,10 @@ static func pick_animation(player: AnimationPlayer, words: Array) -> String:
 			if String(name).to_lower().contains(w):
 				return name
 	return ""
+
+
+static func set_loop(player: AnimationPlayer, name: String, loop: bool) -> void:
+	if player == null or name == "" or not player.has_animation(name):
+		return
+	var a := player.get_animation(name)
+	a.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE

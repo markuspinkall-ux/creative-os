@@ -75,8 +75,8 @@ func build_environment() -> void:
 	env.background_color = Color(String(data.get("sky", "#8ec5ff")))
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(1, 1, 1)
-	env.ambient_light_energy = 0.55
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.ambient_light_energy = 0.35
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	if data.get("fog", false):
 		env.fog_enabled = true
 		env.fog_light_color = env.background_color
@@ -86,7 +86,7 @@ func build_environment() -> void:
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, -30, 0)
-	sun.light_energy = 1.1
+	sun.light_energy = 0.85
 	sun.shadow_enabled = true
 	add_child(sun)
 	# Weiter Boden hinter dem Level (Horizont)
@@ -94,9 +94,9 @@ func build_environment() -> void:
 	if floor_color != "":
 		var plane := MeshInstance3D.new()
 		var pm := PlaneMesh.new()
-		pm.size = Vector2(width + 200, 120)
+		pm.size = Vector2(width + 200, 112)
 		plane.mesh = pm
-		plane.position = Vector3(width / 2.0, -0.5, -55)
+		plane.position = Vector3(width / 2.0, -0.5, -59)
 		plane.material_override = mat(Color(floor_color), 1.0)
 		add_child(plane)
 
@@ -299,9 +299,9 @@ func add_goal(p: Vector3) -> void:
 func _goal_hit(body: Node) -> void:
 	if body == player and not done:
 		done = true
-		player.frozen = true
+		player.celebrate()
 		var tw := create_tween()
-		tw.tween_interval(0.8)
+		tw.tween_interval(1.6)
 		tw.tween_callback(func_emit_finished)
 
 
@@ -363,6 +363,7 @@ func add_npc(e: Dictionary, p: Vector3) -> void:
 		var anim := Assets.find_animator(model)
 		var idle := Assets.pick_animation(anim, ["idle", "stand", "wait"])
 		if idle != "":
+			Assets.set_loop(anim, idle, true)
 			anim.play(idle)
 	else:
 		var mi := MeshInstance3D.new()

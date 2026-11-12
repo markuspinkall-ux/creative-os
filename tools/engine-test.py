@@ -13,10 +13,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "engine"))
-from creative_engine import builder, godot, project  # noqa: E402
+from creative_engine import builder, godot, project, skeleton  # noqa: E402
 
 GODOT = sys.argv[1]
-OUT = Path(sys.argv[2])
+OUT = Path(sys.argv[2]).resolve()
 OUT.mkdir(parents=True, exist_ok=True)
 
 
@@ -61,22 +61,33 @@ work = Path(tempfile.mkdtemp())
 folder = work / "Testspiel"
 data = project.new_project("Testspiel")
 folder.mkdir()
-cube_glb(work / "figur.glb")
-data["player"]["model"] = project.import_asset(folder, work / "figur.glb")
+cube_glb(work / "kiste.glb")
+kiste = project.import_asset(folder, work / "kiste.glb")
+# Spielfigur wie aus dem Charakter-Editor: Beispielfigur mit Skelett und allen festen Bewegungen
+figur = skeleton.orient(skeleton.demo_figure())
+joints = skeleton.fit(figur["vertices"])
+anims = {k: skeleton.preset(k, waddle=14 if k == "walk" else 0, flap=30 if k == "walk" else 0) for k, _n in skeleton.SLOTS}
+(folder / "assets").mkdir(exist_ok=True)
+skeleton.export(folder / "assets" / "held-figur.glb", figur, joints, anims)
+data["player"]["model"] = "assets/held-figur.glb"
 level_id = next(s["id"] for s in data["flow"] if s["type"] == "level")
-data["levels"][level_id]["decor"].append({"model": data["player"]["model"], "x": 12, "y": 2, "z": -5, "height": 4})
+data["levels"][level_id]["decor"].append({"model": kiste, "x": 12, "y": 2, "z": -5, "height": 4})
+for e in data["levels"][level_id]["entities"]:
+    if e["kind"] == "npc":
+        e["model"] = "assets/held-figur.glb"
 project.save(folder, data)
 game = builder.build(folder, data, work / "build")
 print("Projekt:", sorted(p.name for p in game.iterdir()))
 
 run([GODOT, *godot.import_args(game)], check=False)
-out = run([GODOT, "--headless", "--path", str(game), "--quit-after", "4000", "--", f"--level={level_id}", "--autotest"],
+out = run([GODOT, "--headless", "--path", str(game), "--fixed-fps", "60", "--quit-after", "2400", "--", f"--level={level_id}", "--autotest"],
           timeout=300, check=False)
 print("Autotest:", [l for l in out.splitlines() if "AUTOTEST" in l])
 
 xvfb = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"]
 for name, extra in (("splash", ["--nach=1.2"]), ("menue", [f"--level={data['flow'][1]['id']}", "--nach=1.5"]),
-                    ("level", [f"--level={level_id}", "--nach=3"])):
+                    ("level", [f"--level={level_id}", "--nach=3"]),
+                    ("lauf", [f"--level={level_id}", "--autotest", "--nach=2.4"])):
     run([*xvfb, GODOT, "--rendering-driver", "opengl3", "--path", str(game), "--resolution", "1280x720", "--",
          *extra, f"--screenshot={OUT / ('spiel-' + name + '.png')}", "--fenster"], timeout=120, check=False)
 

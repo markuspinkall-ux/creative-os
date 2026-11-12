@@ -133,8 +133,8 @@ def build(project_folder, project_data, target):
     for script in RUNTIME.glob("*.gd"):
         shutil.copy2(script, target / script.name)
     game = json.loads(json.dumps(project_data))
+    game.pop("characters", None)          # Editor-Daten (Skelett, Regler) braucht das Spiel nicht
     (target / "game.json").write_text(json.dumps(game, ensure_ascii=False), encoding="utf-8")
-    assets = Path(project_folder) / "assets"
     used = proj.assets_used(project_data)
     if used:
         (target / "assets").mkdir(exist_ok=True)

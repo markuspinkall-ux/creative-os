@@ -19,6 +19,8 @@ var coyote := 0.0
 var buffer := 0.0
 var facing := 1.0
 var auto_jump := 0.0
+var one_shot := 0.0
+var cheering := false
 
 
 func build(model_path: String, model_height: float) -> void:
@@ -37,11 +39,21 @@ func build(model_path: String, model_height: float) -> void:
 	if model:
 		visual.add_child(model)
 		anim = Assets.find_animator(model)
+		# Feste Plätze aus dem Charakter-Editor (idle, walk, run, jump, fall, cheer, hit) –
+		# fremde Modelle werden über ähnliche Namen zugeordnet.
 		anims = {
 			"idle": Assets.pick_animation(anim, ["idle", "stand", "breath", "wait"]),
-			"run": Assets.pick_animation(anim, ["run", "walk", "jog", "move"]),
-			"jump": Assets.pick_animation(anim, ["jump", "fall", "air"]),
+			"walk": Assets.pick_animation(anim, ["walk", "jog", "move", "run"]),
+			"run": Assets.pick_animation(anim, ["run", "sprint", "jog", "walk", "move"]),
+			"jump": Assets.pick_animation(anim, ["jump", "air", "fall"]),
+			"fall": Assets.pick_animation(anim, ["fall", "air", "jump"]),
+			"cheer": Assets.pick_animation(anim, ["cheer", "victory", "win", "dance", "wave"]),
+			"hit": Assets.pick_animation(anim, ["hit", "hurt", "damage"]),
 		}
+		for key in ["idle", "walk", "run", "fall", "cheer"]:
+			Assets.set_loop(anim, anims[key], true)
+		for key in ["jump", "hit"]:
+			Assets.set_loop(anim, anims[key], false)
 	else:
 		var body := MeshInstance3D.new()
 		var cm := CapsuleMesh.new()
@@ -65,14 +77,27 @@ func build(model_path: String, model_height: float) -> void:
 		visual.add_child(eye)
 
 
-func play(kind: String) -> void:
+func play(kind: String, speed := 1.0) -> void:
 	if anim == null:
 		return
 	var a: String = anims.get(kind, "")
-	if a == "" and kind == "jump":
+	if a == "":
 		a = anims.get("idle", "")
 	if a != "" and anim.current_animation != a:
 		anim.play(a, 0.15)
+	if a != "":
+		anim.speed_scale = speed
+
+
+func celebrate() -> void:
+	cheering = true
+	frozen = true
+
+
+func hurt_animation() -> void:
+	if anim and anims.get("hit", "") != "":
+		play("hit")
+		one_shot = minf(0.6, anim.current_animation_length)
 
 
 func respawn(at: Vector3) -> void:
@@ -84,6 +109,7 @@ func respawn(at: Vector3) -> void:
 func knockback() -> void:
 	velocity = Vector3(-facing * 8.0, 8.0, 0)
 	invulnerable = 1.5
+	hurt_animation()
 
 
 func _physics_process(delta: float) -> void:
@@ -91,7 +117,7 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, 30 * delta)
 		velocity.y -= gravity * delta
 		move_and_slide()
-		play("idle")
+		play("cheer" if cheering else "idle")
 		return
 	invulnerable = maxf(0.0, invulnerable - delta)
 	visual.visible = invulnerable <= 0.0 or int(invulnerable * 12) % 2 == 0
@@ -134,9 +160,15 @@ func _physics_process(delta: float) -> void:
 	if absf(dir) > 0.05:
 		facing = signf(dir)
 	visual.rotation.y = lerp_angle(visual.rotation.y, PI / 2.0 if facing > 0 else -PI / 2.0, minf(1.0, delta * 14.0))
+	if one_shot > 0.0:
+		one_shot -= delta
+		return
+	var speed := absf(velocity.x)
 	if not is_on_floor():
-		play("jump")
-	elif absf(velocity.x) > 0.5:
-		play("run")
+		play("jump" if velocity.y > 0.0 else "fall")
+	elif speed > run_speed * 0.6:
+		play("run", clampf(speed / run_speed, 0.6, 1.6))
+	elif speed > 0.5:
+		play("walk", clampf(speed / (run_speed * 0.5), 0.6, 1.6))
 	else:
 		play("idle")

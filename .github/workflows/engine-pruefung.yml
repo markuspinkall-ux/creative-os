@@ -3,7 +3,8 @@ name: Creative Engine prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [engine/**, tools/engine-test.py, .github/workflows/engine-pruefung.yml]
+    paths: [engine/**, creative3d/creative3d_rig*.py, tools/engine-test.py, tools/engine-editor-vorschau.py,
+            .github/workflows/engine-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -27,6 +28,16 @@ jobs:
           print(godot.install_editor("/tmp/Godot_v4.3-stable_linux.x86_64.zip"))
           print(godot.install_templates("/tmp/Godot_v4.3-stable_export_templates.tpz"))
           P
+      - name: Editor (Selbsttest und Fotos)
+        env: { QT_QPA_PLATFORM: offscreen }
+        run: |
+          pip install -q PySide6 numpy
+          mkdir -p /tmp/lib && cp shell/creative_shell/look.py /tmp/lib/creative_look.py \
+            && cp creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py /tmp/lib/
+          cd engine && PYTHONPATH=/tmp/lib timeout 120 python3 -m creative_engine --selftest && cd ..
+          PYTHONPATH=/tmp/lib timeout 180 python3 tools/engine-editor-vorschau.py fotos
+          printf '[Look]\ndesign=porzellan\naccent=blau\n' > /tmp/hell.conf
+          PYTHONPATH=/tmp/lib timeout 180 python3 tools/engine-editor-vorschau.py fotos hell- /tmp/hell.conf
       - name: Testen
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"

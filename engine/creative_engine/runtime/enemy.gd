@@ -30,6 +30,7 @@ func build(model_path: String) -> void:
 		anim = Assets.find_animator(model)
 		var walk := Assets.pick_animation(anim, ["walk", "run", "move", "idle"])
 		if walk != "":
+			Assets.set_loop(anim, walk, true)
 			anim.play(walk)
 	else:
 		var mi := MeshInstance3D.new()
