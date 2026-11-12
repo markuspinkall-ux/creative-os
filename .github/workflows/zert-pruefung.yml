@@ -1,0 +1,24 @@
+name: Zertifikat dl.fbaipublicfiles.com prüfen
+on:
+  push:
+    branches: ["claude/dinov2-zert"]
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          date -u
+          echo | openssl s_client -connect dl.fbaipublicfiles.com:443 -servername dl.fbaipublicfiles.com -showcerts 2>/dev/null \
+            | awk '/BEGIN CERT/,/END CERT/' > /tmp/kette.pem
+          openssl crl2pkcs7 -nocrl -certfile /tmp/kette.pem | openssl pkcs7 -print_certs -noout | head -20
+          echo | openssl s_client -connect dl.fbaipublicfiles.com:443 -servername dl.fbaipublicfiles.com 2>/dev/null | openssl x509 -noout -dates -issuer
+          curl -sSI https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth | head -5
+          podman run --rm --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          import ssl, urllib.request, certifi
+          print('openssl', ssl.OPENSSL_VERSION, 'certifi', certifi.where())
+          print(ssl.get_default_verify_paths())
+          try:
+              r = urllib.request.urlopen(urllib.request.Request('https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth', method='HEAD')); print('urllib OK', r.status)
+          except Exception as e: print('urllib FEHLER', e)
+          " 2>&1 | tail -8
+          podman run --rm --entrypoint sh ghcr.io/markuspinkall-ux/creative-trellis:latest -c "ls -la /etc/ssl/certs/ca-certificates.crt; dpkg -l ca-certificates 2>/dev/null | tail -1; cat /etc/os-release | head -2"
