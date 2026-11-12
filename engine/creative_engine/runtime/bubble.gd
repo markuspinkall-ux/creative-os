@@ -47,12 +47,19 @@ func setup(text: String, size_px: int, fill_c: Color, text_c: Color, tail_kind: 
 	_layout()
 
 
+func _notification(what: int) -> void:
+	# Größe wird oft gesetzt, bevor die Blase im Baum hängt – dann hier nachziehen
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_READY:
+		_layout()
+
+
 ## Größe passend zum Text (für Blasen im Level)
 func fit(max_width: float) -> void:
 	var font := label.get_theme_font("font")
 	var inner := max_width - PAD * 2
 	var s := font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_CENTER, inner, font_size)
-	var w := minf(max_width, maxf(s.x + PAD * 2 + 8, 120.0))
+	var extra := font_size * 0.9 if hint else 0.0
+	var w := minf(max_width, maxf(s.x + PAD * 2 + 8 + extra, 120.0))
 	var h := s.y + PAD * 2 + (TAIL if tail != "keine" else 0.0)
 	if name_label:
 		h += name_label.get_theme_font_size("font_size") + 4
@@ -97,10 +104,11 @@ func _layout() -> void:
 		name_label.size = Vector2(r.size.x, nh)
 		r.position.y += nh - 4
 		r.size.y -= nh - 4
+	if hint:
+		r.size.x -= font_size * 0.9
+		hint.position = Vector2(body_rect().end.x - PAD - font_size * 0.6, body_rect().end.y - PAD - font_size * 0.85)
 	label.position = r.position
 	label.size = r.size
-	if hint:
-		hint.position = body_rect().end - Vector2(PAD + 10, PAD + font_size * 0.6)
 	queue_redraw()
 
 

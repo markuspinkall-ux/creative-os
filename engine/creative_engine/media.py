@@ -45,15 +45,17 @@ def _run(cmd, parent, title, total=0.0):
             h, mi, se = m[-1]
             dlg.setValue(min(999, int((int(h) * 3600 + int(mi) * 60 + float(se)) / total * 1000)))
     proc.readyRead.connect(read)
-    dlg.canceled.connect(proc.kill)
+    stopped = []
+    dlg.canceled.connect(lambda: (stopped.append(True), proc.kill()) if proc.state() != QProcess.ProcessState.NotRunning else None)
     proc.start(cmd[0], cmd[1:])
     proc.waitForStarted(5000)
     while proc.state() != QProcess.ProcessState.NotRunning:
         QApplication.processEvents()
         proc.waitForFinished(50)
     read()
+    ok = proc.exitStatus() == QProcess.ExitStatus.NormalExit and proc.exitCode() == 0 and not stopped
+    dlg.canceled.disconnect()
     dlg.close()
-    ok = proc.exitStatus() == QProcess.ExitStatus.NormalExit and proc.exitCode() == 0 and not dlg.wasCanceled()
     return ok, "".join(out)
 
 

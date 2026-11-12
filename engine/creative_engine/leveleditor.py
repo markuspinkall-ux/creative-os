@@ -474,6 +474,8 @@ class DialogLines(QWidget):
             who.addItem("NPC sagt", "npc")
             who.addItem("Spieler sagt", "spieler")
             who.setCurrentIndex(max(0, who.findData(line.get("who", "npc"))))
+            who.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            who.setMinimumContentsLength(8)
             who.currentIndexChanged.connect(lambda _i, l=line, w=who: self.set(l, "who", w.currentData()))
             top.addWidget(who, 1)
             for icon, tip, func in (("up", "Nach oben", lambda _=False, n=i: self.move(n, -1)),
@@ -609,7 +611,7 @@ class LevelEditor(QWidget):
 
         # Eigenschaften rechts
         self.props = QScrollArea(objectName="props")
-        self.props.setFixedWidth(300)
+        self.props.setFixedWidth(320)
         self.props.setWidgetResizable(True)
         self.props.setFrameShape(QScrollArea.Shape.NoFrame)
         self.props.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -794,6 +796,8 @@ class LevelEditor(QWidget):
                 mode.addItem("Gespräch (Figur wartet)", "gespraech")
                 mode.addItem("Nebenbei (läuft von selbst)", "nebenbei")
                 mode.setCurrentIndex(max(0, mode.findData(sel.get("mode", "gespraech"))))
+                mode.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+                mode.setMinimumContentsLength(10)
                 mode.currentIndexChanged.connect(lambda _i: self.set_value(sel, "mode", mode.currentData()))
                 mode.setToolTip("Gespräch: Die Spielfigur bleibt stehen, weiter mit Leertaste, Enter oder Klick.\n"
                                 "Nebenbei: Die Blasen wechseln von selbst, man kann weiterlaufen.")
@@ -806,7 +810,7 @@ class LevelEditor(QWidget):
                 secs.setToolTip("Wie lange jede Blase bei „Nebenbei“ stehen bleibt")
                 secs.valueChanged.connect(lambda v: self.set_value(sel, "seconds", v))
                 form.addRow("Je Blase", secs)
-                once = QCheckBox("Nur beim ersten Vorbeikommen")
+                once = QCheckBox("Nur beim ersten Mal")
                 once.setChecked(bool(sel.get("once", True)))
                 once.toggled.connect(lambda v: self.set_value(sel, "once", v))
                 form.addRow("", once)
