@@ -375,7 +375,7 @@ class LevelView(QGraphicsView):
                 ents[:] = [e for e in ents if e["kind"] != what]
             e = {"kind": what, "x": x, "y": y}
             if what == "enemy":
-                e.update({"range": 3, "speed": 2.0, "model": ""})
+                e.update({"range": 3, "speed": 2.0, "model": "", "hp": 1})
             elif what == "npc":
                 e.update({"model": "", "height": 1.7, "name": "", "mode": "gespraech", "seconds": 3.0,
                           "once": True, "dialog": [{"who": "npc", "text": "Hallo!"}]})
@@ -786,6 +786,12 @@ class LevelEditor(QWidget):
                 s.valueChanged.connect(lambda v: self.set_value(sel, "speed", v))
                 form.addRow("Laufweg (Blöcke)", r)
                 form.addRow("Tempo", s)
+                hp = QSpinBox()
+                hp.setRange(1, 99)
+                hp.setValue(int(sel.get("hp", 1)))
+                hp.setToolTip("So viele Angriffstreffer hält der Gegner aus (Draufspringen besiegt ihn immer)")
+                hp.valueChanged.connect(lambda v: self.set_value(sel, "hp", v))
+                form.addRow("Treffer", hp)
             if kind == "npc":
                 proj.upgrade_npc(sel)
                 name = QLineEdit(sel.get("name", ""))

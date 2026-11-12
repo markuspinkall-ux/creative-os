@@ -19,9 +19,30 @@ TAILS = [("unten-links", "unten links"), ("unten-mitte", "unten Mitte"), ("unten
          ("oben-links", "oben links"), ("oben-rechts", "oben rechts"), ("keine", "ohne Spitze")]
 
 
-def paint_bubble(p, r, e, scale):
-    """Sprechblase wie im Spiel (bubble.gd): Fläche, Spitze, Name, Text."""
+def draw_nine(p, pm, r, margin):
+    """Grafik 9-teilig in r zeichnen: Ecken fest, Ränder und Mitte gedehnt (wie NinePatchRect im Spiel)."""
+    m = max(0, min(int(margin), pm.width() // 2 - 1, pm.height() // 2 - 1))
+    dm = min(float(m), r.width() / 2, r.height() / 2)
+    sx = [0, m, pm.width() - m, pm.width()]
+    sy = [0, m, pm.height() - m, pm.height()]
+    dx = [r.left(), r.left() + dm, r.right() - dm, r.right()]
+    dy = [r.top(), r.top() + dm, r.bottom() - dm, r.bottom()]
+    for i in range(3):
+        for j in range(3):
+            src = QRectF(sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j])
+            dst = QRectF(dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j])
+            if src.width() > 0 and src.height() > 0 and dst.width() > 0 and dst.height() > 0:
+                p.drawPixmap(dst, pm, src)
+
+
+def paint_bubble(p, r, e, scale, skin=None, margin=24, text_color=None):
+    """Sprechblase wie im Spiel (bubble.gd): Fläche, Spitze, Name, Text – oder eigene Grafik."""
     tail = e.get("tail", "unten-links")
+    if skin is not None:
+        draw_nine(p, skin, r, margin * scale)
+        e = dict(e)
+        e["textColor"] = text_color or e.get("textColor", "#1c2433")
+        tail = "keine-grafik"
     t = 22 * scale
     body = QRectF(r)
     if tail.startswith("unten"):
@@ -35,8 +56,9 @@ def paint_bubble(p, r, e, scale):
     p.setPen(pen)
     p.setBrush(fill)
     rad = min(26 * scale, body.height() * 0.45)
-    p.drawRoundedRect(body, rad, rad)
-    if tail != "keine":
+    if skin is None:
+        p.drawRoundedRect(body, rad, rad)
+    if tail not in ("keine", "keine-grafik"):
         fx = {"links": 0.22, "rechts": 0.78}.get(tail.split("-")[1], 0.5)
         x = body.x() + body.width() * fx
         if tail.startswith("oben"):
@@ -221,7 +243,10 @@ class Screen(QWidget):
             p.setFont(self.font(float(e.get("size", 28)), scale))
             p.drawText(r, Qt.AlignmentFlag.AlignCenter, e.get("text", "Knopf"))
         elif kind == "bubble":
-            paint_bubble(p, r, e, scale)
+            ui = self.host.project.get("settings", {}).get("ui", {}) if self.host.project else {}
+            skin_rel = e.get("skin") or ("" if e.get("noSkin") else ui.get("bubble", ""))
+            skin = self.pixmap(skin_rel) if skin_rel else None
+            paint_bubble(p, r, e, scale, skin, e.get("skinMargin", ui.get("bubbleMargin", 24)), e.get("textColor"))
         elif kind == "video":
             self.paint_media(p, r, self.pixmap(media.poster_of(e.get("video", ""))), e.get("fit") == "cover", video=True)
         elif kind == "image" and e.get("fit") == "cover":
@@ -597,6 +622,11 @@ class ScreenEditor(QWidget):
             tail.setCurrentIndex(max(0, tail.findData(e.get("tail", "unten-links"))))
             tail.currentIndexChanged.connect(lambda _i: self.set(e, "tail", tail.currentData()))
             form.addRow("Spitze", tail)
+            form.addRow("Eigene Grafik", self.image(e, "skin", "Standard"))
+            if e.get("skin"):
+                form.addRow("Rand der Grafik", self.number(e, "skinMargin", 24, 0, 200, decimals=0))
+            elif self.host.project["settings"].get("ui", {}).get("bubble"):
+                form.addRow("", self.check(e, "noSkin", "Gezeichnete Blase statt Spiel-Grafik"))
         if kind in ("button", "text"):
             form.addRow("Beschriftung", self.line(e, "text"))
             form.addRow("Schriftgröße", self.number(e, "size", 30, 8, 200, decimals=0))

@@ -31,6 +31,7 @@ func _ready() -> void:
 		return
 	game = parsed
 	flow = game.get("flow", [])
+	setup_attack_input()
 	var settings: Dictionary = game.get("settings", {})
 	if settings.get("fullscreen", false) and not args.has("fenster"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
@@ -70,6 +71,27 @@ func setup_input() -> void:
 		jm.axis = JOY_AXIS_LEFT_X
 		jm.axis_value = pair[1]
 		InputMap.action_add_event(pair[0], jm)
+
+
+## Angriffe: Taste je Angriff aus den Spieleinstellungen (Standard J, K, L, U, I, O), Gamepad X, Y, B, RB
+func setup_attack_input() -> void:
+	var attacks: Array = game.get("player", {}).get("attacks", [])
+	var defaults := ["J", "K", "L", "U", "I", "O"]
+	var pad := [JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_B, JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_LEFT_SHOULDER]
+	for i in attacks.size():
+		var action := "angriff%d" % (i + 1)
+		if not InputMap.has_action(action):
+			InputMap.add_action(action, 0.25)
+		var key_name := String(attacks[i].get("key", defaults[mini(i, 5)]))
+		var code := OS.find_keycode_from_string(key_name)
+		if code != KEY_NONE:
+			var ev := InputEventKey.new()
+			ev.physical_keycode = code
+			InputMap.action_add_event(action, ev)
+		if i < pad.size():
+			var jb := InputEventJoypadButton.new()
+			jb.button_index = pad[i]
+			InputMap.action_add_event(action, jb)
 
 
 func _take_screenshot() -> void:
@@ -280,6 +302,12 @@ func make_page(s: Dictionary) -> Node:
 		var node: Control
 		if kind == "bubble":
 			var b = BubbleScript.new()
+			var ui: Dictionary = game.get("settings", {}).get("ui", {})
+			var skin_rel := String(e.get("skin", ""))
+			if skin_rel == "" and not e.get("noSkin", false):
+				skin_rel = String(ui.get("bubble", ""))
+			b.skin = Assets.texture(skin_rel)
+			b.skin_margin = int(e.get("skinMargin", ui.get("bubbleMargin", 24)))
 			b.setup(String(e.get("text", "")), int(e.get("size", 30)), Color(String(e.get("color", "#ffffff"))),
 				Color(String(e.get("textColor", "#1c2433"))), String(e.get("tail", "unten-links")),
 				String(e.get("speaker", "")))

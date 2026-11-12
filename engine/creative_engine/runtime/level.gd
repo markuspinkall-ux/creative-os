@@ -35,6 +35,14 @@ var autotest_time := 0.0
 var bubble_layer: CanvasLayer
 var dialog := {}            # laufendes Gespräch (siehe start_dialog)
 var bubble = null         # Sprechblase (bubble.gd)
+var hud_coins: Label
+var hud_lives: Label
+var hearts: HBoxContainer
+var life_bar: Range
+var max_lives := 3
+var lives_style := "herzen"
+var heart_full := ""
+var heart_empty := ""
 
 
 func setup(level_data: Dictionary, game_data: Dictionary, start_points: int, test: bool) -> void:
@@ -256,8 +264,11 @@ func add_enemy(e: Dictionary, p: Vector3) -> void:
 	en.position = p + Vector3(0, 0.05, 0)
 	en.patrol_range = float(e.get("range", 3))
 	en.speed = float(e.get("speed", 2.0))
+	en.max_hp = maxi(1, int(e.get("hp", 1)))
+	en.hp = en.max_hp
 	add_child(en)
 	en.build(String(e.get("model", "")))
+	en.build_bar()
 
 
 func add_spike(p: Vector3) -> void:
@@ -434,7 +445,10 @@ func show_line() -> void:
 	var speaker := ""
 	if not by_player:
 		speaker = String(dialog["name"])
-	b.setup(String(line.get("text", "")), 24, Color("#ffffff"), Color("#1c2433"),
+	var ui: Dictionary = game.get("settings", {}).get("ui", {})
+	b.skin = Assets.texture(String(ui.get("bubble", "")))
+	b.skin_margin = int(ui.get("bubbleMargin", 24))
+	b.setup(String(line.get("text", "")), 24, Color("#ffffff"), Color(String(ui.get("bubbleText", "#1c2433"))),
 		"unten-links" if speaker_left else "unten-rechts", speaker, dialog["mode"] == "gespraech")
 	b.fit(440)
 	bubble_layer.add_child(b)
@@ -512,9 +526,31 @@ func build_player() -> void:
 	player.position = spawn
 	add_child(player)
 	player.build(String(cfg.get("model", "")), float(cfg.get("height", 1.6)))
+	player.attacks = cfg.get("attacks", [])
+	player.attacked.connect(_player_attack)
 	player.stomped.connect(_stomped)
 	player.hit.connect(func_hit_enemy)
 	player.autotest = autotest
+
+
+## Angriff der Spielfigur: trifft Gegner vor ihr in Reichweite (kurz verzögert, passend zur Bewegung)
+func _player_attack(attack: Dictionary) -> void:
+	await get_tree().create_timer(float(attack.get("delay", 0.12))).timeout
+	if done or not is_instance_valid(player):
+		return
+	var reach := float(attack.get("range", 1.5))
+	var dmg := maxi(1, int(attack.get("damage", 1)))
+	var hit_any := false
+	for en in get_tree().get_nodes_in_group("enemies"):
+		if en.dead:
+			continue
+		var dx: float = (en.global_position.x - player.global_position.x) * player.facing
+		var dy: float = absf(en.global_position.y - player.global_position.y)
+		if dx > -0.4 and dx < reach + 0.4 and dy < 1.4:
+			en.take_hit(dmg, player.global_position.x)
+			hit_any = true
+	if hit_any:
+		update_hud()
 
 
 func _stomped(_enemy: Node) -> void:
@@ -535,22 +571,94 @@ func build_camera() -> void:
 
 
 func build_hud() -> void:
+	var ui: Dictionary = game.get("settings", {}).get("ui", {})
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var panel := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.08, 0.1, 0.55)
-	sb.set_corner_radius_all(14)
-	sb.content_margin_left = 16
-	sb.content_margin_right = 16
-	sb.content_margin_top = 8
-	sb.content_margin_bottom = 8
-	panel.add_theme_stylebox_override("panel", sb)
+	var skin := Assets.texture(String(ui.get("panel", "")))
+	if skin:
+		var st := StyleBoxTexture.new()
+		st.texture = skin
+		var m := float(ui.get("panelMargin", 16))
+		st.texture_margin_left = m
+		st.texture_margin_right = m
+		st.texture_margin_top = m
+		st.texture_margin_bottom = m
+		st.content_margin_left = m + 4
+		st.content_margin_right = m + 4
+		st.content_margin_top = m * 0.6
+		st.content_margin_bottom = m * 0.6
+		panel.add_theme_stylebox_override("panel", st)
+	else:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.07, 0.08, 0.1, 0.55)
+		sb.set_corner_radius_all(14)
+		sb.content_margin_left = 16
+		sb.content_margin_right = 16
+		sb.content_margin_top = 8
+		sb.content_margin_bottom = 8
+		panel.add_theme_stylebox_override("panel", sb)
 	panel.position = Vector2(20, 18)
 	layer.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	panel.add_child(row)
 	hud = Label.new()
 	hud.add_theme_font_size_override("font_size", 24)
-	panel.add_child(hud)
+	row.add_child(hud)
+	row.add_child(hud_icon(String(ui.get("coin", "")), "●", Color("#ffd24a")))
+	hud_coins = Label.new()
+	hud_coins.add_theme_font_size_override("font_size", 24)
+	row.add_child(hud_coins)
+	max_lives = maxi(1, lives)
+	lives_style = String(ui.get("lives", "herzen"))
+	if lives_style == "herzen" and max_lives > 12:
+		lives_style = "zahl"
+	if lives_style == "balken":
+		var fill := Assets.texture(String(ui.get("barFill", "")))
+		if fill:
+			var tp := TextureProgressBar.new()
+			tp.texture_progress = fill
+			var under := Assets.texture(String(ui.get("barBack", "")))
+			if under:
+				tp.texture_under = under
+			tp.nine_patch_stretch = true
+			var m2 := int(ui.get("barMargin", 6))
+			tp.stretch_margin_left = m2
+			tp.stretch_margin_right = m2
+			tp.stretch_margin_top = m2
+			tp.stretch_margin_bottom = m2
+			tp.custom_minimum_size = Vector2(200, 26)
+			life_bar = tp
+		else:
+			var pb := ProgressBar.new()
+			pb.show_percentage = false
+			pb.custom_minimum_size = Vector2(200, 18)
+			var bg := StyleBoxFlat.new()
+			bg.bg_color = Color(0, 0, 0, 0.45)
+			bg.set_corner_radius_all(9)
+			var fg := StyleBoxFlat.new()
+			fg.bg_color = Color("#ff5d6c")
+			fg.set_corner_radius_all(9)
+			pb.add_theme_stylebox_override("background", bg)
+			pb.add_theme_stylebox_override("fill", fg)
+			life_bar = pb
+		life_bar.max_value = max_lives
+		life_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(life_bar)
+	elif lives_style == "herzen":
+		hearts = HBoxContainer.new()
+		hearts.add_theme_constant_override("separation", 4)
+		row.add_child(hearts)
+		for i in max_lives:
+			hearts.add_child(Control.new())
+		heart_full = String(ui.get("heart", ""))
+		heart_empty = String(ui.get("heartEmpty", ""))
+	else:
+		row.add_child(hud_icon(String(ui.get("heart", "")), "♥", Color("#ff5d6c")))
+		hud_lives = Label.new()
+		hud_lives.add_theme_font_size_override("font_size", 24)
+		row.add_child(hud_lives)
 	bubble_layer = CanvasLayer.new()
 	bubble_layer.layer = 0
 	add_child(bubble_layer)
@@ -597,10 +705,45 @@ func set_paused(on: bool) -> void:
 		(pause_panel.get_child(1) as Button).grab_focus()
 
 
+## Symbol in der Anzeige: eigene Grafik oder ein Zeichen
+func hud_icon(rel: String, fallback: String, color: Color, faded := false) -> Control:
+	var tex := Assets.texture(rel)
+	if tex:
+		var tr := TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(30, 30)
+		if faded:
+			tr.modulate = Color(1, 1, 1, 0.3)
+		return tr
+	var l := Label.new()
+	l.text = fallback
+	l.add_theme_font_size_override("font_size", 26)
+	l.add_theme_color_override("font_color", Color(0.6, 0.62, 0.7, 0.55) if faded else color)
+	return l
+
+
 func update_hud() -> void:
-	if hud:
-		var level_name := String(data.get("name", ""))
-		hud.text = "%s   ●  %d   ♥  %d" % [level_name, points, lives]
+	if hud == null:
+		return
+	hud.text = String(data.get("name", ""))
+	hud_coins.text = str(points)
+	var shown := maxi(0, lives)
+	if life_bar:
+		life_bar.value = shown
+	elif hearts:
+		for c in hearts.get_children():
+			c.queue_free()
+		for i in max_lives:
+			if i < shown:
+				hearts.add_child(hud_icon(heart_full, "♥", Color("#ff5d6c")))
+			elif heart_empty != "":
+				hearts.add_child(hud_icon(heart_empty, "♡", Color("#ff5d6c")))
+			else:
+				hearts.add_child(hud_icon(heart_full, "♥", Color("#ff5d6c"), true))
+	elif hud_lives:
+		hud_lives.text = str(shown)
 
 
 func hurt(fell: bool) -> void:

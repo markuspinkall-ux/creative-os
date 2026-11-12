@@ -13,6 +13,8 @@ var label: Label
 var name_label: Label
 var hint: Label
 var font_size := 26
+var skin: Texture2D = null      # eigene Grafik (9-teilig skaliert) statt der gezeichneten Blase
+var skin_margin := 24
 
 
 func setup(text: String, size_px: int, fill_c: Color, text_c: Color, tail_kind: String, speaker := "",
@@ -23,6 +25,16 @@ func setup(text: String, size_px: int, fill_c: Color, text_c: Color, tail_kind: 
 	tail = tail_kind
 	font_size = size_px
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if skin:
+		var np := NinePatchRect.new()
+		np.texture = skin
+		np.patch_margin_left = skin_margin
+		np.patch_margin_right = skin_margin
+		np.patch_margin_top = skin_margin
+		np.patch_margin_bottom = skin_margin
+		np.set_anchors_preset(Control.PRESET_FULL_RECT)
+		np.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(np)
 	if speaker != "":
 		name_label = Label.new()
 		name_label.text = speaker
@@ -130,6 +142,8 @@ func _fix_label() -> void:
 
 
 func _draw() -> void:
+	if skin:
+		return
 	var r := body_rect()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = fill

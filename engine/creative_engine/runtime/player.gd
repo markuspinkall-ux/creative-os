@@ -3,6 +3,7 @@ extends CharacterBody3D
 
 signal stomped(enemy: Node)
 signal hit
+signal attacked(attack: Dictionary)
 
 const Assets = preload("res://assets.gd")
 
@@ -21,6 +22,10 @@ var facing := 1.0
 var auto_jump := 0.0
 var one_shot := 0.0
 var cheering := false
+var attacks: Array = []        # [{name, key, range, damage, cooldown}] – Bewegung: Platz „attack1“, „attack2“ …
+var attack_wait := 0.0
+var auto_attack := 0.0
+var slash: MeshInstance3D
 
 
 func build(model_path: String, model_height: float) -> void:
@@ -54,6 +59,12 @@ func build(model_path: String, model_height: float) -> void:
 			Assets.set_loop(anim, anims[key], true)
 		for key in ["jump", "hit"]:
 			Assets.set_loop(anim, anims[key], false)
+		for i in range(1, 7):
+			var a := Assets.pick_animation(anim, ["attack%d" % i])
+			if a == "" and i == 1:
+				a = Assets.pick_animation(anim, ["attack", "punch", "slash", "kick"])
+			anims["attack%d" % i] = a
+			Assets.set_loop(anim, a, false)
 	else:
 		var body := MeshInstance3D.new()
 		var cm := CapsuleMesh.new()
@@ -89,6 +100,41 @@ func play(kind: String, speed := 1.0) -> void:
 		anim.speed_scale = speed
 
 
+## Sichtbarer „Hieb“ vor der Figur (auch ohne eigene Angriffsbewegung)
+func show_slash(reach: float) -> void:
+	if slash == null:
+		slash = MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(1, 1)
+		slash.mesh = q
+		var m := StandardMaterial3D.new()
+		m.albedo_color = Color(1, 1, 1, 0.55)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		slash.material_override = m
+		add_child(slash)
+	slash.visible = true
+	slash.position = Vector3(facing * (0.3 + reach * 0.5), 0.95, 0.4)
+	slash.scale = Vector3(reach * 0.4, 0.25, 1)
+	var tw := create_tween()
+	tw.tween_property(slash, "scale", Vector3(reach, 0.7, 1), 0.12)
+	tw.tween_callback(func(): slash.visible = false).set_delay(0.06)
+
+
+func start_attack(i: int) -> void:
+	if i >= attacks.size() or attack_wait > 0.0 or frozen:
+		return
+	var a: Dictionary = attacks[i]
+	attack_wait = float(a.get("cooldown", 0.4))
+	var name_: String = anims.get("attack%d" % (i + 1), "")
+	if anim and name_ != "":
+		anim.play(name_, 0.08)
+		anim.speed_scale = 1.0
+		one_shot = minf(anim.current_animation_length, 1.2)
+	show_slash(float(a.get("range", 1.5)))
+	attacked.emit(a)
+
+
 func celebrate() -> void:
 	cheering = true
 	frozen = true
@@ -120,6 +166,15 @@ func _physics_process(delta: float) -> void:
 		play("cheer" if cheering else "idle")
 		return
 	invulnerable = maxf(0.0, invulnerable - delta)
+	attack_wait = maxf(0.0, attack_wait - delta)
+	for i in attacks.size():
+		if InputMap.has_action("angriff%d" % (i + 1)) and Input.is_action_just_pressed("angriff%d" % (i + 1)):
+			start_attack(i)
+	if autotest and not attacks.is_empty():
+		auto_attack -= delta
+		if auto_attack <= 0.0:
+			auto_attack = 1.3
+			start_attack(0)
 	visual.visible = invulnerable <= 0.0 or int(invulnerable * 12) % 2 == 0
 	var dir := Input.get_axis("links", "rechts")
 	var want_jump := Input.is_action_just_pressed("springen")

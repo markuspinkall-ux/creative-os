@@ -44,6 +44,26 @@ def cube_glb(path, color=(0.95, 0.55, 0.25, 1.0)):
     path.write_bytes(struct.pack("<III", 0x46546C67, 2, 12 + len(body)) + body)
 
 
+def png(path, w, h, pixel):
+    """Kleines PNG ohne Zusatzpakete: pixel(x, y) -> (r, g, b, a)."""
+    import zlib
+    raw = b"".join(b"\0" + b"".join(bytes(pixel(x, y)) for x in range(w)) for y in range(h))
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def bubble_px(x, y, n=96, r=26):
+    """Eigene Sprechblasen-Grafik: abgerundetes Kästchen mit dickem orangem Rand."""
+    cx = min(max(x, r), n - 1 - r)
+    cy = min(max(y, r), n - 1 - r)
+    d = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+    if d > r:
+        return (0, 0, 0, 0)
+    return (255, 150, 60, 255) if d > r - 6 or min(x, y, n - 1 - x, n - 1 - y) < 6 else (255, 248, 230, 255)
+
+
 def run(args, timeout=240, env=None, check=True):
     print("$", " ".join(map(str, args)), flush=True)
     r = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=env)
@@ -67,11 +87,21 @@ kiste = project.import_asset(folder, work / "kiste.glb")
 # Spielfigur wie aus dem Charakter-Editor: Beispielfigur mit Skelett und allen festen Bewegungen
 figur = skeleton.orient(skeleton.demo_figure())
 joints = skeleton.fit(figur["vertices"])
-anims = {k: skeleton.preset(k, waddle=14 if k == "walk" else 0, flap=30 if k == "walk" else 0) for k, _n in skeleton.SLOTS}
+anims = {k: skeleton.preset(k, waddle=14 if k == "walk" else 0, flap=30 if k == "walk" else 0)
+         for k, _n in skeleton.SLOTS + skeleton.ATTACK_SLOTS}
 (folder / "assets").mkdir(exist_ok=True)
 skeleton.export(folder / "assets" / "held-figur.glb", figur, joints, anims)
 data["player"]["model"] = "assets/held-figur.glb"
 level_id = next(s["id"] for s in data["flow"] if s["type"] == "level")
+# Eigene Grafiken: Sprechblase und Münz-Symbol; Gegner halten 3 Treffer aus, zwei Angriffe
+png(folder / "assets" / "blase.png", 96, 96, bubble_px)
+png(folder / "assets" / "muenze.png", 32, 32,
+    lambda x, y: (255, 200, 40, 255) if (x - 15.5) ** 2 + (y - 15.5) ** 2 < 196 else (0, 0, 0, 0))
+data["settings"]["ui"].update({"bubble": "assets/blase.png", "bubbleMargin": 30, "coin": "assets/muenze.png"})
+data["player"]["attacks"].append(project.new_attack(1))
+for e in data["levels"][level_id]["entities"]:
+    if e["kind"] == "enemy":
+        e["hp"] = 3
 # Video: Testbild (3 s) als Ogg Theora – Splash im Vollbild, auf der Seite als Fenster
 run(["ffmpeg", "-hide_banner", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24", "-t", "3",
      "-c:v", "libtheora", "-q:v", "6", str(folder / "assets" / "film.ogv")], timeout=120)
@@ -96,7 +126,8 @@ for name, extra in (("splash", ["--nach=1.6"]), ("menue", [f"--level={data['flow
                     ("level", [f"--level={level_id}", "--nach=3"]),
                     ("lauf", [f"--level={level_id}", "--autotest", "--nach=2.4"]),
                     ("dialog", [f"--level={level_id}", "--autotest", "--nach=1.3"]),
-                    ("seite", [f"--level={seite['id']}", "--nach=2.2"])):
+                    ("seite", [f"--level={seite['id']}", "--nach=2.2"]),
+                    ("angriff", [f"--level={level_id}", "--autotest", "--nach=6.6"])):
     run([*xvfb, GODOT, "--rendering-driver", "opengl3", "--path", str(game), "--resolution", "1280x720", "--",
          *extra, f"--screenshot={OUT / ('spiel-' + name + '.png')}", "--fenster"], timeout=120, check=False)
 
