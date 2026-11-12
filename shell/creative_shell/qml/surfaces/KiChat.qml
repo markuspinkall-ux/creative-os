@@ -292,7 +292,8 @@ Window {
                         id: body
                         x: 14; y: 10
                         width: Math.min(implicitWidth, list.width * (msg.mine ? 0.8 : 0.9) - 28)
-                        text: msg.modelData.text.length ? msg.modelData.text
+                        // einzelne Zeilenumbrüche (E-Mails!) im Markdown erhalten
+                        text: msg.modelData.text.length ? (msg.mine ? msg.modelData.text : msg.modelData.text.replace(/\n/g, "  \n"))
                               : (win.ki.status.length ? win.ki.status : "Denkt nach …")
                         textFormat: msg.mine ? TextEdit.PlainText : TextEdit.MarkdownText
                         readOnly: true
@@ -307,10 +308,11 @@ Window {
                         Accessible.name: msg.mine ? "Du: " + text : "KI-Helfer: " + text
                     }
                 }
-                Row {
+                Flow {
                     id: tools
                     visible: !msg.mine && msg.modelData.text.length > 0 && !(msg.last && win.ki.busy)
                     x: 18
+                    width: list.width - 36
                     anchors.top: bubble.bottom
                     anchors.topMargin: 4
                     spacing: 6
@@ -339,7 +341,7 @@ Window {
                         model: msg.modelData.quellen || []
                         delegate: Rectangle {
                             required property var modelData
-                            width: srcText.implicitWidth + 16; height: 24; radius: 12
+                            width: srcText.width + 16; height: 24; radius: 12
                             color: srcMouse.containsMouse ? Theme.hover : "transparent"
                             border.color: Theme.hairline
                             Text {
@@ -347,7 +349,7 @@ Window {
                                 anchors.centerIn: parent
                                 text: "W  " + parent.modelData.titel
                                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
-                                width: Math.min(implicitWidth, 160)
+                                width: Math.min(implicitWidth, 200)
                                 elide: Text.ElideRight
                             }
                             MouseArea { id: srcMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(parent.modelData.url) }
