@@ -125,33 +125,27 @@ SH
     # Shell des Zweitkontos mit Protokoll neu starten: wo hängt sie?
     cat > "$W/shell-frau.sh" <<'SH'
 #!/bin/sh
-u=$(id -u frau)
 spid=$(pgrep -u frau -f "python3 -m creative_shell" | head -1)
-echo "Shell-PID $spid  wchan=$(cat /proc/$spid/wchan 2>/dev/null)"
+echo "Shell-PID $spid"
 for t in /proc/$spid/task/*; do printf '%s %s %s\n' "$(basename $t)" "$(cat $t/comm)" "$(cat $t/wchan 2>/dev/null)"; done | head -20
-ls -l /proc/$spid/fd 2>/dev/null | awk '{print $NF}' | sort | uniq -c | sort -rn | head -15
-echo "Umgebung Shell:"; tr '\0' '\n' < /proc/$spid/environ | cut -c1-90 | sort
-kp=$(pgrep -u frau -x kwin_wayland | head -1)
-echo "Umgebung KWin:"; tr '\0' '\n' < /proc/$kp/environ | cut -c1-90 | sort
-ls -ld /run/user/$u; ls /run/user/$u | head -20
-loginctl show-user frau | head -20
-tr '\0' '\n' < /proc/$spid/environ | grep -E '^(WAYLAND_DISPLAY|DISPLAY|XDG_|QT_|DBUS_SESSION|HOME|USER|PATH|LANG)=' | grep -v '^XDG_RUNTIME_DIR=' > /tmp/frau-env
-echo "XDG_RUNTIME_DIR=/run/user/$u" >> /tmp/frau-env
-# Neustarts verhindern, alte Shell beenden
-for p in $(pgrep -u frau -f creative-shell-supervisor); do kill -STOP $p; done
-kill $spid; sleep 1
-cd /tmp
-sudo -u frau env -i $(cat /tmp/frau-env | tr '\n' ' ') PYTHONPATH=/usr/lib/creative-shell QT_QPA_PLATFORM=wayland \
-    timeout -s ABRT 45 python3 -X faulthandler -m creative_shell > /tmp/frau-shell.log 2>&1 &
-sleep 30
-echo "--- nach 30 s:"
+# Python 3.14: Stapel aller Threads im laufenden Prozess ausgeben (PEP 768)
+cat > /tmp/stapel.py <<'PY'
+import faulthandler, sys, threading, traceback
+with open("/tmp/frau-stapel.txt", "w") as f:
+    for tid, frame in sys._current_frames().items():
+        f.write(f"--- Thread {tid}\n")
+        traceback.print_stack(frame, file=f)
+PY
+chmod 644 /tmp/stapel.py
+python3 -c "import sys; sys.remote_exec($spid, '/tmp/stapel.py')" && echo "remote_exec gesendet"
+sleep 8
+cat /tmp/frau-stapel.txt 2>&1 | tail -120
+echo "--- py-spy:"
+python3 -m venv /tmp/ps >/dev/null 2>&1 && /tmp/ps/bin/pip -q install py-spy >/dev/null 2>&1 && /tmp/ps/bin/py-spy dump --pid $spid 2>&1 | head -150
 SH
     scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/shell-frau.sh" tester@127.0.0.1:/tmp/shell-frau.sh
     echo "--- Shell des Zweitkontos (Diagnose):"
-    $SSH "$R sh /tmp/shell-frau.sh" 2>&1 | grep -v "password for" | tail -60
-    shot desktop-frau-neustart
-    sleep 20
-    $SSH "$R sh -c 'grep -vE \"MESA|portal\" /tmp/frau-shell.log | tail -120'" 2>&1 | tail -120
+    $SSH "$R sh /tmp/shell-frau.sh" 2>&1 | grep -v "password for" | tail -250
     $SSH "$R sh -c 'for p in \$(pgrep -u frau -f creative-shell-supervisor); do kill -CONT \$p; done'" 2>&1 | tail -1
     fshell=$($SSH "pgrep -u frau -f 'python3 -m creative_shell' | head -1")
     fwelcome=$($SSH "pgrep -u frau -f creative_welcome | head -1")
