@@ -25,7 +25,7 @@ from .dbus_service import ShellBus
 from .kwin import KWinBridge
 from .desktop import DesktopModel
 from .tasks import TaskModel
-from .icons import IconProvider
+from .icons import IconFiles
 from .network import NetworkModel
 from .bluetooth import BluetoothModel
 from .printers import PrinterModel
@@ -500,7 +500,9 @@ def main():
 
     engine = QQmlApplicationEngine()
     engine.addImportPath(str(QML_DIR))
-    engine.addImageProvider("icon", IconProvider())
+    # Symbole als Dateien (kein Python-Bildlieferant – der konnte den Start verklemmen)
+    icon_files = IconFiles()
+    engine.rootContext().setContextProperty("iconFiles", icon_files)
 
     cfg = config.load()
     apps = AppModel(cfg["pinned"])

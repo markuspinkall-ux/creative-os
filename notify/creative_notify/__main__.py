@@ -161,8 +161,9 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     center = Center()
     engine = QQmlApplicationEngine()
-    from creative_shell.icons import IconProvider
-    engine.addImageProvider("icon", IconProvider())
+    from creative_shell.icons import IconFiles
+    icon_files = IconFiles()
+    engine.rootContext().setContextProperty("iconFiles", icon_files)
     for d in (HERE.parent.parent / "shell" / "creative_shell" / "qml", Path("/usr/lib/creative-shell/creative_shell/qml")):
         if (d / "Creative" / "qmldir").exists():
             engine.addImportPath(str(d))

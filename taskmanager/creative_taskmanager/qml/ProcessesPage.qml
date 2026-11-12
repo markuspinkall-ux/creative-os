@@ -172,7 +172,7 @@ Item {
                             id: appIcon
                             anchors.fill: parent
                             visible: row.icon.length > 0 && status === Image.Ready
-                            source: row.icon.length > 0 ? "image://icon/" + row.icon : ""
+                            source: row.icon.length > 0 ? iconFiles.url(row.icon) : ""
                             sourceSize.width: 40
                             sourceSize.height: 40
                             asynchronous: true

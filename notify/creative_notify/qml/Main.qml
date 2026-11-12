@@ -74,7 +74,7 @@ Window {
                             visible: appIcon.known
                             anchors.fill: parent
                             sourceSize.width: 68; sourceSize.height: 68
-                            source: appIcon.known ? "image://icon/" + toast.modelData.icon : ""
+                            source: appIcon.known ? iconFiles.url(toast.modelData.icon) : ""
                             asynchronous: true
                             smooth: true
                         }

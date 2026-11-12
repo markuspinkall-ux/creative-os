@@ -962,7 +962,7 @@ Item {
                             anchors.fill: parent
                             sourceSize.width: 76
                             sourceSize.height: 76
-                            source: slot.modelData.kind === "app" ? "image://icon/" + slot.modelData.icon : ""
+                            source: slot.modelData.kind === "app" ? iconFiles.url(slot.modelData.icon) : ""
                             // The icon provider creates QPixmaps on the GUI thread.
                             asynchronous: false
                             smooth: true
@@ -1103,7 +1103,7 @@ Item {
             anchors.centerIn: parent
             width: 38; height: 38
             sourceSize.width: 76; sourceSize.height: 76
-            source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? "image://icon/" + root.dragShelfItem.icon : ""
+            source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? iconFiles.url(root.dragShelfItem.icon) : ""
         }
         FileIcon {
             visible: root.dragPath !== "" || (root.dragShelfItem !== null && root.dragShelfItem.kind !== "app")

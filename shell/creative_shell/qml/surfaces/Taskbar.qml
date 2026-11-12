@@ -198,7 +198,7 @@ Item {
                             visible: modelData.creative === ""
                             width: 17; height: 17
                             sourceSize.width: 34; sourceSize.height: 34
-                            source: modelData.creative === "" && modelData.icon ? "image://icon/" + modelData.icon : ""
+                            source: modelData.creative === "" && modelData.icon ? iconFiles.url(modelData.icon) : ""
                         }
                         MouseArea {
                             id: am
