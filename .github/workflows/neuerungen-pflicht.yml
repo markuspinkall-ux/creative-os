@@ -1,0 +1,21 @@
+name: Neuerungen gepflegt?
+# Jede Änderung, die beim Nutzer ankommt, braucht einen Eintrag unter „Neuerungen ansehen“
+# (settings/creative_settings/neuerungen.json). Reine Werkzeug-/Test-/Workflow-Änderungen sind ausgenommen.
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          echo "$files"
+          relevant=$(echo "$files" | grep -vE '^(\.github/|tests/|tools/|README|.*\.md$|personal/)' || true)
+          if [ -n "$relevant" ] && ! echo "$files" | grep -qx 'settings/creative_settings/neuerungen.json'; then
+            echo "::error::Neuerungen fehlen: settings/creative_settings/neuerungen.json wurde nicht ergänzt."
+            exit 1
+          fi
+          echo "Neuerungen gepflegt."
