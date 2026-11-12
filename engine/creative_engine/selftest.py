@@ -11,6 +11,9 @@ def run():
     work = Path(tempfile.mkdtemp(prefix="creative-engine-test-"))
     data = proj.new_project("Selbsttest")
     proj.add_step(data, "text", 1)
+    proj.add_step(data, "seite", 1)
+    old = {"kind": "npc", "x": 1, "y": 1, "text": "Hallo"}
+    assert proj.upgrade_npc(old)["dialog"] == [{"who": "npc", "text": "Hallo"}]
     proj.duplicate_step(data, len(data["flow"]) - 1)
     assert not proj.validate(data), proj.validate(data)
     figur = S.orient(S.demo_figure())
@@ -27,7 +30,7 @@ def run():
     assert proj.load(work / "spiel")["name"] == "Selbsttest"
     target = builder.build(work / "spiel", data, work / "build")
     game = json.loads((target / "game.json").read_text(encoding="utf-8"))
-    assert len(game["flow"]) == 5 and (target / "assets" / "figur.glb").exists()
+    assert len(game["flow"]) == 6 and (target / "assets" / "figur.glb").exists()
     parsed = S.parse_ai('{"name":"Ente","length":1,"loop":true,"keys":[{"t":0,"Hips":[0,0,12],"bob":0.01},'
                         '{"t":0.5,"Hips":[0,0,-12]}]}')
     assert parsed["tracks"]["Hips"][1][3] == -12

@@ -4,6 +4,7 @@ extends Node
 
 const Assets = preload("res://assets.gd")
 const LevelScript = preload("res://level.gd")
+const BubbleScript = preload("res://bubble.gd")
 
 var game: Dictionary = {}
 var flow: Array = []
@@ -98,6 +99,8 @@ func show_step(i: int) -> void:
 			current = make_menu(s)
 		"text":
 			current = make_text(s)
+		"seite":
+			current = make_page(s)
 		"level":
 			current = make_level(s)
 		_:
@@ -234,6 +237,64 @@ func make_text(s: Dictionary, done: Callable = Callable()) -> Node:
 	var dur := float(s.get("duration", 0))
 	if dur > 0:
 		get_tree().create_timer(dur).timeout.connect(_timed.bind(box, done))
+	return root
+
+
+## Freie Seite (Bild/Comic): Hintergrund, Texte, Bilder und Sprechblasen, die nacheinander erscheinen können.
+## Weiter nach „duration“ Sekunden oder (bei 0) per Taste/Klick.
+func make_page(s: Dictionary) -> Node:
+	var root := CanvasLayer.new()
+	var box := Skippable.new()
+	full_rect(box)
+	root.add_child(box)
+	background(box, s)
+	var size := Vector2(1280, 720)
+	var last := 0.0
+	for e in s.get("elements", []):
+		var kind := String(e.get("kind", ""))
+		var rect := Rect2(float(e.get("x", 0.5)) * size.x, float(e.get("y", 0.5)) * size.y,
+			float(e.get("w", 0.3)) * size.x, float(e.get("h", 0.1)) * size.y)
+		rect.position -= rect.size / 2.0
+		var node: Control
+		if kind == "bubble":
+			var b = BubbleScript.new()
+			b.setup(String(e.get("text", "")), int(e.get("size", 30)), Color(String(e.get("color", "#ffffff"))),
+				Color(String(e.get("textColor", "#1c2433"))), String(e.get("tail", "unten-links")),
+				String(e.get("speaker", "")))
+			node = b
+		elif kind == "image":
+			var tr := TextureRect.new()
+			tr.texture = Assets.texture(String(e.get("image", "")))
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			node = tr
+		else:
+			var l := make_label(String(e.get("text", "")), int(e.get("size", 48)), String(e.get("color", "#ffffff")))
+			if e.get("bold", false):
+				l.add_theme_constant_override("outline_size", 2)
+				l.add_theme_color_override("font_outline_color", Color(String(e.get("color", "#ffffff"))))
+			node = l
+		node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		node.position = rect.position
+		node.size = rect.size
+		box.add_child(node)
+		var delay := float(e.get("after", 0.0))
+		last = maxf(last, delay)
+		if delay > 0.0:
+			node.modulate.a = 0.0
+			var tw := node.create_tween()
+			tw.tween_interval(delay)
+			tw.tween_property(node, "modulate:a", 1.0, 0.25)
+	var dur := float(s.get("duration", 0))
+	if dur <= 0.0:
+		var hint := make_label("Weiter mit Leertaste oder Klick", 16, "#ffffff")
+		hint.modulate.a = 0.55
+		hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		hint.position.y -= 40
+		box.add_child(hint)
+	box.skipped.connect(next_step, CONNECT_ONE_SHOT)
+	if dur > 0.0:
+		get_tree().create_timer(maxf(dur, last + 0.3)).timeout.connect(_timed.bind(box, next_step))
 	return root
 
 

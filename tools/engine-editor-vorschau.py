@@ -36,7 +36,7 @@ w.show()
 
 folder = Path(os.environ["HOME"]) / "Creative Engine" / "Insel-Abenteuer"
 data = proj.new_project("Insel-Abenteuer")
-proj.add_step(data, "text", 1)
+proj.add_step(data, "seite", 1)
 proj.save(folder, data)
 (folder / "assets").mkdir(parents=True, exist_ok=True)
 S.demo_glb(folder / "assets" / "held.glb")
@@ -69,6 +69,12 @@ steps = [
     ("start", lambda: None, None),
     ("level", lambda: w.open_project(str(folder)), None),
     ("level-auswahl", lambda: (w.levels.set_tool("select"), w.levels.show_props(level["entities"][2])), None),
+    ("dialog", lambda: (w.timeline.setCurrentRow(3), w.levels.set_tool("select"),
+                        w.levels.show_props(next(e for e in level["entities"] if e["kind"] == "npc"))), None),
+    ("seite", lambda: w.timeline.setCurrentRow(2), None),
+    ("seite-blase", lambda: (w.screens.screen.selected.emit(w.project["flow"][2]["elements"][1]),
+                             setattr(w.screens.screen, "selection", w.project["flow"][2]["elements"][1]),
+                             w.screens.screen.update()), None),
     ("menue", lambda: (w.timeline.setCurrentRow(1)), None),
     ("splash", lambda: w.timeline.setCurrentRow(0), None),
     ("einstellungen", lambda: w.show_section("settings"), None),

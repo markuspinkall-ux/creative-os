@@ -9,6 +9,7 @@ signal to_menu
 const Assets = preload("res://assets.gd")
 const PlayerScript = preload("res://player.gd")
 const EnemyScript = preload("res://enemy.gd")
+const BubbleScript = preload("res://bubble.gd")
 
 const TILE_COLORS := {
 	"gras": Color("#7a5a3a"), "erde": Color("#7a5a3a"), "stein": Color("#8a93a3"), "ziegel": Color("#b0603f"),
@@ -31,6 +32,9 @@ var width := 60
 var height := 20
 var materials := {}
 var autotest_time := 0.0
+var bubble_layer: CanvasLayer
+var dialog := {}            # laufendes Gespräch (siehe start_dialog)
+var bubble = null         # Sprechblase (bubble.gd)
 
 
 func setup(level_data: Dictionary, game_data: Dictionary, start_points: int, test: bool) -> void:
@@ -374,25 +378,115 @@ func add_npc(e: Dictionary, p: Vector3) -> void:
 		mi.position = Vector3(0, 0.8, 0)
 		mi.material_override = mat(Color("#c3a6ff"))
 		holder.add_child(mi)
-	var label := Label3D.new()
-	label.text = String(e.get("text", "Hallo!"))
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 42
-	label.outline_size = 10
-	label.pixel_size = 0.008
-	label.width = 420
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.position = Vector3(0, 2.4, 0)
-	label.visible = false
-	holder.add_child(label)
+	var info := {
+		"lines": npc_lines(e), "mode": String(e.get("mode", "gespraech")),
+		"secs": float(e.get("seconds", 3.0)), "once": bool(e.get("once", true)), "done": false,
+		"anchor": holder, "top": float(e.get("height", 1.7)) + 0.35, "name": String(e.get("name", "")),
+	}
+	if info["lines"].is_empty():
+		return
 	var a := area_box(Vector3(4, 3, 2), p + Vector3(0, 1.5, 0))
-	a.body_entered.connect(_npc_near.bind(label, true))
-	a.body_exited.connect(_npc_near.bind(label, false))
+	a.body_entered.connect(_npc_near.bind(info, true))
+	a.body_exited.connect(_npc_near.bind(info, false))
 
 
-func _npc_near(body: Node, label: Label3D, show: bool) -> void:
-	if body == player:
-		label.visible = show
+## Dialogzeilen eines NPCs: [{"who": "npc"|"spieler", "text": …}] (alte Projekte: nur "text")
+func npc_lines(e: Dictionary) -> Array:
+	var lines: Array = []
+	for l in e.get("dialog", []):
+		if String(l.get("text", "")).strip_edges() != "":
+			lines.append(l)
+	if lines.is_empty() and String(e.get("text", "")).strip_edges() != "":
+		lines.append({"who": "npc", "text": String(e.get("text", ""))})
+	return lines
+
+
+func _npc_near(body: Node, info: Dictionary, entered: bool) -> void:
+	if body != player or done:
+		return
+	if entered:
+		if dialog.is_empty() and not (info["once"] and info["done"]):
+			start_dialog(info)
+	elif dialog == info and info["mode"] != "gespraech":
+		end_dialog()
+
+
+# ---- Sprechblasen-Dialoge --------------------------------------------------------------------
+func start_dialog(info: Dictionary) -> void:
+	dialog = info
+	dialog["index"] = 0
+	dialog["time"] = 0.0
+	if info["mode"] == "gespraech":
+		player.frozen = true
+	show_line()
+
+
+func show_line() -> void:
+	if bubble:
+		bubble.queue_free()
+		bubble = null
+	var line: Dictionary = dialog["lines"][dialog["index"]]
+	var by_player := String(line.get("who", "npc")) == "spieler"
+	var npc_x: float = (dialog["anchor"] as Node3D).global_position.x
+	# Spitze zeigt zum Sprecher, Blase ragt zur Mitte zwischen beiden
+	var speaker_left := (player.global_position.x < npc_x) == by_player
+	var b = BubbleScript.new()
+	var speaker := ""
+	if not by_player:
+		speaker = String(dialog["name"])
+	b.setup(String(line.get("text", "")), 24, Color("#ffffff"), Color("#1c2433"),
+		"unten-links" if speaker_left else "unten-rechts", speaker, dialog["mode"] == "gespraech")
+	b.fit(440)
+	bubble_layer.add_child(b)
+	bubble = b
+	bubble.set_meta("player", by_player)
+	dialog["time"] = 0.0
+	position_bubble()
+
+
+func position_bubble() -> void:
+	if bubble == null or dialog.is_empty():
+		return
+	var world: Vector3
+	if bubble.get_meta("player"):
+		world = player.global_position + Vector3(0, float(game.get("player", {}).get("height", 1.6)) + 0.35, 0)
+	else:
+		world = (dialog["anchor"] as Node3D).global_position + Vector3(0, float(dialog["top"]), 0)
+	var screen := camera.unproject_position(world)
+	var pos: Vector2 = screen - bubble.tip()
+	var view := get_viewport().get_visible_rect().size
+	pos.x = clampf(pos.x, 8, view.x - bubble.size.x - 8)
+	pos.y = clampf(pos.y, 70, view.y - bubble.size.y - 8)
+	bubble.position = pos
+
+
+func next_line() -> void:
+	if dialog.is_empty():
+		return
+	dialog["index"] += 1
+	if dialog["index"] >= dialog["lines"].size():
+		end_dialog()
+	else:
+		show_line()
+
+
+func end_dialog() -> void:
+	if bubble:
+		bubble.queue_free()
+		bubble = null
+	if dialog.is_empty():
+		return
+	dialog["done"] = true
+	var talk: bool = dialog["mode"] == "gespraech"
+	dialog = {}
+	if talk:
+		# kurz warten, damit der letzte Tastendruck nicht gleich springen lässt
+		get_tree().create_timer(0.2).timeout.connect(_release_player)
+
+
+func _release_player() -> void:
+	if not done and dialog.is_empty():
+		player.frozen = false
 
 
 func build_decor(d: Dictionary) -> void:
@@ -457,6 +551,9 @@ func build_hud() -> void:
 	hud = Label.new()
 	hud.add_theme_font_size_override("font_size", 24)
 	panel.add_child(hud)
+	bubble_layer = CanvasLayer.new()
+	bubble_layer.layer = 0
+	add_child(bubble_layer)
 	pause_panel = VBoxContainer.new()
 	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
 	pause_panel.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -524,6 +621,12 @@ func hurt(fell: bool) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not done:
 		set_paused(not get_tree().paused)
+		return
+	if not dialog.is_empty() and dialog["mode"] == "gespraech" and not get_tree().paused:
+		var click := event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+		if event.is_action_pressed("weiter") or click:
+			get_viewport().set_input_as_handled()
+			next_line()
 
 
 func _process(delta: float) -> void:
@@ -541,6 +644,14 @@ func _process(delta: float) -> void:
 	camera.look_at(Vector3(camera.position.x, ty - 0.4, 0))
 	if player.position.y < -8 and not done:
 		hurt(true)
+	if not dialog.is_empty():
+		position_bubble()
+		dialog["time"] += delta
+		var wait: float = dialog["secs"]
+		if autotest and dialog["mode"] == "gespraech":
+			wait = 1.0
+		if (dialog["mode"] != "gespraech" or autotest) and dialog["time"] >= wait:
+			next_line()
 	if autotest:
 		autotest_time += delta
 		if autotest_time > 25.0:

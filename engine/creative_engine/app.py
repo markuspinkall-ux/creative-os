@@ -20,8 +20,9 @@ from .screens import ScreenEditor
 from .style import C, apply_palette, stylesheet
 
 APP_NAME = "Creative Engine"
-STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level"}
-STEP_NAME = {"splash": "Splash", "menu": "Menü", "text": "Zwischentext", "level": "Level"}
+STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level", "seite": "bubble"}
+STEP_NAME = {"splash": "Splash", "menu": "Menü", "text": "Zwischentext", "level": "Level", "seite": "Seite"}
+STEP_KINDS = ("level", "seite", "splash", "menu", "text")
 
 
 def config_dir():
@@ -240,7 +241,11 @@ class Timeline(QListWidget):
         for i, step in enumerate(flow):
             name = step.get("name") or STEP_NAME[step["type"]]
             kind = STEP_NAME[step["type"]]
-            label = f"{i + 1} · {name}" + ("" if name.startswith(kind) or name == kind else f"\n{kind}")
+            sub = "" if name.startswith(kind) else kind
+            if step["type"] in ("seite", "text", "splash"):
+                dur = float(step.get("duration", 0) or 0)
+                sub = (sub + " · " if sub else "") + (f"{dur:g} s".replace(".", ",") if dur > 0 else "bis Taste")
+            label = f"{i + 1} · {name}" + (f"\n{sub}" if sub else "")
             it = QListWidgetItem(icons.icon(STEP_ICON[step["type"]], C["text"], C["accent"]), label)
             it.setData(Qt.ItemDataRole.UserRole, step["id"])
             it.setSizeHint(QSize(178, 62))
@@ -268,7 +273,7 @@ class Timeline(QListWidget):
             m.addAction(icons.icon("trash", C["danger"]), "Entfernen", lambda: self.win.remove_step(index))
             m.addSeparator()
         add = m.addMenu(icons.icon("plus", C["text"]), "Schritt hinzufügen")
-        for kind in ("level", "splash", "menu", "text"):
+        for kind in STEP_KINDS:
             add.addAction(icons.icon(STEP_ICON[kind], C["text"], C["accent"]), STEP_NAME[kind],
                           lambda k=kind: self.win.add_step(k))
         m.exec(self.mapToGlobal(pos))
@@ -439,7 +444,7 @@ class Window(QMainWindow):
         add.setIconSize(QSize(22, 22))
         add.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         am = QMenu(self)
-        for kind in ("level", "splash", "menu", "text"):
+        for kind in STEP_KINDS:
             am.addAction(icons.icon(STEP_ICON[kind], C["text"], C["accent"]), STEP_NAME[kind],
                          lambda k=kind: self.add_step(k))
         add.setMenu(am)
@@ -454,6 +459,7 @@ class Window(QMainWindow):
         for w in (self.welcome, self.screens, self.levels, self.settings):
             self.stack.addWidget(w)
         self.screens.changed.connect(self.touched)
+        self.screens.changed.connect(lambda: self.project and self.refresh_timeline())
         self.levels.changed.connect(self.touched)
         self.levels.importModel.connect(self.import_decor)
         self.levels.view.status.connect(self.status_msg)

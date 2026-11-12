@@ -30,7 +30,7 @@ ENTITIES = [
     ("spike", "Stacheln", "Kostet ein Leben."),
     ("spring", "Sprungfeder", "Schleudert die Figur hoch."),
     ("checkpoint", "Checkpoint", "Neustartpunkt nach einem Sturz."),
-    ("npc", "NPC", "Figur, die etwas sagt, wenn man vorbeikommt."),
+    ("npc", "NPC", "Figur mit Sprechblasen-Dialog, wenn man vorbeikommt."),
     ("goal", "Ziel", "Fahne – hier ist das Level geschafft."),
 ]
 SINGLE = {"start", "goal"}
@@ -77,7 +77,10 @@ def sample_level(name="Level 1"):
         {"kind": "enemy", "x": 40, "y": 2, "range": 2, "speed": 2.5, "model": ""},
         {"kind": "spike", "x": 31, "y": 2}, {"kind": "spring", "x": 42, "y": 2},
         {"kind": "checkpoint", "x": 38, "y": 4},
-        {"kind": "npc", "x": 5, "y": 2, "text": "Willkommen! Lauf nach rechts zur Fahne.", "model": ""},
+        {"kind": "npc", "x": 5, "y": 2, "model": "", "name": "Lotte", "mode": "gespraech", "seconds": 3.0,
+         "once": True, "dialog": [{"who": "npc", "text": "Hallo! Schön, dass du da bist."},
+                                  {"who": "spieler", "text": "Wo geht's lang?"},
+                                  {"who": "npc", "text": "Immer nach rechts zur Fahne – pass auf die Stacheln auf!"}]},
     ]
     return lvl
 
@@ -122,6 +125,15 @@ def add_step(project, kind, after=None):
         step = {"type": "menu", "id": new_id("m"), "name": "Menü", "bg": "#12151b", "bgImage": "",
                 "elements": [{"kind": "button", "text": "Weiter", "action": "next", "x": 0.5, "y": 0.6, "w": 0.24,
                               "h": 0.09, "size": 30, "color": "#8fb3ff", "textColor": "#12151b", "radius": 16}]}
+    elif kind == "seite":
+        step = {"type": "seite", "id": new_id("p"), "name": "Seite", "bg": "#20263a", "bgImage": "", "duration": 4.0,
+                "elements": [
+                    {"kind": "bubble", "text": "Was für ein Tag!", "speaker": "", "x": 0.32, "y": 0.3, "w": 0.32,
+                     "h": 0.2, "size": 34, "color": "#ffffff", "textColor": "#1c2433", "tail": "unten-links",
+                     "after": 0.0},
+                    {"kind": "bubble", "text": "Und er fängt gerade erst an …", "speaker": "", "x": 0.66, "y": 0.62,
+                     "w": 0.36, "h": 0.2, "size": 34, "color": "#ffe9a8", "textColor": "#1c2433",
+                     "tail": "unten-rechts", "after": 1.5}]}
     else:
         step = {"type": "text", "id": new_id("t"), "name": "Zwischentext", "bg": "#12151b",
                 "text": "Kapitel 2\nDie Reise geht weiter …", "textColor": "#ffffff", "textSize": 40, "duration": 0}
@@ -225,4 +237,20 @@ def load(folder):
         lvl.setdefault("decor", [])
         lvl.setdefault("entities", [])
         lvl.setdefault("tiles", {})
+        for e in lvl["entities"]:
+            if e.get("kind") == "npc":
+                upgrade_npc(e)
     return data
+
+
+def upgrade_npc(e):
+    """Ältere NPCs hatten nur „text“ – daraus wird ein Dialog mit einer Zeile."""
+    if "dialog" not in e:
+        text = e.pop("text", "")
+        e["dialog"] = [{"who": "npc", "text": text}] if text else []
+    e.setdefault("name", "")
+    e.setdefault("mode", "gespraech")
+    e.setdefault("seconds", 3.0)
+    e.setdefault("once", True)
+    return e
+

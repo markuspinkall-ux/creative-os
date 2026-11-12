@@ -60,6 +60,7 @@ def run(args, timeout=240, env=None, check=True):
 work = Path(tempfile.mkdtemp())
 folder = work / "Testspiel"
 data = project.new_project("Testspiel")
+seite = project.add_step(data, "seite", 1)
 folder.mkdir()
 cube_glb(work / "kiste.glb")
 kiste = project.import_asset(folder, work / "kiste.glb")
@@ -87,7 +88,9 @@ print("Autotest:", [l for l in out.splitlines() if "AUTOTEST" in l])
 xvfb = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"]
 for name, extra in (("splash", ["--nach=1.2"]), ("menue", [f"--level={data['flow'][1]['id']}", "--nach=1.5"]),
                     ("level", [f"--level={level_id}", "--nach=3"]),
-                    ("lauf", [f"--level={level_id}", "--autotest", "--nach=2.4"])):
+                    ("lauf", [f"--level={level_id}", "--autotest", "--nach=2.4"]),
+                    ("dialog", [f"--level={level_id}", "--autotest", "--nach=1.3"]),
+                    ("seite", [f"--level={seite['id']}", "--nach=2.2"])):
     run([*xvfb, GODOT, "--rendering-driver", "opengl3", "--path", str(game), "--resolution", "1280x720", "--",
          *extra, f"--screenshot={OUT / ('spiel-' + name + '.png')}", "--fenster"], timeout=120, check=False)
 
