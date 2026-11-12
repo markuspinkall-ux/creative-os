@@ -1823,7 +1823,7 @@ class Writer(QMainWindow):
             self.editor.viewport().setCursor(Qt.CursorShape.IBeamCursor)
 
     def eventFilter(self, obj, event):
-        if obj is self.editor.viewport() and event.type() == QEvent.Type.MouseButtonRelease and self.painter_format:
+        if event.type() == QEvent.Type.MouseButtonRelease and self.painter_format and obj is self.editor.viewport():
             cursor = self.editor.textCursor()
             if cursor.hasSelection():
                 char, block = self.painter_format

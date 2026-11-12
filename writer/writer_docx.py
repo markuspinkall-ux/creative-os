@@ -221,7 +221,7 @@ def _style_for(block, wdoc):
     """Word-Formatvorlage für einen Absatz."""
     kind = block.blockFormat().property(QTextFormat.Property.UserProperty + 1)
     names = {"titel": "Title", "untertitel": "Subtitle", "zitat": "Quote"}
-    if kind in names:
+    if isinstance(kind, str) and kind in names:
         return names[kind]
     level = block.blockFormat().headingLevel()
     if 1 <= level <= 6:
