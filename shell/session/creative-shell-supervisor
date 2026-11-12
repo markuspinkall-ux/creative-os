@@ -112,8 +112,10 @@ if [ -e /run/creative-live ] && command -v creative-installer >/dev/null 2>&1; t
     mkdir -p "$HOME/.cache"
     auto=""; [ -e /run/creative-live-autotest ] && auto="--auto"
     (sleep 4; creative-installer $auto) >"$HOME/.cache/creative-installer.log" 2>&1 &
-# Willkommens-Assistent: nach jeder Anmeldung, bis „Nicht mehr anzeigen“ angehakt ist
-elif command -v creative-welcome >/dev/null 2>&1; then
+# Willkommens-Assistent: nach jeder Anmeldung, bis „Nicht mehr anzeigen“ angehakt ist.
+# Er gehört zur Ersteinrichtung: Standardkonten (z. B. später angelegte Familienkonten)
+# bekommen ihn nie – das System ist ja schon eingerichtet.
+elif command -v creative-welcome >/dev/null 2>&1 && id -nG 2>/dev/null | tr ' ' '\n' | grep -qx wheel; then
     # Meldungen landen in ~/.cache/creative-welcome.log (falls er sich unerwartet schließt)
     mkdir -p "$HOME/.cache"
     (sleep 3; creative-welcome) >"$HOME/.cache/creative-welcome.log" 2>&1 &
