@@ -19,7 +19,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from PySide6.QtCore import (
-    QByteArray, QBuffer, QDate, QDateTime, QEvent, QIODevice, QMarginsF, QPointF, QRectF, QSaveFile,
+    QByteArray, QBuffer, QDate, QDateTime, QEvent, QIODevice, QLocale, QMarginsF, QPointF, QRectF, QSaveFile,
     QSettings, QSize, QSizeF, Qt, QTimer, Signal,
 )
 from PySide6.QtGui import (
@@ -114,6 +114,8 @@ STYLES = [
     ("betont", "Intensiv", 11, True, False, "#2b4f9e", 0, 8, 0, None),
 ]
 STYLE_BY_KEY = {s[0]: s for s in STYLES}
+SHORT_NAMES = {"standard": "Standard", "kein": "Ohne Abst.", "h1": "Überschr. 1", "h2": "Überschr. 2",
+               "h3": "Überschr. 3", "titel": "Titel", "untertitel": "Untertitel", "zitat": "Zitat", "betont": "Intensiv"}
 
 SYMBOLS = "€ £ ¥ © ® ™ § ¶ ° ± × ÷ ≈ ≠ ≤ ≥ ∞ √ ∑ π µ α β γ Δ Ω → ← ↑ ↓ ⇒ ✓ ✗ • · – — „ “ ‚ ‘ « » … ½ ¼ ¾ ² ³ ★ ☆ ♥ ☺".split()
 HIGHLIGHTS = ["#fff176", "#a5e7a0", "#9de5f2", "#f3a6e6", "#9cb8ff", "#ff9a9a", "#ffd59a", "#d9dce3"]
@@ -647,10 +649,10 @@ class StyleTile(QToolButton):
         super().__init__()
         key, name, size, bold, italic, color, *_ = style
         self.setObjectName("styleTile")
-        self.setFixedSize(84, 62)
-        self.setToolTip(name)
+        self.setFixedSize(80, 62)
+        self.setToolTip(f"Formatvorlage „{name}“")
         self.clicked.connect(lambda: on_click(key))
-        self.style_data = (name, size, bold, italic, color)
+        self.style_data = (SHORT_NAMES.get(key, name), size, bold, italic, color)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -668,7 +670,7 @@ class StyleTile(QToolButton):
         p.setPen(QColor(color if color != "#ffffff" else INK))
         p.drawText(QRectF(8, 5, self.width() - 16, 32), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, "AaBbCc")
         f2 = QFont(self.font())
-        f2.setPointSizeF(8)
+        f2.setPointSizeF(7.5)
         p.setFont(f2)
         p.setPen(QColor(C["muted"]))
         p.drawText(QRectF(4, 39, self.width() - 8, 18), Qt.AlignmentFlag.AlignCenter, name)
@@ -773,7 +775,9 @@ class Writer(QMainWindow):
         b.setDefaultAction(action)
         b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         b.setIconSize(QSize(26, 26))
-        b.setMinimumWidth(52)
+        text = action.text().replace("\u00ad", "")
+        extra = 22 if menu else 16
+        b.setMinimumWidth(max(52, b.fontMetrics().horizontalAdvance(text) + extra))
         b.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         if menu:
             b.setMenu(menu)
@@ -893,6 +897,8 @@ class Writer(QMainWindow):
         self.nav_list = QListWidget()
         self.nav_list.setObjectName("navList")
         self.nav_list.itemClicked.connect(self.jump_to_heading)
+        self.nav_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.nav_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         nv.addWidget(self.nav_list, 1)
         self.nav.hide()
         wh.addWidget(self.nav)
@@ -1403,8 +1409,25 @@ class Writer(QMainWindow):
         self.focus_editor()
 
     # ---- Aussehen ------------------------------------------------------------------------
+    def arrow_files(self):
+        cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "creative-writer"
+        out = {}
+        for name, d in (("down", "M6 9l6 6 6-6"), ("up", "M6 15l6-6 6 6")):
+            path = cache / f"pfeil-{name}-{C['muted'].lstrip('#')}.svg"
+            try:
+                cache.mkdir(parents=True, exist_ok=True)
+                if not path.exists():
+                    path.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="%s" fill="none" '
+                                    'stroke="%s" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                                    % (d, C["muted"]))
+            except OSError:
+                pass
+            out[name] = path.as_posix()
+        return out
+
     def apply_style(self):
         c = C
+        arrows = self.arrow_files()
         self.setStyleSheet(f"""
             QWidget#root, QWidget#titleBar {{ background:{c['ground']}; color:{c['text']}; }}
             QLabel {{ color:{c['text']}; background:transparent; }}
@@ -1444,6 +1467,10 @@ class Writer(QMainWindow):
             QComboBox QAbstractItemView {{ background:{c['raised']}; color:{c['text']}; selection-background-color:{c['select']};
                 border:1px solid {c['line']}; outline:none; }}
             QComboBox::drop-down {{ border:none; width:18px; }}
+            QComboBox::down-arrow {{ image:url({arrows['down']}); width:10px; height:10px; }}
+            QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {{ border:none; background:transparent; width:16px; }}
+            QAbstractSpinBox::up-arrow {{ image:url({arrows['up']}); width:9px; height:9px; }}
+            QAbstractSpinBox::down-arrow {{ image:url({arrows['down']}); width:9px; height:9px; }}
             QMenu {{ background:{c['surface']}; color:{c['text']}; border:1px solid {c['line']}; border-radius:10px; padding:6px; }}
             QMenu::item {{ padding:6px 22px 6px 12px; border-radius:6px; }}
             QMenu::item:selected {{ background:{c['select']}; }}
@@ -2793,6 +2820,7 @@ def demo(window):
     ed = window.editor
     cursor = ed.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.End)
+    cursor.insertBlock()
     ed.setTextCursor(cursor)
     window.apply_style_key("h2")
     ed.textCursor().insertText("Zahlen im Überblick")
@@ -2837,6 +2865,7 @@ def selftest(window):
 
 def main():
     arguments = sys.argv[1:]
+    QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Country.Germany))
     app = QApplication(sys.argv[:1])
     app.setApplicationName(APP)
     app.setOrganizationName("CreativeOS")
