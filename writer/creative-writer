@@ -649,7 +649,7 @@ class StyleTile(QToolButton):
         super().__init__()
         key, name, size, bold, italic, color, *_ = style
         self.setObjectName("styleTile")
-        self.setFixedSize(84, 62)
+        self.setFixedSize(82, 62)
         self.setToolTip(f"Formatvorlage „{name}“")
         self.clicked.connect(lambda: on_click(key))
         self.style_data = (SHORT_NAMES.get(key, name), size, bold, italic, color)
@@ -1071,8 +1071,19 @@ class Writer(QMainWindow):
         gl = QHBoxLayout(gallery)
         gl.setContentsMargins(0, 0, 0, 0)
         gl.setSpacing(3)
-        for style in STYLES:
+        for style in STYLES[:5]:
             gl.addWidget(StyleTile(style, self.apply_style_key))
+        more = QMenu(self)
+        for style in STYLES:
+            more.addAction(style[1], lambda k=style[0]: self.apply_style_key(k))
+        more_btn = QToolButton()
+        more_btn.setObjectName("small")
+        more_btn.setIcon(self.ic("chevron"))
+        more_btn.setToolTip("Alle Formatvorlagen")
+        more_btn.setMenu(more)
+        more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        more_btn.setFixedSize(22, 62)
+        gl.addWidget(more_btn)
         g.add(gallery)
 
         g = Ribbon.add_group(page, Group("Bearbeiten"))
