@@ -26,6 +26,7 @@ ApplicationWindow {
         { key: "server", name: "Mein Server", icon: "server", file: "ServerPage.qml", words: "webserver webseite homepage php caddy festplatte" },
         { key: "look", name: "Darstellung", icon: "palette", file: "LookPage.qml", words: "hintergrund hintergrundbild wallpaper bild" },
         { key: "updates", name: "Software & Updates", icon: "refresh", file: "UpdatesPage.qml", words: "update aktualisieren version neustart" },
+        { key: "users", name: "Benutzerkonten", icon: "users", file: "UsersPage.qml", words: "benutzer konto konten anlegen hinzufügen löschen passwort administrator familie kinder" },
         { key: "system", name: "System", icon: "info", file: "SystemPage.qml", words: "info gerätename prozessor ram grafik speicher konto profilbild avatar benutzer bild kürzel" }
     ]
     property var current: pages.find(p => p.key === startPage) || pages[0]

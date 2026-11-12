@@ -26,6 +26,7 @@ from .google_drive import GoogleDriveModel
 from .drives import DrivesModel  # noqa: E402
 from .server import ServerModel  # noqa: E402
 from .sound import SoundModel  # noqa: E402
+from .users import UsersModel  # noqa: E402
 from .system import LookModel, PrinterListModel, SystemModel  # noqa: E402
 
 PAGES = {
@@ -39,6 +40,7 @@ PAGES = {
     "drives": "drives", "laufwerke": "drives", "festplatten": "drives",
     "server": "server", "meinserver": "server", "mein-server": "server",
     "backup": "backup", "sicherung": "backup", "datensicherung": "backup",
+    "users": "users", "benutzer": "users", "konten": "users", "benutzerkonten": "users",
 }
 
 
@@ -74,6 +76,7 @@ def main():
         "drives": DrivesModel(),
         "googleDrive": GoogleDriveModel(),
         "backup": BackupModel(),
+        "users": UsersModel(),
         "look": LookModel(qml_root / "Creative" / "wallpapers"),
     }
     ctx = engine.rootContext()
