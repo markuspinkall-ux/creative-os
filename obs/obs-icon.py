@@ -22,8 +22,9 @@ p = QPainter(img)
 p.setRenderHint(QPainter.RenderHint.Antialiasing)
 tile = QPainterPath()
 tile.addRoundedRect(QRectF(8, 8, SIZE - 16, SIZE - 16), 56, 56)
-p.fillPath(tile, QColor("#232836"))
-p.setPen(QPen(QColor(255, 255, 255, 30), 3))
+light = len(sys.argv) > 2 and sys.argv[2] == "--hell"     # Porzellan: helle Kachel
+p.fillPath(tile, QColor("#ffffff" if light else "#232836"))
+p.setPen(QPen(QColor(28, 36, 51, 40) if light else QColor(255, 255, 255, 30), 3))
 p.drawPath(tile)
 inner = QRectF(SIZE * 0.17, SIZE * 0.17, SIZE * 0.66, SIZE * 0.66)
 if cands:

@@ -438,6 +438,10 @@ COPY settings/bin/creative-backup /usr/bin/creative-backup
 RUN chmod 755 /usr/bin/creative-backup && (command -v rsync >/dev/null || dnf install -y rsync) && dnf clean all
 COPY settings/creative-settings.desktop /usr/share/applications/creative-settings.desktop
 RUN chmod 755 /usr/bin/creative-settings
+# Benutzerkonten anlegen/löschen (Systemsteuerung → Benutzerkonten), root-Teil über pkexec
+COPY users/creative-users-helper /usr/libexec/creative-users-helper
+COPY users/org.creativeos.users.policy /usr/share/polkit-1/actions/org.creativeos.users.policy
+RUN chmod 755 /usr/libexec/creative-users-helper
 
 # ---------------------------------------------------------------------------
 # 8b3) Mein Server – Webseite im Heimnetz (Caddy + PHP), Schalter in der Systemsteuerung
@@ -503,8 +507,12 @@ COPY obs/obs-icon.py /tmp/obs-icon.py
 RUN if rpm -q obs-studio >/dev/null 2>&1; then \
       python3 /tmp/obs-icon.py /usr/share/icons/hicolor/256x256/apps/creative-obs.png \
       && for n in com.obsproject.Studio obs; do cp /usr/share/icons/hicolor/256x256/apps/creative-obs.png /usr/share/icons/Creative/apps/scalable/$n.png; done \
-      ; gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
+      && python3 /tmp/obs-icon.py /tmp/obs-hell.png --hell \
+      && for n in com.obsproject.Studio obs creative-obs; do cp /tmp/obs-hell.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; done \
+      ; rm -f /tmp/obs-hell.png; \
+      gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
       gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null; \
+      gtk-update-icon-cache -q -f /usr/share/icons/CreativePorzellan 2>/dev/null; \
     fi; rm -f /tmp/obs-icon.py
 
 # ---------------------------------------------------------------------------

@@ -45,7 +45,11 @@ if command -v gsettings >/dev/null 2>&1; then
         gs gtk-theme "Adwaita-dark"
         gs color-scheme "prefer-dark"
     fi
-    gs icon-theme "Creative"
+    if [ "$design" = porzellan ] && [ -d /usr/share/icons/CreativePorzellan ]; then
+        gs icon-theme "CreativePorzellan"
+    else
+        gs icon-theme "Creative"
+    fi
     gs cursor-theme "breeze_cursors"
     gs font-name "Arial 10"
     gs accent-color "blue"

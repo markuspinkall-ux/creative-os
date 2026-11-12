@@ -7,6 +7,7 @@
       "Creative Writer öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown – mit Rechtschreibprüfung auf Deutsch",
       "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
       "Creative Software → „Eigene Apps“: die Creative Engine zum Herunterladen – Spiele per Klick bauen, mit Charakter-Editor",
+      "Systemsteuerung → Benutzerkonten: Konten hinzufügen und löschen (auf Wunsch mit Sicherung der Dateien), Passwort ändern, Konten ohne Passwort, Administrator-Rechte vergeben",
       "Creative Engine: Sprechblasen-Dialoge für NPCs, freie Seiten in der Timeline mit Anzeigedauer in Sekunden und eigene Bilder oder Videos – auch im Vollbild",
       "Creative Engine: mehrere Angriffe mit eigener Taste und Bewegung, Lebensanzeige (Herzen, Balken oder Zahl), Gegner mit Lebensbalken und eigene Grafiken für Anzeige und Sprechblasen",
       "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
@@ -18,6 +19,7 @@
     ],
     "verbessert": [
       "Helles Design „Porzellan“ jetzt auch in Art, Cut, FTP, 3D, Notes, Software, Widgets, OBS und auf der Brave-Startseite",
+      "Porzellan: Programmsymbole im Startmenü, in der Taskleiste und in den Titelleisten jetzt hell mit dunklen Strichen (eigenes Symbol-Design „Creative Porzellan“)",
       "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
       "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
     ],

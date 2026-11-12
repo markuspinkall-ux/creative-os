@@ -1,0 +1,129 @@
+#!/bin/bash
+# Benutzerkonten verwalten – läuft als root über pkexec (polkit: org.creativeos.users.manage).
+#   creative-users-helper add <login> <name> <admin 0|1>   Passwort auf stdin (leer = ohne Passwort)
+#   creative-users-helper delete <login> <dateien-behalten 0|1>
+#   creative-users-helper password <login>                Passwort auf stdin (leer = Passwort entfernen)
+# Konten ohne Passwort gibt es nur als Standardkonto (Administratoren brauchen eines).
+# Sie stehen in /var/lib/creative-os/ohne-passwort (lesbar für die Systemsteuerung).
+#   creative-users-helper admin <login> <0|1>
+# Ausgabe bei Fehlern: eine verständliche Zeile auf stderr, Exit-Code ≠ 0.
+set -u
+export LC_ALL=C
+
+die() { echo "$*" >&2; exit 1; }
+caller_uid="${PKEXEC_UID:-}"
+caller=""
+[ -n "$caller_uid" ] && caller=$(getent passwd "$caller_uid" | cut -d: -f1)
+
+valid_login() { [[ "$1" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; }
+is_admin() { id -nG "$1" 2>/dev/null | tr ' ' '\n' | grep -qx wheel; }
+regular() {   # nur normale Konten (UID 1000–59999) anfassen
+    local uid
+    uid=$(id -u "$1" 2>/dev/null) || die "Das Konto „$1“ gibt es nicht."
+    [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || die "„$1“ ist ein Systemkonto und kann hier nicht geändert werden."
+}
+admins() {
+    getent group wheel | cut -d: -f4 | tr ',' '\n' | while read -r u; do
+        [ -n "$u" ] || continue
+        uid=$(id -u "$u" 2>/dev/null) || continue
+        [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] && echo "$u"
+    done
+}
+read_password() {   # leer erlaubt (= ohne Passwort)
+    local pw
+    IFS= read -r pw || true
+    [ -z "$pw" ] || [ "${#pw}" -ge 4 ] || die "Das Passwort muss mindestens 4 Zeichen haben."
+    printf '%s' "$pw"
+}
+NOPW=/var/lib/creative-os/ohne-passwort
+mark_nopw() {   # mark_nopw <login> <1|0>
+    mkdir -p "$(dirname "$NOPW")"
+    touch "$NOPW"; chmod 644 "$NOPW"
+    grep -vx "$1" "$NOPW" > "$NOPW.neu" 2>/dev/null || true
+    [ "$2" = 1 ] && echo "$1" >> "$NOPW.neu"
+    mv "$NOPW.neu" "$NOPW"; chmod 644 "$NOPW"
+}
+set_password() {   # set_password <login> <passwort|leer>
+    if [ -z "$2" ]; then
+        passwd -d "$1" >/dev/null || return 1
+        mark_nopw "$1" 1
+    else
+        printf '%s:%s\n' "$1" "$2" | chpasswd || return 1
+        mark_nopw "$1" 0
+    fi
+}
+
+cmd="${1:-}"
+case "$cmd" in
+add)
+    login="${2:-}"; name="${3:-}"; admin="${4:-0}"
+    valid_login "$login" || die "Der Benutzername darf nur Kleinbuchstaben, Ziffern, - und _ enthalten und muss mit einem Buchstaben beginnen."
+    getent passwd "$login" >/dev/null && die "Den Benutzernamen „$login“ gibt es schon."
+    getent group "$login" >/dev/null && die "„$login“ ist schon als Gruppe vergeben – bitte einen anderen Namen wählen."
+    name=$(printf '%s' "$name" | tr -d ':\n\r,' | cut -c1-80)
+    pw=$(read_password) || exit 1
+    [ -z "$pw" ] && [ "$admin" = 1 ] && die "Administratoren brauchen ein Passwort – sonst könnte jeder am PC alles ändern."
+    groups=""
+    [ "$admin" = 1 ] && groups="-G wheel"
+    # shellcheck disable=SC2086
+    useradd -m -c "$name" -s /bin/bash $groups "$login" 2>&1 >/dev/null | head -1 >&2
+    getent passwd "$login" >/dev/null || die "Das Konto ließ sich nicht anlegen."
+    set_password "$login" "$pw" || { userdel -r "$login" >/dev/null 2>&1; mark_nopw "$login" 0; die "Das Passwort ließ sich nicht setzen."; }
+    if [ -z "$pw" ]; then echo "Konto „$login“ ohne Passwort angelegt."; else echo "Konto „$login“ angelegt."; fi
+    ;;
+delete)
+    login="${2:-}"; keep="${3:-0}"
+    valid_login "$login" || die "Ungültiger Benutzername."
+    regular "$login"
+    [ "$login" = "$caller" ] && die "Du kannst dein eigenes Konto nicht löschen, während du angemeldet bist."
+    if is_admin "$login" && [ "$(admins | grep -vx "$login" | wc -l)" -eq 0 ]; then
+        die "„$login“ ist der letzte Administrator – dann könnte niemand mehr das System verwalten."
+    fi
+    if loginctl list-users --no-legend 2>/dev/null | awk '{print $2}' | grep -qx "$login"; then
+        die "„$login“ ist gerade angemeldet. Bitte erst abmelden (oder den PC neu starten) und dann löschen."
+    fi
+    home=$(getent passwd "$login" | cut -d: -f6)
+    if [ "$keep" = 1 ] && [ -d "$home" ]; then
+        # Dateien in den eigenen Ordner retten: /var/home/geloeschte-konten/<login>-<datum>
+        dest="/var/home/geloeschte-konten/$login-$(date +%Y-%m-%d)"
+        mkdir -p /var/home/geloeschte-konten && chmod 700 /var/home/geloeschte-konten
+        mv "$home" "$dest" || die "Die Dateien ließen sich nicht sichern – Konto nicht gelöscht."
+        if [ -n "$caller" ]; then chown -R "$caller": "$dest" 2>/dev/null; chown "$caller": /var/home/geloeschte-konten; fi
+        userdel "$login" || die "Das Konto ließ sich nicht löschen."
+        mark_nopw "$login" 0
+        echo "Konto „$login“ gelöscht. Die Dateien liegen in $dest."
+    else
+        userdel -r "$login" 2>/dev/null || { getent passwd "$login" >/dev/null && die "Das Konto ließ sich nicht löschen."; }
+        rm -f "/var/lib/AccountsService/users/$login" "/var/lib/AccountsService/icons/$login"
+        mark_nopw "$login" 0
+        echo "Konto „$login“ mit allen Dateien gelöscht."
+    fi
+    ;;
+password)
+    login="${2:-}"
+    valid_login "$login" || die "Ungültiger Benutzername."
+    regular "$login"
+    pw=$(read_password) || exit 1
+    [ -z "$pw" ] && is_admin "$login" && die "Administratoren brauchen ein Passwort. Erst zum Standardkonto machen."
+    set_password "$login" "$pw" || die "Das Passwort ließ sich nicht ändern."
+    if [ -z "$pw" ]; then echo "„$login“ meldet sich jetzt ohne Passwort an."; else echo "Passwort von „$login“ geändert."; fi
+    ;;
+admin)
+    login="${2:-}"; on="${3:-0}"
+    valid_login "$login" || die "Ungültiger Benutzername."
+    regular "$login"
+    if [ "$on" = 1 ]; then
+        grep -qx "$login" "$NOPW" 2>/dev/null && die "Konten ohne Passwort können keine Administratoren sein. Bitte zuerst ein Passwort vergeben."
+        usermod -aG wheel "$login" || die "Ging nicht."
+        echo "„$login“ ist jetzt Administrator."
+    else
+        [ "$login" = "$caller" ] && die "Du kannst dir nicht selbst die Administrator-Rechte nehmen."
+        [ "$(admins | grep -vx "$login" | wc -l)" -eq 0 ] && die "Es muss mindestens einen Administrator geben."
+        gpasswd -d "$login" wheel >/dev/null || die "Ging nicht."
+        echo "„$login“ ist jetzt ein Standardkonto."
+    fi
+    ;;
+*)
+    die "Unbekannter Befehl."
+    ;;
+esac

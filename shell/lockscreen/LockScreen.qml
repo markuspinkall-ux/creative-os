@@ -24,7 +24,8 @@ Item {
     }
 
     function unlock() {
-        if (busy || password.text.length === 0)
+        // leeres Feld erlaubt: Konten ohne Passwort entsperren mit Enter
+        if (busy)
             return
         busy = true
         message = ""
@@ -181,7 +182,7 @@ Item {
                 height: 36
                 radius: 18
                 color: root.accent
-                opacity: password.text.length > 0 && !root.busy ? 1 : 0.5
+                opacity: !root.busy ? (password.text.length > 0 ? 1 : 0.75) : 0.5
                 Text {
                     anchors.centerIn: parent
                     text: root.busy ? "…" : "→"

@@ -114,6 +114,10 @@ sh icons/build-icon-theme.sh "$ICONS" /usr/share/icons/Creative
 # Die Strichsymbole der Shell selbst bleiben unverändert.
 python3 icons/tile-icons.py /usr/share/icons/Creative/apps/scalable
 python3 icons/tile-icons.py --inplace /usr/share/icons/hicolor/scalable/apps/creative-*.svg
+# Dasselbe hell für Porzellan (helle Kachel, dunkle Striche) – Umschalten in Einstellungen → Darstellung
+python3 icons/porzellan-icons.py /usr/share/icons/Creative /usr/share/icons/CreativePorzellan \
+    /usr/share/icons/hicolor/scalable/apps/creative-*.svg
+gtk-update-icon-cache -q -f /usr/share/icons/CreativePorzellan 2>/dev/null || true
 gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null || true
 gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
 

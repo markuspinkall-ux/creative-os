@@ -32,6 +32,7 @@ jobs:
           mkdir -p vorschau
           CREATIVE_SCREENSHOT=vorschau/neuerungen.png timeout 40 python3 -m creative_settings --neuerungen 2>&1 | tail -20 || true
           CREATIVE_SCREENSHOT=vorschau/updates.png timeout 40 python3 -m creative_settings --page updates 2>&1 | tail -5 || true
+          CREATIVE_SCREENSHOT=vorschau/benutzerkonten.png timeout 40 python3 -m creative_settings --page users 2>&1 | tail -5 || true
           ls -la vorschau
         working-directory: settings
       - name: Ablegen
