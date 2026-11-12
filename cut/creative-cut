@@ -36,6 +36,14 @@ from cut_project import (
 )
 from cut_timeline import CACHE, TimelineView
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 STYLE = """
     QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
     QLabel#title { font-size:22px; font-weight:700; }

@@ -91,3 +91,86 @@ def apply_system():
     tool = shutil.which("creative-look-apply") or "/usr/libexec/creative-look-apply"
     if os.path.exists(tool):
         subprocess.Popen([tool], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+# ---- Fertige Apps mit festen Graphit-Farben ins gewählte Design bringen ------------------------
+# Viele Creative-Apps schreiben ihre Farben als Graphit-Hexwerte. themed() übersetzt diese Werte
+# (in Stylesheets, Paletten, einzelnen Farben) ins helle Design „Porzellan“ und die Akzentfarbe
+# ins gewählte Akzent – Programmcode der Apps bleibt dabei unverändert.
+_LIGHT = {
+    # Flächen
+    "#12151b": "#e9eef6", "#101218": "#e4e9f2", "#10131d": "#e4e9f2", "#111827": "#e9eef6",
+    "#131722": "#eef1f6", "#141720": "#eef1f6", "#161920": "#f4f6fa", "#161922": "#f4f6fa",
+    "#171a22": "#f4f6fa", "#171b22": "#f4f6fa", "#18192a": "#eef1f6", "#1c2029": "#ffffff",
+    "#1d2230": "#ffffff", "#1e222c": "#f2f5fa", "#202634": "#f4f6fa", "#232836": "#eef1f6",
+    "#252643": "#eef1f6", "#252842": "#eef1f6", "#262b39": "#eef1f6", "#2a3040": "#e3e8f0",
+    "#2a303d": "#d9dfe9", "#2a3144": "#e3e8f0", "#2c3242": "#e3e8f0", "#293246": "#e3e8f0",
+    "#30384a": "#d9dfe9", "#30384f": "#d9dfe9", "#343b4d": "#d2d9e5", "#343c53": "#d2d9e5",
+    "#3a4252": "#cdd5e2", "#3a4460": "#c6cfde", "#3b455e": "#c6cfde", "#404774": "#c6cfde",
+    "#475576": "#b9c3d6", "#4d5568": "#b5bfd0", "#5a6171": "#8a93a8",
+    # Auswahl
+    "#2f4675": "#dbe6fb", "#2c3650": "#e3ebfb", "#33405e": "#d3defa", "#243451": "#dbe6fb",
+    "#293855": "#dbe6fb", "#2a3a5c": "#dbe6fb",
+    # Schrift
+    "#dce6ff": "#1c2433", "#eaf0ff": "#1c2433", "#b8c3de": "#3a4660", "#b9c9ff": "#2f4b8f",
+    "#9aa6c4": "#5d6884", "#9aa6c2": "#5d6884", "#aab4cb": "#5d6884", "#8993a6": "#5d6884",
+    "#8590a6": "#5d6884", "#6f7a92": "#8a93a8",
+    # Signalfarben (auf hellem Grund dunkler)
+    "#6fdcc0": "#1f9e7f", "#ffb07a": "#d9773a", "#f2d58a": "#a8800f", "#d7a8ff": "#8a3fc9",
+    "#ff8a8e": "#d23c45", "#5a4a22": "#f6e7bd", "#5c2a30": "#fbe0e2", "#174249": "#d6efe9",
+}
+_ACCENTS = ("#8fb3ff", "#9cbcff", "#84a9f7", "#68a0ff")
+_ACCENT_HOVER = ("#a3c1ff", "#a6c3ff")
+_HEX = None
+
+
+def _table():
+    design, accent = read()
+    table = dict(_LIGHT) if design == "porzellan" else {}
+    pal = palette()
+    if design == "porzellan" or accent != "blau":
+        for h in _ACCENTS:
+            table[h] = pal["accent"]
+        for h in _ACCENT_HOVER:
+            table[h] = pal["accentHover"]
+    return table, design == "porzellan"
+
+
+def themed(value):
+    """Graphit-Farben in einem Text (Stylesheet, HTML, einzelne Farbe) ins gewählte Design übersetzen."""
+    global _HEX
+    if not isinstance(value, str) or "#" not in value and "rgba(255" not in value:
+        return value
+    table, light = _table()
+    if not table:
+        return value
+    import re
+    if _HEX is None:
+        _HEX = re.compile(r"#[0-9a-fA-F]{6}\b")
+    out = _HEX.sub(lambda m: table.get(m.group(0).lower(), m.group(0)), value)
+    if light:
+        out = re.sub(r"rgba\(\s*255\s*,\s*255\s*,\s*255\s*,", "rgba(28,36,51,", out)
+    return out
+
+
+def install():
+    """In einer Qt-Widgets-App aufrufen (nach dem Import von PySide6): alle Stylesheets laufen dann
+    durch themed(). Für Farben im Programmcode: QColor(themed("#12151b"))."""
+    try:
+        from PySide6.QtWidgets import QApplication, QWidget
+    except ImportError:
+        return
+    if getattr(QWidget, "_creative_themed", False):
+        return
+    widget_set = QWidget.setStyleSheet
+    app_set = QApplication.setStyleSheet
+
+    def set_widget(self, css):
+        widget_set(self, themed(css))
+
+    def set_app(self, css):
+        app_set(self, themed(css))
+
+    QWidget.setStyleSheet = set_widget
+    QApplication.setStyleSheet = set_app
+    QWidget._creative_themed = True

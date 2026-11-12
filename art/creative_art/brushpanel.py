@@ -18,6 +18,13 @@ except ImportError:
 from . import brushes as B
 from .brushengine import preview, selection_tip
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
 BRUSH_FILTER = ("Alle Pinsel (*.abr *.gbr *.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff);;"
                 "Photoshop-Pinsel (*.abr);;GIMP-Pinsel (*.gbr);;Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff)")
 THUMB = QSize(132, 54)
@@ -148,7 +155,7 @@ class BrushPanel(QWidget):
     def thumb(self, preset):
         image = preview(preset, self.library, THUMB)
         pixmap = QPixmap(THUMB)
-        pixmap.fill(QColor("#12151b"))
+        pixmap.fill(QColor(T("#12151b")))
         with QPainter(pixmap) as painter:
             painter.drawImage(0, 0, image)
         return QIcon(pixmap)

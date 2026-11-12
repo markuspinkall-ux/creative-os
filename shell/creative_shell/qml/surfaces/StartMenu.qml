@@ -11,6 +11,7 @@ Item {
 
     // Wird beim Öffnen aufgerufen
     function opened() {
+        apps.closeFolder()
         search.text = ""
         powerMenu.visible = false
         powerMenu.confirmServer = false
@@ -22,7 +23,18 @@ Item {
         search.forceActiveFocus()
     }
 
-    Keys.onEscapePressed: shell.closePopups()
+    Keys.onEscapePressed: root.back()
+
+    // Esc: erst aus dem Ordner „Creative Apps“ zurück, dann Menü schließen
+    function back() {
+        if (apps.folder !== "") {
+            apps.closeFolder()
+            list.currentIndex = -1
+            search.forceActiveFocus()
+        } else {
+            shell.closePopups()
+        }
+    }
 
     Rectangle {
         id: menu
@@ -77,6 +89,8 @@ Item {
             }
 
             onTextChanged: {
+                if (text.length > 0)
+                    apps.closeFolder()
                 apps.filterText = text
                 list.currentIndex = (text.length > 0 && list.count > 0) ? 0 : -1
             }
@@ -87,22 +101,55 @@ Item {
             }
             Keys.onReturnPressed: list.launchCurrent()
             Keys.onEnterPressed: list.launchCurrent()
-            Keys.onEscapePressed: shell.closePopups()
+            Keys.onEscapePressed: root.back()
 
             Accessible.name: "Apps suchen"
         }
 
-        Text {
+        Item {
             id: heading
             anchors.top: search.bottom
-            anchors.topMargin: 16
+            anchors.topMargin: 12
             anchors.left: parent.left
-            anchors.leftMargin: 22
-            text: search.text.length > 0 ? "Ergebnisse" : "Alle Apps"
-            color: Theme.text
-            font.family: Theme.fontFamily
-            font.pixelSize: 13
-            font.bold: true
+            anchors.right: parent.right
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            height: 26
+
+            // Zurück aus dem Ordner
+            Rectangle {
+                id: backButton
+                visible: apps.folder !== ""
+                width: 26
+                height: 26
+                radius: 13
+                anchors.verticalCenter: parent.verticalCenter
+                color: backMouse.containsMouse ? Theme.hover : "transparent"
+                SvgIcon {
+                    anchors.centerIn: parent
+                    name: "chevron-left"
+                    size: 14
+                }
+                MouseArea {
+                    id: backMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.back()
+                }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Zurück zu allen Apps"
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                x: backButton.visible ? backButton.width + 6 : 8
+                text: search.text.length > 0 ? "Ergebnisse" : (apps.folder !== "" ? apps.folderName : "Alle Apps")
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                font.bold: true
+            }
         }
 
         ListView {
@@ -111,8 +158,10 @@ Item {
             function launchCurrent() {
                 if (count === 0)
                     return
-                apps.launchAt(currentIndex >= 0 ? currentIndex : 0)
-                shell.closePopups()
+                if (apps.launchAt(currentIndex >= 0 ? currentIndex : 0))
+                    shell.closePopups()
+                else
+                    currentIndex = 0
             }
 
             anchors {
@@ -158,6 +207,9 @@ Item {
                 required property string icon
                 required property string comment
                 required property string desktopId
+                required property bool isFolder
+                required property var folderIcons
+                required property int folderCount
 
                 width: ListView.view.width
                 height: 44
@@ -165,8 +217,50 @@ Item {
                 color: rowMouse.pressed ? Theme.pressed
                        : ((rowMouse.containsMouse || ListView.isCurrentItem) ? Theme.hover : "transparent")
 
+                // Ordner „Creative Apps“: kleine Vorschau der Apps darin
+                Rectangle {
+                    visible: row.isFolder
+                    x: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30
+                    height: 30
+                    radius: 8
+                    color: Theme.raised
+                    border.color: Theme.hairline
+                    Grid {
+                        anchors.centerIn: parent
+                        columns: 2
+                        spacing: 2
+                        Repeater {
+                            model: row.folderIcons
+                            delegate: Image {
+                                required property string modelData
+                                width: 11
+                                height: 11
+                                sourceSize.width: 24
+                                sourceSize.height: 24
+                                source: "image://icon/" + modelData
+                                asynchronous: true
+                                smooth: true
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    visible: row.isFolder
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.folderCount + "  ›"
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+
                 Image {
                     id: appIcon
+                    visible: !row.isFolder
                     x: 12
                     anchors.verticalCenter: parent.verticalCenter
                     width: 26
@@ -199,6 +293,8 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: (mouse) => {
                         if (mouse.button === Qt.RightButton) {
+                            if (row.isFolder)
+                                return
                             appMenu.desktopId = row.desktopId
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
@@ -206,8 +302,10 @@ Item {
                             appMenu.visible = true
                             return
                         }
-                        apps.launchAt(row.index)
-                        shell.closePopups()
+                        if (apps.launchAt(row.index))
+                            shell.closePopups()
+                        else
+                            list.positionViewAtBeginning()
                     }
                 }
 

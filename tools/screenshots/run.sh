@@ -34,7 +34,7 @@ for page in look system updates; do
     shot "hell-einstellungen-$page" /usr/bin/creative-settings --page "$page"
 done
 shot "hell-writer-beispiel" /usr/bin/creative-writer --beispiel
-for app in files mail claude welcome taskmanager calculator software notes; do
+for app in files mail claude welcome taskmanager calculator software notes art cut ftp 3d widgets; do
     bin="/usr/bin/creative-$app"
     [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
     shot "hell-$app" "$bin"

@@ -11,6 +11,13 @@ from PySide6.QtWidgets import (
 
 from .document import layer_bounds, layer_matrix
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
 
 class TransformPreview(QWidget):
     def __init__(self, dialog):
@@ -33,11 +40,11 @@ class TransformPreview(QWidget):
         document = self.dialog.document
         transform = self.dialog.matrix()
         with QPainter(self) as painter:
-            painter.fillRect(self.rect(), QColor("#101218"))
+            painter.fillRect(self.rect(), QColor(T("#101218")))
             painter.translate(origin)
             painter.scale(zoom, zoom)
             frame = QRectF(0, 0, document.size.width(), document.size.height())
-            painter.fillRect(frame, QColor("#5a6171"))
+            painter.fillRect(frame, QColor(T("#5a6171")))
             painter.setClipRect(frame)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             for index, layer in enumerate(document.layers):
@@ -51,7 +58,7 @@ class TransformPreview(QWidget):
                 painter.drawImage(0, 0, image)
                 painter.restore()
             painter.setClipping(False)
-            pen = QPen(QColor("#9cbcff"))
+            pen = QPen(QColor(T("#9cbcff")))
             pen.setCosmetic(True)
             painter.setPen(pen)
             outline = [transform.map(corner) for corner in self.dialog.corners]
@@ -59,7 +66,7 @@ class TransformPreview(QWidget):
                 painter.drawLine(corner, outline[(i + 1) % 4])
                 radius = 4 / zoom
                 painter.fillRect(QRectF(corner.x() - radius, corner.y() - radius,
-                                        radius * 2, radius * 2), QColor("#9cbcff"))
+                                        radius * 2, radius * 2), QColor(T("#9cbcff")))
 
     def mousePressEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton:
