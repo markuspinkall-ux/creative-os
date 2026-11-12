@@ -2,6 +2,8 @@ name: Klapplisten-Vorschau
 on:
   push:
     branches: ["claude/3d-combo"]
+permissions:
+  contents: write
 jobs:
   foto:
     runs-on: ubuntu-24.04
