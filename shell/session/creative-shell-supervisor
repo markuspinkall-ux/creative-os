@@ -107,8 +107,13 @@ if command -v creative-assistant >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Live-Umgebung (vom USB-Stick): statt Willkommen gleich die Creative-Installation öffnen
+if [ -e /run/creative-live ] && command -v creative-installer >/dev/null 2>&1; then
+    mkdir -p "$HOME/.cache"
+    auto=""; [ -e /run/creative-live-autotest ] && auto="--auto"
+    (sleep 4; creative-installer $auto) >"$HOME/.cache/creative-installer.log" 2>&1 &
 # Willkommens-Assistent: nach jeder Anmeldung, bis „Nicht mehr anzeigen“ angehakt ist
-if command -v creative-welcome >/dev/null 2>&1; then
+elif command -v creative-welcome >/dev/null 2>&1; then
     # Meldungen landen in ~/.cache/creative-welcome.log (falls er sich unerwartet schließt)
     mkdir -p "$HOME/.cache"
     (sleep 3; creative-welcome) >"$HOME/.cache/creative-welcome.log" 2>&1 &

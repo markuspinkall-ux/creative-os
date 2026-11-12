@@ -1,0 +1,4 @@
+#!/bin/sh
+# Creative OS installieren (Live-Umgebung); --demo spielt nur vor
+export PYTHONPATH="/usr/lib/creative-installer${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_installer "$@"

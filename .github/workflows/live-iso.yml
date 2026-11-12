@@ -1,0 +1,101 @@
+name: Live-ISO mit Creative-Installation
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Grafik"
+        type: choice
+        options: [amd, nvidia]
+        default: amd
+      test:
+        description: "In einer VM komplett installieren und fotografieren"
+        type: boolean
+        default: true
+  push:
+    branches: ["claude/live-*"]
+    paths:
+      - image/live/**
+      - installer/**
+      - tools/live-fotos.sh
+      - .github/workflows/live-iso.yml
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: live-iso-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: Live-ISO (${{ inputs.variant || 'amd' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      VARIANT: ${{ inputs.variant || 'amd' }}
+    steps:
+      - name: Platz schaffen
+        timeout-minutes: 20
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache \
+                      /usr/local/share/boost /usr/share/swift /usr/local/lib/jvm /usr/local/share/powershell \
+                      /usr/local/share/chromium /usr/local/lib/node_modules /opt/microsoft /opt/google
+          sudo docker image prune --all --force >/dev/null || true
+          df -h /
+      - uses: actions/checkout@v4
+      - name: Tests der Installationslogik
+        run: python3 -m pytest -q tests/test_installer_plan.py || (pip install -q pytest && python3 -m pytest -q tests/test_installer_plan.py)
+      - name: Live-Umgebung bauen
+        run: |
+          sudo podman build --cap-add sys_admin --security-opt label=disable --squash \
+            -f image/live/Containerfile --build-arg VARIANT="$VARIANT" -t "localhost/creative-live:$VARIANT" .
+          sudo podman images
+          df -h /
+      - name: ISO erzeugen (Titanoboa)
+        id: iso
+        uses: ublue-os/titanoboa@main
+        with:
+          image-ref: localhost/creative-live:${{ env.VARIANT }}
+      - name: Speicher freigeben
+        run: |
+          mv "${{ steps.iso.outputs.iso-dest }}" "$GITHUB_WORKSPACE/creative-os-$VARIANT-live.iso"
+          sudo podman rmi -af >/dev/null 2>&1 || true
+          sudo podman system prune -af >/dev/null 2>&1 || true
+          ls -lh *.iso; df -h /
+      - name: ISO zum Herunterladen bereitstellen
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-os-${{ env.VARIANT }}-live-iso
+          path: creative-os-*-live.iso
+          retention-days: 7
+          compression-level: 0
+      - name: KVM freischalten
+        if: ${{ github.event_name == 'push' || inputs.test }}
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list 2>/dev/null || true
+          getent hosts archive.ubuntu.com >/dev/null || { echo 'DNS gestört – nehme 1.1.1.1/8.8.8.8'; sudo rm -f /etc/resolv.conf; printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' | sudo tee /etc/resolv.conf >/dev/null; }
+          sudo apt-get -o Acquire::Retries=3 update -qq
+          sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat python3-pil dosfstools >/dev/null
+          sudo chmod 666 /dev/kvm
+      - name: In der VM installieren und fotografieren
+        if: ${{ github.event_name == 'push' || inputs.test }}
+        run: bash tools/live-fotos.sh "$PWD/creative-os-$VARIANT-live.iso"
+      - name: Fotos im Branch „live-fotos“ ablegen
+        if: ${{ always() && (github.event_name == 'push' || inputs.test) }}
+        run: |
+          cd live-fotos 2>/dev/null || exit 0
+          ls *.png >/dev/null 2>&1 || exit 0
+          mkdir -p /tmp/pub && cp *.png /tmp/pub/ && cp serial-*.log /tmp/pub/ 2>/dev/null || true
+          cd /tmp/pub
+          printf '# Creative OS – Live-ISO-Test\n\nLauf %s (%s).\n\n![Übersicht](uebersicht.png)\n' \
+            "${{ github.run_id }}" "${{ github.sha }}" > README.md
+          git init -q -b live-fotos
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add . && git commit -qm "Live-Fotos ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" live-fotos

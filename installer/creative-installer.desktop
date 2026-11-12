@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Creative OS installieren
+Comment=Creative OS fest auf diesem PC einrichten
+Exec=creative-installer
+Icon=creative-installer
+Terminal=false
+Categories=System;
+Keywords=Installation;Installer;Festplatte;
