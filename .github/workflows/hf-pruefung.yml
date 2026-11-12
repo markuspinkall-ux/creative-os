@@ -60,7 +60,22 @@ jobs:
           podman run --rm --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c \
             "import huggingface_hub, torch; print('huggingface_hub', huggingface_hub.__version__, 'torch', torch.__version__)"
           mkdir -p /tmp/modelle
-          podman run --rm -v /tmp/modelle:/cache ghcr.io/markuspinkall-ux/creative-trellis:latest --prepare 2>&1 | tail -40
+          podman run --rm -v /tmp/modelle:/cache --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          import traceback, sys
+          sys.path.insert(0, '/opt/creative')
+          import run
+          try:
+              run.load_pipeline()
+              print('PIPELINE OK')
+          except Exception:
+              traceback.print_exc()
+          try:
+              import rembg; rembg.new_session('u2net'); print('REMBG OK')
+          except Exception:
+              traceback.print_exc()
+          " 2>&1 | grep -v Warning | tail -60
+          pip list 2>/dev/null | head -0
+          podman run --rm --entrypoint sh ghcr.io/markuspinkall-ux/creative-trellis:latest -c "pip list 2>/dev/null | grep -i -E 'hf|hugging|xet|rembg|requests'"
           podman run --rm -e HF_HUB_VERBOSITY=debug -v /tmp/modelle:/cache --entrypoint python3 \
             ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
           from huggingface_hub import hf_hub_download
