@@ -2,9 +2,10 @@
 Type=Application
 Name=Creative Writer
 GenericName=Textverarbeitung
-Comment=Formatierte Dokumente schreiben, drucken und als PDF speichern
+Comment=Dokumente wie in Word schreiben – mit Menüband, Word-Dateien, PDF und Rechtschreibprüfung
 Exec=creative-writer %f
 Icon=creative-writer
 Terminal=false
 Categories=Office;WordProcessor;
-Keywords=Text;Dokument;PDF;Drucken;Schreiben;
+Keywords=Text;Dokument;PDF;Drucken;Schreiben;Word;docx;Brief;Textverarbeitung;
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;text/html;text/markdown;text/plain;

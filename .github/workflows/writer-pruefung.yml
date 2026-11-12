@@ -1,0 +1,39 @@
+name: Creative Writer prüfen
+# Selbsttest (alle Formate inkl. Word) und Bildschirmfotos vor dem Mergen → Branch „writer-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [writer/**, tools/writer-vorschau.py, .github/workflows/writer-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt, python-docx, Enchant
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation \
+            fonts-crosextra-carlito libenchant-2-2 hunspell-de-de
+          pip install -q PySide6 python-docx pyenchant
+      - name: Selbsttest
+        env: { QT_QPA_PLATFORM: offscreen }
+        run: |
+          mkdir -p /tmp/lib && cp dialogs/creative_dialogs.py /tmp/lib/ && cp shell/creative_shell/look.py /tmp/lib/creative_look.py
+          PYTHONPATH=/tmp/lib timeout 120 python3 writer/creative-writer --selftest
+      - name: Fotos
+        env: { QT_QPA_PLATFORM: offscreen }
+        run: |
+          PYTHONPATH=/tmp/lib timeout 120 python3 tools/writer-vorschau.py fotos
+          mkdir -p ~/.config/creative-os && printf '[Look]\ndesign=porzellan\naccent=blau\n' > ~/.config/creative-os/look.conf
+          PYTHONPATH=/tmp/lib timeout 120 python3 tools/writer-vorschau.py fotos hell-
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos 2>/dev/null || exit 0
+          git init -q -b writer-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Writer ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" writer-fotos

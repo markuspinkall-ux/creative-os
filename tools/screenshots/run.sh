@@ -20,6 +20,7 @@ for page in network displays sound look updates system server backup; do
     shot "einstellungen-$page" /usr/bin/creative-settings --page "$page"
 done
 shot "einstellungen-neuerungen" /usr/bin/creative-settings --neuerungen
+shot "writer-beispiel" /usr/bin/creative-writer --beispiel
 for app in art writer cut ftp 3d software notes mail claude iso broadcast pictures \
            taskmanager magazin podcast player calculator welcome files obs; do
     bin="/usr/bin/creative-$app"
@@ -32,6 +33,7 @@ printf '[Look]\ndesign=porzellan\naccent=blau\n' > "$HOME/.config/creative-os/lo
 for page in look system updates; do
     shot "hell-einstellungen-$page" /usr/bin/creative-settings --page "$page"
 done
+shot "hell-writer-beispiel" /usr/bin/creative-writer --beispiel
 for app in files mail claude welcome taskmanager calculator software notes; do
     bin="/usr/bin/creative-$app"
     [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
