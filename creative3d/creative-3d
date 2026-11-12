@@ -27,6 +27,14 @@ try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
 except ImportError:
     pass
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+
 LIB = Path("/usr/lib/creative-3d")
 if not (LIB / "creative3d_softview.py").is_file():
     LIB = Path(__file__).resolve().parent                     # aus dem Quellordner gestartet
@@ -132,6 +140,8 @@ if WEB:
             except OSError:
                 job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
                 return
+            if path == "/viewer.html":                       # Farben ans Design (Graphit/Porzellan) anpassen
+                data = T(data.decode("utf-8")).encode("utf-8")
             buffer = QBuffer(job)
             buffer.setData(QByteArray(data))
             buffer.open(QIODevice.OpenModeFlag.ReadOnly)
@@ -369,7 +379,7 @@ class Creative3D(QMainWindow):
             page = Page(QWebEngineProfile.defaultProfile(), self.view)
             page.message.connect(self.web_message)
             self.view.setPage(page)
-            self.view.page().setBackgroundColor(QColor("#12151b"))
+            self.view.page().setBackgroundColor(QColor(T("#12151b")))
             self.view.loadFinished.connect(self.web_loaded)
             self.view.setUrl(QUrl("c3d://app/viewer.html"))
             self.preview_stack.addWidget(self.view)

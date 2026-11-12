@@ -3,30 +3,37 @@
 import os
 from pathlib import Path
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
 C = {
-    "ground": "#12151b",
-    "surface": "#1c2029",
-    "footer": "#171a22",
-    "raised": "#232836",
-    "editor": "#161920",
-    "gutter": "#161920",
-    "linenum": "#4d5568",
-    "curline": "#1e222c",
-    "text": "#dce6ff",
-    "muted": "#9aa6c2",
-    "comment": "#6f7a92",
-    "accent": "#8fb3ff",
-    "accentText": "#12151b",
-    "flame": "#ffb07a",
-    "teal": "#6fdcc0",
-    "purple": "#d7a8ff",
-    "yellow": "#f2d58a",
-    "blue2": "#b9c9ff",
-    "hit": "#5a4a22",
-    "same": "#2c3650",
-    "bracket": "#33405e",
-    "badbracket": "#5c2a30",
-    "selection": "#2f4675",
+    "ground": T("#12151b"),
+    "surface": T("#1c2029"),
+    "footer": T("#171a22"),
+    "raised": T("#232836"),
+    "editor": T("#161920"),
+    "gutter": T("#161920"),
+    "linenum": T("#4d5568"),
+    "curline": T("#1e222c"),
+    "text": T("#dce6ff"),
+    "muted": T("#9aa6c2"),
+    "comment": T("#6f7a92"),
+    "accent": T("#8fb3ff"),
+    "accentText": T("#12151b"),
+    "flame": T("#ffb07a"),
+    "teal": T("#6fdcc0"),
+    "purple": T("#d7a8ff"),
+    "yellow": T("#f2d58a"),
+    "blue2": T("#b9c9ff"),
+    "hit": T("#5a4a22"),
+    "same": T("#2c3650"),
+    "bracket": T("#33405e"),
+    "badbracket": T("#5c2a30"),
+    "selection": T("#2f4675"),
     "hairline": "rgba(255,255,255,0.07)",
     "hover": "rgba(255,255,255,0.07)",
     "pressed": "rgba(255,255,255,0.12)",
@@ -34,8 +41,13 @@ C = {
 
 
 def icon_dir():
-    for d in (Path(__file__).resolve().parent.parent.parent / "shell" / "creative_shell" / "qml" / "Creative" / "icons",
-              Path("/usr/lib/creative-shell/creative_shell/qml/Creative/icons")):
+    try:
+        from creative_look import is_light
+        sub = "icons-light" if is_light() else "icons"
+    except ImportError:
+        sub = "icons"
+    for d in (Path(__file__).resolve().parent.parent.parent / "shell" / "creative_shell" / "qml" / "Creative" / sub,
+              Path("/usr/lib/creative-shell/creative_shell/qml/Creative") / sub):
         if d.is_dir():
             return d
     return None

@@ -8,6 +8,13 @@ from PySide6.QtWidgets import QWidget
 
 from .brushengine import BrushLibrary, Stroke, bucket_fill, gradient_fill
 
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+    from creative_look import themed as T
+except ImportError:
+    def T(value):
+        return value
+
+
 
 class Canvas(QWidget):
     changed = Signal()
@@ -95,13 +102,13 @@ class Canvas(QWidget):
 
     def paintEvent(self, event):
         with QPainter(self) as painter:
-            painter.fillRect(event.rect(), QColor("#e3e7ed"))
+            painter.fillRect(event.rect(), QColor(T("#e3e7ed")))
             step = 12
             rect = event.rect()
             for y in range(rect.top() // step, rect.bottom() // step + 1):
                 for x in range(rect.left() // step, rect.right() // step + 1):
                     if (x + y) % 2:
-                        painter.fillRect(x * step, y * step, step, step, QColor("#b5bcc8"))
+                        painter.fillRect(x * step, y * step, step, step, QColor(T("#b5bcc8")))
             painter.scale(self.zoom, self.zoom)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, self.zoom < 1)
             for layer in self.document.layers:
@@ -127,7 +134,7 @@ class Canvas(QWidget):
             if self.hover is not None and self.tool in self.tools_brush | {"clone"}:
                 # Umriss der Pinselspitze statt Mauszeiger
                 r = max(1.5 / self.zoom, self.diameter / 2)
-                for color, width in (("#12151b", 3), ("#dce6ff", 1)):
+                for color, width in ((T("#12151b"), 3), (T("#dce6ff"), 1)):
                     pen = QPen(QColor(color), width)
                     pen.setCosmetic(True)
                     painter.setPen(pen)
@@ -137,7 +144,7 @@ class Canvas(QWidget):
                     painter.drawLine(self.hover - QPointF(5 / self.zoom, 0), self.hover + QPointF(5 / self.zoom, 0))
                     painter.drawLine(self.hover - QPointF(0, 5 / self.zoom), self.hover + QPointF(0, 5 / self.zoom))
             if self.tool == "clone" and self.clone_source is not None:
-                pen = QPen(QColor("#68a0ff"))
+                pen = QPen(QColor(T("#68a0ff")))
                 pen.setCosmetic(True)
                 painter.setPen(pen)
                 p = self.clone_source

@@ -30,7 +30,17 @@ from .runner import spawn_detached
 
 DESKTOP_NAMES = {"creative", "kde"}
 
-NAME, ICON, DESKTOP_ID, LETTER, COMMENT = range(Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 6)
+NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT = range(
+    Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 9)
+
+# Eigene Apps („Creative …“) liegen im Startmenü gesammelt im Ordner „Creative Apps“.
+FOLDER_ID = "creative-apps-ordner"
+FOLDER_NAME = "Creative Apps"
+NOT_IN_FOLDER = {"creative-installer.desktop"}
+
+
+def is_creative(entry):
+    return entry.name.startswith("Creative ") and entry.desktop_id not in NOT_IN_FOLDER
 
 
 def application_dirs():
@@ -57,7 +67,8 @@ def _letter(name):
 
 
 class AppEntry:
-    __slots__ = ("desktop_id", "path", "name", "icon", "comment", "keywords", "exec", "terminal", "search", "hidden")
+    __slots__ = ("desktop_id", "path", "name", "icon", "comment", "keywords", "exec", "terminal", "search", "hidden",
+                 "members")
 
     def __init__(self, desktop_id, path, name, icon, comment, keywords, exec_line, terminal):
         self.desktop_id = desktop_id
@@ -69,6 +80,7 @@ class AppEntry:
         self.exec = exec_line
         self.terminal = terminal
         self.hidden = False   # im Startmenü ausgeblendet, aber startbar (z. B. Taskleiste)
+        self.members = None   # nur beim Ordner „Creative Apps“: die Apps darin
         self.search = _plain(" ".join([name, comment, keywords, desktop_id]))
 
 
@@ -131,6 +143,7 @@ class AppModel(QAbstractListModel):
         self._all = []
         self._shown = []
         self._filter = ""
+        self._folder = ""
         self._pinned = []
         locale = QLocale().name()  # z. B. de_DE
         self._langs = [locale, locale.split("_")[0]]
@@ -190,7 +203,18 @@ class AppModel(QAbstractListModel):
             hits.sort(key=lambda e: (not _plain(e.name).startswith(terms[0]), _plain(e.name)))
             self._shown = hits
         else:
-            self._shown = visible
+            creative = [e for e in visible if is_creative(e)]
+            if self._folder:
+                self._shown = creative
+            elif len(creative) >= 2:
+                folder = AppEntry(FOLDER_ID, "", FOLDER_NAME, creative[0].icon,
+                                  f"{len(creative)} Apps", "", "", False)
+                folder.members = creative
+                rest = [e for e in visible if not is_creative(e)] + [folder]
+                rest.sort(key=lambda e: (_letter(e.name) == "#", _plain(e.name)))
+                self._shown = rest
+            else:
+                self._shown = visible
         self.endResetModel()
 
     # ---- Model --------------------------------------------------------------
@@ -212,6 +236,9 @@ class AppModel(QAbstractListModel):
             DESKTOP_ID: QByteArray(b"desktopId"),
             LETTER: QByteArray(b"letter"),
             COMMENT: QByteArray(b"comment"),
+            IS_FOLDER: QByteArray(b"isFolder"),
+            FOLDER_ICONS: QByteArray(b"folderIcons"),
+            FOLDER_COUNT: QByteArray(b"folderCount"),
         }
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
@@ -226,9 +253,15 @@ class AppModel(QAbstractListModel):
             return e.desktop_id
         if role == LETTER:
             # Bei der Suche keine Buchstaben-Überschriften
-            return "" if self._filter.strip() else _letter(e.name)
+            return "" if (self._filter.strip() or self._folder) else _letter(e.name)
         if role == COMMENT:
             return e.comment
+        if role == IS_FOLDER:
+            return e.members is not None
+        if role == FOLDER_ICONS:
+            return [m.icon for m in (e.members or [])[:4]]
+        if role == FOLDER_COUNT:
+            return len(e.members or [])
         return None
 
     # ---- Für QML ------------------------------------------------------------
@@ -243,6 +276,24 @@ class AppModel(QAbstractListModel):
 
     filterText = Property(str, _get_filter, _set_filter, notify=filterTextChanged)
 
+    folderChanged = Signal()
+
+    def _get_folder(self):
+        return self._folder
+
+    def _set_folder(self, name):
+        if name != self._folder:
+            self._folder = name
+            self._apply_filter()
+            self.folderChanged.emit()
+
+    folder = Property(str, _get_folder, _set_folder, notify=folderChanged)
+    folderName = Property(str, lambda self: FOLDER_NAME if self._folder else "", notify=folderChanged)
+
+    @Slot()
+    def closeFolder(self):
+        self._set_folder("")
+
     def _get_pinned(self):
         return self._pinned
 
@@ -255,10 +306,16 @@ class AppModel(QAbstractListModel):
             return None
         return {"desktopId": entry.desktop_id, "name": entry.name, "icon": entry.icon}
 
-    @Slot(int)
+    @Slot(int, result=bool)
     def launchAt(self, row):
+        """Startet die App – oder öffnet den Ordner „Creative Apps“ (Rückgabe False: Menü bleibt offen)."""
         if 0 <= row < len(self._shown):
-            self._launch(self._shown[row])
+            entry = self._shown[row]
+            if entry.members is not None:
+                self._set_folder(FOLDER_ID)
+                return False
+            self._launch(entry)
+        return True
 
     @Slot(str)
     def launch(self, desktop_id):
