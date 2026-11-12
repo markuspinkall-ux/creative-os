@@ -12,6 +12,7 @@ from PySide6.QtCore import Property, QObject, QProcess, Signal, Slot
 
 HELPER = "/usr/libexec/creative-users-helper"
 ICONS = Path("/var/lib/AccountsService/icons")
+NOPW = Path("/var/lib/creative-os/ohne-passwort")
 LOGIN_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 
 
@@ -40,6 +41,10 @@ def initials(name):
 def accounts():
     me = pwd.getpwuid(os.getuid()).pw_name
     adm, active = admins(), logged_in()
+    try:
+        nopw = set(NOPW.read_text(encoding="utf-8").split())
+    except OSError:
+        nopw = set()
     out = []
     for p in pwd.getpwall():
         if not 1000 <= p.pw_uid < 60000 or p.pw_shell.endswith(("nologin", "false")):
@@ -57,7 +62,7 @@ def accounts():
                 pass
         out.append({"login": p.pw_name, "name": name, "initials": initials(name), "picture": picture,
                     "admin": p.pw_name in adm, "me": p.pw_name == me, "active": p.pw_name in active,
-                    "home": p.pw_dir})
+                    "home": p.pw_dir, "nopassword": p.pw_name in nopw})
     out.sort(key=lambda a: (not a["me"], a["name"].lower()))
     return out
 

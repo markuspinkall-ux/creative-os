@@ -122,6 +122,7 @@ SettingsPage {
                         Badge { visible: modelData.me; text: "Du"; anchors.verticalCenter: parent.verticalCenter }
                         Badge { visible: modelData.admin; text: "Administrator"; tint: "#ffb07a"; anchors.verticalCenter: parent.verticalCenter }
                         Badge { visible: modelData.active && !modelData.me; text: "angemeldet"; tint: "#6fdcc0"; anchors.verticalCenter: parent.verticalCenter }
+                        Badge { visible: modelData.nopassword; text: "ohne Passwort"; tint: "#c3a6ff"; anchors.verticalCenter: parent.verticalCenter }
                     }
                     Text {
                         text: modelData.login + "  ·  " + modelData.home
@@ -136,13 +137,13 @@ SettingsPage {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
                     CButton {
-                        text: "Passwort ändern"
+                        text: modelData.nopassword ? "Passwort vergeben" : "Passwort ändern"
                         enabled: !users.busy
                         onClicked: passwordPopup.openFor(modelData)
                     }
                     CButton {
                         text: modelData.admin ? "Zum Standardkonto" : "Zum Administrator"
-                        enabled: !users.busy && !(modelData.admin && (modelData.me || users.adminCount <= 1))
+                        enabled: !users.busy && !(modelData.admin && (modelData.me || users.adminCount <= 1)) && !(modelData.nopassword && !modelData.admin)
                         onClicked: users.setAdmin(modelData.login, !modelData.admin)
                     }
                     CButton {
@@ -175,11 +176,11 @@ SettingsPage {
         property bool loginTouched: false
         property string loginHint: loginField.text.length ? users.check(loginField.text) : ""
         property bool ready: nameField.text.trim().length > 0 && loginHint === "" && loginField.text.length > 0
-                             && pw1.text.length >= 4 && pw1.text === pw2.text
+                             && (noPw.checked || (pw1.text.length >= 4 && pw1.text === pw2.text))
 
         function openFresh() {
             nameField.text = ""; loginField.text = ""; pw1.text = ""; pw2.text = ""
-            loginTouched = false; adminSwitch.checked = false
+            loginTouched = false; adminSwitch.checked = false; noPw.checked = false
             open()
             nameField.input.forceActiveFocus()
         }
@@ -210,19 +211,26 @@ SettingsPage {
                 input.onTextEdited: addPopup.loginTouched = true
             }
             FieldLabel { visible: addPopup.loginHint !== ""; text: addPopup.loginHint; color: "#ff8a8e" }
-            FieldLabel { text: "Passwort" }
-            Field { id: pw1; width: parent.width; password: true; placeholder: "mindestens 4 Zeichen" }
+            CSwitch {
+                id: noPw
+                label: "Ohne Passwort – Anmelden mit einem Klick (gut für Kinder oder einen Familien-PC)"
+                onToggled: value => { noPw.checked = value; if (value) adminSwitch.checked = false }
+            }
+            FieldLabel { visible: !noPw.checked; text: "Passwort" }
+            Field { id: pw1; visible: !noPw.checked; width: parent.width; password: true; placeholder: "mindestens 4 Zeichen" }
             Field {
                 id: pw2
+                visible: !noPw.checked
                 width: parent.width
                 password: true
                 placeholder: "Passwort wiederholen"
                 bad: pw2.text.length > 0 && pw2.text !== pw1.text
             }
-            FieldLabel { visible: pw2.text.length > 0 && pw2.text !== pw1.text; text: "Die Passwörter sind verschieden."; color: "#ff8a8e" }
+            FieldLabel { visible: !noPw.checked && pw2.text.length > 0 && pw2.text !== pw1.text; text: "Die Passwörter sind verschieden."; color: "#ff8a8e" }
             Item { width: 1; height: 2 }
             CSwitch {
                 id: adminSwitch
+                visible: !noPw.checked
                 label: "Administrator (darf Programme installieren und Konten verwalten)"
                 onToggled: value => adminSwitch.checked = value
             }
@@ -235,7 +243,8 @@ SettingsPage {
                     text: users.busy ? "Wird angelegt …" : "Konto anlegen"
                     primary: true
                     enabled: addPopup.ready && !users.busy
-                    onClicked: users.add(nameField.text, loginField.text, pw1.text, adminSwitch.checked)
+                    onClicked: users.add(nameField.text, loginField.text, noPw.checked ? "" : pw1.text,
+                                         adminSwitch.checked && !noPw.checked)
                 }
             }
         }
@@ -266,9 +275,24 @@ SettingsPage {
             Field { id: np1; width: parent.width; password: true; placeholder: "Neues Passwort (mindestens 4 Zeichen)" }
             Field { id: np2; width: parent.width; password: true; placeholder: "Wiederholen"; bad: np2.text.length > 0 && np2.text !== np1.text }
             Item { width: 1; height: 6 }
+            Text {
+                visible: passwordPopup.account.admin === true
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Administratoren brauchen immer ein Passwort."
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+            }
             Row {
                 anchors.right: parent.right
                 spacing: 8
+                CButton {
+                    visible: !passwordPopup.account.admin && !passwordPopup.account.nopassword
+                    text: "Ohne Passwort"
+                    enabled: !users.busy
+                    onClicked: users.setPassword(passwordPopup.account.login, "")
+                }
                 CButton { text: "Abbrechen"; onClicked: passwordPopup.close() }
                 CButton {
                     text: "Passwort ändern"

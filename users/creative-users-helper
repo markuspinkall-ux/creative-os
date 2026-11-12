@@ -1,8 +1,10 @@
 #!/bin/bash
 # Benutzerkonten verwalten – läuft als root über pkexec (polkit: org.creativeos.users.manage).
-#   creative-users-helper add <login> <name> <admin 0|1>   Passwort auf stdin
+#   creative-users-helper add <login> <name> <admin 0|1>   Passwort auf stdin (leer = ohne Passwort)
 #   creative-users-helper delete <login> <dateien-behalten 0|1>
-#   creative-users-helper password <login>                Passwort auf stdin
+#   creative-users-helper password <login>                Passwort auf stdin (leer = Passwort entfernen)
+# Konten ohne Passwort gibt es nur als Standardkonto (Administratoren brauchen eines).
+# Sie stehen in /var/lib/creative-os/ohne-passwort (lesbar für die Systemsteuerung).
 #   creative-users-helper admin <login> <0|1>
 # Ausgabe bei Fehlern: eine verständliche Zeile auf stderr, Exit-Code ≠ 0.
 set -u
@@ -27,11 +29,28 @@ admins() {
         [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] && echo "$u"
     done
 }
-read_password() {
+read_password() {   # leer erlaubt (= ohne Passwort)
     local pw
     IFS= read -r pw || true
-    [ "${#pw}" -ge 4 ] || die "Das Passwort muss mindestens 4 Zeichen haben."
+    [ -z "$pw" ] || [ "${#pw}" -ge 4 ] || die "Das Passwort muss mindestens 4 Zeichen haben."
     printf '%s' "$pw"
+}
+NOPW=/var/lib/creative-os/ohne-passwort
+mark_nopw() {   # mark_nopw <login> <1|0>
+    mkdir -p "$(dirname "$NOPW")"
+    touch "$NOPW"; chmod 644 "$NOPW"
+    grep -vx "$1" "$NOPW" > "$NOPW.neu" 2>/dev/null || true
+    [ "$2" = 1 ] && echo "$1" >> "$NOPW.neu"
+    mv "$NOPW.neu" "$NOPW"; chmod 644 "$NOPW"
+}
+set_password() {   # set_password <login> <passwort|leer>
+    if [ -z "$2" ]; then
+        passwd -d "$1" >/dev/null || return 1
+        mark_nopw "$1" 1
+    else
+        printf '%s:%s\n' "$1" "$2" | chpasswd || return 1
+        mark_nopw "$1" 0
+    fi
 }
 
 cmd="${1:-}"
@@ -43,13 +62,14 @@ add)
     getent group "$login" >/dev/null && die "„$login“ ist schon als Gruppe vergeben – bitte einen anderen Namen wählen."
     name=$(printf '%s' "$name" | tr -d ':\n\r,' | cut -c1-80)
     pw=$(read_password) || exit 1
+    [ -z "$pw" ] && [ "$admin" = 1 ] && die "Administratoren brauchen ein Passwort – sonst könnte jeder am PC alles ändern."
     groups=""
     [ "$admin" = 1 ] && groups="-G wheel"
     # shellcheck disable=SC2086
     useradd -m -c "$name" -s /bin/bash $groups "$login" 2>&1 >/dev/null | head -1 >&2
     getent passwd "$login" >/dev/null || die "Das Konto ließ sich nicht anlegen."
-    printf '%s:%s\n' "$login" "$pw" | chpasswd || { userdel -r "$login" >/dev/null 2>&1; die "Das Passwort ließ sich nicht setzen."; }
-    echo "Konto „$login“ angelegt."
+    set_password "$login" "$pw" || { userdel -r "$login" >/dev/null 2>&1; mark_nopw "$login" 0; die "Das Passwort ließ sich nicht setzen."; }
+    if [ -z "$pw" ]; then echo "Konto „$login“ ohne Passwort angelegt."; else echo "Konto „$login“ angelegt."; fi
     ;;
 delete)
     login="${2:-}"; keep="${3:-0}"
@@ -70,10 +90,12 @@ delete)
         mv "$home" "$dest" || die "Die Dateien ließen sich nicht sichern – Konto nicht gelöscht."
         if [ -n "$caller" ]; then chown -R "$caller": "$dest" 2>/dev/null; chown "$caller": /var/home/geloeschte-konten; fi
         userdel "$login" || die "Das Konto ließ sich nicht löschen."
+        mark_nopw "$login" 0
         echo "Konto „$login“ gelöscht. Die Dateien liegen in $dest."
     else
         userdel -r "$login" 2>/dev/null || { getent passwd "$login" >/dev/null && die "Das Konto ließ sich nicht löschen."; }
         rm -f "/var/lib/AccountsService/users/$login" "/var/lib/AccountsService/icons/$login"
+        mark_nopw "$login" 0
         echo "Konto „$login“ mit allen Dateien gelöscht."
     fi
     ;;
@@ -82,14 +104,16 @@ password)
     valid_login "$login" || die "Ungültiger Benutzername."
     regular "$login"
     pw=$(read_password) || exit 1
-    printf '%s:%s\n' "$login" "$pw" | chpasswd || die "Das Passwort ließ sich nicht ändern."
-    echo "Passwort von „$login“ geändert."
+    [ -z "$pw" ] && is_admin "$login" && die "Administratoren brauchen ein Passwort. Erst zum Standardkonto machen."
+    set_password "$login" "$pw" || die "Das Passwort ließ sich nicht ändern."
+    if [ -z "$pw" ]; then echo "„$login“ meldet sich jetzt ohne Passwort an."; else echo "Passwort von „$login“ geändert."; fi
     ;;
 admin)
     login="${2:-}"; on="${3:-0}"
     valid_login "$login" || die "Ungültiger Benutzername."
     regular "$login"
     if [ "$on" = 1 ]; then
+        grep -qx "$login" "$NOPW" 2>/dev/null && die "Konten ohne Passwort können keine Administratoren sein. Bitte zuerst ein Passwort vergeben."
         usermod -aG wheel "$login" || die "Ging nicht."
         echo "„$login“ ist jetzt Administrator."
     else

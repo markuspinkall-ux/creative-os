@@ -24,3 +24,9 @@ def test_suggest_login():
     assert suggest_login("Jörg Müller").startswith("joerg")
     assert suggest_login("  ") == ""
     assert initials("Anna Müller") == "AM"
+
+
+def test_helper_admin_needs_password():
+    r = subprocess.run(["bash", str(ROOT / "users" / "creative-users-helper"), "add", "testkind", "Kind", "1"],
+                       input="\n", capture_output=True, text=True)
+    assert r.returncode != 0 and "Administratoren brauchen ein Passwort" in r.stderr
