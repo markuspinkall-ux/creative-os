@@ -11,18 +11,33 @@
     --text: #dce6ff; --muted: rgba(220, 230, 255, 0.62);
     --accent: #8fb3ff; --accent-text: #12151b; --flame: #ffb07a;
     --line: rgba(255, 255, 255, 0.08);
+    --panel: rgba(28, 32, 41, 0.78); --panel-strong: rgba(28, 32, 41, 0.92); --panel-hover: rgba(35, 40, 54, 0.95);
+    --veil: rgba(12, 14, 19, 0.45); --mono: rgba(143, 179, 255, 0.16); --dash: rgba(255, 255, 255, 0.14);
+    --soft: rgba(255, 255, 255, 0.06); --shadow: rgba(0, 0, 0, 0.35); --wall: url("graphit.svg");
+  }
+  /* Helles Design „Porzellan“ – Brave folgt der Systemeinstellung von Creative OS */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground: #e9eef6; --surface: #ffffff; --raised: #ffffff;
+      --text: #1c2433; --muted: rgba(28, 36, 51, 0.62);
+      --accent: #3d6fe0; --accent-text: #ffffff; --flame: #d9773a;
+      --line: rgba(28, 36, 51, 0.10);
+      --panel: rgba(255, 255, 255, 0.82); --panel-strong: rgba(255, 255, 255, 0.95); --panel-hover: rgba(255, 255, 255, 1);
+      --veil: rgba(233, 238, 246, 0.25); --mono: rgba(61, 111, 224, 0.12); --dash: rgba(28, 36, 51, 0.18);
+      --soft: rgba(28, 36, 51, 0.06); --shadow: rgba(28, 36, 51, 0.12); --wall: url("porzellan.svg");
+    }
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
     min-height: 100vh;
-    background: var(--ground) url("graphit.svg") center / cover no-repeat fixed;
+    background: var(--ground) var(--wall) center / cover no-repeat fixed;
     color: var(--text);
     font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
     display: flex; flex-direction: column; align-items: center;
   }
   body::before {           /* abdunkeln, damit Schrift gut lesbar bleibt */
-    content: ""; position: fixed; inset: 0; background: rgba(12, 14, 19, 0.45); pointer-events: none;
+    content: ""; position: fixed; inset: 0; background: var(--veil); pointer-events: none;
   }
   main { position: relative; width: min(860px, calc(100% - 32px)); margin-top: 14vh; }
   .clock { text-align: center; }
@@ -33,10 +48,10 @@
   form.search {
     margin: 34px auto 0; width: min(640px, 100%); height: 54px;
     display: flex; align-items: center; gap: 12px; padding: 0 8px 0 20px;
-    background: rgba(28, 32, 41, 0.92); border-radius: 27px;
-    box-shadow: 0 0 0 1px var(--line), 0 18px 40px rgba(0, 0, 0, 0.35);
+    background: var(--panel-strong); border-radius: 27px;
+    box-shadow: 0 0 0 1px var(--line), 0 18px 40px var(--shadow);
   }
-  form.search:focus-within { box-shadow: 0 0 0 2px var(--accent), 0 18px 40px rgba(0, 0, 0, 0.35); }
+  form.search:focus-within { box-shadow: 0 0 0 2px var(--accent), 0 18px 40px var(--shadow); }
   form.search svg { flex: none; }
   form.search input {
     flex: 1; height: 100%; border: 0; outline: none; background: transparent;
@@ -54,13 +69,13 @@
   .tile {
     position: relative; width: 112px; height: 112px; border-radius: 18px; text-decoration: none; color: var(--text);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-    background: rgba(28, 32, 41, 0.78); box-shadow: 0 0 0 1px var(--line);
+    background: var(--panel); box-shadow: 0 0 0 1px var(--line);
     transition: background .12s, transform .12s;
   }
-  .tile:hover { background: rgba(35, 40, 54, 0.95); transform: translateY(-2px); }
+  .tile:hover { background: var(--panel-hover); transform: translateY(-2px); }
   .tile .mono {
     width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px; letter-spacing: -.5px; background: rgba(143, 179, 255, 0.16); color: var(--accent);
+    font-weight: 700; font-size: 18px; letter-spacing: -.5px; background: var(--mono); color: var(--accent);
   }
   .tile .name { font-size: 13px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile .remove {
@@ -70,20 +85,20 @@
   body.editing .tile .remove { display: block; }
   body.editing .tile { animation: wiggle .25s ease-in-out infinite alternate; }
   @keyframes wiggle { from { transform: rotate(-.6deg); } to { transform: rotate(.6deg); } }
-  .tile.add { border: 2px dashed rgba(255, 255, 255, 0.14); background: transparent; box-shadow: none; cursor: pointer; }
-  .tile.add .mono { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+  .tile.add { border: 2px dashed var(--dash); background: transparent; box-shadow: none; cursor: pointer; }
+  .tile.add .mono { background: var(--soft); color: var(--text); }
   body:not(.editing) .tile.add { display: none; }
 
   .bar { margin-top: 18px; display: flex; justify-content: center; gap: 8px; }
   .bar button {
     height: 34px; padding: 0 14px; border: 0; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px;
-    background: rgba(28, 32, 41, 0.78); color: var(--text); box-shadow: 0 0 0 1px var(--line);
+    background: var(--panel); color: var(--text); box-shadow: 0 0 0 1px var(--line);
   }
   .bar button.primary { background: var(--accent); color: var(--accent-text); font-weight: 700; box-shadow: none; }
 
   dialog {
     border: 0; border-radius: 18px; padding: 24px; width: min(420px, calc(100% - 32px));
-    background: var(--raised); color: var(--text); box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(0, 0, 0, .5);
+    background: var(--raised); color: var(--text); box-shadow: 0 0 0 1px var(--line), 0 30px 80px var(--shadow);
   }
   dialog::backdrop { background: rgba(0, 0, 0, .5); }
   dialog h2 { margin: 0 0 16px; font-size: 18px; }
@@ -107,7 +122,7 @@
   </div>
 
   <form class="search" action="https://search.brave.com/search" method="get" role="search">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dce6ff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--muted)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input name="q" id="q" placeholder="Im Internet suchen oder Adresse eingeben" autocomplete="off" autofocus aria-label="Suche">
     <button type="submit">Suchen</button>
   </form>

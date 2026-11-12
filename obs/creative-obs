@@ -5,8 +5,15 @@
 cfg="${XDG_CONFIG_HOME:-$HOME/.config}/obs-studio"
 if [ ! -e "$cfg/user.ini" ] && [ ! -e "$cfg/global.ini" ]; then
     mkdir -p "$cfg"
-    printf '[Appearance]\nTheme=com.obsproject.Yami.CreativeGraphit\n' > "$cfg/user.ini"
+    printf '[Appearance]\nTheme=com.obsproject.Yami.CreativeGraphit\n' > "$cfg/user.ini"  # wird unten ans Design angepasst
     printf '[General]\nLanguage=de-DE\n' > "$cfg/global.ini"
+fi
+# OBS-Design passend zu Creative OS (Graphit/Porzellan) – nur solange eines unserer Themes gewählt ist
+look="${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/look.conf"
+want=com.obsproject.Yami.CreativeGraphit
+grep -qs '^design=porzellan' "$look" && want=com.obsproject.Yami.CreativePorzellan
+if [ -f "$cfg/user.ini" ] && grep -qE '^Theme=com\.obsproject\.Yami\.Creative(Graphit|Porzellan)$' "$cfg/user.ini"; then
+    sed -i -E "s/^Theme=com\.obsproject\.Yami\.Creative(Graphit|Porzellan)$/Theme=$want/" "$cfg/user.ini"
 fi
 export QT_QPA_PLATFORM=xcb
 unset QT_QUICK_CONTROLS_STYLE

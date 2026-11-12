@@ -380,7 +380,7 @@ RUN chmod 755 /usr/bin/creative-iso /usr/libexec/creative-iso-helper /usr/share/
 # Look: Graphit-Variante des OBS-Designs „Yami“; eigene virtuelle Kamera „OBS Virtuelle Kamera“ (/dev/video43)
 RUN dnf install -y --skip-unavailable obs-studio && dnf clean all \
  && (rpm -q obs-studio >/dev/null && echo "OBS: $(rpm -q --qf '%{VERSION}' obs-studio)" || echo "OBS FEHLT")
-COPY obs/Yami_CreativeGraphit.ovt /usr/share/obs/obs-studio/themes/Yami_CreativeGraphit.ovt
+COPY obs/Yami_CreativeGraphit.ovt obs/Yami_CreativePorzellan.ovt /usr/share/obs/obs-studio/themes/
 COPY obs/creative-obs /usr/bin/creative-obs
 RUN chmod 755 /usr/bin/creative-obs \
  && f=/usr/share/applications/com.obsproject.Studio.desktop; if [ -f "$f" ]; then \
