@@ -98,6 +98,7 @@ Item {{
         }}
     }}
     KiChat {{ id: chatWin; objectName: "chat"; ki: kiHelper }}
+    Component.onCompleted: chatWin.openChat()
 }}
 """
     qml_file = OUT / "ki-vorschau.qml"
@@ -106,9 +107,6 @@ Item {{
     if not engine.rootObjects():
         print("QML konnte nicht geladen werden")
         return 1
-    root = engine.rootObjects()[0]
-    chat = root.property("chat")
-    chat.openChat()
     warten(app, lambda: False, 2.5)
     from PySide6.QtQuick import QQuickWindow
     for w in app.topLevelWindows():
