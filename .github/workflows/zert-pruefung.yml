@@ -7,18 +7,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          date -u
-          echo | openssl s_client -connect dl.fbaipublicfiles.com:443 -servername dl.fbaipublicfiles.com -showcerts 2>/dev/null \
-            | awk '/BEGIN CERT/,/END CERT/' > /tmp/kette.pem
-          openssl crl2pkcs7 -nocrl -certfile /tmp/kette.pem | openssl pkcs7 -print_certs -noout | head -20
-          echo | openssl s_client -connect dl.fbaipublicfiles.com:443 -servername dl.fbaipublicfiles.com 2>/dev/null | openssl x509 -noout -dates -issuer
-          curl -sSI https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth | head -5
-          podman run --rm --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
-          import ssl, urllib.request, certifi
-          print('openssl', ssl.OPENSSL_VERSION, 'certifi', certifi.where())
-          print(ssl.get_default_verify_paths())
-          try:
-              r = urllib.request.urlopen(urllib.request.Request('https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth', method='HEAD')); print('urllib OK', r.status)
-          except Exception as e: print('urllib FEHLER', e)
-          " 2>&1 | tail -8
-          podman run --rm --entrypoint sh ghcr.io/markuspinkall-ux/creative-trellis:latest -c "ls -la /etc/ssl/certs/ca-certificates.crt; dpkg -l ca-certificates 2>/dev/null | tail -1; cat /etc/os-release | head -2"
+          pip install -q huggingface_hub
+          python3 - <<'PY'
+          from huggingface_hub import list_repo_files
+          for r in ["fastforks/dinov2"]:
+              try:
+                  print(r, [f for f in list_repo_files(r) if "vitl14_reg4" in f])
+              except Exception as e:
+                  print(r, "FEHLER", e)
+          PY
+          # Original (Zertifikat abgelaufen → nur zum Vergleich ohne Prüfung) und Spiegel vergleichen
+          curl -sk -o meta.pth https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth
+          sha256sum meta.pth; ls -la meta.pth
+          for p in dinov2_vitl14_reg4_pretrain.pth dinov2-vitl14-reg/dinov2_vitl14_reg4_pretrain.pth; do
+            curl -sSLf -o hf.pth "https://huggingface.co/fastforks/dinov2/resolve/main/$p" && { echo "Spiegel: $p"; sha256sum hf.pth; break; }
+          done
