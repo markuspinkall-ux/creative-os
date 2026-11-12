@@ -39,6 +39,7 @@ DEMO = [
     ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", T("#8fc6af")),
 ]
 FEATURED = {row[0]: row for row in DEMO}
+FEATURED["org.creativeos.Engine"] = ("org.creativeos.Engine", "Creative Engine", "Spiele bauen per Klick", "E", "#8fb3ff")
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 STYLE = """

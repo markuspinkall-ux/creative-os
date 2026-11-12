@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.creativeos.Engine</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Creative Engine</name>
+  <summary>Spiele bauen per Klick</summary>
+  <description>
+    <p>Wähle ein Genre, gestalte Splash, Startbildschirm und Level per Maus, lade eigene 3D-Figuren (GLB)
+      und gib ihnen mit dem Charakter-Editor Bewegungen – per KI-Beschreibung oder mit Reglern.
+      Mit einem Klick testen und als fertiges Spiel für Linux und Windows exportieren.</p>
+  </description>
+  <launchable type="desktop-id">org.creativeos.Engine.desktop</launchable>
+  <url type="homepage">https://github.com/markuspinkall-ux/creative-os</url>
+  <developer id="org.creativeos"><name>Creative OS</name></developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-12"/>
+  </releases>
+</component>

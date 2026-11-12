@@ -1,0 +1,113 @@
+name: Eigene Apps veröffentlichen
+# Baut die Creative Engine als Flatpak und legt den Katalog „Eigene Apps“ in den Branch „flatpak-repo“
+# (abrufbar über raw.githubusercontent.com). Creative Software zeigt ihn unter „Eigene Apps“.
+# Veröffentlicht wird nur von main; auf claude/**-Branches wird gebaut und eine Probe-Installation gemacht.
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: [engine/**, creative3d/creative3d_rig*.py, shell/creative_shell/look.py, .github/workflows/eigene-apps.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: eigene-apps-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  URL: https://raw.githubusercontent.com/${{ github.repository }}/flatpak-repo
+jobs:
+  flatpak:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Flatpak-Werkzeuge
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q flatpak flatpak-builder ostree xvfb
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          for v in 6.11 6.10 6.9; do
+            if flatpak remote-info --user flathub io.qt.PySide.BaseApp//$v >/dev/null 2>&1 \
+               && flatpak remote-info --user flathub org.kde.Sdk//$v >/dev/null 2>&1; then echo "VERSION=$v" >> $GITHUB_ENV; break; fi
+          done
+      - name: Quellen zusammenstellen
+        run: |
+          echo "KDE/PySide: $VERSION"
+          test -n "$VERSION"
+          mkdir -p bau/quelle
+          cp -r engine/creative_engine bau/quelle/
+          cp shell/creative_shell/look.py bau/quelle/creative_look.py
+          cp creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py bau/quelle/
+          cp engine/flatpak/creative-engine.sh engine/flatpak/org.creativeos.Engine.* bau/quelle/
+          sed "s/@VERSION@/$VERSION/g" engine/flatpak/org.creativeos.Engine.yml > bau/org.creativeos.Engine.yml
+      - name: Alten Katalog holen (für Updates)
+        run: |
+          mkdir -p repo
+          if git ls-remote --exit-code origin flatpak-repo >/dev/null 2>&1; then
+            git fetch -q --depth 1 origin flatpak-repo && git --work-tree=repo checkout FETCH_HEAD -- . && git reset -q
+            rm -rf repo/.git
+          fi
+          [ -f repo/config ] || ostree init --repo=repo --mode=archive-z2
+      - name: Bauen
+        timeout-minutes: 45
+        run: |
+          cd bau
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
+            --repo=../repo --default-branch=stable --subject="Creative Engine ${GITHUB_SHA::7}" build org.creativeos.Engine.yml
+          cd ..
+          flatpak build-update-repo --prune --prune-depth=2 --generate-static-deltas=false \
+            --title="Creative OS – Eigene Apps" repo
+          du -sh repo
+      - name: Katalog-Datei
+        run: |
+          cat > repo/creative-eigene-apps.flatpakrepo <<EOR
+          [Flatpak Repo]
+          Title=Creative OS – Eigene Apps
+          Url=$URL/
+          Homepage=https://github.com/${GITHUB_REPOSITORY}
+          Comment=Programme von Creative OS, die nicht im System stecken (z. B. Creative Engine)
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          EOR
+          cat > repo/org.creativeos.Engine.flatpakref <<EOR
+          [Flatpak Ref]
+          Name=org.creativeos.Engine
+          Branch=stable
+          Title=Creative Engine
+          Url=$URL/
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          IsRuntime=false
+          EOR
+          touch repo/.nojekyll
+      - name: Probe-Installation
+        run: |
+          # wie auf dem PC: Katalog-Datei ohne GPG-Schlüssel (nur Url ersetzt)
+          sed "s#^Url=.*#Url=file://$PWD/repo/#" repo/creative-eigene-apps.flatpakrepo > /tmp/probe.flatpakrepo
+          flatpak remote-add --user probe /tmp/probe.flatpakrepo
+          flatpak remotes --user -d
+          flatpak install --user -y --noninteractive probe org.creativeos.Engine
+          flatpak info --user org.creativeos.Engine
+          flatpak run --user --command=sh org.creativeos.Engine -c \
+            'PYTHONPATH=/app/lib/creative-engine python3 -c "from creative_engine import selftest; selftest.run()"'
+          mkdir -p fotos
+          xvfb-run -a -s "-screen 0 1440x900x24" timeout 40 flatpak run --user --command=sh org.creativeos.Engine -c \
+            'PYTHONPATH=/app/lib/creative-engine QT_QPA_PLATFORM=offscreen python3 -c "
+          import sys
+          from PySide6.QtWidgets import QApplication
+          from PySide6.QtCore import QTimer
+          from creative_engine import app as e
+          a = QApplication([]); a.setStyleSheet(e.stylesheet()); w = e.Window(); w.resize(1440, 900); w.show()
+          import os; f = os.path.expanduser(\"~/flatpak-start.png\")
+          QTimer.singleShot(1500, lambda: (w.grab().save(f), a.quit())); a.exec()
+          print(\"Fenster ok\")"' && cp ~/flatpak-start.png fotos/ 2>/dev/null || true
+      - name: Veröffentlichen
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd repo
+          git init -q -b flatpak-repo && git add -A \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Eigene Apps ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" flatpak-repo
+      - name: Foto ablegen
+        if: always() && github.ref != 'refs/heads/main'
+        run: |
+          cd fotos 2>/dev/null && ls *.png >/dev/null 2>&1 || exit 0
+          git init -q -b flatpak-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Flatpak ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" flatpak-fotos
