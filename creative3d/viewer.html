@@ -21,7 +21,12 @@ Ziehen dreht die Figur, Mausrad zoomt.</div></div>
     const c = document.createElement("canvas");
     const gl = c.getContext("webgl2") || c.getContext("webgl");
     if (!gl) { console.log("C3D:nowebgl"); return; }
-    customElements.whenDefined("model-viewer").then(() => console.log("C3D:ready webgl"));
+    let renderer = "";
+    try {
+      const info = gl.getExtension("WEBGL_debug_renderer_info");
+      renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    } catch (e) {}
+    customElements.whenDefined("model-viewer").then(() => console.log("C3D:ready webgl " + renderer));
   })();
   window.addEventListener("error", (e) => console.log("C3D:error " + (e.message || "Skriptfehler")));
   const mv = document.getElementById("mv");

@@ -44,7 +44,8 @@ SETUP = LIB / "creative3d-setup"
 OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-3d"
 IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
 IMAGE = os.environ.get("CREATIVE3D_IMAGE", "ghcr.io/markuspinkall-ux/creative-trellis:latest")
-QUALITY = [("normal", "Normal (≈ 1–2 Min.)"), ("hoch", "Hoch – schärfere Textur (≈ 3–5 Min.)")]
+QUALITY = [("normal", "Normal (≈ 1–2 Min.)"), ("hoch", "Hoch – schärfere Textur (≈ 3–5 Min.)"),
+           ("sehr-hoch", "Sehr hoch – 4K-Textur per KI (≈ 5–8 Min.)")]
 FORMATS = [("glb", "GLB", "Für Blender, Spiele-Engines, Web und AR – mit Textur"),
            ("obj", "OBJ", "Universell, mit Textur (MTL + PNG)"),
            ("stl", "STL", "Für den 3D-Druck, 10 cm hoch"), ("ply", "PLY", "Punktwolken- und Netz-Werkzeuge")]
@@ -80,6 +81,13 @@ STYLE = """
 
 def ready():
     return (DATA / "trellis-ready").is_file()
+
+
+def run_override():
+    """Neuere Fassung des Rechenteils aus Creative OS in den Container legen – so kommen
+    Verbesserungen (z. B. „Sehr hoch“) mit dem System-Update, ohne den 14-GB-Container neu zu laden."""
+    newer = LIB / "trellis-run.py"
+    return ["-v", f"{newer}:/opt/creative/run.py:ro"] if newer.is_file() else []
 
 
 def gpu_name():
@@ -476,11 +484,14 @@ class Creative3D(QMainWindow):
             self.use_soft("Die Vorschau-Seite ließ sich nicht laden.")
             return
         # model-viewer muss sich innerhalb weniger Sekunden melden, sonst Ausweich-Vorschau
-        QTimer.singleShot(7000, lambda: None if self.web_ok else self.use_soft("Die 3D-Vorschau hat nicht geantwortet."))
+        QTimer.singleShot(15000, lambda: None if self.web_ok else self.use_soft("Die 3D-Vorschau hat nicht geantwortet."))
 
     def web_message(self, text):
-        if text == "ready webgl":
+        if text.startswith("ready webgl"):
             self.web_ok = True
+            renderer = text[len("ready webgl"):].strip()
+            if renderer:
+                print(f"Creative 3D: 3D-Vorschau läuft ({renderer})", file=sys.stderr)
         elif text.startswith("nowebgl"):
             self.use_soft("Die Grafikkarte steht der eingebauten Browser-Engine nicht zur Verfügung (kein WebGL).")
         elif text.startswith("error") and not self.web_ok:
@@ -499,10 +510,25 @@ class Creative3D(QMainWindow):
             if self.result:
                 self.preview(self.rigged or self.result["files"]["glb"])
 
+    def busy(self):
+        return self.proc.state() != QProcess.ProcessState.NotRunning
+
     def use_soft(self, reason):
         if self.web_failed:
             return
+        # Echte 3D-Vorschau scheitert an der Grafikkarte? Dann einmal mit Software-WebGL
+        # (SwiftShader) neu starten – das ist weit besser als die einfache Vorschau.
+        if reason != "eingestellt" and not os.environ.get("CREATIVE3D_SOFTGL") and not self.busy() \
+                and self.settings.value("webglSoftware", False, type=bool) is False:
+            self.settings.setValue("webglSoftware", True)
+            self.settings.sync()
+            print(f"Creative 3D: {reason} – starte die 3D-Vorschau mit Software-WebGL neu", file=sys.stderr)
+            QProcess.startDetached(sys.executable, [str(Path(sys.argv[0]).resolve()), *sys.argv[1:]])
+            QTimer.singleShot(0, QApplication.quit)
+            return
         self.web_failed = True
+        if hasattr(self, "simple"):
+            self.simple.setToolTip("Einfache Vorschau aktiv: " + reason)
         if hasattr(self, "simple") and not self.simple.isChecked():
             self.simple.blockSignals(True)
             self.simple.setChecked(True)
@@ -571,6 +597,7 @@ class Creative3D(QMainWindow):
         args = ["run", "--rm", "--security-opt", "label=disable", "--device", "nvidia.com/gpu=all",
                 "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
                 "-v", f"{DATA / 'modelle'}:/cache", "-v", f"{self.out}:/out",
+                *run_override(),
                 IMAGE, "--image", f"/out/{copy.name}", "--out", "/out", "--quality", str(self.detail.currentData())]
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONUNBUFFERED", "1")
@@ -757,10 +784,17 @@ class Creative3D(QMainWindow):
 
 def main():
     selftest = "--selftest" in sys.argv
-    # Falls die Browser-Engine die Grafikkarte sperrt: WebGL notfalls per Software (SwiftShader)
+    # Falls die Browser-Engine die Grafikkarte sperrt: WebGL notfalls per Software (SwiftShader).
+    # Ist das schon einmal nötig gewesen (Einstellung webglSoftware), gleich damit starten.
     flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
-    if "--enable-unsafe-swiftshader" not in flags:
-        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (flags + " --enable-unsafe-swiftshader").strip()
+    extra = ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
+    if QSettings("Creative OS", "Creative 3D").value("webglSoftware", False, type=bool):
+        os.environ["CREATIVE3D_SOFTGL"] = "1"
+        extra += ["--use-gl=angle", "--use-angle=swiftshader"]
+    for flag in extra:
+        if flag.split("=")[0] not in flags:
+            flags = (flags + " " + flag).strip()
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags
     if not selftest:
         register_scheme()
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
