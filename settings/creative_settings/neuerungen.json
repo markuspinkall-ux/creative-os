@@ -34,6 +34,7 @@
       "Tray: Programme wie Steam oder Discord lassen sich per Rechtsklick → „Beenden“ schließen (Systemprogramme, die immer laufen, ausgenommen)"
     ],
     "behoben": [
+      "Schwarzer Bildschirm nach der Anmeldung (vor allem bei neuen Konten): Die Oberfläche konnte beim Start hängen bleiben, wenn Hintergrund-Abfragen (z. B. Bluetooth) gleichzeitig fertig wurden – Ergebnisse laufen jetzt sicher über den Haupt-Thread",
       "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
       "Creative 3D: Die einfache Vorschau war oft dauerhaft an – jetzt startet die echte 3D-Vorschau notfalls per Software",
       "Creative 3D und Creative Cut: aufgeklappte Auswahllisten waren durchsichtig",

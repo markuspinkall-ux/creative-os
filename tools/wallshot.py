@@ -11,6 +11,8 @@ from PySide6.QtQuick import QQuickView
 from PySide6.QtQuickControls2 import QQuickStyle
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)
+from creative_shell.mainthread import install as _mt_install
+_mt_timer = _mt_install()
 from creative_shell.apps import AppModel
 from creative_shell.desktop import DesktopModel
 from creative_shell.desktopstats import DesktopStats

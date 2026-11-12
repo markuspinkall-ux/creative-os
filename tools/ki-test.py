@@ -26,6 +26,7 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
 from creative_shell import ki  # noqa: E402
+from creative_shell.mainthread import install  # noqa: E402
 
 FRAGEN = [
     "Wer war der erste Bundeskanzler der Bundesrepublik Deutschland?",
@@ -44,6 +45,7 @@ def warten(app, cond, sekunden):
 def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv[:1])
+    _timer = install()  # noqa: F841
     helfer = ki.KiHelfer()
     print("Grafikspeicher:", helfer.vram, "GB · Empfehlung:", helfer.choice, "· Modell:", helfer.modelName or "–")
     fehler = 0

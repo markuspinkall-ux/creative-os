@@ -18,6 +18,7 @@ from PySide6.QtGui import QDesktopServices, QGuiApplication
 
 from . import config
 from .runner import spawn_detached
+from .mainthread import post
 
 ROLES = ["name", "path", "isDir", "tint", "ext", "selected"]
 ROLE_IDS = {n: Qt.ItemDataRole.UserRole + 1 + i for i, n in enumerate(ROLES)}
@@ -310,7 +311,7 @@ class DesktopModel(QAbstractListModel):
             except (OSError, RuntimeError):
                 ok = False
             finally:
-                self.pasteFinished.emit(ok)
+                post(self.pasteFinished.emit, ok)
 
         threading.Thread(target=copy, daemon=True).start()
 
@@ -338,7 +339,7 @@ class DesktopModel(QAbstractListModel):
 
         def work():
             _done, failed = transfer(sources, target, mode)
-            self.dropFinished.emit(failed)
+            post(self.dropFinished.emit, failed)
 
         threading.Thread(target=work, daemon=True).start()
 

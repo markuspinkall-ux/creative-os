@@ -6,6 +6,7 @@ import subprocess
 import threading
 
 from PySide6.QtCore import QObject, Property, QTimer, Signal, Slot
+from .mainthread import post
 
 MAC = re.compile(r"^[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}$")
 
@@ -102,9 +103,9 @@ class BluetoothModel(QObject):
             try:
                 if action:
                     action()
-                self._result.emit({"state": read_state()})
+                post(self._result.emit, {"state": read_state()})
             except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
-                self._result.emit({"error": str(exc)})
+                post(self._result.emit, {"error": str(exc)})
         threading.Thread(target=worker, daemon=True).start()
 
     @Slot(object)

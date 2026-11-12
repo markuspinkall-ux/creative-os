@@ -24,6 +24,7 @@ from PySide6.QtCore import Property, QObject, QProcess, QTimer, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 
 from . import config
+from .mainthread import post
 
 LIB = Path(os.environ.get("CREATIVE_KI_LIB", "/usr/lib/creative-ki"))
 MODELLE = Path(os.environ.get("CREATIVE_KI_MODELLE", "/var/lib/creative-ki/modelle"))
@@ -257,8 +258,8 @@ class KiHelfer(QObject):
 
         def lesen(proc):
             for line in proc.stdout:
-                self._setupLine.emit(line.rstrip("\n"))
-            self._setupEnd.emit(proc.wait())
+                post(self._setupLine.emit, line.rstrip("\n"))
+            post(self._setupEnd.emit, proc.wait())
 
         threading.Thread(target=lesen, args=(self._setup,), daemon=True).start()
 
@@ -380,7 +381,7 @@ class KiHelfer(QObject):
                     system += ("\n\nHintergrund aus der Wikipedia (nur verwenden, wenn es zur Frage passt; "
                                "nicht erwähnen, dass dir Text vorliegt):\n" +
                                "\n\n".join(f"[{t}] {x}" for t, x, _ in treffer))
-            self._chunk.emit("")         # Status: denkt
+            post(self._chunk.emit, "")         # Status: denkt
             body = json.dumps({
                 "messages": [{"role": "system", "content": system}] + verlauf,
                 "stream": True, "temperature": 0.4, "max_tokens": 1200,
@@ -403,10 +404,10 @@ class KiHelfer(QObject):
                     except (ValueError, KeyError, IndexError):
                         continue
                     if delta.get("content"):
-                        self._chunk.emit(delta["content"])
-            self._done.emit("", quellen)
+                        post(self._chunk.emit, delta["content"])
+            post(self._done.emit, "", quellen)
         except Exception as exc:  # noqa: BLE001 – jede Störung landet als Meldung im Widget
-            self._done.emit(str(exc) or exc.__class__.__name__, quellen)
+            post(self._done.emit, str(exc) or exc.__class__.__name__, quellen)
 
     def _on_chunk(self, text):
         if not self._messages:

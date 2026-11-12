@@ -494,6 +494,9 @@ def main():
     app.setApplicationName("creative-shell")
     app.setDesktopFileName("creative-shell")
     app.setQuitOnLastWindowClosed(False)
+    # Ergebnisse von Hintergrund-Threads nur im Haupt-Thread verarbeiten (siehe mainthread.py)
+    from .mainthread import install as _install_mainthread
+    _mainthread_timer = _install_mainthread()  # noqa: F841 – muss am Leben bleiben
 
     engine = QQmlApplicationEngine()
     engine.addImportPath(str(QML_DIR))

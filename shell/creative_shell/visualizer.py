@@ -14,6 +14,7 @@ import time
 from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
 from . import config
+from .mainthread import post
 
 try:
     import numpy as np
@@ -134,8 +135,8 @@ class Visualizer(QObject):
             smooth = np.where(level > smooth, smooth * 0.35 + level * 0.65, smooth * 0.82 + level * 0.18)
             if rms <= SILENCE and time.monotonic() - self._last_sound > 1.5:
                 smooth *= 0.8
-            self._frame.emit([round(float(v), 3) for v in smooth])
-        self._frame.emit(None)
+            post(self._frame.emit, [round(float(v), 3) for v in smooth])
+        post(self._frame.emit, None)
 
     def _apply(self, levels):
         if levels is None:

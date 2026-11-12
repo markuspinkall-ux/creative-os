@@ -51,6 +51,13 @@ echo "Warte auf das System …"
 for i in $(seq 1 90); do $SSH true 2>/dev/null && break; sleep 5; done
 $SSH true 2>/dev/null || fail "System nicht erreichbar (kein SSH nach 7 Minuten)"
 shot login
+# Stand dieses Branches vorab einspielen (vorübergehend beschreibbares /usr, bis zum Neustart)
+if [ "${BRANCH_EINSPIELEN:-1}" = 1 ] && [ -d shell/creative_shell ]; then
+    echo "--- Branch-Stand wird in die VM eingespielt …"
+    tar -czf "$W/branch.tgz" shell/creative_shell shell/session/creative-shell-supervisor users/creative-users-helper login/creative
+    scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/branch.tgz" tester@127.0.0.1:/tmp/branch.tgz
+    $SSH "echo creative-test | sudo -S sh -c 'rpm-ostree usroverlay >/dev/null 2>&1 || ostree admin unlock >/dev/null 2>&1; mkdir -p /tmp/b && tar -xzf /tmp/branch.tgz -C /tmp/b && rm -rf /usr/lib/creative-shell/creative_shell && cp -r /tmp/b/shell/creative_shell /usr/lib/creative-shell/ && install -m755 /tmp/b/shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor && install -m755 /tmp/b/users/creative-users-helper /usr/libexec/creative-users-helper && cp /tmp/b/login/creative/Main.qml /usr/share/sddm/themes/creative/Main.qml && echo eingespielt'" 2>&1 | tail -2
+fi
 echo "System läuft. Anmeldung wird automatisch durchgeführt …"
 $SSH "echo creative-test | sudo -S sh -c 'mkdir -p /etc/sddm.conf.d && printf \"[Autologin]\nUser=tester\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -3
 sleep 100
@@ -97,10 +104,19 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
     $SSH "echo creative-test | sudo -S sh -c 'rm -f /etc/sddm.conf.d/zz-starttest.conf; mkdir -p /var/lib/sddm; printf \"[Last]\nUser=frau\nSession=/usr/share/wayland-sessions/creative.desktop\n\" > /var/lib/sddm/state.conf; chown sddm: /var/lib/sddm/state.conf 2>/dev/null; systemctl restart sddm'" 2>&1 | tail -2
     sleep 40
     shot anmeldung-frau
-    $SSH "echo creative-test | sudo -S sh -c 'printf \"[Autologin]\nUser=frau\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -2
-    sleep 110
-    shot desktop-frau
     R="echo creative-test | sudo -S"
+    haenger=0
+    for runde in 1 2 3; do
+        $SSH "echo creative-test | sudo -S sh -c 'printf \"[Autologin]\nUser=frau\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -2
+        sleep 100
+        shot desktop-frau-$runde
+        zeichnet=$($SSH "$R sh -c 'p=\$(pgrep -u frau -f \"python3 -m creative_shell\" | head -1); cat /proc/\$p/task/*/comm 2>/dev/null | grep -c QSGRenderThr; echo; cat /proc/\$p/wchan'" 2>/dev/null | grep -v password | tr '\n' ' ')
+        echo "Runde $runde: Render-Threads/Haupt-Thread: $zeichnet"
+        case "$zeichnet" in 0*) haenger=$((haenger + 1)) ;; esac
+        $SSH "$R journalctl -b --no-pager -t creative-shell _UID=\$(id -u frau) | tail -15" 2>&1 | grep -v "password for\|MESA\|portal" | tail -15
+    done
+    echo "Zweitkonto: $haenger von 3 Anmeldungen ohne gezeichnete Oberfläche"
+    shot desktop-frau
     $SSH "$R sh -c 'u=\$(id -u frau); echo Sitzungen:; loginctl list-sessions --no-legend; echo Prozesse:; pgrep -u frau -af \"creative|kwin|python3\" | head -30; echo Zustand: \$(cat /tmp/creative-shell-state-\$u 2>/dev/null); echo Home:; ls -la ~frau ~frau/.config ~frau/.config/creative-os 2>&1 | head -60; echo Willkommen-Log:; tail -30 ~frau/.cache/creative-welcome.log 2>&1'" > "$W/frau.log" 2>&1
     $SSH "$R journalctl -b --no-pager _UID=\$(id -u frau) 2>/dev/null | tail -250" > "$W/frau-journal.log" 2>&1
     $SSH "$R journalctl -b --no-pager -u sddm 2>/dev/null | tail -60" > "$W/sddm.log" 2>&1
@@ -151,6 +167,7 @@ SH
     fwelcome=$($SSH "pgrep -u frau -f creative_welcome | head -1")
     echo "Zweitkonto: Oberfläche ${fshell:-läuft NICHT} · Willkommen ${fwelcome:+läuft (soll nicht)}"
     [ -n "$fshell" ] || fail "Zweitkonto: Die Oberfläche läuft nicht"
+    [ "$haenger" = 0 ] || fail "Zweitkonto: Oberfläche hing bei $haenger von 3 Anmeldungen (schwarzer Bildschirm)"
     [ -z "$fwelcome" ] || echo "HINWEIS: Willkommen-Fenster lief beim Zweitkonto"
 fi
 echo "STARTTEST BESTANDEN"

@@ -17,6 +17,7 @@ from pathlib import Path
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 
 from . import config
+from .mainthread import post
 
 
 def _player_file():
@@ -113,9 +114,9 @@ class NowPlaying(QObject):
 
         def work():
             try:
-                self._result.emit(read_now())
+                post(self._result.emit, read_now())
             except Exception:
-                self._result.emit(None)
+                post(self._result.emit, None)
         threading.Thread(target=work, daemon=True).start()
 
     def _apply(self, now):

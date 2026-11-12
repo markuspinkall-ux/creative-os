@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 
 from . import config
+from .mainthread import post
 
 
 def read(url):
@@ -143,7 +144,7 @@ class DesktopWidget(QObject):
                 rows, message = weather(value) if self._weather else rss(value.splitlines())
             except (OSError, ValueError, KeyError, IndexError) as exc:
                 rows, message = [], str(exc)
-            self._ready.emit((value, rows, message))
+            post(self._ready.emit, (value, rows, message))
 
         threading.Thread(target=run, daemon=True).start()
 
