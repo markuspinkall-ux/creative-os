@@ -7,7 +7,7 @@ Meldet sich zeilenweise (wie bisher), damit Creative 3D mitlesen kann:
   ERR <text>              Fehler
 
   run.py --prepare                          Modelle laden (einmalig, ≈ 4 GB nach /cache)
-  run.py --image /in/bild.png --out /out [--quality normal|hoch] [--seed 1]
+  run.py --image /in/bild.png --out /out [--quality normal|hoch|sehr-hoch] [--seed 1]
   run.py --selftest                         Prüfung beim Bauen (ohne Grafikkarte)
 """
 
@@ -24,7 +24,11 @@ QUALITY = {
     # Abtastschritte (Form, Details), Texturgröße, Anteil entfernter Dreiecke
     "normal": {"ss_steps": 12, "slat_steps": 12, "texture": 1024, "simplify": 0.95},
     "hoch": {"ss_steps": 25, "slat_steps": 25, "texture": 2048, "simplify": 0.90},
+    # 2048 backen (passt sicher in 12 GB), dann per KI (Real-ESRGAN ×4) auf 8192 und sauber auf 4096
+    "sehr-hoch": {"ss_steps": 40, "slat_steps": 40, "texture": 2048, "simplify": 0.85, "upscale": 4096},
 }
+ESRGAN_URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+ESRGAN_SHA256 = "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1"   # BSD-3-Lizenz
 
 
 def say(kind, *parts):
@@ -67,6 +71,118 @@ def hook_sampler_progress(ranges):
 
     fe.tqdm = Reporter
     return original
+
+
+# ── KI-Hochskalierung der Textur (Real-ESRGAN x4plus, eigene schlanke Umsetzung) ──
+
+def esrgan_net():
+    """RRDBNet wie in Real-ESRGAN/BasicSR (BSD-3) – nur das, was zum Hochrechnen nötig ist."""
+    import torch
+    from torch import nn
+    from torch.nn import functional as F
+
+    class RDB(nn.Module):
+        def __init__(self, f=64, g=32):
+            super().__init__()
+            self.conv1 = nn.Conv2d(f, g, 3, 1, 1)
+            self.conv2 = nn.Conv2d(f + g, g, 3, 1, 1)
+            self.conv3 = nn.Conv2d(f + 2 * g, g, 3, 1, 1)
+            self.conv4 = nn.Conv2d(f + 3 * g, g, 3, 1, 1)
+            self.conv5 = nn.Conv2d(f + 4 * g, f, 3, 1, 1)
+            self.lrelu = nn.LeakyReLU(0.2, True)
+
+        def forward(self, x):
+            x1 = self.lrelu(self.conv1(x))
+            x2 = self.lrelu(self.conv2(torch.cat((x, x1), 1)))
+            x3 = self.lrelu(self.conv3(torch.cat((x, x1, x2), 1)))
+            x4 = self.lrelu(self.conv4(torch.cat((x, x1, x2, x3), 1)))
+            return self.conv5(torch.cat((x, x1, x2, x3, x4), 1)) * 0.2 + x
+
+    class RRDB(nn.Module):
+        def __init__(self, f=64, g=32):
+            super().__init__()
+            self.rdb1, self.rdb2, self.rdb3 = RDB(f, g), RDB(f, g), RDB(f, g)
+
+        def forward(self, x):
+            return self.rdb3(self.rdb2(self.rdb1(x))) * 0.2 + x
+
+    class RRDBNet(nn.Module):
+        def __init__(self, f=64, blocks=23, g=32):
+            super().__init__()
+            self.conv_first = nn.Conv2d(3, f, 3, 1, 1)
+            self.body = nn.Sequential(*[RRDB(f, g) for _ in range(blocks)])
+            self.conv_body = nn.Conv2d(f, f, 3, 1, 1)
+            self.conv_up1 = nn.Conv2d(f, f, 3, 1, 1)
+            self.conv_up2 = nn.Conv2d(f, f, 3, 1, 1)
+            self.conv_hr = nn.Conv2d(f, f, 3, 1, 1)
+            self.conv_last = nn.Conv2d(f, 3, 3, 1, 1)
+            self.lrelu = nn.LeakyReLU(0.2, True)
+
+        def forward(self, x):
+            feat = self.conv_first(x)
+            feat = feat + self.conv_body(self.body(feat))
+            feat = self.lrelu(self.conv_up1(F.interpolate(feat, scale_factor=2, mode="nearest")))
+            feat = self.lrelu(self.conv_up2(F.interpolate(feat, scale_factor=2, mode="nearest")))
+            return self.conv_last(self.lrelu(self.conv_hr(feat)))
+
+    return RRDBNet()
+
+
+def esrgan_weights(cache=Path(os.environ.get("TORCH_HOME", "/cache/torch")) / "esrgan"):
+    """Gewichte laden (einmalig ≈ 64 MB von GitHub) und per Prüfsumme sichern."""
+    import hashlib
+    import urllib.request
+    path = cache / "RealESRGAN_x4plus.pth"
+    if not path.is_file():
+        cache.mkdir(parents=True, exist_ok=True)
+        part = path.with_suffix(".part")
+        urllib.request.urlretrieve(ESRGAN_URL, part)
+        digest = hashlib.sha256(part.read_bytes()).hexdigest()
+        if digest != ESRGAN_SHA256:
+            part.unlink(missing_ok=True)
+            raise RuntimeError("Real-ESRGAN: Prüfsumme passt nicht")
+        part.replace(path)
+    return path
+
+
+def upscale_texture(image, target, tile=384, pad=16):
+    """PIL-Bild per Real-ESRGAN ×4 hochrechnen und auf target × target bringen (in Kacheln, fp16 auf der GPU)."""
+    import numpy as np
+    import torch
+    from PIL import Image
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    net = esrgan_net()
+    state = torch.load(esrgan_weights(), map_location="cpu")
+    net.load_state_dict(state.get("params_ema", state.get("params", state)), strict=True)
+    net.eval().to(device)
+    half = device == "cuda"
+    if half:
+        net.half()
+    rgba = image.convert("RGBA")
+    rgb = np.asarray(rgba.convert("RGB"), np.float32) / 255.0
+    h, w = rgb.shape[:2]
+    out = np.zeros((h * 4, w * 4, 3), np.float32)
+    x = torch.from_numpy(rgb).permute(2, 0, 1)[None]
+    with torch.no_grad():
+        for top in range(0, h, tile):
+            for left in range(0, w, tile):
+                t0, l0 = max(0, top - pad), max(0, left - pad)
+                t1, l1 = min(h, top + tile + pad), min(w, left + tile + pad)
+                part = x[:, :, t0:t1, l0:l1].to(device)
+                part = part.half() if half else part
+                res = net(part).float().clamp(0, 1)[0].permute(1, 2, 0).cpu().numpy()
+                bt, bl = (top - t0) * 4, (left - l0) * 4
+                th, tw = min(tile, h - top) * 4, min(tile, w - left) * 4
+                out[top * 4:top * 4 + th, left * 4:left * 4 + tw] = res[bt:bt + th, bl:bl + tw]
+    del net
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    big = Image.fromarray((out * 255 + 0.5).astype(np.uint8))
+    if big.size != (target, target):
+        big = big.resize((target, target), Image.LANCZOS)
+    if rgba.getextrema()[3][0] < 255:   # Transparenz übernehmen
+        big.putalpha(rgba.getchannel("A").resize(big.size, Image.LANCZOS))
+    return big
 
 
 # ── Hilfen für die Ausgabe ────────────────────────────────────────────────
@@ -192,6 +308,19 @@ def generate(args):
     if glb is None or len(glb.faces) == 0:
         say("ERR", "Aus diesem Bild ließ sich keine Figur formen. Versuch ein Bild mit klarem Motiv.")
         return 2
+    if settings.get("upscale"):
+        progress(86, f"Rechne die Textur per KI auf {settings['upscale']} × {settings['upscale']} hoch …")
+        try:
+            material = glb.visual.material
+            texture = material.baseColorTexture if getattr(material, "baseColorTexture", None) is not None \
+                else material.image
+            sharp = upscale_texture(texture, settings["upscale"])
+            if getattr(material, "baseColorTexture", None) is not None:
+                material.baseColorTexture = sharp
+            else:
+                material.image = sharp
+        except Exception as error:  # noqa: BLE001 – lieber normale Textur als gar keine Figur
+            progress(88, f"Hochrechnen ging nicht ({error}) – nehme die normale Textur")
     progress(92, "Speichere GLB, OBJ, STL und PLY …")
     files = export_all(glb, out, name)
     seconds = round(time.time() - started)
