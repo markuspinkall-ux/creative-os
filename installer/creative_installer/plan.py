@@ -196,12 +196,22 @@ user --name={cfg["userName"]} --gecos="{gecos}" --groups=wheel --iscrypted --pas
 # Creative OS kommt vom Stick (ohne Internet) …
 ostreecontainer --url={source} --transport=containers-storage --no-signature-verification
 
+%pre-install --log=/tmp/creative-pre-install.log
+# Beim Entpacken braucht ostree viel Platz in /var/tmp – im Live-System ist das nur RAM.
+# Darum für die Dauer der Installation einen Ordner auf der Zielplatte nehmen.
+mkdir -p /mnt/sysimage/.creative-tmp
+mount --bind /mnt/sysimage/.creative-tmp /var/tmp
+%end
+
 %post --erroronfail --log=/root/creative-install-post.log
 # … und holt sich Updates danach direkt aus der GitHub-Registry
 bootc switch --mutate-in-place --transport registry {target} || rpm-ostree rebase --experimental ostree-unverified-registry:{target} || true
 %end
 
 %post --nochroot --log=/mnt/sysroot/root/creative-install-efi.log
+# Platz für die Installation wieder freigeben (siehe %pre-install)
+umount /var/tmp 2>/dev/null || true
+rm -rf /mnt/sysroot/.creative-tmp /mnt/sysimage/.creative-tmp 2>/dev/null || true
 # Secure Boot: Schlüssel der Creative-OS-Treiber zur Freischaltung vormerken (Passwort: creative)
 if [ -d /sys/firmware/efi ] && mokutil --sb-state 2>/dev/null | grep -qi enabled; then
     key=/usr/share/creative-os/secureboot/creative-os-mok.der   # die Live-Umgebung ist Creative OS selbst
