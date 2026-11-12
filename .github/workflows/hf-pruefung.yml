@@ -44,3 +44,24 @@ jobs:
               else:
                   ok = False
           sys.exit(0 if ok else 1)
+
+  container-probe:
+    # Wie auf dem PC: „run.py --prepare“ im echten TRELLIS-Container (ohne Grafikkarte)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Platz schaffen
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost
+          df -h /
+      - name: Container laden und Modelle holen
+        run: |
+          podman pull -q ghcr.io/markuspinkall-ux/creative-trellis:latest
+          podman run --rm --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c \
+            "import huggingface_hub, torch; print('huggingface_hub', huggingface_hub.__version__, 'torch', torch.__version__)"
+          mkdir -p /tmp/modelle
+          podman run --rm -v /tmp/modelle:/cache ghcr.io/markuspinkall-ux/creative-trellis:latest --prepare 2>&1 | tail -40
+          podman run --rm -e HF_HUB_VERBOSITY=debug -v /tmp/modelle:/cache --entrypoint python3 \
+            ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          from huggingface_hub import hf_hub_download
+          print(hf_hub_download('microsoft/TRELLIS-image-large', 'pipeline.json'))" 2>&1 | tail -30
