@@ -32,7 +32,9 @@ ORDER = list(NAMES)          # Eltern stehen immer vor ihren Kindern
 
 SLOTS = [("idle", "Stehen"), ("walk", "Gehen"), ("run", "Rennen"), ("jump", "Springen"),
          ("fall", "Fallen"), ("cheer", "Jubeln"), ("hit", "Treffer")]
-SLOT_NAME = dict(SLOTS)
+ATTACK_SLOTS = [("attack1", "Angriff 1"), ("attack2", "Angriff 2"), ("attack3", "Angriff 3"), ("attack4", "Angriff 4")]
+ATTACK_STYLE = {"attack1": "Schlag", "attack2": "Tritt", "attack3": "Hieb von oben", "attack4": "Wirbel"}
+SLOT_NAME = dict(SLOTS + ATTACK_SLOTS)
 LOOPING = {"idle", "walk", "run", "fall", "cheer"}
 FPS = 24
 
@@ -460,6 +462,42 @@ def preset(kind, tempo=1.0, stride=28.0, arms=24.0, waddle=0.0, flap=0.0, bounce
             key("RightLeg", t, 14 * max(0, math.sin(ph)))
             bob.append([round(t, 4), round(bounce * 0.05 * max(0.0, math.sin(ph)), 4)])
         return {"length": period, "loop": True, "tracks": tracks, "bob": bob}
+    if kind.startswith("attack"):
+        style = {"attack1": "punch", "attack2": "kick", "attack3": "swing", "attack4": "spin"}.get(kind, "punch")
+        f = 1 / max(0.2, tempo)
+        if style == "punch":   # rechter Arm stößt nach vorn
+            for t, arm, fore, spine, hips in ((0.0, 0, -10, 0, 0), (0.08, 20, -70, -5, -10),
+                                               (0.18, -85, -5, 10, 20), (0.32, -80, -10, 8, 15), (0.5, 0, -10, 0, 0)):
+                key("RightArm", t * f, arm * arms / 24, 0, -8)
+                key("RightForeArm", t * f, fore)
+                key("Spine", t * f, spine * 0.5, hips)
+                key("Hips", t * f, 0, hips * 0.5)
+                key("LeftArm", t * f, -20, 0, 10)
+                key("LeftForeArm", t * f, -60)
+        elif style == "kick":   # rechtes Bein tritt nach vorn
+            for t, leg, knee, lean in ((0.0, 0, 0, 0), (0.12, -40, 80, -5), (0.24, -85, 5, -12),
+                                       (0.38, -80, 10, -10), (0.55, 0, 0, 0)):
+                key("RightUpLeg", t * f, leg * stride / 28)
+                key("RightLeg", t * f, knee)
+                key("Spine", t * f, lean)
+                key("LeftArm", t * f, -lean, 0, 35)
+                key("RightArm", t * f, lean, 0, -35)
+        elif style == "swing":   # beide Arme schlagen von oben nach unten
+            for t, arm, spine in ((0.0, 0, 0), (0.15, -170, -12), (0.3, -40, 20), (0.45, -30, 15), (0.65, 0, 0)):
+                key("LeftArm", t * f, arm * arms / 24, 0, 8)
+                key("RightArm", t * f, arm * arms / 24, 0, -8)
+                key("LeftForeArm", t * f, -20)
+                key("RightForeArm", t * f, -20)
+                key("Spine", t * f, spine)
+                key("Spine2", t * f, spine * 0.5)
+        else:   # Wirbel: einmal um die eigene Achse, Arme ausgestreckt
+            for i in range(9):
+                t = 0.6 * i / 8
+                key("Hips", t * f, 0, 360 * i / 8)
+                key("LeftArm", t * f, 0, 0, 85)
+                key("RightArm", t * f, 0, 0, -85)
+        return {"length": round(max(k[0] for keys in tracks.values() for k in keys), 3), "loop": False,
+                "tracks": tracks, "bob": bob}
     if kind == "hit":
         for t, spine, head, arm in ((0.0, 0, 0, 0), (0.1, -18, -20, 40), (0.5, 0, 0, 0)):
             key("Spine", t, spine)

@@ -259,7 +259,23 @@ class CharacterEditor(QDialog):
         self.slot_rows = {}
         grid = QGridLayout()
         grid.setSpacing(6)
-        for i, (key, name) in enumerate(S.SLOTS):
+        attack_names = [a.get("name", "") for a in data["player"].get("attacks", [])]
+        row_no = 0
+        for key, name in S.SLOTS + S.ATTACK_SLOTS:
+            if key == "attack1":
+                head = QLabel("ANGRIFFE", objectName="section")
+                head.setContentsMargins(0, 10, 0, 0)
+                grid.addWidget(head, row_no, 0, 1, 3)
+                tip = QLabel("Taste, Reichweite und Schaden stellst du unter Spieleinstellungen → Angriffe ein.")
+                tip.setWordWrap(True)
+                tip.setObjectName("sub")
+                grid.addWidget(tip, row_no + 1, 0, 1, 3)
+                row_no += 2
+            if key.startswith("attack"):
+                n = int(key[-1]) - 1
+                if n < len(attack_names) and attack_names[n]:
+                    name = f"{name}: {attack_names[n]}"
+            row_no += 2
             label = QLabel(name)
             label.setStyleSheet("font-weight:700")
             state = QLabel("–")
@@ -272,14 +288,21 @@ class CharacterEditor(QDialog):
             assign = QPushButton("Zuweisen")
             assign.setToolTip("Die Bewegung aus der Vorschau hier speichern")
             assign.clicked.connect(lambda _=False, k=key: self.assign(k))
-            grid.addWidget(label, i * 2, 0)
-            grid.addWidget(play, i * 2, 1)
-            grid.addWidget(assign, i * 2, 2)
-            grid.addWidget(state, i * 2 + 1, 0, 1, 3)
+            r0 = row_no - 2
+            grid.addWidget(label, r0, 0)
+            grid.addWidget(play, r0, 1)
+            grid.addWidget(assign, r0, 2)
+            grid.addWidget(state, r0 + 1, 0, 1, 3)
             self.slot_rows[key] = (state, play, assign)
         sv.addLayout(grid)
         sv.addStretch(1)
-        body.addWidget(slots)
+        slot_scroll = QScrollArea()
+        slot_scroll.setWidgetResizable(True)
+        slot_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        slot_scroll.setFixedWidth(310)
+        slot_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        slot_scroll.setWidget(slots)
+        body.addWidget(slot_scroll)
 
         # Vorschau (Mitte)
         mid = QVBoxLayout()
@@ -305,6 +328,8 @@ class CharacterEditor(QDialog):
         self.kind = QComboBox()
         for key, name in S.SLOTS:
             self.kind.addItem(name, key)
+        for key, name in S.ATTACK_SLOTS:
+            self.kind.addItem(f"{name} ({S.ATTACK_STYLE[key]})", key)
         self.kind.setCurrentIndex(1)
         self.kind.currentIndexChanged.connect(lambda _i: self.from_sliders())
         row.addWidget(self.kind, 1)

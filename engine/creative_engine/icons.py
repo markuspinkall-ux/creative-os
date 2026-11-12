@@ -86,6 +86,8 @@ SHAPES = {
     "plus": '<path d="M12 5v14M5 12h14"/>',
     "minus": '<path d="M5 12h14"/>',
     "back": '<path d="M15 6l-6 6 6 6"/>',
+    "up": '<path d="M6 15l6-6 6 6"/>',
+    "bubble": '<path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 9.5h8M8 12.5h5" stroke="{a}"/>',
     # Creative Engine
     "play": '<path d="M7 4.5v15l12-7.5z" fill="{a}"/>',
     "stop": '<rect x="6" y="6" width="12" height="12" rx="2" fill="{a}"/>',

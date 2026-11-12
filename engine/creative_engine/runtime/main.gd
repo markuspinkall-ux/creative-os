@@ -4,6 +4,7 @@ extends Node
 
 const Assets = preload("res://assets.gd")
 const LevelScript = preload("res://level.gd")
+const BubbleScript = preload("res://bubble.gd")
 
 var game: Dictionary = {}
 var flow: Array = []
@@ -30,6 +31,7 @@ func _ready() -> void:
 		return
 	game = parsed
 	flow = game.get("flow", [])
+	setup_attack_input()
 	var settings: Dictionary = game.get("settings", {})
 	if settings.get("fullscreen", false) and not args.has("fenster"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
@@ -71,6 +73,27 @@ func setup_input() -> void:
 		InputMap.action_add_event(pair[0], jm)
 
 
+## Angriffe: Taste je Angriff aus den Spieleinstellungen (Standard J, K, L, U, I, O), Gamepad X, Y, B, RB
+func setup_attack_input() -> void:
+	var attacks: Array = game.get("player", {}).get("attacks", [])
+	var defaults := ["J", "K", "L", "U", "I", "O"]
+	var pad := [JOY_BUTTON_X, JOY_BUTTON_Y, JOY_BUTTON_B, JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_LEFT_SHOULDER]
+	for i in attacks.size():
+		var action := "angriff%d" % (i + 1)
+		if not InputMap.has_action(action):
+			InputMap.add_action(action, 0.25)
+		var key_name := String(attacks[i].get("key", defaults[mini(i, 5)]))
+		var code := OS.find_keycode_from_string(key_name)
+		if code != KEY_NONE:
+			var ev := InputEventKey.new()
+			ev.physical_keycode = code
+			InputMap.action_add_event(action, ev)
+		if i < pad.size():
+			var jb := InputEventJoypadButton.new()
+			jb.button_index = pad[i]
+			InputMap.action_add_event(action, jb)
+
+
 func _take_screenshot() -> void:
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(screenshot_path)
@@ -98,6 +121,8 @@ func show_step(i: int) -> void:
 			current = make_menu(s)
 		"text":
 			current = make_text(s)
+		"seite":
+			current = make_page(s)
 		"level":
 			current = make_level(s)
 		_:
@@ -132,21 +157,38 @@ func full_rect(node: Control) -> void:
 	node.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 
-func background(layer: Control, s: Dictionary) -> void:
+## Hintergrund: Farbe, Bild und/oder Video im Vollbild. Gibt den Video-Player zurück (oder null).
+func background(layer: Control, s: Dictionary) -> VideoStreamPlayer:
 	var bg := ColorRect.new()
 	bg.color = Color(String(s.get("bg", "#000000")))
 	full_rect(bg)
 	layer.add_child(bg)
+	var cover := String(s.get("bgFit", "cover")) == "cover"
 	var image := String(s.get("bgImage", ""))
 	if image != "":
-		var tex := Assets.texture(image)
-		if tex:
-			var tr := TextureRect.new()
-			tr.texture = tex
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			full_rect(tr)
-			layer.add_child(tr)
+		var m := Assets.media(image, cover)
+		if m:
+			full_rect(m)
+			layer.add_child(m)
+	var video := String(s.get("bgVideo", ""))
+	if video != "":
+		var v := Assets.media(video, cover, bool(s.get("videoLoop", false)), float(s.get("videoVolume", 0.0)),
+			float(s.get("bgRatio", 16.0 / 9.0)))
+		if v:
+			full_rect(v)
+			layer.add_child(v)
+			return v.get_meta("video")
+	return null
+
+
+## Bild- oder Video-Element einer Seite/eines Menüs
+func media_element(e: Dictionary) -> Control:
+	var rel := String(e.get("video", e.get("image", "")))
+	var m := Assets.media(rel, String(e.get("fit", "contain")) == "cover", bool(e.get("loop", false)),
+		float(e.get("volume", 0.0)), float(e.get("ratio", 16.0 / 9.0)))
+	if m == null:
+		m = Control.new()
+	return m
 
 
 func make_label(text: String, size: int, color: String) -> Label:
@@ -175,7 +217,7 @@ func make_splash(s: Dictionary) -> Node:
 	var box := Skippable.new()
 	full_rect(box)
 	root.add_child(box)
-	background(box, s)
+	var player := background(box, s)
 	var center := VBoxContainer.new()
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	full_rect(center)
@@ -197,6 +239,11 @@ func make_splash(s: Dictionary) -> Node:
 	var fade := float(s.get("fade", 0.6))
 	var tw := box.create_tween()
 	tw.tween_property(box, "modulate:a", 1.0, fade)
+	if player and s.get("untilVideoEnd", false):
+		player.finished.connect(_skip_splash.bind(box), CONNECT_ONE_SHOT)
+		box.set_meta("tween", tw)
+		box.skipped.connect(_skip_splash.bind(box))
+		return root
 	tw.tween_interval(max(0.2, float(s.get("duration", 2.5))))
 	tw.tween_property(box, "modulate:a", 0.0, fade)
 	tw.tween_callback(next_step)
@@ -234,6 +281,71 @@ func make_text(s: Dictionary, done: Callable = Callable()) -> Node:
 	var dur := float(s.get("duration", 0))
 	if dur > 0:
 		get_tree().create_timer(dur).timeout.connect(_timed.bind(box, done))
+	return root
+
+
+## Freie Seite (Bild/Comic): Hintergrund, Texte, Bilder und Sprechblasen, die nacheinander erscheinen können.
+## Weiter nach „duration“ Sekunden oder (bei 0) per Taste/Klick.
+func make_page(s: Dictionary) -> Node:
+	var root := CanvasLayer.new()
+	var box := Skippable.new()
+	full_rect(box)
+	root.add_child(box)
+	var player := background(box, s)
+	var size := Vector2(1280, 720)
+	var last := 0.0
+	for e in s.get("elements", []):
+		var kind := String(e.get("kind", ""))
+		var rect := Rect2(float(e.get("x", 0.5)) * size.x, float(e.get("y", 0.5)) * size.y,
+			float(e.get("w", 0.3)) * size.x, float(e.get("h", 0.1)) * size.y)
+		rect.position -= rect.size / 2.0
+		var node: Control
+		if kind == "bubble":
+			var b = BubbleScript.new()
+			var ui: Dictionary = game.get("settings", {}).get("ui", {})
+			var skin_rel := String(e.get("skin", ""))
+			if skin_rel == "" and not e.get("noSkin", false):
+				skin_rel = String(ui.get("bubble", ""))
+			b.skin = Assets.texture(skin_rel)
+			b.skin_margin = int(e.get("skinMargin", ui.get("bubbleMargin", 24)))
+			b.setup(String(e.get("text", "")), int(e.get("size", 30)), Color(String(e.get("color", "#ffffff"))),
+				Color(String(e.get("textColor", "#1c2433"))), String(e.get("tail", "unten-links")),
+				String(e.get("speaker", "")))
+			node = b
+		elif kind in ["image", "video"]:
+			node = media_element(e)
+			if kind == "video" and player == null and node.has_meta("video"):
+				player = node.get_meta("video")
+		else:
+			var l := make_label(String(e.get("text", "")), int(e.get("size", 48)), String(e.get("color", "#ffffff")))
+			if e.get("bold", false):
+				l.add_theme_constant_override("outline_size", 2)
+				l.add_theme_color_override("font_outline_color", Color(String(e.get("color", "#ffffff"))))
+			node = l
+		node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		node.position = rect.position
+		node.size = rect.size
+		box.add_child(node)
+		var delay := float(e.get("after", 0.0))
+		last = maxf(last, delay)
+		if delay > 0.0:
+			node.modulate.a = 0.0
+			var tw := node.create_tween()
+			tw.tween_interval(delay)
+			tw.tween_property(node, "modulate:a", 1.0, 0.25)
+	var dur := float(s.get("duration", 0))
+	if player and s.get("untilVideoEnd", false):
+		player.finished.connect(_timed.bind(box, next_step), CONNECT_ONE_SHOT)
+		dur = -1.0
+	if dur == 0.0:
+		var hint := make_label("Weiter mit Leertaste oder Klick", 16, "#ffffff")
+		hint.modulate.a = 0.55
+		hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		hint.position.y -= 40
+		box.add_child(hint)
+	box.skipped.connect(next_step, CONNECT_ONE_SHOT)
+	if dur > 0.0:
+		get_tree().create_timer(maxf(dur, last + 0.3)).timeout.connect(_timed.bind(box, next_step))
 	return root
 
 
@@ -286,12 +398,8 @@ func make_menu(s: Dictionary) -> Node:
 			node = b
 			if first == null:
 				first = b
-		elif kind == "image":
-			var tr := TextureRect.new()
-			tr.texture = Assets.texture(String(e.get("image", "")))
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			node = tr
+		elif kind in ["image", "video"]:
+			node = media_element(e)
 		else:
 			var l := make_label(String(e.get("text", "")), int(e.get("size", 48)), String(e.get("color", "#ffffff")))
 			if e.get("bold", false):

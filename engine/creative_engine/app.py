@@ -10,7 +10,7 @@ from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
-    QGridLayout, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow, QMenu,
+    QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
     QMessageBox, QPushButton, QScrollArea, QSpinBox, QStackedWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -20,8 +20,9 @@ from .screens import ScreenEditor
 from .style import C, apply_palette, stylesheet
 
 APP_NAME = "Creative Engine"
-STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level"}
-STEP_NAME = {"splash": "Splash", "menu": "Menü", "text": "Zwischentext", "level": "Level"}
+STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level", "seite": "bubble"}
+STEP_NAME = {"splash": "Splash", "menu": "Menü", "text": "Zwischentext", "level": "Level", "seite": "Seite"}
+STEP_KINDS = ("level", "seite", "splash", "menu", "text")
 
 
 def config_dir():
@@ -240,7 +241,11 @@ class Timeline(QListWidget):
         for i, step in enumerate(flow):
             name = step.get("name") or STEP_NAME[step["type"]]
             kind = STEP_NAME[step["type"]]
-            label = f"{i + 1} · {name}" + ("" if name.startswith(kind) or name == kind else f"\n{kind}")
+            sub = "" if name.startswith(kind) else kind
+            if step["type"] in ("seite", "text", "splash"):
+                dur = float(step.get("duration", 0) or 0)
+                sub = (sub + " · " if sub else "") + (f"{dur:g} s".replace(".", ",") if dur > 0 else "bis Taste")
+            label = f"{i + 1} · {name}" + (f"\n{sub}" if sub else "")
             it = QListWidgetItem(icons.icon(STEP_ICON[step["type"]], C["text"], C["accent"]), label)
             it.setData(Qt.ItemDataRole.UserRole, step["id"])
             it.setSizeHint(QSize(178, 62))
@@ -268,71 +273,181 @@ class Timeline(QListWidget):
             m.addAction(icons.icon("trash", C["danger"]), "Entfernen", lambda: self.win.remove_step(index))
             m.addSeparator()
         add = m.addMenu(icons.icon("plus", C["text"]), "Schritt hinzufügen")
-        for kind in ("level", "splash", "menu", "text"):
+        for kind in STEP_KINDS:
             add.addAction(icons.icon(STEP_ICON[kind], C["text"], C["accent"]), STEP_NAME[kind],
                           lambda k=kind: self.win.add_step(k))
         m.exec(self.mapToGlobal(pos))
 
 
 class GameSettings(QWidget):
-    """Spielfigur und Fenster: Modell, Tempo, Sprungkraft, Leben, Auflösung."""
+    """Spielfigur, Angriffe, Anzeige/eigene Grafiken und Fenster."""
 
     def __init__(self, win):
         super().__init__()
         self.win = win
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(48, 36, 48, 36)
-        outer.setSpacing(14)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        outer.addWidget(scroll)
+        body = QWidget()
+        scroll.setWidget(body)
+        v = QVBoxLayout(body)
+        v.setContentsMargins(48, 30, 48, 36)
+        v.setSpacing(14)
         title = QLabel("Spieleinstellungen")
         title.setObjectName("heading")
-        outer.addWidget(title)
-        row = QHBoxLayout()
-        row.setSpacing(18)
-        self.player_box = QWidget(objectName="panel")
-        self.window_box = QWidget(objectName="panel")
-        row.addWidget(self.player_box)
-        row.addWidget(self.window_box)
-        row.addStretch(1)
-        outer.addLayout(row)
-        outer.addStretch(1)
-        self.pf = QFormLayout(self.player_box)
-        self.pf.setContentsMargins(20, 18, 20, 18)
-        self.wf = QFormLayout(self.window_box)
-        self.wf.setContentsMargins(20, 18, 20, 18)
-        self.player_box.setMinimumWidth(380)
-        self.window_box.setMinimumWidth(320)
+        v.addWidget(title)
+        grid = QGridLayout()
+        grid.setSpacing(18)
+        self.boxes = {}
+        for i, key in enumerate(("player", "attacks", "ui", "window")):
+            box = QWidget(objectName="panel")
+            box.setMinimumWidth(420)
+            lay = QVBoxLayout(box)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(8)
+            self.boxes[key] = lay
+            grid.addWidget(box, i // 2, i % 2, Qt.AlignmentFlag.AlignTop)
+        grid.setColumnStretch(2, 1)
+        v.addLayout(grid)
+        v.addStretch(1)
+
+    @staticmethod
+    def clear(layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                GameSettings.clear(item.layout())
+
+    def spin(self, target, key, lo, hi, step, default, decimals=2, suffix=""):
+        s = QDoubleSpinBox()
+        s.setDecimals(decimals)
+        s.setRange(lo, hi)
+        s.setSingleStep(step)
+        s.setSuffix(suffix)
+        s.setValue(float(target.get(key, default)))
+        s.valueChanged.connect(lambda val: self.set(target, key, val))
+        return s
 
     def load(self, data):
-        for form in (self.pf, self.wf):
-            while form.rowCount():
-                form.removeRow(0)
+        for lay in self.boxes.values():
+            self.clear(lay)
         pl, st = data["player"], data["settings"]
-        head = QLabel("SPIELFIGUR", objectName="section")
-        self.pf.addRow(head)
+        ui = st.setdefault("ui", dict(proj.UI_DEFAULT))
+
+        # Spielfigur
+        lay = self.boxes["player"]
+        lay.addWidget(QLabel("SPIELFIGUR", objectName="section"))
+        form = QFormLayout()
         self.model_btn = QPushButton(Path(pl.get("model", "")).name or "Standardfigur")
         self.model_btn.setIcon(icons.icon("model", C["accent"]))
         self.model_btn.clicked.connect(lambda: self.win.choose_model_for(pl, self.model_btn))
-        self.pf.addRow("3D-Modell (GLB)", self.model_btn)
+        form.addRow("3D-Modell (GLB)", self.model_btn)
         char = QPushButton("Charakter-Editor öffnen …")
         char.setIcon(icons.icon("bone", C["text"], C["accent"]))
         char.clicked.connect(self.win.open_character_editor)
-        self.pf.addRow("Bewegungen", char)
-        for key, label, lo, hi, step, default in (("height", "Größe (Meter)", 0.3, 6, 0.1, 1.6),
-                                                  ("speed", "Lauftempo", 1, 30, 0.5, 7.0),
-                                                  ("jump", "Sprungkraft", 2, 40, 0.5, 12.0)):
-            s = QDoubleSpinBox()
-            s.setRange(lo, hi)
-            s.setSingleStep(step)
-            s.setValue(float(pl.get(key, default)))
-            s.valueChanged.connect(lambda v, k=key: self.set(pl, k, v))
-            self.pf.addRow(label, s)
+        form.addRow("Bewegungen", char)
+        form.addRow("Größe (Meter)", self.spin(pl, "height", 0.3, 6, 0.1, 1.6))
+        form.addRow("Lauftempo", self.spin(pl, "speed", 1, 30, 0.5, 7.0))
+        form.addRow("Sprungkraft", self.spin(pl, "jump", 2, 40, 0.5, 12.0))
         lives = QSpinBox()
         lives.setRange(1, 99)
         lives.setValue(int(pl.get("lives", 3)))
-        lives.valueChanged.connect(lambda v: self.set(pl, "lives", v))
-        self.pf.addRow("Leben", lives)
+        lives.valueChanged.connect(lambda val: self.set(pl, "lives", val))
+        form.addRow("Leben", lives)
+        lay.addLayout(form)
 
-        self.wf.addRow(QLabel("FENSTER", objectName="section"))
+        # Angriffe
+        lay = self.boxes["attacks"]
+        lay.addWidget(QLabel("ANGRIFFE", objectName="section"))
+        hint = QLabel("Jeder Angriff hat eine eigene Taste und spielt die Bewegung „Angriff 1, 2, …“ aus dem "
+                      "Charakter-Editor. Gamepad: X, Y, B, RB.")
+        hint.setWordWrap(True)
+        hint.setObjectName("sub")
+        lay.addWidget(hint)
+        attacks = pl.setdefault("attacks", [])
+        for i, a in enumerate(attacks):
+            card = QWidget(objectName="panel")
+            cv = QGridLayout(card)
+            cv.setContentsMargins(10, 8, 10, 8)
+            cv.setHorizontalSpacing(8)
+            name = QLineEdit(a.get("name", ""))
+            name.setPlaceholderText(f"Angriff {i + 1}")
+            name.textEdited.connect(lambda t, a=a: self.set(a, "name", t))
+            key = QComboBox()
+            for k in proj.ATTACK_KEYS + ["E", "Q", "F", "R", "X", "C", "V", "Shift", "Ctrl", "Alt"]:
+                key.addItem(f"Taste {k}", k)
+            key.setCurrentIndex(max(0, key.findData(a.get("key", "J"))))
+            key.currentIndexChanged.connect(lambda _i, a=a, key=key: self.set(a, "key", key.currentData()))
+            remove = QToolButton()
+            remove.setIcon(icons.icon("trash", C["danger"]))
+            remove.setToolTip("Angriff entfernen")
+            remove.clicked.connect(lambda _=False, i=i: (attacks.pop(i), self.win.touched(), self.load(data)))
+            cv.addWidget(QLabel(f"{i + 1}"), 0, 0)
+            cv.addWidget(name, 0, 1, 1, 3)
+            cv.addWidget(key, 0, 4)
+            cv.addWidget(remove, 0, 5)
+            values = QHBoxLayout()
+            for label, k, lo, hi, step, default, dec, suffix in (
+                    ("Reichweite", "range", 0.5, 10, 0.25, 1.5, 2, " m"), ("Schaden", "damage", 1, 20, 1, 1, 0, ""),
+                    ("Pause", "cooldown", 0.1, 5, 0.1, 0.4, 1, " s")):
+                small = QLabel(label)
+                small.setObjectName("sub")
+                values.addWidget(small)
+                values.addWidget(self.spin(a, k, lo, hi, step, default, dec, suffix), 1)
+            cv.addLayout(values, 1, 1, 1, 5)
+            lay.addWidget(card)
+        if len(attacks) < 4:
+            add = QPushButton("+ Angriff hinzufügen")
+            add.clicked.connect(lambda: (attacks.append(proj.new_attack(len(attacks))), self.win.touched(), self.load(data)))
+            lay.addWidget(add)
+
+        # Anzeige und eigene Grafiken
+        lay = self.boxes["ui"]
+        lay.addWidget(QLabel("ANZEIGE UND EIGENE GRAFIKEN", objectName="section"))
+        form = QFormLayout()
+        style = QComboBox()
+        for k, label in (("herzen", "Herzen"), ("balken", "Lebensbalken"), ("zahl", "Zahl")):
+            style.addItem(label, k)
+        style.setCurrentIndex(max(0, style.findData(ui.get("lives", "herzen"))))
+        style.currentIndexChanged.connect(lambda _i: (self.set(ui, "lives", style.currentData()), self.load(data)))
+        form.addRow("Lebensanzeige", style)
+        rows = [("coin", "Münz-Symbol"), ("panel", "Hintergrund der Anzeige")]
+        if ui.get("lives") == "balken":
+            rows = [("barFill", "Balken (voll)"), ("barBack", "Balken (leer)")] + rows
+        else:
+            rows = [("heart", "Herz (voll)"), ("heartEmpty", "Herz (leer)")] + rows
+        rows.append(("bubble", "Sprechblase"))
+        for k, label in rows:
+            form.addRow(label, self.graphic(ui, k))
+        if ui.get("bubble"):
+            form.addRow("Rand der Blase", self.spin(ui, "bubbleMargin", 0, 200, 2, 24, 0, " px"))
+        color = QPushButton(ui.get("bubbleText", "#1c2433"))
+        color.setStyleSheet(f"QPushButton{{background:{ui.get('bubbleText', '#1c2433')};color:#ffffff;}}")
+
+        def pick_color():
+            from PySide6.QtWidgets import QColorDialog
+            c = QColorDialog.getColor(QColor(ui.get("bubbleText", "#1c2433")), self, "Textfarbe der Blasen")
+            if c.isValid():
+                self.set(ui, "bubbleText", c.name())
+                self.load(data)
+        color.clicked.connect(pick_color)
+        form.addRow("Text der Blasen", color)
+        lay.addLayout(form)
+        tip = QLabel("Eigene Grafiken als PNG. Anzeige-Hintergrund, Balken und Sprechblase werden 9-teilig "
+                     "gedehnt: Ecken bleiben, die Mitte wächst mit. Leer = Standard-Look.")
+        tip.setWordWrap(True)
+        tip.setObjectName("sub")
+        lay.addWidget(tip)
+
+        # Fenster
+        lay = self.boxes["window"]
+        lay.addWidget(QLabel("FENSTER", objectName="section"))
+        form = QFormLayout()
         res = QComboBox()
         for w, h in ((1280, 720), (1600, 900), (1920, 1080), (2560, 1440)):
             res.addItem(f"{w} × {h}", (w, h))
@@ -340,15 +455,39 @@ class GameSettings(QWidget):
         res.setCurrentIndex(max(0, idx))
         res.currentIndexChanged.connect(lambda _i: (self.set(st, "width", res.currentData()[0]),
                                                     self.set(st, "height", res.currentData()[1])))
-        self.wf.addRow("Auflösung", res)
+        form.addRow("Auflösung", res)
         full = QCheckBox("Im Vollbild starten")
         full.setChecked(bool(st.get("fullscreen")))
-        full.toggled.connect(lambda v: self.set(st, "fullscreen", v))
-        self.wf.addRow("", full)
-        keys = QLabel("<b>Steuerung im Spiel</b><br>← → oder A D: laufen<br>Leertaste, W oder ↑: springen<br>"
-                      "Esc: Pause<br>Gamepad wird automatisch erkannt.")
-        keys.setObjectName("sub")
-        self.wf.addRow(keys)
+        full.toggled.connect(lambda val: self.set(st, "fullscreen", val))
+        form.addRow("", full)
+        lay.addLayout(form)
+        keys = ", ".join(f"{a.get('key', '?')} {a.get('name', '')}".strip() for a in attacks) or "keine"
+        info = QLabel(f"<b>Steuerung im Spiel</b><br>← → oder A D: laufen<br>Leertaste, W oder ↑: springen<br>"
+                      f"Angriffe: {keys}<br>Esc: Pause · Gamepad wird automatisch erkannt.")
+        info.setWordWrap(True)
+        info.setObjectName("sub")
+        lay.addWidget(info)
+
+    def graphic(self, target, key):
+        row = QWidget()
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 0, 0, 0)
+        b = QPushButton(Path(target.get(key, "")).name or "Standard")
+        b.setIcon(icons.icon("image", C["text"]))
+
+        def pick():
+            rel = self.win.import_file("Grafik wählen", "Bilder (*.png *.webp *.jpg *.jpeg)")
+            if rel:
+                self.set(target, key, rel)
+                self.load(self.win.project)
+        b.clicked.connect(pick)
+        x = QToolButton()
+        x.setIcon(icons.icon("close", C["muted"]))
+        x.setToolTip("Standard verwenden")
+        x.clicked.connect(lambda: (self.set(target, key, ""), self.load(self.win.project)))
+        h.addWidget(b, 1)
+        h.addWidget(x)
+        return row
 
     def set(self, target, key, value):
         target[key] = value
@@ -439,7 +578,7 @@ class Window(QMainWindow):
         add.setIconSize(QSize(22, 22))
         add.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         am = QMenu(self)
-        for kind in ("level", "splash", "menu", "text"):
+        for kind in STEP_KINDS:
             am.addAction(icons.icon(STEP_ICON[kind], C["text"], C["accent"]), STEP_NAME[kind],
                          lambda k=kind: self.add_step(k))
         add.setMenu(am)
@@ -454,6 +593,7 @@ class Window(QMainWindow):
         for w in (self.welcome, self.screens, self.levels, self.settings):
             self.stack.addWidget(w)
         self.screens.changed.connect(self.touched)
+        self.screens.changed.connect(lambda: self.project and self.refresh_timeline())
         self.levels.changed.connect(self.touched)
         self.levels.importModel.connect(self.import_decor)
         self.levels.view.status.connect(self.status_msg)

@@ -145,7 +145,7 @@ def build(project_folder, project_data, target):
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
             # Godot soll GLB/PNG nicht importieren – die Laufzeit lädt sie selbst
-            if dst.suffix.lower() in (".glb", ".gltf", ".png", ".jpg", ".jpeg", ".webp"):
+            if dst.suffix.lower() in (".glb", ".gltf", ".png", ".jpg", ".jpeg", ".webp", ".ogv"):
                 (dst.parent / (dst.name + ".import")).write_text('[remap]\n\nimporter="keep"\n', encoding="utf-8")
     (target / ".gdignore_note").write_text("Erzeugt von der Creative Engine.\n", encoding="utf-8")
     return target

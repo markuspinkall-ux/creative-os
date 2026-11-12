@@ -11,10 +11,16 @@ var origin_x := 0.0
 var visual: Node3D
 var dead := false
 var anim: AnimationPlayer
+var hp := 1
+var max_hp := 1
+var bar: Node3D
+var bar_fill: MeshInstance3D
+var flash := 0.0
 
 
 func build(model_path: String) -> void:
 	origin_x = position.x
+	add_to_group("enemies")
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(0.8, 0.8, 1.0)
@@ -56,6 +62,47 @@ func build(model_path: String) -> void:
 			visual.add_child(eye)
 
 
+## Lebensbalken über dem Gegner (nur wenn er mehr als einen Treffer aushält)
+func build_bar() -> void:
+	if max_hp <= 1:
+		return
+	bar = Node3D.new()
+	bar.position = Vector3(0, 1.25, 0)
+	add_child(bar)
+	for part in [["bg", Color(0.08, 0.09, 0.12, 0.85), 0.9], ["fill", Color("#ff5d6c"), 0.84]]:
+		var mi := MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(part[2], 0.12 if part[0] == "bg" else 0.07)
+		mi.mesh = q
+		var m := StandardMaterial3D.new()
+		m.albedo_color = part[1]
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		m.no_depth_test = true
+		m.render_priority = 1 if part[0] == "fill" else 0
+		if part[1].a < 1.0:
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mi.material_override = m
+		bar.add_child(mi)
+		if part[0] == "fill":
+			bar_fill = mi
+
+
+## Treffer durch einen Angriff der Spielfigur
+func take_hit(damage: int, from_x: float) -> void:
+	if dead:
+		return
+	hp -= damage
+	flash = 0.2
+	position.x += signf(position.x - from_x) * 0.4
+	if bar_fill:
+		var k := clampf(float(hp) / float(max_hp), 0.0, 1.0)
+		bar_fill.scale.x = maxf(0.001, k)
+		bar_fill.position.x = -0.42 * (1.0 - k)
+	if hp <= 0:
+		defeat()
+
+
 func defeat() -> void:
 	if dead:
 		return
@@ -66,11 +113,16 @@ func defeat() -> void:
 	tw.tween_property(visual, "scale", Vector3(1.3, 0.15, 1.3), 0.15)
 	tw.tween_interval(0.3)
 	tw.tween_callback(queue_free)
+	if bar:
+		bar.visible = false
 
 
 func _physics_process(delta: float) -> void:
 	if dead:
 		return
+	if flash > 0.0:
+		flash -= delta
+		visual.visible = int(flash * 30) % 2 == 0 or flash <= 0.0
 	velocity.y -= gravity * delta
 	velocity.x = dir * speed
 	move_and_slide()

@@ -3,16 +3,92 @@
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import (
-    QCheckBox, QColorDialog, QComboBox, QDoubleSpinBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+    QCheckBox, QColorDialog, QComboBox, QDoubleSpinBox, QFormLayout, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
 
-from . import icons, project as proj
+from . import icons, media, project as proj
 from .style import C
 
 BASE_W, BASE_H = 1280, 720
+
+
+TAILS = [("unten-links", "unten links"), ("unten-mitte", "unten Mitte"), ("unten-rechts", "unten rechts"),
+         ("oben-links", "oben links"), ("oben-rechts", "oben rechts"), ("keine", "ohne Spitze")]
+
+
+def draw_nine(p, pm, r, margin):
+    """Grafik 9-teilig in r zeichnen: Ecken fest, Ränder und Mitte gedehnt (wie NinePatchRect im Spiel)."""
+    m = max(0, min(int(margin), pm.width() // 2 - 1, pm.height() // 2 - 1))
+    dm = min(float(m), r.width() / 2, r.height() / 2)
+    sx = [0, m, pm.width() - m, pm.width()]
+    sy = [0, m, pm.height() - m, pm.height()]
+    dx = [r.left(), r.left() + dm, r.right() - dm, r.right()]
+    dy = [r.top(), r.top() + dm, r.bottom() - dm, r.bottom()]
+    for i in range(3):
+        for j in range(3):
+            src = QRectF(sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j])
+            dst = QRectF(dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j])
+            if src.width() > 0 and src.height() > 0 and dst.width() > 0 and dst.height() > 0:
+                p.drawPixmap(dst, pm, src)
+
+
+def paint_bubble(p, r, e, scale, skin=None, margin=24, text_color=None):
+    """Sprechblase wie im Spiel (bubble.gd): Fläche, Spitze, Name, Text – oder eigene Grafik."""
+    tail = e.get("tail", "unten-links")
+    if skin is not None:
+        draw_nine(p, skin, r, margin * scale)
+        e = dict(e)
+        e["textColor"] = text_color or e.get("textColor", "#1c2433")
+        tail = "keine-grafik"
+    t = 22 * scale
+    body = QRectF(r)
+    if tail.startswith("unten"):
+        body.setHeight(r.height() - t)
+    elif tail.startswith("oben"):
+        body.setTop(r.top() + t)
+    fill = QColor(e.get("color", "#ffffff"))
+    text = QColor(e.get("textColor", "#1c2433"))
+    line = text.darker(120) if text.lightness() < 128 else fill.darker(220)
+    pen = QPen(line, max(1.0, 3 * scale))
+    p.setPen(pen)
+    p.setBrush(fill)
+    rad = min(26 * scale, body.height() * 0.45)
+    if skin is None:
+        p.drawRoundedRect(body, rad, rad)
+    if tail not in ("keine", "keine-grafik"):
+        fx = {"links": 0.22, "rechts": 0.78}.get(tail.split("-")[1], 0.5)
+        x = body.x() + body.width() * fx
+        if tail.startswith("oben"):
+            a, b, tip = QPointF(x - 14 * scale, body.top() + 2), QPointF(x + 14 * scale, body.top() + 2), \
+                QPointF(x - 6 * scale, r.top())
+        else:
+            a, b, tip = QPointF(x - 14 * scale, body.bottom() - 2), QPointF(x + 14 * scale, body.bottom() - 2), \
+                QPointF(x - 6 * scale, r.bottom())
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawPolygon(QPolygonF([a, b, tip]))
+        p.setPen(pen)
+        p.drawLine(a, tip)
+        p.drawLine(b, tip)
+    inner = body.adjusted(14 * scale, 10 * scale, -14 * scale, -10 * scale)
+    size = float(e.get("size", 30))
+    if e.get("speaker"):
+        f = QFont()
+        f.setPixelSize(max(6, int(size * 0.62 * scale)))
+        f.setBold(True)
+        p.setFont(f)
+        c = QColor(text)
+        c.setAlpha(170)
+        p.setPen(c)
+        p.drawText(inner, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop, e["speaker"])
+        inner.setTop(inner.top() + size * 0.62 * scale + 4)
+    f = QFont()
+    f.setPixelSize(max(6, int(size * scale)))
+    p.setFont(f)
+    p.setPen(text)
+    p.drawText(inner, Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, e.get("text", ""))
 
 
 class Screen(QWidget):
@@ -72,30 +148,50 @@ class Screen(QWidget):
         p.save()
         p.setClipRect(f)
         p.fillRect(f, QColor(self.step.get("bg", "#000000")))
-        bg = self.pixmap(self.step.get("bgImage", ""))
-        if bg:
-            scaled = bg.scaled(f.size().toSize(), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                               Qt.TransformationMode.SmoothTransformation)
-            p.drawPixmap(int(f.center().x() - scaled.width() / 2), int(f.center().y() - scaled.height() / 2), scaled)
+        cover = self.step.get("bgFit", "cover") == "cover"
+        self.paint_media(p, f, self.pixmap(self.step.get("bgImage", "")), cover)
+        if self.step.get("bgVideo"):
+            self.paint_media(p, f, self.pixmap(media.poster_of(self.step["bgVideo"])), cover, video=True)
         kind = self.step["type"]
         if kind == "splash":
             self.paint_splash(p, f, scale)
         elif kind == "text":
             self.paint_text(p, f, scale)
-        elif kind == "menu":
+        elif kind in ("menu", "seite"):
             for e in self.step.get("elements", []):
                 self.paint_element(p, e, self.element_rect(e, fr), scale)
         p.restore()
         p.setPen(QPen(QColor(C["line"]), 1))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRect(f)
-        if kind == "menu" and self.selection is not None:
+        if kind in ("menu", "seite") and self.selection is not None:
             r = self.element_rect(self.selection, fr)
             p.setPen(QPen(QColor(C["accent"]), 2, Qt.PenStyle.DashLine))
             p.drawRoundedRect(r.adjusted(-4, -4, 4, 4), 6, 6)
             p.setBrush(QColor(C["accent"]))
             p.setPen(Qt.PenStyle.NoPen)
             p.drawEllipse(r.bottomRight() + QPointF(4, 4), 6, 6)
+
+    def paint_media(self, p, r, pm, cover, video=False):
+        """Bild/Video-Vorschaubild in r: cover = randlos füllen, sonst ganz zeigen."""
+        p.save()
+        p.setClipRect(r)
+        if pm:
+            mode = Qt.AspectRatioMode.KeepAspectRatioByExpanding if cover else Qt.AspectRatioMode.KeepAspectRatio
+            scaled = pm.scaled(r.size().toSize(), mode, Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap(int(r.center().x() - scaled.width() / 2), int(r.center().y() - scaled.height() / 2), scaled)
+        elif video:
+            p.fillRect(r, QColor(20, 24, 32))
+        if video:
+            c = r.center()
+            rad = max(10.0, min(r.width(), r.height()) * 0.09)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(0, 0, 0, 140))
+            p.drawEllipse(c, rad, rad)
+            p.setBrush(QColor(255, 255, 255, 230))
+            p.drawPolygon(QPolygonF([QPointF(c.x() - rad * 0.35, c.y() - rad * 0.5),
+                                     QPointF(c.x() - rad * 0.35, c.y() + rad * 0.5), QPointF(c.x() + rad * 0.55, c.y())]))
+        p.restore()
 
     def font(self, size, scale, bold=False):
         f = QFont()
@@ -146,6 +242,15 @@ class Screen(QWidget):
             p.setPen(QColor(e.get("textColor", "#12151b")))
             p.setFont(self.font(float(e.get("size", 28)), scale))
             p.drawText(r, Qt.AlignmentFlag.AlignCenter, e.get("text", "Knopf"))
+        elif kind == "bubble":
+            ui = self.host.project.get("settings", {}).get("ui", {}) if self.host.project else {}
+            skin_rel = e.get("skin") or ("" if e.get("noSkin") else ui.get("bubble", ""))
+            skin = self.pixmap(skin_rel) if skin_rel else None
+            paint_bubble(p, r, e, scale, skin, e.get("skinMargin", ui.get("bubbleMargin", 24)), e.get("textColor"))
+        elif kind == "video":
+            self.paint_media(p, r, self.pixmap(media.poster_of(e.get("video", ""))), e.get("fit") == "cover", video=True)
+        elif kind == "image" and e.get("fit") == "cover":
+            self.paint_media(p, r, self.pixmap(e.get("image", "")), True)
         elif kind == "image":
             pm = self.pixmap(e.get("image", ""))
             if pm:
@@ -175,7 +280,7 @@ class Screen(QWidget):
         return None, None
 
     def mousePressEvent(self, event):
-        if not self.step or self.step["type"] != "menu":
+        if not self.step or self.step["type"] not in ("menu", "seite"):
             return
         pos = event.position()
         e, mode = self.hit(pos)
@@ -186,7 +291,7 @@ class Screen(QWidget):
         self.update()
 
     def mouseMoveEvent(self, event):
-        if not self.step or self.step["type"] != "menu":
+        if not self.step or self.step["type"] not in ("menu", "seite"):
             return
         pos = event.position()
         if self.drag is None:
@@ -241,9 +346,14 @@ class ScreenEditor(QWidget):
         self.screen.changed.connect(self.changed)
         self.screen.selected.connect(self.show_element)
         h.addWidget(self.screen, 1)
-        self.props = QWidget(objectName="props")
-        self.props.setFixedWidth(300)
-        self.pv = QVBoxLayout(self.props)
+        self.props = QScrollArea(objectName="props")
+        self.props.setFixedWidth(310)
+        self.props.setWidgetResizable(True)
+        self.props.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.props.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        inner = QWidget()
+        self.props.setWidget(inner)
+        self.pv = QVBoxLayout(inner)
         self.pv.setContentsMargins(16, 16, 16, 16)
         self.pv.setSpacing(10)
         h.addWidget(self.props)
@@ -320,6 +430,68 @@ class ScreenEditor(QWidget):
         row.addWidget(x)
         return row
 
+    def video(self, target, key, ratio_key, label="Video wählen …"):
+        row = QHBoxLayout()
+        b = QPushButton(Path(target.get(key, "")).name or label)
+        b.setIcon(icons.icon("play", C["text"], C["accent"]))
+
+        def pick():
+            from PySide6.QtWidgets import QFileDialog
+            path, _ = QFileDialog.getOpenFileName(self, "Video wählen", str(Path.home()), media.VIDEO_FILTER)
+            if not path:
+                return
+            result = media.import_video(self.host.folder, path, self)
+            if isinstance(result, str):
+                QMessageBox.warning(self, "Video", result)
+                return
+            b.setText(Path(result["rel"]).name)
+            target[ratio_key] = result["ratio"]
+            target["videoLength"] = result["duration"]
+            self.set(target, key, result["rel"])
+            self.show_again()
+        b.clicked.connect(pick)
+        x = QPushButton()
+        x.setObjectName("ghost")
+        x.setIcon(icons.icon("close", C["muted"]))
+        x.setToolTip("Video entfernen")
+        x.clicked.connect(lambda: (b.setText(label), self.set(target, key, ""), self.show_again()))
+        row.addWidget(b, 1)
+        row.addWidget(x)
+        return row
+
+    def fit(self, target, key, default):
+        c = QComboBox()
+        c.addItem("Randlos füllen", "cover")
+        c.addItem("Ganz zeigen", "contain")
+        c.setCurrentIndex(max(0, c.findData(target.get(key, default))))
+        c.currentIndexChanged.connect(lambda _i: self.set(target, key, c.currentData()))
+        return c
+
+    def check(self, target, key, text, default=False, on=None, off=None):
+        box = QCheckBox(text)
+        value = target.get(key, default)
+        box.setChecked(value == on if on is not None else bool(value))
+        box.toggled.connect(lambda v: self.set(target, key, (on if v else off) if on is not None else v))
+        return box
+
+    def show_again(self):
+        sel = self.screen.selection
+        self.show_element(sel)
+
+    def media_rows(self, form, s):
+        """Hintergrundbild/-video (Vollbild) für alle Bildschirm-Schritte."""
+        form.addRow("Bild", self.image(s, "bgImage"))
+        form.addRow("Video", self.video(s, "bgVideo", "bgRatio"))
+        if s.get("bgImage") or s.get("bgVideo"):
+            form.addRow("Füllen", self.fit(s, "bgFit", "cover"))
+        if s.get("bgVideo"):
+            form.addRow("", self.check(s, "videoLoop", "Video wiederholen"))
+            form.addRow("", self.check(s, "videoVolume", "Ton aus", 0.0, on=-80.0, off=0.0))
+            if s["type"] in ("splash", "seite"):
+                length = s.get("videoLength", 0)
+                text = "Weiter, wenn das Video endet" + (f" ({length:g} s)".replace(".", ",") if length else "")
+                form.addRow("", self.check(s, "untilVideoEnd", text))
+
     def heading(self, text):
         l = QLabel(text)
         l.setStyleSheet("font-size:18px;font-weight:700")
@@ -337,13 +509,14 @@ class ScreenEditor(QWidget):
         if s is None:
             return
         kind = s["type"]
-        if kind == "menu" and element is not None:
+        if kind in ("menu", "seite") and element is not None:
             self.show_menu_element(element)
             return
-        self.pv.addWidget(self.heading({"splash": "Splash", "text": "Zwischentext", "menu": "Menü"}[kind]))
+        self.pv.addWidget(self.heading({"splash": "Splash", "text": "Zwischentext", "menu": "Menü", "seite": "Seite"}[kind]))
         form = QFormLayout()
         form.addRow("Name", self.line(s, "name"))
         form.addRow("Hintergrund", self.color(s, "bg", "#000000"))
+        self.media_rows(form, s)
         if kind == "splash":
             form.addRow("Logo", self.image(s, "logo", "Logo wählen …"))
             form.addRow("Logogröße", self.number(s, "logoSize", 0.35, 0.05, 0.9, 0.05, 2))
@@ -362,24 +535,57 @@ class ScreenEditor(QWidget):
             d = self.number(s, "duration", 0, 0, 30, 0.5)
             d.setSpecialValueText("bis Tastendruck")
             form.addRow("Dauer (s)", d)
-        else:
-            form.addRow("Bild", self.image(s, "bgImage"))
+        elif kind == "seite":
+            d = self.number(s, "duration", 4.0, 0, 120, 0.5)
+            d.setSpecialValueText("bis Tastendruck")
+            d.setSuffix(" s")
+            d.setToolTip("So lange bleibt die Seite stehen, dann kommt der nächste Schritt (Bild oder Spiel).\n"
+                         "0 = bis Leertaste oder Klick. Mit Taste/Klick kann man immer weiterblättern.")
+            form.addRow("Anzeigen", d)
         self.pv.addLayout(form)
+        if kind == "seite":
+            self.pv.addSpacing(6)
+            self.pv.addWidget(QLabel("HINZUFÜGEN", objectName="section"))
+            row = QGridLayout()
+            row.setSpacing(6)
+            for i, (label, icon, el) in enumerate((
+                    ("Sprechblase", "bubble", {"kind": "bubble", "text": "Hallo!", "speaker": "", "x": 0.5, "y": 0.4,
+                                               "w": 0.3, "h": 0.18, "size": 32, "color": "#ffffff",
+                                               "textColor": "#1c2433", "tail": "unten-links", "after": 0.0}),
+                    ("Text", "text", {"kind": "text", "text": "Kapitel 1", "x": 0.5, "y": 0.15, "w": 0.6,
+                                      "h": 0.12, "size": 52, "color": "#ffffff", "bold": True, "after": 0.0}),
+                    ("Bild", "image", {"kind": "image", "image": "", "x": 0.5, "y": 0.55, "w": 0.4, "h": 0.5,
+                                       "after": 0.0}),
+                    ("Video", "play", {"kind": "video", "video": "", "x": 0.5, "y": 0.5, "w": 0.5, "h": 0.5,
+                                       "fit": "contain", "after": 0.0}))):
+                b = QPushButton(label)
+                b.setIcon(icons.icon(icon, C["text"], C["accent"]))
+                b.clicked.connect(lambda _=False, el=el: self.add_element(dict(el)))
+                row.addWidget(b, i // 2, i % 2)
+            self.pv.addLayout(row)
+            tip = QLabel("Blasen, Texte und Bilder in der Vorschau verschieben, am Punkt unten rechts die Größe ändern. "
+                         "Mit „Erscheint nach“ tauchen sie nacheinander auf – wie in einem Comic.")
+            tip.setWordWrap(True)
+            tip.setObjectName("sub")
+            self.pv.addWidget(tip)
         if kind == "menu":
             self.pv.addSpacing(6)
             self.pv.addWidget(QLabel("HINZUFÜGEN", objectName="section"))
-            row = QHBoxLayout()
-            for label, icon, el in (
+            row = QGridLayout()
+            row.setSpacing(6)
+            for i, (label, icon, el) in enumerate((
                     ("Knopf", "menu", {"kind": "button", "text": "Knopf", "action": "start", "x": 0.5, "y": 0.8,
                                        "w": 0.24, "h": 0.09, "size": 30, "color": C["accent"],
                                        "textColor": "#12151b", "radius": 16}),
                     ("Text", "text", {"kind": "text", "text": "Überschrift", "x": 0.5, "y": 0.2, "w": 0.6,
                                       "h": 0.12, "size": 56, "color": "#ffffff", "bold": True}),
-                    ("Bild", "image", {"kind": "image", "image": "", "x": 0.5, "y": 0.4, "w": 0.3, "h": 0.3})):
+                    ("Bild", "image", {"kind": "image", "image": "", "x": 0.5, "y": 0.4, "w": 0.3, "h": 0.3}),
+                    ("Video", "play", {"kind": "video", "video": "", "x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0,
+                                       "fit": "cover", "loop": True}))):
                 b = QPushButton(label)
                 b.setIcon(icons.icon(icon, C["text"], C["accent"]))
                 b.clicked.connect(lambda _=False, el=el: self.add_element(dict(el)))
-                row.addWidget(b)
+                row.addWidget(b, i // 2, i % 2)
             self.pv.addLayout(row)
             tip = QLabel("Elemente in der Vorschau anklicken und verschieben, am Punkt unten rechts die Größe ändern. "
                          "Entf löscht.")
@@ -397,8 +603,30 @@ class ScreenEditor(QWidget):
 
     def show_menu_element(self, e):
         kind = e.get("kind")
-        self.pv.addWidget(self.heading({"button": "Knopf", "image": "Bild"}.get(kind, "Text")))
+        self.pv.addWidget(self.heading({"button": "Knopf", "image": "Bild", "video": "Video", "bubble": "Sprechblase"}.get(kind, "Text")))
         form = QFormLayout()
+        if kind == "bubble":
+            t = QPlainTextEdit(e.get("text", ""))
+            t.setFixedHeight(80)
+            t.textChanged.connect(lambda: self.set(e, "text", t.toPlainText()))
+            form.addRow("Text", t)
+            speaker = self.line(e, "speaker")
+            speaker.setPlaceholderText("optional, z. B. Lotte")
+            form.addRow("Wer spricht", speaker)
+            form.addRow("Schriftgröße", self.number(e, "size", 32, 8, 200, decimals=0))
+            form.addRow("Blasenfarbe", self.color(e, "color", "#ffffff"))
+            form.addRow("Textfarbe", self.color(e, "textColor", "#1c2433"))
+            tail = QComboBox()
+            for key, name in TAILS:
+                tail.addItem(name, key)
+            tail.setCurrentIndex(max(0, tail.findData(e.get("tail", "unten-links"))))
+            tail.currentIndexChanged.connect(lambda _i: self.set(e, "tail", tail.currentData()))
+            form.addRow("Spitze", tail)
+            form.addRow("Eigene Grafik", self.image(e, "skin", "Standard"))
+            if e.get("skin"):
+                form.addRow("Rand der Grafik", self.number(e, "skinMargin", 24, 0, 200, decimals=0))
+            elif self.host.project["settings"].get("ui", {}).get("bubble"):
+                form.addRow("", self.check(e, "noSkin", "Gezeichnete Blase statt Spiel-Grafik"))
         if kind in ("button", "text"):
             form.addRow("Beschriftung", self.line(e, "text"))
             form.addRow("Schriftgröße", self.number(e, "size", 30, 8, 200, decimals=0))
@@ -423,8 +651,30 @@ class ScreenEditor(QWidget):
             bold.setChecked(bool(e.get("bold")))
             bold.toggled.connect(lambda v: self.set(e, "bold", v))
             form.addRow("", bold)
-        else:
+        elif kind == "image":
             form.addRow("Bild", self.image(e, "image"))
+        elif kind == "video":
+            form.addRow("Video", self.video(e, "video", "ratio"))
+            form.addRow("", self.check(e, "loop", "Wiederholen"))
+            form.addRow("", self.check(e, "volume", "Ton aus", 0.0, on=-80.0, off=0.0))
+        if kind in ("image", "video"):
+            form.addRow("Füllen", self.fit(e, "fit", "contain"))
+            full = QPushButton("Vollbild")
+            full.setIcon(icons.icon("focus", C["text"]))
+            full.setToolTip("Füllt den ganzen Bildschirm")
+
+            def fullscreen():
+                e.update({"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0, "fit": "cover"})
+                self.screen.update()
+                self.changed.emit()
+                self.show_element(e)
+            full.clicked.connect(fullscreen)
+            form.addRow("", full)
+        if self.step["type"] == "seite":
+            after = self.number(e, "after", 0.0, 0, 60, 0.5)
+            after.setSpecialValueText("sofort")
+            after.setSuffix(" s")
+            form.addRow("Erscheint nach", after)
         self.pv.addLayout(form)
         row = QHBoxLayout()
         back = QPushButton("Fertig")

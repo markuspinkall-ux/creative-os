@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import (
-    QButtonGroup, QColorDialog, QDoubleSpinBox, QFormLayout, QGraphicsScene, QGraphicsView,
+    QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDoubleSpinBox, QFormLayout, QGraphicsScene, QGraphicsView,
     QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton, QScrollArea,
     QSpinBox, QToolButton, QVBoxLayout, QWidget,
 )
@@ -375,9 +375,10 @@ class LevelView(QGraphicsView):
                 ents[:] = [e for e in ents if e["kind"] != what]
             e = {"kind": what, "x": x, "y": y}
             if what == "enemy":
-                e.update({"range": 3, "speed": 2.0, "model": ""})
+                e.update({"range": 3, "speed": 2.0, "model": "", "hp": 1})
             elif what == "npc":
-                e.update({"text": "Hallo!", "model": "", "height": 1.7})
+                e.update({"model": "", "height": 1.7, "name": "", "mode": "gespraech", "seconds": 3.0,
+                          "once": True, "dialog": [{"who": "npc", "text": "Hallo!"}]})
             ents.append(e)
             self.selection = e
             self.selected.emit(e)
@@ -435,6 +436,84 @@ class LevelView(QGraphicsView):
             self.delete_selection()
             return
         super().keyPressEvent(event)
+
+
+class DialogLines(QWidget):
+    """Liste der Sprechblasen eines NPCs: wer spricht, was gesagt wird. Reihenfolge = Ablauf im Spiel."""
+
+    def __init__(self, lines, changed):
+        super().__init__()
+        self.lines = lines
+        self.changed = changed
+        self.v = QVBoxLayout(self)
+        self.v.setContentsMargins(0, 0, 0, 0)
+        self.v.setSpacing(6)
+        self.rows = QVBoxLayout()
+        self.rows.setSpacing(8)
+        self.v.addLayout(self.rows)
+        add = QHBoxLayout()
+        for who, label in (("npc", "+ NPC sagt"), ("spieler", "+ Spieler sagt")):
+            b = QPushButton(label)
+            b.clicked.connect(lambda _=False, w=who: self.add(w))
+            add.addWidget(b)
+        self.v.addLayout(add)
+        self.fill()
+
+    def fill(self):
+        while self.rows.count():
+            item = self.rows.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        for i, line in enumerate(self.lines):
+            box = QWidget(objectName="panel")
+            bv = QVBoxLayout(box)
+            bv.setContentsMargins(8, 6, 8, 8)
+            bv.setSpacing(4)
+            top = QHBoxLayout()
+            who = QComboBox()
+            who.addItem("NPC sagt", "npc")
+            who.addItem("Spieler sagt", "spieler")
+            who.setCurrentIndex(max(0, who.findData(line.get("who", "npc"))))
+            who.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            who.setMinimumContentsLength(8)
+            who.currentIndexChanged.connect(lambda _i, l=line, w=who: self.set(l, "who", w.currentData()))
+            top.addWidget(who, 1)
+            for icon, tip, func in (("up", "Nach oben", lambda _=False, n=i: self.move(n, -1)),
+                                    ("trash", "Entfernen", lambda _=False, n=i: self.remove(n))):
+                b = QToolButton()
+                b.setIcon(icons.icon(icon, C["danger"] if icon == "trash" else C["text"]))
+                b.setToolTip(tip)
+                b.clicked.connect(func)
+                b.setEnabled(icon == "trash" or i > 0)
+                top.addWidget(b)
+            bv.addLayout(top)
+            text = QPlainTextEdit(line.get("text", ""))
+            text.setFixedHeight(58)
+            text.setPlaceholderText("Was wird gesagt?")
+            text.textChanged.connect(lambda l=line, t=text: self.set(l, "text", t.toPlainText()))
+            bv.addWidget(text)
+            self.rows.addWidget(box)
+
+    def set(self, line, key, value):
+        line[key] = value
+        self.changed()
+
+    def add(self, who):
+        self.lines.append({"who": who, "text": ""})
+        self.fill()
+        self.changed()
+
+    def remove(self, i):
+        del self.lines[i]
+        self.fill()
+        self.changed()
+
+    def move(self, i, d):
+        j = i + d
+        if 0 <= j < len(self.lines):
+            self.lines[i], self.lines[j] = self.lines[j], self.lines[i]
+            self.fill()
+            self.changed()
 
 
 class LevelEditor(QWidget):
@@ -531,9 +610,14 @@ class LevelEditor(QWidget):
         h.addWidget(self.view, 1)
 
         # Eigenschaften rechts
-        self.props = QWidget(objectName="props")
-        self.props.setFixedWidth(270)
-        self.pv = QVBoxLayout(self.props)
+        self.props = QScrollArea(objectName="props")
+        self.props.setFixedWidth(320)
+        self.props.setWidgetResizable(True)
+        self.props.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.props.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        inner = QWidget()
+        self.props.setWidget(inner)
+        self.pv = QVBoxLayout(inner)
         self.pv.setContentsMargins(14, 14, 14, 14)
         self.pv.setSpacing(10)
         h.addWidget(self.props)
@@ -702,16 +786,48 @@ class LevelEditor(QWidget):
                 s.valueChanged.connect(lambda v: self.set_value(sel, "speed", v))
                 form.addRow("Laufweg (Blöcke)", r)
                 form.addRow("Tempo", s)
+                hp = QSpinBox()
+                hp.setRange(1, 99)
+                hp.setValue(int(sel.get("hp", 1)))
+                hp.setToolTip("So viele Angriffstreffer hält der Gegner aus (Draufspringen besiegt ihn immer)")
+                hp.valueChanged.connect(lambda v: self.set_value(sel, "hp", v))
+                form.addRow("Treffer", hp)
             if kind == "npc":
-                t = QPlainTextEdit(sel.get("text", ""))
-                t.setFixedHeight(90)
-                t.textChanged.connect(lambda: self.set_value(sel, "text", t.toPlainText()))
-                form.addRow("Sagt", t)
+                proj.upgrade_npc(sel)
+                name = QLineEdit(sel.get("name", ""))
+                name.setPlaceholderText("z. B. Lotte (steht über der Blase)")
+                name.textEdited.connect(lambda t: self.set_value(sel, "name", t))
+                form.addRow("Name", name)
+                mode = QComboBox()
+                mode.addItem("Gespräch (Figur wartet)", "gespraech")
+                mode.addItem("Nebenbei (läuft von selbst)", "nebenbei")
+                mode.setCurrentIndex(max(0, mode.findData(sel.get("mode", "gespraech"))))
+                mode.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+                mode.setMinimumContentsLength(10)
+                mode.currentIndexChanged.connect(lambda _i: self.set_value(sel, "mode", mode.currentData()))
+                mode.setToolTip("Gespräch: Die Spielfigur bleibt stehen, weiter mit Leertaste, Enter oder Klick.\n"
+                                "Nebenbei: Die Blasen wechseln von selbst, man kann weiterlaufen.")
+                form.addRow("Art", mode)
+                secs = QDoubleSpinBox()
+                secs.setRange(0.5, 30)
+                secs.setSingleStep(0.5)
+                secs.setSuffix(" s")
+                secs.setValue(float(sel.get("seconds", 3.0)))
+                secs.setToolTip("Wie lange jede Blase bei „Nebenbei“ stehen bleibt")
+                secs.valueChanged.connect(lambda v: self.set_value(sel, "seconds", v))
+                form.addRow("Je Blase", secs)
+                once = QCheckBox("Nur beim ersten Mal")
+                once.setChecked(bool(sel.get("once", True)))
+                once.toggled.connect(lambda v: self.set_value(sel, "once", v))
+                form.addRow("", once)
             if kind in ("enemy", "npc"):
                 model = QPushButton(Path(sel.get("model", "")).name or "Standardfigur")
                 model.clicked.connect(lambda: self.host.choose_model_for(sel, model))
                 form.addRow("3D-Figur", model)
         self.pv.addLayout(form)
+        if not is_decor and sel.get("kind") == "npc":
+            self.pv.addWidget(QLabel("DIALOG (SPRECHBLASEN)", objectName="section"))
+            self.pv.addWidget(DialogLines(sel["dialog"], self.changed.emit))
         delete = QPushButton("Entfernen")
         delete.setIcon(icons.icon("trash", C["danger"]))
         delete.clicked.connect(self.view.delete_selection)

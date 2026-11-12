@@ -30,7 +30,7 @@ ENTITIES = [
     ("spike", "Stacheln", "Kostet ein Leben."),
     ("spring", "Sprungfeder", "Schleudert die Figur hoch."),
     ("checkpoint", "Checkpoint", "Neustartpunkt nach einem Sturz."),
-    ("npc", "NPC", "Figur, die etwas sagt, wenn man vorbeikommt."),
+    ("npc", "NPC", "Figur mit Sprechblasen-Dialog, wenn man vorbeikommt."),
     ("goal", "Ziel", "Fahne – hier ist das Level geschafft."),
 ]
 SINGLE = {"start", "goal"}
@@ -77,7 +77,10 @@ def sample_level(name="Level 1"):
         {"kind": "enemy", "x": 40, "y": 2, "range": 2, "speed": 2.5, "model": ""},
         {"kind": "spike", "x": 31, "y": 2}, {"kind": "spring", "x": 42, "y": 2},
         {"kind": "checkpoint", "x": 38, "y": 4},
-        {"kind": "npc", "x": 5, "y": 2, "text": "Willkommen! Lauf nach rechts zur Fahne.", "model": ""},
+        {"kind": "npc", "x": 5, "y": 2, "model": "", "name": "Lotte", "mode": "gespraech", "seconds": 3.0,
+         "once": True, "dialog": [{"who": "npc", "text": "Hallo! Schön, dass du da bist."},
+                                  {"who": "spieler", "text": "Wo geht's lang?"},
+                                  {"who": "npc", "text": "Immer nach rechts zur Fahne – pass auf die Stacheln auf!"}]},
     ]
     return lvl
 
@@ -103,9 +106,21 @@ def new_project(name, genre="jumpnrun", sample=True):
             {"type": "level", "id": level_id, "name": "Level 1"},
         ],
         "levels": {level_id: sample_level("Level 1") if sample else empty_level("Level 1")},
-        "player": {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3},
-        "settings": {"width": 1280, "height": 720, "fullscreen": False},
+        "player": {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3, "attacks": [new_attack(0)]},
+        "settings": {"width": 1280, "height": 720, "fullscreen": False, "ui": dict(UI_DEFAULT)},
     }
+
+
+ATTACK_KEYS = ["J", "K", "L", "U", "I", "O"]
+ATTACK_NAMES = ["Schlag", "Tritt", "Hieb", "Wirbel"]
+UI_DEFAULT = {"lives": "herzen", "heart": "", "heartEmpty": "", "coin": "", "panel": "", "panelMargin": 16,
+              "barFill": "", "barBack": "", "barMargin": 6, "bubble": "", "bubbleMargin": 24, "bubbleText": "#1c2433"}
+UI_IMAGES = ("heart", "heartEmpty", "coin", "panel", "barFill", "barBack", "bubble")
+
+
+def new_attack(i):
+    return {"name": ATTACK_NAMES[i] if i < len(ATTACK_NAMES) else f"Angriff {i + 1}", "key": ATTACK_KEYS[i % 6],
+            "range": 1.5, "damage": 1, "cooldown": 0.4}
 
 
 def add_step(project, kind, after=None):
@@ -122,6 +137,15 @@ def add_step(project, kind, after=None):
         step = {"type": "menu", "id": new_id("m"), "name": "Menü", "bg": "#12151b", "bgImage": "",
                 "elements": [{"kind": "button", "text": "Weiter", "action": "next", "x": 0.5, "y": 0.6, "w": 0.24,
                               "h": 0.09, "size": 30, "color": "#8fb3ff", "textColor": "#12151b", "radius": 16}]}
+    elif kind == "seite":
+        step = {"type": "seite", "id": new_id("p"), "name": "Seite", "bg": "#20263a", "bgImage": "", "duration": 4.0,
+                "elements": [
+                    {"kind": "bubble", "text": "Was für ein Tag!", "speaker": "", "x": 0.32, "y": 0.3, "w": 0.32,
+                     "h": 0.2, "size": 34, "color": "#ffffff", "textColor": "#1c2433", "tail": "unten-links",
+                     "after": 0.0},
+                    {"kind": "bubble", "text": "Und er fängt gerade erst an …", "speaker": "", "x": 0.66, "y": 0.62,
+                     "w": 0.36, "h": 0.2, "size": 34, "color": "#ffe9a8", "textColor": "#1c2433",
+                     "tail": "unten-rechts", "after": 1.5}]}
     else:
         step = {"type": "text", "id": new_id("t"), "name": "Zwischentext", "bg": "#12151b",
                 "text": "Kapitel 2\nDie Reise geht weiter …", "textColor": "#ffffff", "textSize": 40, "duration": 0}
@@ -173,18 +197,27 @@ def validate(project):
 def assets_used(project):
     used = set()
     for s in project["flow"]:
-        for key in ("logo", "bgImage"):
+        for key in ("logo", "bgImage", "bgVideo"):
             if s.get(key):
                 used.add(s[key])
         for e in s.get("elements", []):
-            if e.get("image"):
-                used.add(e["image"])
+            for key in ("image", "video"):
+                if e.get(key):
+                    used.add(e[key])
     for lvl in project["levels"].values():
         for e in lvl["entities"] + lvl.get("decor", []):
             if e.get("model"):
                 used.add(e["model"])
     if project["player"].get("model"):
         used.add(project["player"]["model"])
+    ui = project.get("settings", {}).get("ui", {})
+    for key in UI_IMAGES:
+        if ui.get(key):
+            used.add(ui[key])
+    for s in project["flow"]:
+        for e in s.get("elements", []):
+            if e.get("skin"):
+                used.add(e["skin"])
     return used
 
 
@@ -221,8 +254,28 @@ def load(folder):
         raise ValueError("Das Projekt stammt aus einer neueren Creative Engine.")
     data.setdefault("player", {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3})
     data.setdefault("settings", {"width": 1280, "height": 720, "fullscreen": False})
+    data["player"].setdefault("attacks", [])
+    ui = data["settings"].setdefault("ui", {})
+    for key, value in UI_DEFAULT.items():
+        ui.setdefault(key, value)
     for lvl in data.get("levels", {}).values():
         lvl.setdefault("decor", [])
         lvl.setdefault("entities", [])
         lvl.setdefault("tiles", {})
+        for e in lvl["entities"]:
+            if e.get("kind") == "npc":
+                upgrade_npc(e)
     return data
+
+
+def upgrade_npc(e):
+    """Ältere NPCs hatten nur „text“ – daraus wird ein Dialog mit einer Zeile."""
+    if "dialog" not in e:
+        text = e.pop("text", "")
+        e["dialog"] = [{"who": "npc", "text": text}] if text else []
+    e.setdefault("name", "")
+    e.setdefault("mode", "gespraech")
+    e.setdefault("seconds", 3.0)
+    e.setdefault("once", True)
+    return e
+
