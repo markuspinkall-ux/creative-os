@@ -1,0 +1,47 @@
+name: Creative 3D Rechenteil prüfen
+# Neuer Rechenteil (run.py) im echten TRELLIS-Container: Selbsttest und KI-Hochrechnen der Textur (auf CPU).
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [creative3d/trellis/run.py, .github/workflows/3d-rechenteil.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Platz schaffen
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - name: Container
+        run: podman pull -q ghcr.io/markuspinkall-ux/creative-trellis:latest
+      - name: Selbsttest und Hochrechnen
+        run: |
+          mkdir -p cache fotos
+          R="podman run --rm -v $PWD/creative3d/trellis/run.py:/opt/creative/run.py:ro -v $PWD/cache:/cache -v $PWD/fotos:/fotos"
+          $R ghcr.io/markuspinkall-ux/creative-trellis:latest --selftest
+          $R --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          import sys, time
+          sys.path.insert(0, '/opt/creative')
+          import run
+          from PIL import Image, ImageDraw
+          img = Image.new('RGB', (128, 128), (235, 225, 210))
+          d = ImageDraw.Draw(img)
+          for i in range(0, 128, 8):
+              d.line([(i, 0), (128 - i, 128)], fill=(60, 80, 160), width=1)
+          d.ellipse([30, 30, 98, 98], outline=(200, 40, 40), width=3)
+          d.text((40, 58), 'Creative', fill=(20, 20, 20))
+          img.save('/fotos/textur-klein.png')
+          t = time.time()
+          big = run.upscale_texture(img, 512, tile=64)
+          print('hochgerechnet', big.size, 'in', round(time.time() - t, 1), 's')
+          assert big.size == (512, 512)
+          big.save('/fotos/textur-ki.png')
+          img.resize((512, 512), Image.BICUBIC).save('/fotos/textur-einfach.png')
+          "
+      - name: Fotos ablegen
+        run: |
+          cd fotos && git init -q -b 3d-fotos && git add . && git -c user.name=bot -c user.email=bot@localhost commit -qm fotos \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" 3d-fotos
