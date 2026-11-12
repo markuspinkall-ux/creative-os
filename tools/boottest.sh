@@ -71,6 +71,8 @@ journalctl --user -b --no-pager 2>/dev/null | grep -o "CREATIVE-MM.*"; journalct
 $SSH 'journalctl -b --no-pager -t creative-shell -t creative-notifyd -t creative-session 2>/dev/null | tail -40' > "$W/session.log" 2>&1
 $SSH 'journalctl -b --no-pager -p err 2>/dev/null | tail -60' > "$W/errors.log" 2>&1
 echo "--- Willkommen-Protokoll:"; $SSH 'cat ~/.cache/creative-welcome.log 2>/dev/null | tail -20; pgrep -af creative_welcome' 2>&1 | tail -22
+echo "--- Umgebung der Shell (erstes Konto):"
+$SSH 'p=$(pgrep -u tester -f "python3 -m creative_shell" | head -1); tr "\0" "\n" < /proc/$p/environ | cut -c1-90 | sort' 2>&1 | head -40
 state=$($SSH 'cat /tmp/creative-shell-state-$(id -u) 2>/dev/null')
 shell=$($SSH 'pgrep -u tester -f "python3 -m creative_shell" | head -1')
 notif=$($SSH 'pgrep -u tester -f "python3 -m creative_notify" | head -1')
@@ -128,8 +130,13 @@ spid=$(pgrep -u frau -f "python3 -m creative_shell" | head -1)
 echo "Shell-PID $spid  wchan=$(cat /proc/$spid/wchan 2>/dev/null)"
 for t in /proc/$spid/task/*; do printf '%s %s %s\n' "$(basename $t)" "$(cat $t/comm)" "$(cat $t/wchan 2>/dev/null)"; done | head -20
 ls -l /proc/$spid/fd 2>/dev/null | awk '{print $NF}' | sort | uniq -c | sort -rn | head -15
-tr '\0' '\n' < /proc/$spid/environ | grep -E '^(WAYLAND_DISPLAY|DISPLAY|XDG_|QT_|DBUS_SESSION|HOME|USER|PATH|LANG)=' > /tmp/frau-env
-cat /tmp/frau-env
+echo "Umgebung Shell:"; tr '\0' '\n' < /proc/$spid/environ | cut -c1-90 | sort
+kp=$(pgrep -u frau -x kwin_wayland | head -1)
+echo "Umgebung KWin:"; tr '\0' '\n' < /proc/$kp/environ | cut -c1-90 | sort
+ls -ld /run/user/$u; ls /run/user/$u | head -20
+loginctl show-user frau | head -20
+tr '\0' '\n' < /proc/$spid/environ | grep -E '^(WAYLAND_DISPLAY|DISPLAY|XDG_|QT_|DBUS_SESSION|HOME|USER|PATH|LANG)=' | grep -v '^XDG_RUNTIME_DIR=' > /tmp/frau-env
+echo "XDG_RUNTIME_DIR=/run/user/$u" >> /tmp/frau-env
 # Neustarts verhindern, alte Shell beenden
 for p in $(pgrep -u frau -f creative-shell-supervisor); do kill -STOP $p; done
 kill $spid; sleep 1
