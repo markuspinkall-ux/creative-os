@@ -84,7 +84,32 @@ welcome=$($SSH 'pgrep -u tester -f creative_welcome | head -1')
 [ -n "$welcome" ] || fail "Das Willkommen-Fenster läuft nicht"
 $SSH 'grep -q "of null\|Traceback" ~/.cache/creative-welcome.log 2>/dev/null' && fail "Fehler im Willkommen-Fenster (siehe Protokoll)"
 [ "$state" = "ok" ] || fail "Die Oberfläche läuft nicht stabil (Zustand: ${state:-unbekannt})"
-echo "STARTTEST BESTANDEN"
 shot final
+
+# ---- Zweites Konto: ohne Passwort, wie in der Systemsteuerung angelegt ----------------------
+if [ "${ZWEITKONTO:-1}" = 1 ]; then
+    echo "--- Zweites Konto „frau“ (ohne Passwort) wird angelegt …"
+    $SSH "echo creative-test | sudo -S sh -c 'PKEXEC_UID=\$(id -u tester) /usr/libexec/creative-users-helper add frau \"Anna Test\" 0 </dev/null'" 2>&1 | tail -3
+    $SSH "getent passwd frau; id frau; sudo -n true 2>/dev/null; echo creative-test | sudo -S passwd -S frau; cat /var/lib/creative-os/ohne-passwort" 2>&1 | tail -5
+    # Anmeldemaske mit „frau“ als zuletzt gewähltem Konto
+    $SSH "echo creative-test | sudo -S sh -c 'rm -f /etc/sddm.conf.d/zz-starttest.conf; mkdir -p /var/lib/sddm; printf \"[Last]\nUser=frau\nSession=/usr/share/wayland-sessions/creative.desktop\n\" > /var/lib/sddm/state.conf; chown sddm: /var/lib/sddm/state.conf 2>/dev/null; systemctl restart sddm'" 2>&1 | tail -2
+    sleep 40
+    shot anmeldung-frau
+    $SSH "echo creative-test | sudo -S sh -c 'printf \"[Autologin]\nUser=frau\nSession=creative.desktop\n\" > /etc/sddm.conf.d/zz-starttest.conf && systemctl restart sddm'" 2>&1 | tail -2
+    sleep 110
+    shot desktop-frau
+    R="echo creative-test | sudo -S"
+    $SSH "$R sh -c 'u=\$(id -u frau); echo Sitzungen:; loginctl list-sessions --no-legend; echo Prozesse:; pgrep -u frau -af \"creative|kwin|python3\" | head -30; echo Zustand: \$(cat /tmp/creative-shell-state-\$u 2>/dev/null); echo Home:; ls -la ~frau ~frau/.config ~frau/.config/creative-os 2>&1 | head -60; echo Willkommen-Log:; tail -30 ~frau/.cache/creative-welcome.log 2>&1'" > "$W/frau.log" 2>&1
+    $SSH "$R journalctl -b --no-pager _UID=\$(id -u frau) 2>/dev/null | tail -250" > "$W/frau-journal.log" 2>&1
+    $SSH "$R journalctl -b --no-pager -u sddm 2>/dev/null | tail -60" > "$W/sddm.log" 2>&1
+    echo "--- Zweitkonto:"; cat "$W/frau.log" | head -120
+    echo "--- Zweitkonto-Journal (Fehler):"; grep -iE "error|fehler|traceback|crash|abgestürzt|Neustart|failed|denied|exception" "$W/frau-journal.log" | tail -60
+    fshell=$($SSH "pgrep -u frau -f 'python3 -m creative_shell' | head -1")
+    fwelcome=$($SSH "pgrep -u frau -f creative_welcome | head -1")
+    echo "Zweitkonto: Oberfläche ${fshell:-läuft NICHT} · Willkommen ${fwelcome:+läuft (soll nicht)}"
+    [ -n "$fshell" ] || fail "Zweitkonto: Die Oberfläche läuft nicht"
+    [ -z "$fwelcome" ] || fail "Zweitkonto: Das Willkommen-Fenster erscheint bei einem neuen Konto"
+fi
+echo "STARTTEST BESTANDEN"
 kill "$(cat "$W/qemu.pid")" 2>/dev/null
 exit 0
