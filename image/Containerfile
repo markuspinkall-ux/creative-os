@@ -460,6 +460,20 @@ COPY server/org.creativeos.servermode.policy /usr/share/polkit-1/actions/org.cre
 RUN chmod 755 /usr/libexec/creative-server-helper /usr/libexec/creative-servermode
 
 # ---------------------------------------------------------------------------
+# 8b3b) KI-Helfer (Desktop-Widget): lokales Sprachmodell über llama.cpp mit Vulkan –
+#       läuft auf NVIDIA und AMD, ohne Grafikkarte auf dem Prozessor.
+#       Das Modell (Gemma 4, Apache 2.0) lädt man beim Einrichten nach /var/lib/creative-ki.
+# ---------------------------------------------------------------------------
+COPY ki/install-llama.sh /tmp/install-llama.sh
+RUN dnf install -y --skip-unavailable vulkan-loader mesa-vulkan-drivers libgomp && dnf clean all \
+ && sh /tmp/install-llama.sh /usr/lib/creative-ki/llama && rm -f /tmp/install-llama.sh
+COPY ki/modelle.json /usr/lib/creative-ki/modelle.json
+COPY ki/creative-ki-setup /usr/libexec/creative-ki-setup
+COPY ki/org.creativeos.ki.policy /usr/share/polkit-1/actions/org.creativeos.ki.policy
+RUN chmod 755 /usr/libexec/creative-ki-setup \
+ && printf 'd /var/lib/creative-ki 0755 root root -\nd /var/lib/creative-ki/modelle 0755 root root -\n' > /usr/lib/tmpfiles.d/creative-ki.conf
+
+# ---------------------------------------------------------------------------
 # 8b4) Sprachassistent im Tray (Wetter, Timer, Musik) – Modelle laufen lokal
 # ---------------------------------------------------------------------------
 RUN dnf install -y --skip-unavailable mpv espeak-ng sound-theme-freedesktop python3-pip python3-numpy \

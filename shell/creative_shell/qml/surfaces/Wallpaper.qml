@@ -365,7 +365,10 @@ Item {
             const pos = root.widgetPosition(key, extra, "y")
             return pos < 0 ? Math.min(defaultY, maxY) : 8 + pos * (maxY - 8)
         }
-        function setPos(x, y) { widgetExtras.setPosition(key, x, y) }
+        function setPos(x, y) {
+            if (key === "ki") kiHelper.setPos(x, y)
+            else widgetExtras.setPosition(key, x, y)
+        }
         function restorePosition() {
             x = Qt.binding(() => extra.homeX())
             y = Qt.binding(() => extra.homeY())
@@ -530,6 +533,21 @@ Item {
                 }
             }
         }
+    }
+
+    // KI-Helfer: lokales Open-Source-Sprachmodell – Fragen stellt man im eigenen Fenster
+    KiChat { id: kiChat; ki: kiHelper }
+
+    ExtraWidget {
+        key: "ki"
+        visible: root.widgetOnScreen("ki") && kiHelper.enabled
+        posX: kiHelper.posX
+        posY: kiHelper.posY
+        defaultX: Math.max(8, root.width - 700)
+        defaultY: 420
+        width: 330
+        height: 178
+        body: KiCard { onOpen: kiChat.openChat() }
     }
 
     // Ein normales Fenster bekommt Tastaturfokus. Der Wayland-Hintergrund
@@ -1183,6 +1201,7 @@ Item {
             { sep: true },
             { label: rssWidget.enabled ? "RSS-Gadget ausblenden" : "RSS-Gadget einblenden", icon: "plus", act: "rss" },
             { label: weatherWidget.enabled ? "Wetter-Gadget ausblenden" : "Wetter-Gadget einblenden", icon: "plus", act: "weather" },
+            { label: kiHelper.enabled ? "KI-Helfer ausblenden" : "KI-Helfer einblenden", icon: "sparkle", act: "ki" },
             { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
             { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
@@ -1199,6 +1218,7 @@ Item {
             else if (act === "widgets") shell.openWidgetManager()
             else if (act === "rss") rssWidget.toggle()
             else if (act === "weather") weatherWidget.toggle()
+            else if (act === "ki") kiHelper.toggle()
             else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
             else if (act === "taskmanager") desktopStats.openTaskManager()
             else if (act === "viz") visualizer.setEnabled(!visualizer.enabled)

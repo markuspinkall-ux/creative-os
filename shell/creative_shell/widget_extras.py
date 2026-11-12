@@ -79,7 +79,8 @@ class WidgetExtras(QObject):
         QTimer.singleShot(0, self.refresh)
 
     def _save(self, **changes):
-        settings = {**self._settings, **changes}
+        # frisch lesen: der KI-Helfer speichert im selben Abschnitt
+        settings = {**config.load()["desktopExtras"], **changes}
         if not config.set_value("desktopExtras", settings):
             return False
         self._settings = settings

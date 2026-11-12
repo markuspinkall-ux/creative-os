@@ -36,6 +36,7 @@ from .trash import TrashModel
 from .desktopstats import DesktopStats
 from .desktopwidgets import DesktopWidget
 from .widget_extras import WidgetExtras
+from .ki import KiHelfer
 from .visualizer import Visualizer
 from .loginsound import play_login_sound
 from .nowplaying import NowPlaying
@@ -52,7 +53,7 @@ ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
 POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth", "taskmenu")
 SURFACES = POPUPS + ("bubble",)
-DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch")
+DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "ki")
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
@@ -517,6 +518,7 @@ def main():
         "desktopStats": DesktopStats(),
         "rssWidget": DesktopWidget("RSS"),
         "widgetExtras": WidgetExtras(),
+        "kiHelper": KiHelfer(),
         "weatherWidget": DesktopWidget("Weather"),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
@@ -565,7 +567,7 @@ def main():
     bus = ShellBus(shell, tasks, apps, models["session"], {
         "shelf": models["shelf"], "stats": models["desktopStats"],
         "rss": models["rssWidget"], "weather": models["weatherWidget"],
-        "extras": models["widgetExtras"],
+        "extras": models["widgetExtras"], "ki": models["kiHelper"],
     })
     bus.register()
 

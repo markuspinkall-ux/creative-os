@@ -1,0 +1,29 @@
+{
+  "gross": {
+    "name": "Gemma 4 12B",
+    "beschreibung": "Beste Antworten – für Grafikkarten ab 10 GB",
+    "datei": "gemma-4-12b-it-qat-q4_0.gguf",
+    "url": "https://huggingface.co/google/gemma-4-12B-it-qat-q4_0-gguf/resolve/main/gemma-4-12b-it-qat-q4_0.gguf",
+    "groesse": 6975879296,
+    "sha256": "93567e57a8fe10b23569b9d9ec38cd005deedf71e29477c421a4b83f418a538b",
+    "vram_gb": 10
+  },
+  "mittel": {
+    "name": "Gemma 4 E4B",
+    "beschreibung": "Gute Antworten – für Grafikkarten ab 6 GB",
+    "datei": "gemma-4-E4B-it-Q4_0.gguf",
+    "url": "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_0.gguf",
+    "groesse": 4590807392,
+    "sha256": "a555b900214b477d8880e7832e0b8925e139b0159640036b09fe472b6f2097f2",
+    "vram_gb": 6
+  },
+  "klein": {
+    "name": "Gemma 4 E2B",
+    "beschreibung": "Schnell und sparsam – läuft auch ohne starke Grafikkarte",
+    "datei": "gemma-4-E2B-it-Q4_0.gguf",
+    "url": "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_0.gguf",
+    "groesse": 2841481184,
+    "sha256": "8e30dff3ac4c8434c49a7036fa15564bdbb6044e42bf04550bf1a096ad7e6a52",
+    "vram_gb": 0
+  }
+}

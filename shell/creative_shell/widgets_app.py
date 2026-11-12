@@ -55,6 +55,7 @@ class WidgetWindow(QMainWindow):
         for name, label in (
             ("shelf", "Ablage"), ("stats", "Leistungsanzeige"), ("rss", "RSS-Nachrichten"),
             ("weather", "Wetter"), ("clock", "Analoge Uhr"), ("twitch", "Twitch-Favoriten"),
+            ("ki", "KI-Helfer (lokale KI, Open Source)"),
         ):
             switch = QCheckBox(label)
             switch.toggled.connect(lambda enabled, key=name: self.set_enabled(key, enabled))
@@ -143,7 +144,7 @@ class WidgetWindow(QMainWindow):
             monitor.setEnabled(enabled)
             if self.available:
                 with QSignalBlocker(switch):
-                    switch.setChecked(state[name])
+                    switch.setChecked(state.get(name, False))
                 self.update_monitors(name, state["screens"], state["targets"].get(name, ""))
         if self.available:
             channels = "\n".join(state["channels"])
