@@ -30,6 +30,7 @@ func setup(text: String, size_px: int, fill_c: Color, text_c: Color, tail_kind: 
 		name_label.add_theme_color_override("font_color", text_c.lerp(fill_c, 0.35))
 		add_child(name_label)
 	label = Label.new()
+	label.size = Vector2(320, 60)   # vor dem Text: sonst wird mit Breite 0 umgebrochen (riesige Mindesthöhe)
 	label.text = text
 	label.add_theme_font_size_override("font_size", size_px)
 	label.add_theme_color_override("font_color", text_c)
@@ -113,7 +114,19 @@ func _layout() -> void:
 	# zweimal: zuerst die Breite (Zeilenumbruch neu berechnen), dann die Höhe
 	label.size = Vector2(r.size.x, 1)
 	label.size = r.size
+	_target = r
+	call_deferred("_fix_label")
 	queue_redraw()
+
+
+var _target := Rect2()
+
+
+## Das Label kennt seine neue Mindesthöhe erst nach dem Umbruch – dann Größe nochmals setzen
+func _fix_label() -> void:
+	if label and _target.size.x >= 20.0:
+		label.position = _target.position
+		label.size = _target.size
 
 
 func _draw() -> void:
