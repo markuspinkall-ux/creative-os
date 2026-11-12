@@ -1,0 +1,31 @@
+name: Zertifikat prüfen (DINOv2)
+on:
+  push:
+    branches: ["claude/cert-probe"]
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Host
+        run: |
+          date -u
+          echo | openssl s_client -connect dl.fbaipublicfiles.com:443 -servername dl.fbaipublicfiles.com -showcerts 2>/dev/null \
+            | awk '/BEGIN CERT/,/END CERT/' > chain.pem
+          csplit -s -z -f c chain.pem '/BEGIN CERT/' '{*}' || true
+          for f in c*; do openssl x509 -in $f -noout -subject -issuer -dates; echo; done
+          curl -sSI https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth | head -5
+      - name: Container
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+          podman pull -q ghcr.io/markuspinkall-ux/creative-trellis:latest
+          podman run --rm --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          import ssl, urllib.request, certifi
+          print('openssl', ssl.OPENSSL_VERSION, 'certifi', certifi.where())
+          print(ssl.get_default_verify_paths())
+          try:
+              r = urllib.request.urlopen('https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth')
+              print('OK', r.status, r.headers.get('Content-Length'))
+          except Exception as e:
+              print('FEHLER', e)
+          " 2>&1 | tail -10
+          podman run --rm --entrypoint sh ghcr.io/markuspinkall-ux/creative-trellis:latest -c "ls -la /etc/ssl/certs | head -3; dpkg -l ca-certificates 2>/dev/null | tail -1; echo \$SSL_CERT_FILE \$REQUESTS_CA_BUNDLE"
