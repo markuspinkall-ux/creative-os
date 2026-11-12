@@ -107,7 +107,11 @@ func _layout() -> void:
 	if hint:
 		r.size.x -= font_size * 0.9
 		hint.position = Vector2(body_rect().end.x - PAD - font_size * 0.6, body_rect().end.y - PAD - font_size * 0.85)
+	if r.size.x < 20.0:
+		return  # noch keine echte Größe – sonst rechnet das Label mit einem Buchstaben pro Zeile
 	label.position = r.position
+	# zweimal: zuerst die Breite (Zeilenumbruch neu berechnen), dann die Höhe
+	label.size = Vector2(r.size.x, 1)
 	label.size = r.size
 	queue_redraw()
 
