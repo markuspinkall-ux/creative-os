@@ -507,8 +507,12 @@ COPY obs/obs-icon.py /tmp/obs-icon.py
 RUN if rpm -q obs-studio >/dev/null 2>&1; then \
       python3 /tmp/obs-icon.py /usr/share/icons/hicolor/256x256/apps/creative-obs.png \
       && for n in com.obsproject.Studio obs; do cp /usr/share/icons/hicolor/256x256/apps/creative-obs.png /usr/share/icons/Creative/apps/scalable/$n.png; done \
-      ; gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
+      && python3 /tmp/obs-icon.py /tmp/obs-hell.png --hell \
+      && for n in com.obsproject.Studio obs creative-obs; do cp /tmp/obs-hell.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; done \
+      ; rm -f /tmp/obs-hell.png; \
+      gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
       gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null; \
+      gtk-update-icon-cache -q -f /usr/share/icons/CreativePorzellan 2>/dev/null; \
     fi; rm -f /tmp/obs-icon.py
 
 # ---------------------------------------------------------------------------
