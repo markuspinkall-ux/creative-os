@@ -22,8 +22,8 @@ jobs:
           # Original nur zum Vergleich (Prüfsumme bekannt: 36e4deff…)
           curl -sSfL -o cache/original.pth https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_reg4_pretrain.pth \
             || echo "Original nicht ladbar (Zertifikat?) – Vergleich nur strukturell"
-          podman run --rm -v $PWD/cache:/cache --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
-          import os, torch
+          podman run --rm -e XFORMERS_DISABLED=1 -v $PWD/cache:/cache --entrypoint sh ghcr.io/markuspinkall-ux/creative-trellis:latest -c "pip install -q timm 2>&1 | tail -1; python3 -c \"
+          import os, torch, timm
           os.environ['TORCH_HOME'] = '/cache/torch'
           m = torch.hub.load('facebookresearch/dinov2', 'dinov2_vitl14_reg', pretrained=False).eval()
           conv = torch.load('/cache/umgewandelt/dinov2_vitl14_reg4_pretrain.pth', map_location='cpu')
@@ -38,6 +38,12 @@ jobs:
                   b = m.forward_features(x)
               for k in ('x_norm_clstoken', 'x_norm_patchtokens', 'x_prenorm'):
                   print(k, 'max. Abweichung', (a[k] - b[k]).abs().max().item())
-          else:
-              print('Ausgabe', a['x_prenorm'].shape, 'Mittel', a['x_prenorm'].mean().item())
-          "
+          # Gegenprobe mit timm (dieselben Gewichte, timm-Aufbau)
+          t = timm.create_model('vit_large_patch14_reg4_dinov2.lvd142m', pretrained=True, num_classes=0).eval()
+          with torch.no_grad():
+              f = t.forward_features(x)
+          n = t.num_prefix_tokens
+          print('timm: Klassen-Token max. Abweichung', (f[:, 0] - a['x_norm_clstoken']).abs().max().item())
+          print('timm: Bildteile    max. Abweichung', (f[:, n:] - a['x_norm_patchtokens']).abs().max().item())
+          print('Wertebereich', a['x_norm_patchtokens'].abs().max().item())
+          \""
