@@ -105,6 +105,8 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
     $SSH "echo creative-test | sudo -S sh -c 'rm -f /etc/sddm.conf.d/zz-starttest.conf; mkdir -p /var/lib/sddm; printf \"[Last]\nUser=frau\nSession=/usr/share/wayland-sessions/creative.desktop\n\" > /var/lib/sddm/state.conf; chown sddm: /var/lib/sddm/state.conf 2>/dev/null; systemctl restart sddm'" 2>&1 | tail -2
     sleep 40
     shot anmeldung-frau
+    echo "--- Anmeldemaske (Theme, Greeter-Meldungen):"
+    $SSH "echo creative-test | sudo -S sh -c 'grep -c passwordless /usr/share/sddm/themes/creative/Main.qml; ls -la /var/lib/creative-os/; journalctl -b --no-pager -u sddm _COMM=sddm-greeter-qt6 2>/dev/null | tail -5; journalctl -b --no-pager | grep -iE \"sddm-greeter|Main.qml|qml:\" | grep -viE \"MESA\" | tail -40'" 2>&1 | grep -v "password for" | tail -50
     R="echo creative-test | sudo -S"
     haenger=0
     for runde in 1 2 3; do
