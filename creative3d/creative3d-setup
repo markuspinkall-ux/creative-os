@@ -83,14 +83,16 @@ done
 [ "$ok" = 1 ] || fail "Der TRELLIS-Container ließ sich nicht laden (Details: $log)."
 podman image exists "$IMAGE" 2>/dev/null || { podman_ok; fail "Der TRELLIS-Container fehlt nach dem Laden."; }
 
-step 4 "Lade die KI-Modelle (≈ 4 GB) …"
-podman run --rm --security-opt label=disable -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
-    || fail "Die Modelle ließen sich nicht laden."
-
-step 5 "Teste die Grafikkarte im Container …"
+step 4 "Teste die Grafikkarte im Container …"
 podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entrypoint python3 "$IMAGE" -c \
     "import torch; assert torch.cuda.is_available(), 'keine Grafikkarte'; print('Grafikkarte im Container:', torch.cuda.get_device_name(0))" \
     || fail "Der Container sieht die Grafikkarte nicht. Bitte neu starten und erneut versuchen."
+
+step 5 "Lade die KI-Modelle (≈ 4 GB) …"
+# Mit Grafikkarte: TRELLIS baut beim Laden schon Teile auf der Grafikkarte auf. Ohne sie
+# scheiterte das Laden – und wurde als irreführender „401“-Fehler von Hugging Face gemeldet.
+podman run --rm --security-opt label=disable --device nvidia.com/gpu=all -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
+    || fail "Die Modelle ließen sich nicht laden."
 
 date +%s > "$DATA/trellis-ready"
 echo "FERTIG"
