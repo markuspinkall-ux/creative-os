@@ -103,7 +103,23 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
     $SSH "$R journalctl -b --no-pager _UID=\$(id -u frau) 2>/dev/null | tail -250" > "$W/frau-journal.log" 2>&1
     $SSH "$R journalctl -b --no-pager -u sddm 2>/dev/null | tail -60" > "$W/sddm.log" 2>&1
     echo "--- Zweitkonto:"; cat "$W/frau.log" | head -120
-    echo "--- Zweitkonto-Journal (Fehler):"; grep -iE "error|fehler|traceback|crash|abgestürzt|Neustart|failed|denied|exception" "$W/frau-journal.log" | tail -60
+    echo "--- Zweitkonto-Journal (ohne MESA/Portal):"; grep -vE "MESA|portal|Theme parsing" "$W/frau-journal.log" | tail -120
+    echo "--- Sitzungsprotokoll (Ausgabe der Shell):"
+    $SSH "$R sh -c 'tail -150 ~frau/.local/share/sddm/wayland-session.log 2>&1; ls -la ~frau/.local/share/sddm 2>&1'" 2>&1 | grep -vE "MESA|portal" | tail -150
+    echo "--- KWin-Fenster (Zweitkonto):"
+    cat > "$W/kwin-frau.sh" <<'SH'
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
+id=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting --method org.kde.kwin.Scripting.loadScript /tmp/dump.js mmf | grep -o "[0-9]\+" | head -1)
+gdbus call --session --dest org.kde.KWin --object-path /Scripting/Script$id --method org.kde.kwin.Script.run >/dev/null
+sleep 2
+journalctl --user -b --no-pager 2>/dev/null | grep -o "CREATIVE-MM.*" | sort -u | head -40
+SH
+    scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/kwin-frau.sh" tester@127.0.0.1:/tmp/kwin-frau.sh
+    $SSH "chmod 644 /tmp/dump.js /tmp/kwin-frau.sh; $R sudo -u frau sh /tmp/kwin-frau.sh; $R journalctl -b --no-pager _UID=\$(id -u frau) | grep -o 'CREATIVE-MM.*' | sort -u | head -40" 2>&1 | tail -40
+    # Willkommen schließen: ist darunter der Schreibtisch?
+    $SSH "$R pkill -u frau -f creative_welcome" 2>&1 | tail -1
+    sleep 5
+    shot desktop-frau-ohne-willkommen
     fshell=$($SSH "pgrep -u frau -f 'python3 -m creative_shell' | head -1")
     fwelcome=$($SSH "pgrep -u frau -f creative_welcome | head -1")
     echo "Zweitkonto: Oberfläche ${fshell:-läuft NICHT} · Willkommen ${fwelcome:+läuft (soll nicht)}"
