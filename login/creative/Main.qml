@@ -158,7 +158,6 @@ Item {
             if (root.passwordless) {
                 // Konto hat doch ein Passwort bekommen: Feld wieder zeigen
                 root.message = "Bitte dein Passwort eingeben."
-                root.readNoPassword()
                 root.noPassword = root.noPassword.filter(n => n !== root.userName())
                 password.forceActiveFocus()
                 return
