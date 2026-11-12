@@ -89,6 +89,15 @@ podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entry
     || fail "Der Container sieht die Grafikkarte nicht. Bitte neu starten und erneut versuchen."
 
 step 5 "Lade die KI-Modelle (≈ 4 GB) …"
+# DINOv2 (Bildverständnis) von Hugging Face statt von Metas Server holen – der war im
+# November 2026 wegen eines abgelaufenen Zertifikats nicht erreichbar. Klappt das nicht,
+# lädt TRELLIS es wie bisher selbst von Meta.
+HERE="$(dirname "$(readlink -f "$0")")"
+if [ -f "$HERE/dinov2_from_timm.py" ]; then
+    podman run --rm --security-opt label=disable -v "$HERE/dinov2_from_timm.py:/opt/dinov2_from_timm.py:ro" \
+        -v "$DATA/modelle:/cache" --entrypoint python3 "$IMAGE" /opt/dinov2_from_timm.py /cache/torch/hub/checkpoints \
+        || echo "Hinweis: DINOv2 von Hugging Face ging nicht – versuche es bei Meta."
+fi
 # Mit Grafikkarte: TRELLIS baut beim Laden schon Teile auf der Grafikkarte auf. Ohne sie
 # scheiterte das Laden – und wurde als irreführender „401“-Fehler von Hugging Face gemeldet.
 podman run --rm --security-opt label=disable --device nvidia.com/gpu=all -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
