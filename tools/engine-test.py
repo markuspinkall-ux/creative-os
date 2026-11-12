@@ -72,6 +72,12 @@ anims = {k: skeleton.preset(k, waddle=14 if k == "walk" else 0, flap=30 if k == 
 skeleton.export(folder / "assets" / "held-figur.glb", figur, joints, anims)
 data["player"]["model"] = "assets/held-figur.glb"
 level_id = next(s["id"] for s in data["flow"] if s["type"] == "level")
+# Video: Testbild (3 s) als Ogg Theora – Splash im Vollbild, auf der Seite als Fenster
+run(["ffmpeg", "-hide_banner", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24", "-t", "3",
+     "-c:v", "libtheora", "-q:v", "6", str(folder / "assets" / "film.ogv")], timeout=120)
+data["flow"][0].update({"bgVideo": "assets/film.ogv", "bgRatio": 16 / 9, "untilVideoEnd": True, "text": ""})
+seite["elements"].append({"kind": "video", "video": "assets/film.ogv", "x": 0.5, "y": 0.62, "w": 0.4, "h": 0.4,
+                          "fit": "contain", "ratio": 16 / 9, "loop": True, "after": 0.0})
 data["levels"][level_id]["decor"].append({"model": kiste, "x": 12, "y": 2, "z": -5, "height": 4})
 for e in data["levels"][level_id]["entities"]:
     if e["kind"] == "npc":
@@ -86,7 +92,7 @@ out = run([GODOT, "--headless", "--path", str(game), "--fixed-fps", "60", "--qui
 print("Autotest:", [l for l in out.splitlines() if "AUTOTEST" in l])
 
 xvfb = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"]
-for name, extra in (("splash", ["--nach=1.2"]), ("menue", [f"--level={data['flow'][1]['id']}", "--nach=1.5"]),
+for name, extra in (("splash", ["--nach=1.6"]), ("menue", [f"--level={data['flow'][1]['id']}", "--nach=1.5"]),
                     ("level", [f"--level={level_id}", "--nach=3"]),
                     ("lauf", [f"--level={level_id}", "--autotest", "--nach=2.4"]),
                     ("dialog", [f"--level={level_id}", "--autotest", "--nach=1.3"]),

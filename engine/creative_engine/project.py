@@ -185,12 +185,13 @@ def validate(project):
 def assets_used(project):
     used = set()
     for s in project["flow"]:
-        for key in ("logo", "bgImage"):
+        for key in ("logo", "bgImage", "bgVideo"):
             if s.get(key):
                 used.add(s[key])
         for e in s.get("elements", []):
-            if e.get("image"):
-                used.add(e["image"])
+            for key in ("image", "video"):
+                if e.get(key):
+                    used.add(e[key])
     for lvl in project["levels"].values():
         for e in lvl["entities"] + lvl.get("decor", []):
             if e.get("model"):

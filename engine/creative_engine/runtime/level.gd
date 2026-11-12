@@ -623,7 +623,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_paused(not get_tree().paused)
 		return
 	if not dialog.is_empty() and dialog["mode"] == "gespraech" and not get_tree().paused:
-		var click := event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+		var click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 		if event.is_action_pressed("weiter") or click:
 			get_viewport().set_input_as_handled()
 			next_line()

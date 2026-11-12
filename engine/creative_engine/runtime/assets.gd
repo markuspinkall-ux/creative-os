@@ -128,3 +128,62 @@ static func set_loop(player: AnimationPlayer, name: String, loop: bool) -> void:
 		return
 	var a := player.get_animation(name)
 	a.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
+
+
+## Video (Ogg Theora, .ogv – der Editor wandelt andere Formate beim Hinzufügen um)
+static func video(rel: String) -> VideoStream:
+	var path := path_of(rel)
+	if path == "" or not FileAccess.file_exists(path):
+		if path != "":
+			push_warning("Video fehlt: " + path)
+		return null
+	var v := VideoStreamTheora.new()
+	v.file = path
+	return v
+
+
+## Bild oder Video als Control (füllt seine Fläche; cover = randlos füllen, sonst ganz zeigen)
+static func media(rel: String, cover: bool, loop := false, volume := 0.0, ratio := 16.0 / 9.0) -> Control:
+	if rel.get_extension().to_lower() == "ogv":
+		var stream := video(rel)
+		if stream == null:
+			return null
+		var p := VideoStreamPlayer.new()
+		p.stream = stream
+		p.expand = true
+		p.autoplay = true
+		p.loop = loop
+		p.volume_db = volume
+		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if cover:
+			# VideoStreamPlayer streckt – für „randlos“ in einem Rahmen mittig zuschneiden
+			var clip := Control.new()
+			clip.clip_contents = true
+			clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			clip.add_child(p)
+			clip.set_meta("video", p)
+			clip.resized.connect(_cover_video.bind(clip, p, ratio))
+			return clip
+		var box := AspectRatioContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(p)
+		box.set_meta("video", p)
+		box.ratio = ratio
+		return box
+	var tex := texture(rel)
+	if tex == null:
+		return null
+	var tr := TextureRect.new()
+	tr.texture = tex
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if cover else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tr
+
+
+static func _cover_video(clip: Control, p: VideoStreamPlayer, ratio: float) -> void:
+	var s := clip.size
+	var w := maxf(s.x, s.y * ratio)
+	var h := w / ratio
+	p.size = Vector2(w, h)
+	p.position = (s - p.size) / 2.0

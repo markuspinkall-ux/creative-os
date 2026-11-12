@@ -135,21 +135,38 @@ func full_rect(node: Control) -> void:
 	node.set_anchors_preset(Control.PRESET_FULL_RECT)
 
 
-func background(layer: Control, s: Dictionary) -> void:
+## Hintergrund: Farbe, Bild und/oder Video im Vollbild. Gibt den Video-Player zurück (oder null).
+func background(layer: Control, s: Dictionary) -> VideoStreamPlayer:
 	var bg := ColorRect.new()
 	bg.color = Color(String(s.get("bg", "#000000")))
 	full_rect(bg)
 	layer.add_child(bg)
+	var cover := String(s.get("bgFit", "cover")) == "cover"
 	var image := String(s.get("bgImage", ""))
 	if image != "":
-		var tex := Assets.texture(image)
-		if tex:
-			var tr := TextureRect.new()
-			tr.texture = tex
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			full_rect(tr)
-			layer.add_child(tr)
+		var m := Assets.media(image, cover)
+		if m:
+			full_rect(m)
+			layer.add_child(m)
+	var video := String(s.get("bgVideo", ""))
+	if video != "":
+		var v := Assets.media(video, cover, bool(s.get("videoLoop", false)), float(s.get("videoVolume", 0.0)),
+			float(s.get("bgRatio", 16.0 / 9.0)))
+		if v:
+			full_rect(v)
+			layer.add_child(v)
+			return v.get_meta("video")
+	return null
+
+
+## Bild- oder Video-Element einer Seite/eines Menüs
+func media_element(e: Dictionary) -> Control:
+	var rel := String(e.get("video", e.get("image", "")))
+	var m := Assets.media(rel, String(e.get("fit", "contain")) == "cover", bool(e.get("loop", false)),
+		float(e.get("volume", 0.0)), float(e.get("ratio", 16.0 / 9.0)))
+	if m == null:
+		m = Control.new()
+	return m
 
 
 func make_label(text: String, size: int, color: String) -> Label:
@@ -178,7 +195,7 @@ func make_splash(s: Dictionary) -> Node:
 	var box := Skippable.new()
 	full_rect(box)
 	root.add_child(box)
-	background(box, s)
+	var player := background(box, s)
 	var center := VBoxContainer.new()
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	full_rect(center)
@@ -200,6 +217,11 @@ func make_splash(s: Dictionary) -> Node:
 	var fade := float(s.get("fade", 0.6))
 	var tw := box.create_tween()
 	tw.tween_property(box, "modulate:a", 1.0, fade)
+	if player and s.get("untilVideoEnd", false):
+		player.finished.connect(_skip_splash.bind(box), CONNECT_ONE_SHOT)
+		box.set_meta("tween", tw)
+		box.skipped.connect(_skip_splash.bind(box))
+		return root
 	tw.tween_interval(max(0.2, float(s.get("duration", 2.5))))
 	tw.tween_property(box, "modulate:a", 0.0, fade)
 	tw.tween_callback(next_step)
@@ -247,7 +269,7 @@ func make_page(s: Dictionary) -> Node:
 	var box := Skippable.new()
 	full_rect(box)
 	root.add_child(box)
-	background(box, s)
+	var player := background(box, s)
 	var size := Vector2(1280, 720)
 	var last := 0.0
 	for e in s.get("elements", []):
@@ -262,12 +284,10 @@ func make_page(s: Dictionary) -> Node:
 				Color(String(e.get("textColor", "#1c2433"))), String(e.get("tail", "unten-links")),
 				String(e.get("speaker", "")))
 			node = b
-		elif kind == "image":
-			var tr := TextureRect.new()
-			tr.texture = Assets.texture(String(e.get("image", "")))
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			node = tr
+		elif kind in ["image", "video"]:
+			node = media_element(e)
+			if kind == "video" and player == null and node.has_meta("video"):
+				player = node.get_meta("video")
 		else:
 			var l := make_label(String(e.get("text", "")), int(e.get("size", 48)), String(e.get("color", "#ffffff")))
 			if e.get("bold", false):
@@ -286,7 +306,10 @@ func make_page(s: Dictionary) -> Node:
 			tw.tween_interval(delay)
 			tw.tween_property(node, "modulate:a", 1.0, 0.25)
 	var dur := float(s.get("duration", 0))
-	if dur <= 0.0:
+	if player and s.get("untilVideoEnd", false):
+		player.finished.connect(_timed.bind(box, next_step), CONNECT_ONE_SHOT)
+		dur = -1.0
+	if dur == 0.0:
 		var hint := make_label("Weiter mit Leertaste oder Klick", 16, "#ffffff")
 		hint.modulate.a = 0.55
 		hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -347,12 +370,8 @@ func make_menu(s: Dictionary) -> Node:
 			node = b
 			if first == null:
 				first = b
-		elif kind == "image":
-			var tr := TextureRect.new()
-			tr.texture = Assets.texture(String(e.get("image", "")))
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			node = tr
+		elif kind in ["image", "video"]:
+			node = media_element(e)
 		else:
 			var l := make_label(String(e.get("text", "")), int(e.get("size", 48)), String(e.get("color", "#ffffff")))
 			if e.get("bold", false):

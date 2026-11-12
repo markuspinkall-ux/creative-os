@@ -43,7 +43,9 @@ jobs:
           mkdir -p repo
           if git ls-remote --exit-code origin flatpak-repo >/dev/null 2>&1; then
             git fetch -q --depth 1 origin flatpak-repo && git --work-tree=repo checkout FETCH_HEAD -- . && git reset -q
-            rm -rf repo/.git
+            rm -rf repo/.git repo/.lock
+            # Git speichert keine leeren Ordner – OSTree braucht sie
+            mkdir -p repo/refs/heads repo/refs/remotes repo/refs/mirrors repo/tmp repo/state repo/extensions
           fi
           [ -f repo/config ] || ostree init --repo=repo --mode=archive-z2
       - name: Bauen
