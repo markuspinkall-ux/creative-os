@@ -129,7 +129,12 @@ state="/tmp/creative-shell-state-$uid"
 rm -f "$state"
 
 while true; do
-    /usr/bin/creative-shell &
+    # Ausgabe ins Systemprotokoll: journalctl --user -t creative-shell
+    if command -v systemd-cat >/dev/null 2>&1; then
+        systemd-cat -t creative-shell /usr/bin/creative-shell &
+    else
+        /usr/bin/creative-shell &
+    fi
     spid=$!
     ( sleep 60; kill -0 "$spid" 2>/dev/null && echo ok > "$state" ) &
     wait "$spid"
