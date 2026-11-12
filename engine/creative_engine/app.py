@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 from . import icons, project as proj, runner
 from .leveleditor import LevelEditor
 from .screens import ScreenEditor
-from .style import C, stylesheet
+from .style import C, apply_palette, stylesheet
 
 APP_NAME = "Creative Engine"
 STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level"}
@@ -238,7 +238,9 @@ class Timeline(QListWidget):
         self.blockSignals(True)
         self.clear()
         for i, step in enumerate(flow):
-            label = f"{i + 1}  {step.get('name') or STEP_NAME[step['type']]}\n{STEP_NAME[step['type']]}"
+            name = step.get("name") or STEP_NAME[step["type"]]
+            kind = STEP_NAME[step["type"]]
+            label = f"{i + 1} · {name}" + ("" if name.startswith(kind) or name == kind else f"\n{kind}")
             it = QListWidgetItem(icons.icon(STEP_ICON[step["type"]], C["text"], C["accent"]), label)
             it.setData(Qt.ItemDataRole.UserRole, step["id"])
             it.setSizeHint(QSize(178, 62))
@@ -314,7 +316,7 @@ class GameSettings(QWidget):
         char = QPushButton("Charakter-Editor öffnen …")
         char.setIcon(icons.icon("bone", C["text"], C["accent"]))
         char.clicked.connect(self.win.open_character_editor)
-        self.pf.addRow("Skelett & Animation", char)
+        self.pf.addRow("Bewegungen", char)
         for key, label, lo, hi, step, default in (("height", "Größe (Meter)", 0.3, 6, 0.1, 1.6),
                                                   ("speed", "Lauftempo", 1, 30, 0.5, 7.0),
                                                   ("jump", "Sprungkraft", 2, 40, 0.5, 12.0)):
@@ -543,6 +545,7 @@ class Window(QMainWindow):
         self.refresh_timeline()
         self.show_section("flow")
         self.check()
+        self.status_msg("Projekt geöffnet – Ablauf oben, Werkzeuge links, Eigenschaften rechts. F5 testet.")
 
     def maybe_save(self):
         if self.project and self.dirty:
@@ -605,6 +608,7 @@ class Window(QMainWindow):
             if b.isCheckable():
                 b.setChecked(k == key)
         if key == "settings":
+            self.timeline.clearSelection()
             self.settings.load(self.project)
             self.stack.setCurrentWidget(self.settings)
         else:
@@ -748,6 +752,10 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setDesktopFileName("org.creativeos.Engine")
+    from PySide6.QtCore import QLocale
+    QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Territory.Germany))
+    app.setStyle("Fusion")
+    apply_palette(app)
     app.setStyleSheet(stylesheet())
     win = Window()
     args = [a for a in sys.argv[1:] if not a.startswith("-")]

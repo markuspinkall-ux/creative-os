@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Engine
+GenericName=Spiele-Editor
+Comment=Spiele bauen per Klick: Jump'n'Run gestalten, testen und als fertiges Spiel exportieren
+Exec=creative-engine %f
+Icon=org.creativeos.Engine
+Terminal=false
+Categories=Development;Game;Graphics;
+Keywords=Spiel;Game;Engine;Editor;Jump'n'Run;Level;Godot;
+StartupWMClass=org.creativeos.Engine

@@ -363,7 +363,7 @@ class ScreenEditor(QWidget):
             d.setSpecialValueText("bis Tastendruck")
             form.addRow("Dauer (s)", d)
         else:
-            form.addRow("Hintergrundbild", self.image(s, "bgImage"))
+            form.addRow("Bild", self.image(s, "bgImage"))
         self.pv.addLayout(form)
         if kind == "menu":
             self.pv.addSpacing(6)

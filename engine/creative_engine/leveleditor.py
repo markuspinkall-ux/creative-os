@@ -451,7 +451,7 @@ class LevelEditor(QWidget):
 
         # Palette links
         side = QWidget(objectName="side")
-        side.setFixedWidth(232)
+        side.setFixedWidth(262)
         sv = QVBoxLayout(side)
         sv.setContentsMargins(12, 12, 12, 12)
         sv.setSpacing(8)
@@ -545,7 +545,7 @@ class LevelEditor(QWidget):
         b.setCheckable(True)
         b.setText(name)
         b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        b.setMinimumWidth(98)
+        b.setMinimumWidth(112)
         b.setToolTip(tip or name)
         from PySide6.QtGui import QIcon, QPixmap
         pm = QPixmap(36, 36)

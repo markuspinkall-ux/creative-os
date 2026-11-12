@@ -1,9 +1,16 @@
 """Graphit/Porzellan-Farben und Stylesheet der Creative Engine."""
 
+import os
+from pathlib import Path
+
 from PySide6.QtGui import QColor
 
 try:
+    import creative_look
     from creative_look import palette as _look_palette
+    if os.path.exists("/.flatpak-info"):
+        # Im Flatpak zeigt XDG_CONFIG_HOME in die App-Sandbox – das Design steht im echten ~/.config
+        creative_look.path = lambda: Path.home() / ".config" / "creative-os" / "look.conf"
 except ImportError:
     _look_palette = None
 
@@ -34,6 +41,9 @@ def stylesheet():
     QMainWindow, QWidget#root {{ background:{c['ground']}; }}
     QWidget#topBar {{ background:{c['ground']}; }}
     QLabel {{ background:transparent; }}
+    QScrollArea {{ background:transparent; border:none; }}
+    QScrollArea > QWidget > QWidget {{ background:transparent; }}
+    QWidget#side QScrollArea > QWidget > QWidget, QWidget#props QScrollArea > QWidget > QWidget {{ background:{c['side']}; }}
     QLabel#appTitle {{ font-size:15px; font-weight:700; }}
     QLabel#projectName {{ color:{c['muted']}; font-size:13px; }}
     QLabel#heading {{ font-size:26px; font-weight:700; }}
@@ -89,3 +99,22 @@ def stylesheet():
     QWidget#statusBar {{ background:{c['ground']}; border-top:1px solid {c['line']}; }}
     QWidget#statusBar QLabel {{ color:{c['muted']}; font-size:12px; }}
     """
+
+
+def apply_palette(app):
+    """Grundfarben für alle Widgets (Bildlaufflächen, Listen …), damit nichts hell durchscheint."""
+    from PySide6.QtGui import QPalette
+    c = C
+    pal = QPalette()
+    roles = {QPalette.ColorRole.Window: c["ground"], QPalette.ColorRole.Base: c["raised"],
+             QPalette.ColorRole.AlternateBase: c["surface"], QPalette.ColorRole.Text: c["text"],
+             QPalette.ColorRole.WindowText: c["text"], QPalette.ColorRole.Button: c["raised"],
+             QPalette.ColorRole.ButtonText: c["text"], QPalette.ColorRole.Highlight: c["accent"],
+             QPalette.ColorRole.HighlightedText: c["accentText"], QPalette.ColorRole.ToolTipBase: c["raised"],
+             QPalette.ColorRole.ToolTipText: c["text"], QPalette.ColorRole.PlaceholderText: c["dim"],
+             QPalette.ColorRole.Link: c["accent"]}
+    for role, value in roles.items():
+        pal.setColor(role, QColor(value))
+    for role in (QPalette.ColorRole.Text, QPalette.ColorRole.WindowText, QPalette.ColorRole.ButtonText):
+        pal.setColor(QPalette.ColorGroup.Disabled, role, QColor(c["dim"]))
+    app.setPalette(pal)

@@ -25,7 +25,10 @@ out = Path(sys.argv[1]).resolve()
 prefix = sys.argv[2] if len(sys.argv) > 2 else ""
 out.mkdir(parents=True, exist_ok=True)
 qt = QApplication(sys.argv[:1])
+from PySide6.QtCore import QLocale  # noqa: E402
+QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Territory.Germany))
 qt.setStyle("Fusion")
+engine.apply_palette(qt)
 qt.setStyleSheet(engine.stylesheet())
 w = engine.Window()
 w.resize(1440, 900)
