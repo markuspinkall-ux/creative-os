@@ -256,36 +256,32 @@ Window {
                         }
                     }
                 }
-                // Messwerte: so viel kostet die Kamera pro Bild
-                Column {
-                    spacing: 4
-                    visible: bc.camera && bc.fps > 0
-                    Text { text: "Rechenzeit pro Bild"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
-                Rectangle {
-                    width: meter.implicitWidth + 20
-                    height: 32
-                    radius: 10
-                    color: bc.slow ? Qt.rgba(Theme.flame.r, Theme.flame.g, Theme.flame.b, 0.18) : Theme.tint(0.06)
-                    Text {
-                        id: meter
-                        anchors.centerIn: parent
-                        text: "Freistellen " + bc.processingMs.toFixed(1) + " ms"
-                              + (bc.upscaleState === "aktiv" ? " · Upscaling " + bc.upscaleMs.toFixed(1) + " ms" : "")
-                              + " · Budget " + bc.budgetMs.toFixed(1) + " ms"
-                        color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 11
-                    }
-                }
-                }
             }
-            InfoRow { visible: bc.camera && bc.cameraMode !== ""; label: "Webcam liefert"; value: bc.cameraMode }
-            InfoRow { visible: bc.camera && bc.outputMode !== ""; label: "Creative Kamera sendet"; value: bc.outputMode }
+            InfoRow {
+                visible: bc.camera && bc.cameraMode !== ""
+                label: "Bild"
+                value: bc.outputMode !== "" && bc.upscaleState === "aktiv"
+                       ? bc.cameraMode.split(" (")[0].split(" · ")[0] + " → " + bc.outputMode
+                       : bc.cameraMode
+            }
+            InfoRow {
+                visible: bc.camera && bc.fps > 0
+                label: "Rechenzeit pro Bild"
+                valueColor: bc.slow ? Theme.flame : Theme.text
+                value: "Freistellen " + bc.processingMs.toFixed(1)
+                       + (bc.upscaleState === "aktiv" ? " · KI " + bc.upscaleMs.toFixed(1) : "")
+                       + " ms von " + bc.budgetMs.toFixed(1) + " ms"
+            }
             Text {
+                id: upWarn
                 width: parent.width
                 wrapMode: Text.WordWrap
                 readonly property string msg: bc.upscale === "aus" ? ""
                     : bc.upscaleAvailable !== "" ? "KI-Upscaling " + bc.upscaleAvailable + "."
                     : bc.upscaleState.indexOf("nicht") === 0 || bc.upscaleState.indexOf("abgeschaltet") === 0 ? "KI-Upscaling " + bc.upscaleState + "."
-                    : bc.slow ? "Zu viel Rechenlast für diese Bildrate – „Schnell“ oder „Aus“ wählen, damit Spiel und Stream flüssig bleiben."
+                    : bc.slow ? "Zu viel Rechenlast für " + bc.budgetMs.toFixed(1) + " ms pro Bild – "
+                                + (bc.upscale === "beste" ? "„Schnell“ wählen" : "Upscaling ausschalten")
+                                + ", damit Spiel und Stream flüssig bleiben."
                     : ""
                 visible: msg !== ""
                 text: msg
@@ -294,7 +290,7 @@ Window {
             Text {
                 width: parent.width
                 wrapMode: Text.WordWrap
-                visible: bc.camera
+                visible: bc.camera && !upWarn.visible
                 text: "In Discord, Teams, Zoom oder OBS die Kamera „Creative Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
@@ -348,6 +344,7 @@ Window {
     component InfoRow: Item {
         property string label
         property string value
+        property color valueColor: Theme.text
         width: parent ? parent.width : 300
         height: 22
         Text { text: parent.label; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
@@ -357,7 +354,7 @@ Window {
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideLeft
             text: parent.value
-            color: Theme.text
+            color: parent.valueColor
             font.family: Theme.fontFamily
             font.pixelSize: 12
         }

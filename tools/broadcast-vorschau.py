@@ -50,13 +50,38 @@ class Fake(QObject):
         self._up = v
         self.changed.emit()
 
-    for _n in ("setVoice", "setCamera", "setPreview"):
-        locals()[_n] = Slot(bool)(lambda self, v: None)
-    for _n in ("setVoiceInput", "setCameraDevice", "setEffect", "setBackground", "setQuality"):
-        locals()[_n] = Slot(str)(lambda self, v: None)
-    setStrength = Slot(int)(lambda self, v: None)
-    refreshMicrophones = Slot()(lambda self: None)
-    refreshCameras = Slot()(lambda self: None)
+    @Slot(bool)
+    def setVoice(self, v): pass
+
+    @Slot(bool)
+    def setCamera(self, v): pass
+
+    @Slot(bool)
+    def setPreview(self, v): pass
+
+    @Slot(str)
+    def setVoiceInput(self, v): pass
+
+    @Slot(str)
+    def setCameraDevice(self, v): pass
+
+    @Slot(str)
+    def setEffect(self, v): pass
+
+    @Slot(str)
+    def setBackground(self, v): pass
+
+    @Slot(str)
+    def setQuality(self, v): pass
+
+    @Slot(int)
+    def setStrength(self, v): pass
+
+    @Slot()
+    def refreshMicrophones(self): pass
+
+    @Slot()
+    def refreshCameras(self): pass
 
     voice = Property(bool, lambda s: True, constant=True)
     strength = Property(int, lambda s: 70, constant=True)

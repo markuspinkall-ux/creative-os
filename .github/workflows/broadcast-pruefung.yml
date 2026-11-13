@@ -71,7 +71,7 @@ jobs:
           assert psnr(y, hr) > psnr(bic, hr) - 1.0, "KI-Bild deutlich schlechter als bikubisch?"
           cv2.imwrite("/tmp/up-vergleich.jpg", np.hstack([bic[300:700, 200:900], y[300:700, 200:900]]))
           PY
-          mkdir -p vorschau && cp /tmp/up-vergleich.jpg vorschau/
+          mkdir -p "$GITHUB_WORKSPACE/vorschau" && cp /tmp/up-vergleich.jpg "$GITHUB_WORKSPACE/vorschau/"
       - name: Selbsttest Dienst
         run: cd broadcast && XDG_RUNTIME_DIR=/tmp python3 -m creative_broadcast.daemon --selftest || true
       - name: Fotos der Oberfläche
