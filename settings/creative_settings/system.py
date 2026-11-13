@@ -31,6 +31,15 @@ def os_name():
     return data.get("PRETTY_NAME") or data.get("NAME") or "Linux"
 
 
+def release_info():
+    """Versionsnummer und Codename von Creative OS, z. B. „Creative OS 1 · Mighty Mercury“."""
+    try:
+        data = json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
+        return f"Creative OS {data['nummer']} · {data['codename']}"
+    except (OSError, ValueError, KeyError):
+        return ""
+
+
 def cpu_name():
     m = re.search(r"^model name\s*:\s*(.+)$", _read("/proc/cpuinfo"), re.M)
     name = m.group(1) if m else platform.processor() or "Unbekannt"
@@ -131,7 +140,7 @@ class SystemModel(QObject):
         self._run = Runner(self, force_c_locale=True)
         self._info = {
             "os": os_name(), "cpu": cpu_name(), "ram": ram_text(), "gpu": gpu_names(),
-            "disk": disk_text(), "kernel": platform.release(),
+            "disk": disk_text(), "kernel": platform.release(), "release": release_info(),
         }
         self._host = socket.gethostname()
         self._message = ""

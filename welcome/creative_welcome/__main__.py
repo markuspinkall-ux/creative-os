@@ -76,6 +76,12 @@ def main():
     ctx.setContextProperty("network", network)
     ctx.setContextProperty("session", session)
     ctx.setContextProperty("look", look)
+    try:
+        import json as _json
+        _v = _json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
+        ctx.setContextProperty("creativeRelease", f"Creative OS {_v['nummer']} · {_v['codename']}")
+    except (OSError, ValueError, KeyError):
+        ctx.setContextProperty("creativeRelease", "")
     ctx.setContextProperty("wallpaperUrl", QUrl.fromLocalFile(str(qml_root / "Creative" / "wallpapers" / "graphit.svg")))
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():

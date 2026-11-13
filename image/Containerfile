@@ -591,10 +591,16 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
 # Paketquellen weiter passen – Fedora ist nur noch der Unterbau)
 COPY image/plymouth/watermark.png /usr/share/pixmaps/creative-os-logo.png
 COPY LICENSE /usr/share/licenses/creative-os/LICENSE
+# Versionsnummer und Codename (Planeten von innen nach außen, wie die Rakete fliegt)
+COPY image/version.json /usr/share/creative-os/version.json
 RUN v="$(date +%Y.%m.%d)" \
+ && nr="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["nummer"])')" \
+ && cn="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["codename"])')" \
+ && kurz="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["kurz"])')" \
  && sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
-           -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Creative OS"/' \
-           -e "s/^VERSION=.*/VERSION=\"${v}\"/" \
+           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Creative OS ${nr} · ${cn}\"/" \
+           -e "s/^VERSION=.*/VERSION=\"${nr} · ${cn} (${v})\"/" \
+           -e "s/^VERSION_CODENAME=.*/VERSION_CODENAME=${kurz}/" \
            -e 's/^VARIANT=.*/VARIANT="Creative OS"/' \
            -e 's/^LOGO=.*/LOGO=creative-os-logo/' \
            -e 's|^HOME_URL=.*|HOME_URL="https://github.com/markuspinkall-ux/creative-os"|' \
@@ -602,6 +608,7 @@ RUN v="$(date +%Y.%m.%d)" \
            -e 's|^BUG_REPORT_URL=.*|BUG_REPORT_URL="https://github.com/markuspinkall-ux/creative-os/issues"|' \
            -e '/^DOCUMENTATION_URL=/d' -e '/^REDHAT_/d' -e '/^SUPPORT_END=/d' \
            /usr/lib/os-release \
+ && (grep -q '^VERSION_CODENAME=' /usr/lib/os-release || echo "VERSION_CODENAME=${kurz}" >> /usr/lib/os-release) \
  && (grep -q '^DEFAULT_HOSTNAME=' /usr/lib/os-release \
        && sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="creative-os"/' /usr/lib/os-release \
        || echo 'DEFAULT_HOSTNAME="creative-os"' >> /usr/lib/os-release)

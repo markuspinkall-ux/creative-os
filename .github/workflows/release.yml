@@ -31,11 +31,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           date="$(date +%Y.%m.%d)"
+          name="$(python3 -c 'import json;d=json.load(open("image/version.json"));print(str(d["nummer"]) + " · " + d["codename"])')"
           tag="version-$(date +%Y%m%d)-${{ github.run_number }}"
           prev="$(git tag --list 'version-*' --sort=-creatordate | head -n1)"
           range="${prev:+$prev..}HEAD"
           {
-            echo "## Neu in Creative OS ${date}"
+            echo "## Neu in Creative OS ${name} (${date})"
             echo
             git log --no-merges --pretty='%s' $range \
               | grep -v '^Werkzeug\|^Probe\|^wip\|^Bauen für' \
@@ -44,4 +45,4 @@ jobs:
             echo "Update: Systemsteuerung › Software & Updates › Nach Updates suchen."
           } > notes.md
           git tag "$tag" && git push origin "$tag"
-          gh release create "$tag" --title "Creative OS ${date}" --notes-file notes.md --repo "${{ github.repository }}"
+          gh release create "$tag" --title "Creative OS ${name} (${date})" --notes-file notes.md --repo "${{ github.repository }}"
