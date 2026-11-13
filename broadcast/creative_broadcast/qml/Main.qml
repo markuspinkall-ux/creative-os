@@ -7,9 +7,9 @@ import Creative
 Window {
     id: win
     width: 980
-    height: 660
+    height: 760
     minimumWidth: 820
-    minimumHeight: 560
+    minimumHeight: 640
     visible: true
     title: "Creative Broadcast"
     color: Theme.surface
@@ -229,10 +229,68 @@ Window {
                     }
                 }
             }
+            // KI-Upscaling auf 1080p
+            Row {
+                spacing: 12
+                Column {
+                    spacing: 4
+                    Text { text: "KI-Upscaling auf 1080p"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                    Row {
+                        spacing: 6
+                        Repeater {
+                            model: [{ k: "aus", t: "Aus" }, { k: "schnell", t: "Schnell" }, { k: "beste", t: "Beste Schärfe" }]
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool cur: bc.upscale === modelData.k
+                                readonly property bool allowed: modelData.k === "aus" || bc.upscaleAvailable === ""
+                                width: uText.implicitWidth + 24
+                                height: 32
+                                radius: 16
+                                opacity: allowed ? 1 : 0.45
+                                color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : (um.containsMouse && allowed ? Theme.tint(0.1) : Theme.tint(0.06))
+                                Text { id: uText; anchors.centerIn: parent; text: modelData.t; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: parent.cur }
+                                MouseArea { id: um; anchors.fill: parent; hoverEnabled: true; enabled: parent.allowed; cursorShape: Qt.PointingHandCursor; onClicked: bc.setUpscale(modelData.k) }
+                                Accessible.role: Accessible.Button
+                                Accessible.name: "KI-Upscaling: " + modelData.t
+                            }
+                        }
+                    }
+                }
+            }
+            InfoRow {
+                visible: bc.camera && bc.cameraMode !== ""
+                label: "Bild"
+                value: bc.outputMode !== "" && bc.upscaleState === "aktiv"
+                       ? bc.cameraMode.split(" (")[0].split(" · ")[0] + " → " + bc.outputMode
+                       : bc.cameraMode
+            }
+            InfoRow {
+                visible: bc.camera && bc.fps > 0
+                label: "Rechenzeit pro Bild"
+                valueColor: bc.slow ? Theme.flame : Theme.text
+                value: "Freistellen " + bc.processingMs.toFixed(1)
+                       + (bc.upscaleState === "aktiv" ? " · KI " + bc.upscaleMs.toFixed(1) : "")
+                       + " ms von " + bc.budgetMs.toFixed(1) + " ms"
+            }
+            Text {
+                id: upWarn
+                width: parent.width
+                wrapMode: Text.WordWrap
+                readonly property string msg: bc.upscale === "aus" ? ""
+                    : bc.upscaleAvailable !== "" ? "KI-Upscaling " + bc.upscaleAvailable + "."
+                    : bc.upscaleState.indexOf("nicht") === 0 || bc.upscaleState.indexOf("abgeschaltet") === 0 ? "KI-Upscaling " + bc.upscaleState + "."
+                    : bc.slow ? "Zu viel Rechenlast für " + bc.budgetMs.toFixed(1) + " ms pro Bild – "
+                                + (bc.upscale === "beste" ? "„Schnell“ wählen" : "Upscaling ausschalten")
+                                + ", damit Spiel und Stream flüssig bleiben."
+                    : ""
+                visible: msg !== ""
+                text: msg
+                color: bc.slow ? Theme.flame : Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+            }
             Text {
                 width: parent.width
                 wrapMode: Text.WordWrap
-                visible: bc.camera
+                visible: bc.camera && !upWarn.visible
                 text: "In Discord, Teams, Zoom oder OBS die Kamera „Creative Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
@@ -286,6 +344,7 @@ Window {
     component InfoRow: Item {
         property string label
         property string value
+        property color valueColor: Theme.text
         width: parent ? parent.width : 300
         height: 22
         Text { text: parent.label; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
@@ -295,7 +354,7 @@ Window {
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideLeft
             text: parent.value
-            color: Theme.text
+            color: parent.valueColor
             font.family: Theme.fontFamily
             font.pixelSize: 12
         }
