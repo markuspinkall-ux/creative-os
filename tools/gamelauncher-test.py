@@ -144,15 +144,18 @@ def photos():
                PYTHONPATH=f"{ROOT / 'gamelauncher'}:{ROOT / 'shell'}")
     rc = 0
     for design in ("graphit", "porzellan"):
-        conf = HOME / f"conf-{design}"
-        (conf / "creative-os").mkdir(parents=True, exist_ok=True)
-        (conf / "creative-os/look.conf").write_text(f"[Look]\ndesign={design}\naccent=blau\n")
-        env["XDG_CONFIG_HOME"] = str(conf)
-        r = subprocess.run([sys.executable, "-m", "creative_gamelauncher", "--foto", str(OUT / f"launcher-{design}.png")],
-                           env=env, capture_output=True, text=True, timeout=120)
-        print(r.stdout[-3000:], r.stderr[-3000:])
-        if "QML:" in r.stdout or r.returncode != 0 or not (OUT / f"launcher-{design}.png").is_file():
-            rc = 1
+        for view in ("kacheln", "liste"):
+            conf = HOME / f"conf-{design}-{view}"
+            (conf / "creative-os").mkdir(parents=True, exist_ok=True)
+            (conf / "creative-os/look.conf").write_text(f"[Look]\ndesign={design}\naccent=blau\n")
+            (conf / "creative-os/gamelauncher-ansicht.conf").write_text(f"[Ansicht]\nview={view}\n")
+            env["XDG_CONFIG_HOME"] = str(conf)
+            name = f"launcher-{design}" + ("" if view == "kacheln" else "-liste") + ".png"
+            r = subprocess.run([sys.executable, "-m", "creative_gamelauncher", "--foto", str(OUT / name)],
+                               env=env, capture_output=True, text=True, timeout=120)
+            print(r.stdout[-3000:], r.stderr[-3000:])
+            if "QML:" in r.stdout or r.returncode != 0 or not (OUT / name).is_file():
+                rc = 1
     return rc
 
 

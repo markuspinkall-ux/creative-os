@@ -18,14 +18,16 @@
       "Creative Engine hat ein neues Symbol im Stil aller Creative-Apps (Graphit- und Porzellan-Kachel)",
       "Creative Widgets listet jetzt alle Widgets, auch den Musik-Visualizer",
       "Rechtsklick auf den Schreibtisch aufgeräumt: Widgets (Ablage, Wetter, RSS, KI-Helfer, Leistungsanzeige, Musik-Visualizer) schaltest du jetzt in Creative Widgets oder in Systemsteuerung › Darstellung ein und aus",
-      "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets"
+      "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets",
+      "Game Launcher: viel größere Kacheln – und wahlweise eine Listenansicht mit Cover, Spielzeit und Größe (umschalten oben rechts, mit der View-Taste am Controller oder „V“)"
     ],
     "behoben": [
       "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos",
       "Neue Dateien auf dem Schreibtisch (z. B. Downloads) liegen nicht mehr unter oder über Widgets, sondern suchen sich den nächsten freien Platz daneben, darunter oder darüber – auch wenn ein Widget verschoben wird",
       "Beim Ziehen einer Datei blieb ein Datei-Symbol (z. B. „JPEG“) auf dem Schreibtisch stehen, auch nachdem die Datei gelöscht war",
       "Systemsteuerung › Updates zeigt den Fortschritt wieder an, wenn sie während eines Downloads geschlossen und neu geöffnet wird – das Update lädt im Hintergrund weiter",
-      "Game Launcher fehlte im Startmenü und in der Suche – er steht jetzt unter „G“ im Startmenü"
+      "Game Launcher fehlte im Startmenü und in der Suche – er steht jetzt unter „G“ im Startmenü",
+      "Game Launcher öffnet sich jetzt zuverlässig auf dem Hauptbildschirm aus den Bildschirm-Einstellungen (vorher konnte er auf einem anderen Monitor landen)"
     ]
   },
   {

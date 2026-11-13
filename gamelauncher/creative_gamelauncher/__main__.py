@@ -6,8 +6,13 @@
   creative-gamelauncher --selftest   ohne Bildschirm laden und Warnungen melden
 """
 
+import json
+import os
+import re
 import signal
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 for _p in (Path(__file__).resolve().parent.parent.parent / "shell", Path("/usr/lib/creative-shell")):
@@ -21,6 +26,58 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
+
+
+def primary_output():
+    """Name des Hauptbildschirms, wie in den Bildschirm-Einstellungen festgelegt (Priorität 1).
+    Qt kennt unter Wayland nur den „ersten“ Bildschirm – der ist oft nicht der Hauptbildschirm."""
+    try:
+        raw = subprocess.run(["kscreen-doctor", "-j"], capture_output=True, text=True, timeout=3).stdout
+        data = json.loads(raw[raw.index("{"):])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return ""
+    outs = [o for o in data.get("outputs", []) if o.get("enabled", True) and o.get("connected", True)]
+    outs.sort(key=lambda o: int(o.get("priority", 99) or 99))
+    return outs[0].get("name", "") if outs else ""
+
+
+def kwin_to_output(name):
+    """KWin bitten, dieses Fenster auf den Bildschirm `name` zu legen und ins Vollbild zu schalten
+    (unter Wayland darf ein Programm das nicht selbst)."""
+    if not name:
+        return
+    code = (
+        f"const target = workspace.screens.find(o => o.name === {json.dumps(name)});\n"
+        "for (const w of workspace.windowList()) {\n"
+        f"    if (w.pid !== {os.getpid()} || !w.normalWindow) continue;\n"
+        "    if (target && w.output !== target) workspace.sendClientToScreen(w, target);\n"
+        "    w.fullScreen = true;\n"
+        "    workspace.activeWindow = w;\n"
+        "}\n"
+    )
+    script = Path(tempfile.gettempdir()) / f"creative-gamelauncher-{os.getpid()}.js"
+    plugin = f"creative-gamelauncher-{os.getpid()}"
+    call = ["gdbus", "call", "--session", "--dest", "org.kde.KWin"]
+    try:
+        script.write_text(code, encoding="utf-8")
+        out = subprocess.run(call + ["--object-path", "/Scripting", "--method",
+                                     "org.kde.kwin.Scripting.loadScript", str(script), plugin],
+                             capture_output=True, text=True, timeout=3).stdout
+        m = re.search(r"\((-?\d+),?\)", out)
+        if m and int(m.group(1)) >= 0:
+            subprocess.run(call + ["--object-path", f"/Scripting/Script{m.group(1)}", "--method",
+                                   "org.kde.kwin.Script.run"], capture_output=True, timeout=3)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    finally:
+        def cleanup():
+            subprocess.run(call + ["--object-path", "/Scripting", "--method",
+                                   "org.kde.kwin.Scripting.unloadScript", plugin], capture_output=True, timeout=3)
+            try:
+                script.unlink()
+            except OSError:
+                pass
+        QTimer.singleShot(2000, cleanup)
 
 
 def main():
@@ -60,8 +117,9 @@ def main():
         QTimer.singleShot(1500, done)
         return app.exec()
 
-    # Nur auf dem Hauptbildschirm, im Vollbild
-    screen = app.primaryScreen()
+    # Nur auf dem Hauptbildschirm (wie in den Bildschirm-Einstellungen festgelegt), im Vollbild
+    main_output = "" if "--foto" in sys.argv else primary_output()
+    screen = next((sc for sc in app.screens() if sc.name() == main_output), None) or app.primaryScreen()
     if screen is not None:
         win.setScreen(screen)
         win.setGeometry(screen.geometry())
@@ -70,6 +128,9 @@ def main():
         win.show()
     else:
         win.showFullScreen()
+        # Sicherheitshalber KWin den Bildschirm vorgeben (einmal sofort, einmal nach dem Aufbau)
+        QTimer.singleShot(300, lambda: kwin_to_output(screen.name() if screen else main_output))
+        QTimer.singleShot(1500, lambda: kwin_to_output(screen.name() if screen else main_output))
 
     if "--foto" in sys.argv:
         target = sys.argv[sys.argv.index("--foto") + 1]
