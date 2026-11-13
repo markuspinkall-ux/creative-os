@@ -135,45 +135,6 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
     echo "--- Zweitkonto-Journal (ohne MESA/Portal):"; grep -vE "MESA|portal|Theme parsing" "$W/frau-journal.log" | tail -120
     echo "--- Sitzungsprotokoll (Ausgabe der Shell):"
     $SSH "$R sh -c 'tail -150 ~frau/.local/share/sddm/wayland-session.log 2>&1; ls -la ~frau/.local/share/sddm 2>&1'" 2>&1 | grep -vE "MESA|portal" | tail -150
-    echo "--- KWin-Fenster (Zweitkonto):"
-    cat > "$W/kwin-frau.sh" <<'SH'
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
-id=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting --method org.kde.kwin.Scripting.loadScript /tmp/dump.js mmf | grep -o "[0-9]\+" | head -1)
-gdbus call --session --dest org.kde.KWin --object-path /Scripting/Script$id --method org.kde.kwin.Script.run >/dev/null
-sleep 2
-journalctl --user -b --no-pager 2>/dev/null | grep -o "CREATIVE-MM.*" | sort -u | head -40
-SH
-    scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/kwin-frau.sh" tester@127.0.0.1:/tmp/kwin-frau.sh
-    $SSH "chmod 644 /tmp/dump.js /tmp/kwin-frau.sh; $R sudo -u frau sh /tmp/kwin-frau.sh; $R journalctl -b --no-pager _UID=\$(id -u frau) | grep -o 'CREATIVE-MM.*' | sort -u | head -40" 2>&1 | tail -40
-    # Willkommen schließen: ist darunter der Schreibtisch?
-    $SSH "$R pkill -u frau -f creative_welcome" 2>&1 | tail -1
-    sleep 5
-    shot desktop-frau-ohne-willkommen
-    # Shell des Zweitkontos mit Protokoll neu starten: wo hängt sie?
-    cat > "$W/shell-frau.sh" <<'SH'
-#!/bin/sh
-spid=$(pgrep -u frau -f "python3 -m creative_shell" | head -1)
-echo "Shell-PID $spid"
-for t in /proc/$spid/task/*; do printf '%s %s %s\n' "$(basename $t)" "$(cat $t/comm)" "$(cat $t/wchan 2>/dev/null)"; done | head -20
-# Python 3.14: Stapel aller Threads im laufenden Prozess ausgeben (PEP 768)
-cat > /tmp/stapel.py <<'PY'
-import faulthandler, sys, threading, traceback
-with open("/tmp/frau-stapel.txt", "w") as f:
-    for tid, frame in sys._current_frames().items():
-        f.write(f"--- Thread {tid}\n")
-        traceback.print_stack(frame, file=f)
-PY
-chmod 644 /tmp/stapel.py
-python3 -c "import sys; sys.remote_exec($spid, '/tmp/stapel.py')" && echo "remote_exec gesendet"
-sleep 8
-cat /tmp/frau-stapel.txt 2>&1 | tail -120
-echo "--- py-spy:"
-python3 -m venv /tmp/ps >/dev/null 2>&1 && /tmp/ps/bin/pip -q install py-spy >/dev/null 2>&1 && /tmp/ps/bin/py-spy dump --pid $spid 2>&1 | head -150
-SH
-    scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/shell-frau.sh" tester@127.0.0.1:/tmp/shell-frau.sh
-    echo "--- Shell des Zweitkontos (Diagnose):"
-    $SSH "$R sh /tmp/shell-frau.sh" 2>&1 | grep -v "password for" | tail -250
-    $SSH "$R sh -c 'for p in \$(pgrep -u frau -f creative-shell-supervisor); do kill -CONT \$p; done'" 2>&1 | tail -1
     fshell=$($SSH "pgrep -u frau -f 'python3 -m creative_shell' | head -1")
     fwelcome=$($SSH "pgrep -u frau -f creative_welcome | head -1")
     echo "Zweitkonto: Oberfläche ${fshell:-läuft NICHT} · Willkommen ${fwelcome:+läuft (soll nicht)}"

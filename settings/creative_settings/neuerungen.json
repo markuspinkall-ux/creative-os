@@ -41,7 +41,8 @@
       "Benutzerkonten: Die Schalter „Kein Passwort?“ und „Administrator?“ hatten keine Beschriftung",
       "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
       "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab",
-      "Bluetooth einschalten: kein roher Fehlertext mehr („PowerState: off-enabling“) – braucht der Adapter einen Moment, wird automatisch erneut versucht"
+      "Bluetooth einschalten: kein roher Fehlertext mehr („PowerState: off-enabling“) – braucht der Adapter einen Moment, wird automatisch erneut versucht",
+      "Anmeldebildschirm: konnte seine Einstellungen nicht lesen (Fedora überschrieb sie) – helles Design, Server-Modus-Anzeige und Konten ohne Passwort werden jetzt erkannt"
     ]
   },
   {
