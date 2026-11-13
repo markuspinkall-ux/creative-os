@@ -32,7 +32,7 @@ jobs:
           QT_QUICK_BACKEND: software
         run: |
           mkdir -p fotos
-          H=$(mktemp -d); mkdir -p "$H/Schreibtisch" "$H/.config/creative-os"
+          H=$(mktemp -d); mkdir -p "$H/Schreibtisch" "$H/.config/creative-os"; ln -s Schreibtisch "$H/Desktop"
           for n in Urlaub.jpg Rechnung.pdf Notizen.txt Lied.mp3 Video.mp4 Tabelle.ods Foto2.png Foto3.png Bericht.odt Archiv.zip Skript.sh; do echo x > "$H/Schreibtisch/$n"; done
           mkdir "$H/Schreibtisch/Projekte"
           cat > "$H/.config/creative-os/shell.json" <<'JSON'
