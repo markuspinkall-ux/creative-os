@@ -4,17 +4,26 @@
 #   Modelle:    ~/.local/share/creative-3d/modelle  (≈ 4 GB: TRELLIS, DINOv2, Hintergrund-Entfernung)
 #   Markierung: ~/.local/share/creative-3d/trellis-ready
 # Ausgabe: Zeilen „STEP <n> <gesamt> <text>“ für die Fortschrittsanzeige.
-#   creative3d-setup              einrichten / reparieren
-#   creative3d-setup --entfernen  alles wieder löschen
+#   creative3d-setup                     TRELLIS einrichten / reparieren
+#   creative3d-setup --modell trellis2   TRELLIS.2 einrichten (größer, braucht HF-Schlüssel für DINOv3)
+#   creative3d-setup --entfernen         alles wieder löschen
 set -eu
 DATA="${CREATIVE3D_HOME:-$HOME/.local/share/creative-3d}"
-IMAGE="${CREATIVE3D_IMAGE:-ghcr.io/markuspinkall-ux/creative-trellis:latest}"
+MODELL=trellis
+if [ "${1:-}" = "--modell" ]; then MODELL="${2:-trellis}"; shift 2; fi
+if [ "$MODELL" = trellis2 ]; then
+    IMAGE="${CREATIVE3D_IMAGE2:-ghcr.io/markuspinkall-ux/creative-trellis2:latest}"
+    NAME="TRELLIS.2"; MARK="$DATA/trellis2-ready"; NEED_GB=50; MODEL_GB=13
+else
+    IMAGE="${CREATIVE3D_IMAGE:-ghcr.io/markuspinkall-ux/creative-trellis:latest}"
+    NAME="TRELLIS"; MARK="$DATA/trellis-ready"; NEED_GB=32; MODEL_GB=4
+fi
 TOTAL=5
 step() { echo "STEP $1 $TOTAL $2"; }
 fail() { echo "FEHLER: $*"; exit 1; }
 
 if [ "${1:-}" = "--entfernen" ]; then
-    podman rmi -f "$IMAGE" >/dev/null 2>&1 || true
+    podman rmi -f ghcr.io/markuspinkall-ux/creative-trellis:latest ghcr.io/markuspinkall-ux/creative-trellis2:latest >/dev/null 2>&1 || true
     rm -rf "$DATA"
     echo "Creative-3D-KI entfernt."
     exit 0
@@ -25,7 +34,7 @@ if [ -z "${CREATIVE_WACH:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 && 
     export CREATIVE_WACH=1
     exec systemd-inhibit --what=idle --mode=block --who="Creative 3D" --why="KI wird eingerichtet" "$0" "$@"
 fi
-rm -f "$DATA/trellis-ready" "$DATA/ready"
+rm -f "$MARK" "$DATA/ready"
 
 # Reste der früheren TripoSR-Einrichtung (≈ 5 GB) aufräumen
 for old in venv TripoSR hf u2net bin python cache; do
@@ -57,14 +66,14 @@ podman_ok
 store="$HOME/.local/share/containers"
 mkdir -p "$store"
 free_gb=$(df -Pk "$store" | awk 'NR==2 {print int($4/1024/1024)}')
-if podman image exists "$IMAGE" 2>/dev/null; then need=6; else need=${CREATIVE3D_MIN_GB:-32}; fi
+if podman image exists "$IMAGE" 2>/dev/null; then need=$((MODEL_GB + 2)); else need=${CREATIVE3D_MIN_GB:-$NEED_GB}; fi
 [ "${free_gb:-0}" -lt "$need" ] && fail "Zu wenig Speicherplatz: frei sind ${free_gb} GB, gebraucht werden etwa ${need} GB. Bitte Platz schaffen (z. B. Papierkorb leeren) und erneut versuchen."
 echo "Freier Speicher: ${free_gb} GB"
 if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
     fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Creative OS aktualisieren und neu starten."
 fi
 
-step 3 "Lade den TRELLIS-Container (≈ 14 GB, das dauert eine Weile) …"
+step 3 "Lade den $NAME-Container (≈ 14–18 GB, das dauert eine Weile) …"
 # Bis zu drei Versuche – bereits geladene Teile bleiben erhalten
 log="$DATA/laden.log"
 ok=0
@@ -80,28 +89,48 @@ for try in 1 2 3; do
     if grep -q 'fatal error\|SIGSEGV\|unexpected fault' "$log"; then podman_ok; fi
     grep -qi 'no space left' "$log" && fail "Der Speicherplatz ist beim Entpacken ausgegangen. Bitte Platz schaffen und erneut versuchen."
 done
-[ "$ok" = 1 ] || fail "Der TRELLIS-Container ließ sich nicht laden (Details: $log)."
-podman image exists "$IMAGE" 2>/dev/null || { podman_ok; fail "Der TRELLIS-Container fehlt nach dem Laden."; }
+[ "$ok" = 1 ] || fail "Der $NAME-Container ließ sich nicht laden (Details: $log)."
+podman image exists "$IMAGE" 2>/dev/null || { podman_ok; fail "Der $NAME-Container fehlt nach dem Laden."; }
 
 step 4 "Teste die Grafikkarte im Container …"
 podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entrypoint python3 "$IMAGE" -c \
     "import torch; assert torch.cuda.is_available(), 'keine Grafikkarte'; print('Grafikkarte im Container:', torch.cuda.get_device_name(0))" \
     || fail "Der Container sieht die Grafikkarte nicht. Bitte neu starten und erneut versuchen."
 
-step 5 "Lade die KI-Modelle (≈ 4 GB) …"
-# DINOv2 (Bildverständnis) von Hugging Face statt von Metas Server holen – der war im
-# November 2026 wegen eines abgelaufenen Zertifikats nicht erreichbar. Klappt das nicht,
-# lädt TRELLIS es wie bisher selbst von Meta.
-HERE="$(dirname "$(readlink -f "$0")")"
-if [ -f "$HERE/dinov2_from_timm.py" ]; then
-    podman run --rm --security-opt label=disable -v "$HERE/dinov2_from_timm.py:/opt/dinov2_from_timm.py:ro" \
-        -v "$DATA/modelle:/cache" --entrypoint python3 "$IMAGE" /opt/dinov2_from_timm.py /cache/torch/hub/checkpoints \
-        || echo "Hinweis: DINOv2 von Hugging Face ging nicht – versuche es bei Meta."
+step 5 "Lade die KI-Modelle (≈ $MODEL_GB GB) …"
+if [ "$MODELL" = trellis2 ]; then
+    # DINOv3 (Meta) ist freischaltpflichtig: Schlüssel aus Creative 3D, nur für diesen Schritt
+    token_file="$DATA/hf-token"
+    [ -s "$token_file" ] || fail "Bitte zuerst deinen Hugging-Face-Schlüssel in Creative 3D eintragen."
+    HF_TOKEN="$(cat "$token_file")"
+    export HF_TOKEN
+    out="$DATA/einrichten2.log"
+    set +e
+    podman run --rm --security-opt label=disable --device nvidia.com/gpu=all -e HF_TOKEN \
+        -v "$DATA/modelle:/cache" "$IMAGE" --prepare 2>&1 | tee "$out"
+    rc=$?
+    set -e
+    unset HF_TOKEN
+    if grep -q '^ERR DINOV3_GESPERRT' "$out"; then
+        fail "DINOV3_GESPERRT Meta hat den Zugang zu DINOv3 noch nicht freigeschaltet. Sobald die Freischaltungs-Mail da ist, einfach erneut einrichten."
+    fi
+    grep -q '^OK ' "$out" || fail "Die Modelle ließen sich nicht laden (Details: $out)."
+    [ "$rc" = 0 ] || true
+else
+    # DINOv2 (Bildverständnis) von Hugging Face statt von Metas Server holen – der war im
+    # November 2026 wegen eines abgelaufenen Zertifikats nicht erreichbar. Klappt das nicht,
+    # lädt TRELLIS es wie bisher selbst von Meta.
+    HERE="$(dirname "$(readlink -f "$0")")"
+    if [ -f "$HERE/dinov2_from_timm.py" ]; then
+        podman run --rm --security-opt label=disable -v "$HERE/dinov2_from_timm.py:/opt/dinov2_from_timm.py:ro" \
+            -v "$DATA/modelle:/cache" --entrypoint python3 "$IMAGE" /opt/dinov2_from_timm.py /cache/torch/hub/checkpoints \
+            || echo "Hinweis: DINOv2 von Hugging Face ging nicht – versuche es bei Meta."
+    fi
+    # Mit Grafikkarte: TRELLIS baut beim Laden schon Teile auf der Grafikkarte auf. Ohne sie
+    # scheiterte das Laden – und wurde als irreführender „401“-Fehler von Hugging Face gemeldet.
+    podman run --rm --security-opt label=disable --device nvidia.com/gpu=all -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
+        || fail "Die Modelle ließen sich nicht laden."
 fi
-# Mit Grafikkarte: TRELLIS baut beim Laden schon Teile auf der Grafikkarte auf. Ohne sie
-# scheiterte das Laden – und wurde als irreführender „401“-Fehler von Hugging Face gemeldet.
-podman run --rm --security-opt label=disable --device nvidia.com/gpu=all -v "$DATA/modelle:/cache" "$IMAGE" --prepare \
-    || fail "Die Modelle ließen sich nicht laden."
 
-date +%s > "$DATA/trellis-ready"
+date +%s > "$MARK"
 echo "FERTIG"

@@ -3,7 +3,7 @@ name: Creative 3D Rechenteil prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [creative3d/trellis/run.py, creative3d/trellis/foto_projektion.py, tools/foto-projektion-test.py, .github/workflows/3d-rechenteil.yml]
+    paths: [creative3d/trellis/run.py, creative3d/trellis/foto_projektion.py, creative3d/creative-3d, tools/c3d-vorschau.py, tools/foto-projektion-test.py, .github/workflows/3d-rechenteil.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -65,3 +65,22 @@ jobs:
         run: |
           cd fotos && git init -q -b 3d-fotos && git add . && git -c user.name=bot -c user.email=bot@localhost commit -qm fotos \
             && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" 3d-fotos
+  oberflaeche:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf install -y -q python3 python3-pyside6 python3-numpy git liberation-sans-fonts google-noto-sans-fonts >/dev/null
+      - name: Foto Einrichtung TRELLIS.2
+        env:
+          QT_QPA_PLATFORM: offscreen
+          C3D_FOTO: c3d-trellis2.png
+        run: |
+          mkdir -p fotos
+          C3D_FOTO=fotos/c3d-trellis2.png python3 tools/c3d-vorschau.py
+          C3D_MODELL=trellis C3D_FOTO=fotos/c3d-trellis.png python3 tools/c3d-vorschau.py
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b 3d-oberflaeche && git add . && git -c user.name=bot -c user.email=bot@localhost commit -qm fotos \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" 3d-oberflaeche

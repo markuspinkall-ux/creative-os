@@ -20,7 +20,8 @@ from PySide6.QtCore import (QBuffer, QByteArray, QIODevice, QProcess, QProcessEn
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
-    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout, QWidget,
+    QLineEdit, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout,
+    QWidget,
 )
 try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox
@@ -44,6 +45,11 @@ SETUP = LIB / "creative3d-setup"
 OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "creative-3d"
 IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
 IMAGE = os.environ.get("CREATIVE3D_IMAGE", "ghcr.io/markuspinkall-ux/creative-trellis:latest")
+IMAGE2 = os.environ.get("CREATIVE3D_IMAGE2", "ghcr.io/markuspinkall-ux/creative-trellis2:latest")
+MODELS = [("trellis", "TRELLIS – schnell"), ("trellis2", "TRELLIS.2 – genauer, langsamer (4 Mrd. Parameter)")]
+DINOV3_URL = "https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m"
+HF_JOIN_URL = "https://huggingface.co/join"
+HF_TOKEN_URL = "https://huggingface.co/settings/tokens"
 QUALITY = [("normal", "Normal (≈ 1–2 Min.)"), ("hoch", "Hoch – schärfere Textur (≈ 3–5 Min.)"),
            ("sehr-hoch", "Sehr hoch – 4K-Textur per KI (≈ 5–8 Min.)")]
 FORMATS = [("glb", "GLB", "Für Blender, Spiele-Engines, Web und AR – mit Textur"),
@@ -83,17 +89,23 @@ STYLE = """
 """
 
 
-def ready():
-    return (DATA / "trellis-ready").is_file()
+def ready(model="trellis"):
+    return (DATA / ("trellis2-ready" if model == "trellis2" else "trellis-ready")).is_file()
 
 
-def run_override():
+def token_file():
+    return DATA / "hf-token"
+
+
+def run_override(model="trellis"):
     """Neuere Fassung des Rechenteils aus Creative OS in den Container legen – so kommen
     Verbesserungen (z. B. „Sehr hoch“) mit dem System-Update, ohne den 14-GB-Container neu zu laden."""
     newer = LIB / "trellis-run.py"
     if not newer.is_file():
         return []
     args = ["-v", f"{newer}:/opt/creative/run.py:ro"]
+    if model == "trellis2" and (LIB / "trellis2-run2.py").is_file():
+        args += ["-v", f"{LIB / 'trellis2-run2.py'}:/opt/creative/run2.py:ro"]
     helper = LIB / "trellis-foto_projektion.py"
     if helper.is_file():
         args += ["-v", f"{helper}:/opt/creative/foto_projektion.py:ro"]
@@ -333,6 +345,19 @@ class Creative3D(QMainWindow):
         hint = QLabel("Der Hintergrund wird automatisch entfernt und das Motiv zugeschnitten.", objectName="muted")
         hint.setWordWrap(True)
         lv.addWidget(hint)
+        self.settings = QSettings("Creative OS", "Creative 3D")
+        mrow = QHBoxLayout()
+        mrow.addWidget(QLabel("Modell"))
+        self.model = QComboBox()
+        for key, label in MODELS:
+            self.model.addItem(label, key)
+        self.model.setToolTip("TRELLIS.2 ist größer und genauer, läuft auf 12 GB aber im Sparmodus und braucht "
+                              "dafür deutlich länger")
+        saved = self.settings.value("modell", "trellis")
+        self.model.setCurrentIndex(max(0, self.model.findData(saved)))
+        self.model.currentIndexChanged.connect(self.model_changed)
+        mrow.addWidget(self.model, 1)
+        lv.addLayout(mrow)
         row = QHBoxLayout()
         row.addWidget(QLabel("Qualität"))
         self.detail = QComboBox()
@@ -407,7 +432,6 @@ class Creative3D(QMainWindow):
         self.preview_stack.addWidget(self.soft)
         self.preview_stack.setCurrentWidget(self.soft if self.web_failed else self.view)
         self.stack.addWidget(self.preview_stack)
-        self.settings = QSettings("Creative OS", "Creative 3D")
         if not self.settings.value("vorschauV2", False, type=bool):
             # Früher blieb die einfache Vorschau nach einem einzigen Aussetzer dauerhaft an – einmal zurücksetzen
             self.settings.setValue("simplePreview", False)
@@ -422,16 +446,30 @@ class Creative3D(QMainWindow):
         sv = QVBoxLayout(setup)
         sv.setContentsMargins(30, 20, 30, 20)
         sv.addStretch()
-        title = QLabel("KI einmalig einrichten")
-        title.setStyleSheet("font-size:20px; font-weight:700;")
-        sv.addWidget(title)
-        text = QLabel("Creative 3D nutzt TRELLIS von Microsoft, eine frei verfügbare KI (MIT-Lizenz), die komplett "
-                      "auf deiner NVIDIA-Grafikkarte läuft – dein Bild verlässt den Rechner nicht.\n\nDafür werden "
-                      "einmalig ein fertiger TRELLIS-Container (≈ 14 GB) und die Modelle (≈ 4 GB) geladen, je nach "
-                      "Leitung 20–60 Minuten. Das System selbst bleibt unverändert; alte TripoSR-Daten werden "
-                      "dabei gelöscht.", objectName="muted")
-        text.setWordWrap(True)
-        sv.addWidget(text)
+        self.setup_title = QLabel("KI einmalig einrichten")
+        self.setup_title.setStyleSheet("font-size:20px; font-weight:700;")
+        sv.addWidget(self.setup_title)
+        self.setup_text = QLabel("", objectName="muted")
+        self.setup_text.setWordWrap(True)
+        self.setup_text.setOpenExternalLinks(True)
+        self.setup_text.setTextFormat(Qt.TextFormat.RichText)
+        sv.addWidget(self.setup_text)
+        # Nur TRELLIS.2: Hugging-Face-Schlüssel (für das freischaltpflichtige DINOv3 von Meta)
+        self.token_box = QWidget()
+        tb = QHBoxLayout(self.token_box)
+        tb.setContentsMargins(0, 6, 0, 0)
+        self.token = QLineEdit()
+        self.token.setEchoMode(QLineEdit.EchoMode.Password)
+        self.token.setPlaceholderText("Hugging-Face-Schlüssel (beginnt mit hf_)")
+        self.token.setStyleSheet("background:" + T("#232836") + "; border:1px solid " + T("rgba(255,255,255,0.08)")
+                                 + "; border-radius:10px; padding:8px 10px;")
+        try:
+            if token_file().is_file():
+                self.token.setText(token_file().read_text().strip())
+        except OSError:
+            pass
+        tb.addWidget(self.token, 1)
+        sv.addWidget(self.token_box)
         self.setup_button = QPushButton("KI einrichten", objectName="primary")
         self.setup_button.clicked.connect(self.start_setup)
         self.setup_button.setFixedWidth(200)
@@ -473,7 +511,8 @@ class Creative3D(QMainWindow):
     # ---- Zustand ------------------------------------------------------------------
     def refresh(self):
         busy = self.proc.state() != QProcess.ProcessState.NotRunning
-        is_ready = ready()
+        is_ready = ready(self.current_model())
+        self.setup_texts()
         gpu = gpu_name()
         self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte – TRELLIS braucht eine")
         self.stack.setCurrentIndex(0 if is_ready else 1)
@@ -582,19 +621,66 @@ class Creative3D(QMainWindow):
         self.refresh()
 
     # ---- KI einrichten ------------------------------------------------------------
+    def current_model(self):
+        return self.model.currentData() or "trellis"
+
+    def model_changed(self, _index):
+        self.settings.setValue("modell", self.current_model())
+        self.setup_status.setText("")
+        self.refresh()
+
+    def setup_texts(self):
+        if self.current_model() == "trellis2":
+            self.setup_title.setText("TRELLIS.2 einmalig einrichten")
+            self.setup_text.setText(
+                "TRELLIS.2 von Microsoft (MIT-Lizenz, 4 Mrd. Parameter) formt Figuren genauer, mit feineren Kanten "
+                "und Material. Es ist für 24 GB Grafikspeicher gebaut – auf deiner Karte läuft es im <b>Sparmodus</b>: "
+                "jedes Teilmodell kommt nur für seinen Schritt auf die Grafikkarte, der Rest wartet im Arbeitsspeicher. "
+                "Das dauert länger als bei TRELLIS, dein Bild verlässt den Rechner trotzdem nicht.<br><br>"
+                "Geladen werden ein Container (≈ 18 GB) und die Modelle (≈ 13 GB). Ein Bildmodell (DINOv3 von Meta) "
+                "gibt Meta nur nach Freischaltung heraus:<br>"
+                f"1. Kostenloses Konto anlegen: <a href='{HF_JOIN_URL}'>huggingface.co/join</a><br>"
+                f"2. Zugang beantragen: <a href='{DINOV3_URL}'>DINOv3 auf Hugging Face</a> – Meta schaltet von Hand frei<br>"
+                f"3. Schlüssel erstellen (Art „Read“): <a href='{HF_TOKEN_URL}'>huggingface.co/settings/tokens</a> "
+                "und unten einfügen.<br><br>Der Schlüssel bleibt auf diesem PC und wird nur zum Laden der Modelle benutzt.")
+            self.token_box.show()
+            self.setup_button.setText("TRELLIS.2 einrichten")
+        else:
+            self.setup_title.setText("KI einmalig einrichten")
+            self.setup_text.setText(
+                "Creative 3D nutzt TRELLIS von Microsoft, eine frei verfügbare KI (MIT-Lizenz), die komplett "
+                "auf deiner NVIDIA-Grafikkarte läuft – dein Bild verlässt den Rechner nicht.<br><br>Dafür werden "
+                "einmalig ein fertiger TRELLIS-Container (≈ 14 GB) und die Modelle (≈ 4 GB) geladen, je nach "
+                "Leitung 20–60 Minuten. Das System selbst bleibt unverändert.")
+            self.token_box.hide()
+            self.setup_button.setText("KI einrichten")
+
     def start_setup(self):
+        args = [str(SETUP)]
+        if self.current_model() == "trellis2":
+            key = self.token.text().strip()
+            if not key.startswith("hf_"):
+                self.setup_status.setText("Bitte zuerst deinen Hugging-Face-Schlüssel einfügen (beginnt mit hf_).")
+                return
+            DATA.mkdir(parents=True, exist_ok=True)
+            path = token_file()
+            path.touch(mode=0o600, exist_ok=True)
+            os.chmod(path, 0o600)
+            path.write_text(key + "\n")
+            args += ["--modell", "trellis2"]
         self.mode, self.error, self.buffer = "setup", "", b""
         self.log.clear()
         self.log.show()
         self.setup_progress.setValue(0)
         self.setup_progress.show()
         self.setup_status.setText("Starte …")
-        self.proc.start("sh", [str(SETUP)])
+        self.proc.start("sh", args)
         self.refresh()
 
     # ---- Figur erzeugen -----------------------------------------------------------
     def start_generate(self):
-        if not (self.image and ready()):
+        model = self.current_model()
+        if not (self.image and ready(model)):
             return
         self.counter += 1
         self.out = OUTPUT / time.strftime("%Y%m%d-%H%M%S")
@@ -611,8 +697,9 @@ class Creative3D(QMainWindow):
         args = ["run", "--rm", "--security-opt", "label=disable", "--device", "nvidia.com/gpu=all",
                 "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
                 "-v", f"{DATA / 'modelle'}:/cache", "-v", f"{self.out}:/out",
-                *run_override(),
-                IMAGE, "--image", f"/out/{copy.name}", "--out", "/out", "--quality", str(self.detail.currentData())]
+                *run_override(model),
+                IMAGE2 if model == "trellis2" else IMAGE,
+                "--image", f"/out/{copy.name}", "--out", "/out", "--quality", str(self.detail.currentData())]
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONUNBUFFERED", "1")
         self.proc.setProcessEnvironment(env)
@@ -680,8 +767,12 @@ class Creative3D(QMainWindow):
         if mode == "setup":
             ok = code == 0 and ready()
             self.setup_progress.setValue(100 if ok else self.setup_progress.value())
-            self.setup_status.setText("Fertig – Creative 3D ist bereit." if ok
-                                      else "Einrichtung fehlgeschlagen – Details siehe unten. Erneut versuchen?")
+            gated = "DINOV3_GESPERRT" in self.log.toPlainText()
+            self.setup_status.setText(
+                "Fertig – Creative 3D ist bereit." if ok else
+                "Meta hat den Zugang zu DINOv3 noch nicht freigeschaltet. Sobald die Mail von Hugging Face da ist, "
+                "einfach erneut einrichten – bereits Geladenes bleibt erhalten." if gated else
+                "Einrichtung fehlgeschlagen – Details siehe unten. Erneut versuchen?")
             if ok:
                 self.status.setText("KI bereit. Wähle links ein Bild.")
         else:
