@@ -13,6 +13,7 @@ os.environ["HOME"] = str(home)
 os.environ["XDG_CONFIG_HOME"] = str(home / ".config")
 os.environ["PATH"] = "/usr/bin:/bin"          # kein xdg-user-dir → ~/Schreibtisch
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shell"))
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 app = QGuiApplication(sys.argv)

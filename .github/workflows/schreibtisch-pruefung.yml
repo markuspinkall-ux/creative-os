@@ -25,7 +25,7 @@ jobs:
       - name: Plätze speichern (Modell)
         env:
           QT_QPA_PLATFORM: offscreen
-        run: cd shell && python3 ../tools/schreibtisch-test.py modell
+        run: python3 tools/schreibtisch-test.py modell
       - name: Shell fotografieren
         env:
           QT_QPA_PLATFORM: offscreen
