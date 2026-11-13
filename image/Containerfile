@@ -346,6 +346,10 @@ RUN dnf install -y --skip-unavailable python3-opencv python3-numpy python3-onnxr
  && curl -fsSL -o /usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx \
         https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/rvm_mobilenetv3_fp32.onnx \
  || echo "BROADCAST: MODELL ODER ONNX FEHLT"
+# KI-Upscaling der Kamera: 2xNomosUni_span_multijpg (Philip Hofmann, CC-BY-4.0), FP16 für die Grafikkarte
+RUN curl -fsSL -o /usr/share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx \
+        https://github.com/Phhofm/models/releases/download/2xNomosUni_span_multijpg/2xNomosUni_span_multijpg_fp16_opset17.onnx \
+ && echo "Creative Broadcast: Upscaling-Modell ok" || echo "BROADCAST: UPSCALING-MODELL FEHLT"
 # Rauschentfernung: DeepFilterNet als LADSPA-Filter für PipeWire (wird hier übersetzt)
 RUN dnf install -y --skip-unavailable cargo rust gcc git && dnf clean all \
  && cd /tmp && git clone -q --depth 1 https://github.com/Rikorose/DeepFilterNet \
