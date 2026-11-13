@@ -336,7 +336,7 @@ Window {
     // ---- Kachel-Band ---------------------------------------------------------------------------
     Column {
         x: win.px(64)
-        y: win.px(452)
+        y: win.px(424)
         width: parent.width - x
         spacing: win.px(14)
         visible: win.tabKey !== "shop" && !win.listMode
@@ -352,7 +352,7 @@ Window {
         ListView {
             id: tiles
             width: parent.width
-            height: win.px(530)
+            height: win.px(516)
             orientation: ListView.Horizontal
             spacing: win.px(26)
             model: win.shown
@@ -366,7 +366,7 @@ Window {
                 required property var modelData
                 required property int index
                 readonly property bool on: index === win.index
-                width: on ? win.px(346) : win.px(300)
+                width: on ? win.px(340) : win.px(296)
                 height: tiles.height
                 Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                 Rectangle {
@@ -374,7 +374,7 @@ Window {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: win.px(6)
                     width: parent.width
-                    height: tile.on ? win.px(519) : win.px(450)
+                    height: tile.on ? win.px(506) : win.px(440)
                     Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                     radius: win.px(16)
                     color: Theme.raised
