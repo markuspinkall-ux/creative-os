@@ -18,7 +18,8 @@
       "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets"
     ],
     "behoben": [
-      "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos"
+      "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos",
+      "Game Launcher fehlte im Startmenü und in der Suche – er steht jetzt unter „G“ im Startmenü"
     ]
   },
   {
