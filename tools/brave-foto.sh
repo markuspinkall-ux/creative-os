@@ -20,9 +20,20 @@ brave-browser --no-sandbox --no-first-run --disable-gpu --user-data-dir="$prof" 
     "$p1" "$p2" >/tmp/brave.log 2>&1 & bp=$!
 sleep 12
 import -window root "$out/brave-ruhe.png"
-# Maus über den ersten (inaktiven) Tab
+# Maus über den aktiven, dann über den inaktiven Tab
 xdotool mousemove 120 20; sleep 3
+import -window root "$out/brave-hover-aktiv.png"
+xdotool mousemove 360 20; sleep 3
 import -window root "$out/brave-hover.png"
 convert "$out/brave-hover.png" -crop 640x220+0+0 +repage "$out/brave-hover-ausschnitt.png"
+convert "$out/brave-hover-aktiv.png" -crop 640x220+0+0 +repage "$out/brave-hover-aktiv-ausschnitt.png"
+# Wie unter KDE (Creative-Sitzung): Desktop-Kennung setzen und Brave neu starten
+kill $bp 2>/dev/null; sleep 2
+XDG_CURRENT_DESKTOP=Creative:KDE KDE_FULL_SESSION=true brave-browser --no-sandbox --no-first-run --disable-gpu --user-data-dir="$prof" --window-size=1280,800 --window-position=0,0 \
+    "$p1" "$p2" >>/tmp/brave.log 2>&1 & bp=$!
+sleep 10
+xdotool mousemove 360 20; sleep 3
+import -window root "$out/brave-kde-hover.png"
+convert "$out/brave-kde-hover.png" -crop 640x220+0+0 +repage "$out/brave-kde-hover-ausschnitt.png"
 kill $bp $xv 2>/dev/null
 tail -5 /tmp/brave.log
