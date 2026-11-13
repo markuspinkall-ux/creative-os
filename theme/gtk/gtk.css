@@ -275,3 +275,15 @@ filechooser treeview.view header button {
   border-radius: 0;
   padding: 7px 10px;
 }
+
+/* Reiter (Notebook) – Brave und Chromium nehmen diese Farbe für den hervorgehobenen Tab */
+notebook tab:checked, notebook:focus tab:checked {
+  background-color: #2b3a5a;
+  color: #ffffff;
+}
+tooltip, tooltip.background {
+  background-color: #232836;
+  color: #dce6ff;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
