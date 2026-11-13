@@ -572,7 +572,7 @@ def main():
     bus = ShellBus(shell, tasks, apps, models["session"], {
         "shelf": models["shelf"], "stats": models["desktopStats"],
         "rss": models["rssWidget"], "weather": models["weatherWidget"],
-        "extras": models["widgetExtras"], "ki": models["kiHelper"],
+        "extras": models["widgetExtras"], "ki": models["kiHelper"], "viz": models["visualizer"],
     })
     bus.register()
 
