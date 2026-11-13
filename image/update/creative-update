@@ -6,11 +6,38 @@
 #   creative-update --auto        für die automatischen Updates (Dienst)
 #   creative-update --channel     zeigt den Update-Kanal (stabil | test)
 #   sudo creative-update --channel test|stabil   Kanal wechseln (lädt die Version des Kanals)
+#   creative-update --verfolgen   laufendes Update im Terminal mitlesen (auch ohne Passwort)
+#
+# Während ein Update lädt, steht seine Ausgabe in /run/creative-update/log und
+# /run/creative-update/state („PID Art Startzeit“). So zeigt die Systemsteuerung den
+# Fortschritt auch dann, wenn sie zwischendurch geschlossen und wieder geöffnet wurde.
 #
 # Klappt der Download nicht, weil die Verbindung über IPv6 abgelehnt wird
 # (kommt in manchen Heimnetzen und VMs vor), wird IPv6 für diesen einen
 # Versuch kurz ausgeschaltet und danach wieder eingeschaltet.
 set -u
+RUN_DIR=/run/creative-update
+
+# Mitlesen: braucht keine Rechte, die Dateien sind für alle lesbar
+if [ "${1:-}" = "--verfolgen" ] || [ "${1:-}" = "--follow" ]; then
+    if [ -r "$RUN_DIR/state" ]; then
+        read -r pid art start < "$RUN_DIR/state"
+        if kill -0 "$pid" 2>/dev/null || [ -d "/proc/$pid" ]; then
+            echo "Update läuft ($art, seit $(date -d "@$start" +%H:%M) Uhr) – Strg+C beendet nur das Mitlesen."
+            echo
+            exec tail -n +1 -f --pid="$pid" "$RUN_DIR/log"
+        fi
+    fi
+    if [ -r "$RUN_DIR/log" ]; then
+        echo "Gerade läuft kein Update. Das letzte endete so:"
+        echo
+        tail -n 15 "$RUN_DIR/log"
+        [ -r "$RUN_DIR/result" ] && echo && echo "Ergebnis: $(cat "$RUN_DIR/result")"
+    else
+        echo "Seit dem letzten Neustart lief kein Update. Den Stand zeigt:  rpm-ostree status"
+    fi
+    exit 0
+fi
 
 # Solange ein Update lädt, geht der PC nicht von selbst in den Standby
 # (selbst in den Standby schicken geht weiterhin).
@@ -83,11 +110,40 @@ case "${1:-}" in
 esac
 
 log=$(mktemp)
-trap 'rm -f "$log"' EXIT
+# Nur ein Update gleichzeitig – und Fortschritt für alle lesbar ablegen
+mkdir -p "$RUN_DIR" && chmod 755 "$RUN_DIR"
+if [ "${1:-}" != "--check" ]; then
+    if [ -r "$RUN_DIR/state" ]; then
+        read -r opid _ _ < "$RUN_DIR/state"
+        if [ "$opid" != "$$" ] && [ -d "/proc/$opid" ]; then
+            echo "Es lädt bereits ein Update – mitlesen mit:  creative-update --verfolgen"
+            exit 75
+        fi
+    fi
+    live="$RUN_DIR/log"
+    : > "$live"; chmod 644 "$live"; rm -f "$RUN_DIR/result"
+    echo "$$ ${1:-update} $(date +%s)" > "$RUN_DIR/state"; chmod 644 "$RUN_DIR/state"
+    trap 'rm -f "$log" "$RUN_DIR/state"' EXIT
+else
+    live="$log"
+    trap 'rm -f "$log"' EXIT
+fi
+# Wird das Fenster geschlossen, das zuschaut, läuft das Update trotzdem weiter
+trap '' PIPE HUP
 
 attempt() {
-    rpm-ostree "${args[@]}" 2>&1 | tee "$log"
-    return "${PIPESTATUS[0]}"
+    local start
+    start=$(stat -c %s "$live" 2>/dev/null || echo 0)
+    rpm-ostree "${args[@]}" >>"$live" 2>&1 &
+    local job=$!
+    # Ausgabe live weiterreichen (an die Systemsteuerung oder das Terminal)
+    tail -c +"$((start + 1))" -f --pid="$job" "$live" 2>/dev/null &
+    local viewer=$!
+    wait "$job"
+    local rc=$?
+    wait "$viewer" 2>/dev/null
+    [ "$live" = "$log" ] || tail -c +"$((start + 1))" "$live" > "$log"
+    return "$rc"
 }
 
 attempt
@@ -104,7 +160,7 @@ if [ "$rc" -ne 0 ] && [ "$rc" -ne 77 ] && \
     fi
 fi
 if [ "$rc" -eq 0 ] && [ "${1:-}" != "--check" ] && [ "${1:-}" != "--auto" ]; then
-    echo
-    echo "Fertig. Mit einem Neustart wird das Update aktiv:  systemctl reboot"
+    { echo; echo "Fertig. Mit einem Neustart wird das Update aktiv:  systemctl reboot"; } | tee -a "$live"
 fi
+[ "${1:-}" != "--check" ] && echo "$rc" > "$RUN_DIR/result" && chmod 644 "$RUN_DIR/result"
 exit "$rc"

@@ -144,6 +144,8 @@ class SystemModel(QObject):
                      "channel": "", "rolledBack": "", "channelBusy": False,
                      "pendingChannel": "", "wantChannel": "", "progress": -1, "progressText": ""}
         self.checkStatus()
+        # Lädt schon ein Update (z. B. vor dem Schließen gestartet)? Dann Fortschritt weiter zeigen
+        QTimer.singleShot(0, self._attach_running)
 
     def _localAccounts(self):
         accounts = []
@@ -363,21 +365,84 @@ class SystemModel(QObject):
         p.finished.connect(finished)
         p.start(args[0], list(args[1:]))
 
+    def _download_done(self, code, _out, err):
+        self._upd["busy"] = False
+        if code == 75:                               # lief schon – dem laufenden Update zusehen
+            self._attach_running()
+        elif code == 0:
+            self.checkStatus()
+        elif code in (126, 127):
+            self._set_upd(state="available", text="Abgebrochen – das Update wurde nicht geladen.")
+        else:
+            detail = (err.strip().splitlines() or [""])[-1][:160]
+            self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
+                          + (f" ({detail})" if detail else ""))
+
     @Slot()
     def downloadUpdate(self):
+        if _running_update():
+            self._attach_running()
+            return
         self._set_upd(busy=True, text="Update wird heruntergeladen – du kannst normal weiterarbeiten …")
+        self._stream(self._update_cmd(), self._download_done)
 
-        def done(code, _out, err):
-            self._upd["busy"] = False
-            if code == 0:
-                self.checkStatus()
-            elif code in (126, 127):
-                self._set_upd(state="available", text="Abgebrochen – das Update wurde nicht geladen.")
-            else:
-                detail = (err.strip().splitlines() or [""])[-1][:160]
-                self._set_upd(state="error", text="Das Update konnte nicht geladen werden."
-                              + (f" ({detail})" if detail else ""))
-        self._stream(self._update_cmd(), done)
+    def _attach_running(self):
+        """Einem Update zusehen, das ohne dieses Fenster läuft (creative-update schreibt
+        seine Ausgabe nach /run/creative-update/log)."""
+        run = _running_update()
+        if not run or self._upd.get("busy") or getattr(self, "_follow", None):
+            return
+        pid, kind, started = run
+        self._set_upd(busy=True, progress=-1, progressText="Lese den Fortschritt …",
+                      text="Das automatische Update lädt gerade – du kannst normal weiterarbeiten …" if kind == "--auto"
+                      else "Update wird heruntergeladen – du kannst normal weiterarbeiten …")
+        st = {"pos": 0, "buf": "", "out": [], "progress": UpdateProgress(_load_update_history()),
+              "t0": time.monotonic() - max(0.0, time.time() - started)}
+        timer = QTimer(self)
+        timer.setInterval(1000)
+        self._follow = timer
+
+        def read_log():
+            try:
+                with open(UPDATE_RUN_DIR / "log", "rb") as fh:
+                    fh.seek(st["pos"])
+                    data = fh.read()
+                    st["pos"] = fh.tell()
+            except OSError:
+                return
+            st["buf"] += data.decode("utf-8", "replace")
+            parts = re.split(r"[\r\n]", st["buf"])
+            st["buf"] = parts.pop()
+            for line in parts:
+                if line.strip():
+                    st["out"].append(line.strip())
+                    st["progress"].feed(line.strip())
+
+        def tick():
+            read_log()
+            st["progress"].sample(time.monotonic() - st["t0"], read_rx_bytes(), read_wx_bytes())
+            if Path(f"/proc/{pid}").exists():
+                state = st["progress"].state()
+                if st["out"]:
+                    self._set_upd(progress=state["progress"], progressText=state["text"])
+                return
+            timer.stop()
+            timer.deleteLater()
+            self._follow = None
+            try:
+                code = int((UPDATE_RUN_DIR / "result").read_text().strip())
+            except (OSError, ValueError):
+                code = 0 if any("systemctl reboot" in line for line in st["out"]) else 1
+            if code == 0 and st["progress"].total:
+                st["progress"].finish(time.monotonic() - st["t0"])
+                _save_update_history(st["progress"].history())
+            self._set_upd(progress=100 if code == 0 else -1, progressText="")
+            out = "\n".join(st["out"])
+            self._download_done(code, out, out)
+
+        timer.timeout.connect(tick)
+        timer.start()
+        tick()
 
     @Slot(str)
     def setChannel(self, name):
@@ -467,6 +532,19 @@ class SystemModel(QObject):
     secureBootMessage = Property(str, lambda self: self._sb_msg, notify=sbChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
     changelog = Property("QVariantList", lambda self: load_changelog(), constant=True)
+
+
+UPDATE_RUN_DIR = Path("/run/creative-update")
+
+
+def _running_update():
+    """(PID, Art, Startzeit) eines laufenden creative-update – sonst None."""
+    try:
+        pid, kind, started = (UPDATE_RUN_DIR / "state").read_text().split()[:3]
+        pid, started = int(pid), float(started)
+    except (OSError, ValueError):
+        return None
+    return (pid, kind, started) if Path(f"/proc/{pid}").exists() else None
 
 
 class PrinterListModel(QObject):

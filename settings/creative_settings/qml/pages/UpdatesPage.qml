@@ -106,6 +106,14 @@ SettingsPage {
                 font.family: Theme.fontFamily
                 font.pixelSize: 12
             }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Du kannst dieses Fenster schließen – das Update lädt weiter. Im Terminal mitlesen:  creative-update --verfolgen"
+                color: Theme.textMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+            }
         }
     }
 
