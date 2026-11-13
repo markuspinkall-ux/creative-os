@@ -85,6 +85,12 @@ Item {
     property string dragUris: ""        // text/uri-list für andere Programme (Dateien, Brave …)
     property int pendingRow: -1          // Klick auf Ausgewähltes: erst beim Loslassen nur dieses wählen
 
+    // Ziehen einer Datei beenden – auch wenn das Betriebssystem kein „fertig“ meldet
+    function endFileDrag() {
+        dragPath = ""
+        dragUris = ""
+    }
+
     // Strg = kopieren, Umschalt = verschieben, sonst gleiches Laufwerk → verschieben
     function dropMode(drop) {
         if ((drop.modifiers & Qt.ControlModifier) || drop.proposedAction === Qt.CopyAction) return "copy"
@@ -115,6 +121,7 @@ Item {
         property bool selecting: false
         anchors.fill: parent
         onPressed: (mouse) => {
+            root.endFileDrag()
             if (mouse.button !== Qt.LeftButton) return
             marquee.width = 0
             marquee.height = 0
@@ -175,8 +182,10 @@ Item {
         onEntered: (drag) => { drag.accepted = drag.formats.includes(root.iconDragFormat) || drag.hasUrls }
         onDropped: (drop) => {
             if (drop.formats.includes(root.iconDragFormat)) {
-                desktop.moveDraggedToScreen(drop.getDataAsString(root.iconDragFormat), root.screenName)
+                const c = icons.cellAt(drop.x, drop.y)
+                desktop.placeDragged(drop.getDataAsString(root.iconDragFormat), root.screenName, c[0], c[1])
                 drop.accept(Qt.MoveAction)
+                root.endFileDrag()
             } else if (drop.hasUrls) {
                 desktop.dropUrls(drop.urls, "", root.dropMode(drop))
                 drop.accept(Qt.CopyAction)   // wir erledigen das selbst – die Quelle löscht nichts
@@ -217,6 +226,7 @@ Item {
     }
 
     DesktopFeed {
+        id: feedRss
         source: rssWidget
         widgetKey: "rss"
         title: "RSS-Nachrichten"
@@ -225,6 +235,7 @@ Item {
     }
 
     DesktopFeed {
+        id: feedWeather
         source: weatherWidget
         widgetKey: "weather"
         title: "Wetter"
@@ -415,6 +426,7 @@ Item {
     }
 
     ExtraWidget {
+        id: extraClock
         key: "clock"
         visible: root.widgetOnScreen("clock") && widgetExtras.clockEnabled
         posX: widgetExtras.clockX
@@ -464,6 +476,7 @@ Item {
     }
 
     ExtraWidget {
+        id: extraTwitch
         key: "twitch"
         visible: root.widgetOnScreen("twitch") && widgetExtras.twitchEnabled
         posX: widgetExtras.twitchX
@@ -539,6 +552,7 @@ Item {
     KiChat { id: kiChat; ki: kiHelper }
 
     ExtraWidget {
+        id: extraKi
         key: "ki"
         visible: root.widgetOnScreen("ki") && kiHelper.enabled
         posX: kiHelper.posX
@@ -720,20 +734,109 @@ Item {
     }
 
     // ---- Schreibtisch-Symbole ------------------------------------------------------
-    GridView {
+    // Feste Plätze im Raster (wie bei Windows): Ein Symbol liegt dort, wo man es hingezogen hat.
+    // Neue Dateien (z. B. Downloads) suchen sich den ersten freien Platz – nie unter einem Widget.
+    Item {
         id: icons
         x: 12
         y: 12
         width: parent.width - 24
         height: parent.height - root.barSpace - 24
-        flow: GridView.FlowTopToBottom
-        cellWidth: 104
-        cellHeight: 108
-        interactive: false
-        model: desktop.screenModel(root.screenName, shell.screenNames, shell.primaryScreen)
+        readonly property int cellWidth: 104
+        readonly property int cellHeight: 108
+        readonly property int cols: Math.max(1, Math.floor(width / cellWidth))
+        readonly property int rows: Math.max(1, Math.floor(height / cellHeight))
+        property var model: desktop.screenModel(root.screenName, shell.screenNames, shell.primaryScreen)
+        readonly property int count: iconRepeater.count
+        function itemAtIndex(i) { return iconRepeater.itemAt(i) }
+        property var slots: ({})          // Pfad → [Spalte, Zeile]
 
+        // Alle Widgets auf diesem Monitor – ändert sich eins (Lage, Größe, an/aus), neu anordnen
+        readonly property var widgetItems: [feedRss, feedWeather, extraClock, extraTwitch, extraKi, statsBox, shelfBox]
+        readonly property string widgetSig: widgetItems.map(w => w && w.visible
+            ? [Math.round(w.x), Math.round(w.y), Math.round(w.width), Math.round(w.height)].join(",") : "-").join(";")
+        onWidgetSigChanged: relayoutTimer.restart()
+        onColsChanged: relayoutTimer.restart()
+        onRowsChanged: relayoutTimer.restart()
+        onCountChanged: relayoutTimer.restart()
+        Connections {
+            target: icons.model
+            function onModelReset() { relayoutTimer.restart() }
+            function onRowsInserted() { relayoutTimer.restart() }
+            function onRowsRemoved() { relayoutTimer.restart() }
+            function onLayoutChanged() { relayoutTimer.restart() }
+        }
+        Connections {
+            target: desktop
+            function onCellsChanged() { relayoutTimer.restart() }
+        }
+        Timer { id: relayoutTimer; interval: 60; onTriggered: icons.relayout() }
+        Component.onCompleted: relayoutTimer.restart()
+
+        // Zelle unter einem Punkt (Koordinaten von root)
+        function cellAt(px, py) {
+            return [Math.max(0, Math.min(cols - 1, Math.floor((px - x) / cellWidth))),
+                    Math.max(0, Math.min(rows - 1, Math.floor((py - y) / cellHeight)))]
+        }
+
+        function relayout() {
+            const taken = {}
+            const key = (c, r) => c + ":" + r
+            // Zellen unter Widgets sperren (mit etwas Abstand)
+            for (const w of widgetItems) {
+                if (!w || !w.visible) continue
+                const left = w.x - x - 6, top = w.y - y - 6
+                const right = left + w.width + 12, bottom = top + w.height + 12
+                for (let c = 0; c < cols; ++c)
+                    for (let r = 0; r < rows; ++r) {
+                        const cx = c * cellWidth, cy = r * cellHeight
+                        if (cx + cellWidth - 8 > left && cx + 8 < right && cy + cellHeight - 8 > top && cy + 8 < bottom)
+                            taken[key(c, r)] = "widget"
+                    }
+            }
+            const saved = (desktop.cells || {})[root.screenName] || {}
+            const paths = []
+            for (let i = 0; i < iconRepeater.count; ++i) {
+                const it = iconRepeater.itemAt(i)
+                if (it) paths.push(it.path)
+            }
+            const result = {}
+            // 1. Symbole mit eigenem Platz (sofern frei)
+            for (const p of paths) {
+                const c = saved[p]
+                if (c && c[0] < cols && c[1] < rows && !taken[key(c[0], c[1])]) {
+                    result[p] = [c[0], c[1]]
+                    taken[key(c[0], c[1])] = p
+                }
+            }
+            // 2. Der Rest: erster freier Platz, von oben nach unten, dann nach rechts
+            let col = 0, row = 0
+            for (const p of paths) {
+                if (result[p]) continue
+                while (col < cols && taken[key(col, row)]) {
+                    row += 1
+                    if (row >= rows) { row = 0; col += 1 }
+                }
+                if (col >= cols) { result[p] = [cols - 1, rows - 1]; continue }   // Schreibtisch voll
+                result[p] = [col, row]
+                taken[key(col, row)] = p
+            }
+            slots = result
+        }
+
+        Repeater {
+            id: iconRepeater
+            model: icons.model
         delegate: Item {
             id: cell
+            readonly property string path: model.path
+            readonly property var slot: icons.slots[model.path]
+            property url dragImage: ""
+            visible: !!slot
+            x: slot ? slot[0] * icons.cellWidth : 0
+            y: slot ? slot[1] * icons.cellHeight : 0
+            Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             width: icons.cellWidth
             height: icons.cellHeight
 
@@ -759,12 +862,19 @@ Item {
                 }
             }
             FileIcon {
+                id: cellIcon
                 y: 12
                 anchors.horizontalCenter: parent.horizontalCenter
                 size: 46
                 isDir: model.isDir
                 tint: model.tint
                 ext: model.ext
+                // Bild, das beim Ziehen am Mauszeiger hängt (das Betriebssystem zeichnet es)
+                function prepareDragImage() {
+                    if (cell.dragImage.toString() === "" && visible && width > 0)
+                        grabToImage(r => cell.dragImage = r.url, Qt.size(46, 46))
+                }
+                Component.onCompleted: Qt.callLater(prepareDragImage)
             }
             Text {
                 y: 64
@@ -800,10 +910,14 @@ Item {
                     const p = cell.mapToItem(root, mouse.x, mouse.y)
                     ghost.x = p.x - ghost.width / 2
                     ghost.y = p.y - ghost.height / 2
+                    ghost.Drag.imageSource = cell.dragImage
                     ghost.Drag.startDrag()
+                    root.endFileDrag()          // Ziehen ist vorbei (startDrag wartet bis zum Loslassen)
                 }
+                onEntered: cellIcon.prepareDragImage()
                 onPressed: (mouse) => {
                     pressPos = Qt.point(mouse.x, mouse.y)
+                    root.endFileDrag()
                     root.takeKeyboard()
                     shell.closePopups()
                     if (mouse.button === Qt.RightButton) {
@@ -826,6 +940,7 @@ Item {
             }
             Accessible.role: Accessible.ListItem
             Accessible.name: model.name
+        }
         }
     }
 
@@ -1093,8 +1208,11 @@ Item {
             : ({ [root.iconDragFormat]: root.dragPath })
         Drag.supportedActions: root.dragPath !== "" ? (Qt.MoveAction | Qt.CopyAction) : Qt.MoveAction
         Drag.proposedAction: Qt.MoveAction
-        Drag.onDragFinished: { root.dragPath = ""; root.dragUris = "" }
-        visible: root.dragPath !== "" || root.dragShelfKey !== ""
+        Drag.onDragFinished: root.endFileDrag()
+        Drag.hotSpot.x: 23
+        Drag.hotSpot.y: 23
+        // Dateien zeigt das Betriebssystem am Mauszeiger – hier nur Einträge aus der Ablage
+        visible: root.dragShelfKey !== ""
         z: 20
         width: 52; height: 52
         opacity: 0.85

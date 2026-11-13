@@ -130,6 +130,7 @@ class ScreenIcons(QSortFilterProxyModel):
 
 class DesktopModel(QAbstractListModel):
     selectionChanged = Signal()
+    cellsChanged = Signal()
     clipboardChanged = Signal()
     pasteFinished = Signal(bool)
     dropFinished = Signal(int)
@@ -152,6 +153,10 @@ class DesktopModel(QAbstractListModel):
             if isinstance(screen, str)
         }
         self._screen_models = {}
+        raw = config.load().get("desktopIconCells") or {}
+        self._cells = {scr: {p: [int(c[0]), int(c[1])] for p, c in (cells or {}).items()
+                             if isinstance(c, (list, tuple)) and len(c) == 2}
+                       for scr, cells in raw.items() if isinstance(cells, dict)}
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(self._dir))
         self._watcher.directoryChanged.connect(lambda _p: self._timer.start())
@@ -183,6 +188,7 @@ class DesktopModel(QAbstractListModel):
     def refresh(self):
         selected = {r["path"] for r in self._rows if r["selected"]}
         rows = []
+        listed = False
         try:
             with os.scandir(self._dir) as it:
                 for e in it:
@@ -199,12 +205,15 @@ class DesktopModel(QAbstractListModel):
                         ext = Path(e.name).suffix[1:5].upper()
                     rows.append({"name": e.name, "path": e.path, "isDir": is_dir, "tint": tint,
                                  "ext": ext, "selected": e.path in selected})
+            listed = True
         except OSError:
             pass
         rows.sort(key=lambda r: (not r["isDir"], r["name"].casefold()))
         self.beginResetModel()
         self._rows = rows
         self.endResetModel()
+        if listed:                     # nur bei gelesenem Ordner aufräumen
+            self._forget_missing()
         if str(self._dir) not in self._watcher.directories() and self._dir.is_dir():
             self._watcher.addPath(str(self._dir))
         self.selectionChanged.emit()
@@ -228,6 +237,47 @@ class DesktopModel(QAbstractListModel):
             self.screen_assignments = assignments
             for model in self._screen_models.values():
                 model.invalidateFilter()
+
+    # ---- Freie Plätze (wie bei Windows: Symbol dorthin ziehen, wo es liegen soll) ----
+    def _save_cells(self):
+        config.set_value("desktopIconCells", self._cells)
+        self.cellsChanged.emit()
+
+    @Slot(str, str, int, int)
+    def placeDragged(self, path, screen, col, row):
+        """Gezogenes Symbol (samt Auswahl) auf diesem Monitor an Spalte/Zeile ablegen.
+        Mehrere Symbole kommen untereinander; was dort lag, sucht sich einen freien Platz."""
+        selected = self.selectedPaths()
+        paths = [path] + [p for p in selected if p != path] if path in selected else [path]
+        present = {r["path"] for r in self._rows}
+        paths = [p for p in paths if p in present]
+        if not paths:
+            return
+        self.moveToScreen(paths, screen)
+        cells = self._cells.setdefault(screen, {})
+        for scr, other in self._cells.items():          # Platz auf anderen Monitoren vergessen
+            if scr != screen:
+                for p in paths:
+                    other.pop(p, None)
+        for i, p in enumerate(paths):
+            target = [max(0, col), max(0, row + i)]
+            for q, c in list(cells.items()):
+                if c == target and q not in paths:
+                    del cells[q]                         # verdrängtes Symbol ordnet sich neu ein
+            cells[p] = target
+        self._save_cells()
+
+    def _forget_missing(self):
+        present = {r["path"] for r in self._rows}
+        changed = False
+        for cells in self._cells.values():
+            for p in [p for p in cells if p not in present]:
+                del cells[p]
+                changed = True
+        if changed:
+            self._save_cells()
+
+    cells = Property("QVariantMap", lambda self: {k: dict(v) for k, v in self._cells.items()}, notify=cellsChanged)
 
     @Slot(str, str)
     def moveDraggedToScreen(self, path, screen):
