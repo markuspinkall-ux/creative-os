@@ -32,7 +32,7 @@
       "Game Launcher öffnet sich jetzt zuverlässig auf dem Hauptbildschirm aus den Bildschirm-Einstellungen (vorher konnte er auf einem anderen Monitor landen)",
       "Schreibtisch-Symbole lassen sich jetzt wirklich frei verschieben: Beim Ziehen zeigt ein Rahmen den Zielplatz, Widgets bleiben frei, auf einen Ordner oder die Ablage ziehen geht weiterhin – und über einem Fenster wird die Datei an das Programm übergeben",
       "Creative 3D: „TRELLIS.2 einrichten“ hat versehentlich das alte TRELLIS eingerichtet – jetzt wird wirklich TRELLIS.2 geladen. Beim ausgegrauten „3D-Figur erstellen“ steht nun dabei, was noch fehlt",
-      "Creative 3D schaltet nicht mehr von selbst auf die „Einfache Vorschau“ um, wenn die 3D-Vorschau kurz hakt oder die Grafikkarte noch rechnet – das passiert nur noch, wenn du es selbst einschaltest oder der PC gar keine 3D-Vorschau kann"
+      "Creative 3D zeigt die Figur wieder in der echten 3D-Vorschau: Die Browser-Engine hat das Laden der Figur blockiert, deshalb sprang ständig die „Einfache Vorschau“ an. Außerdem schaltet Creative 3D nicht mehr von selbst um, wenn die Vorschau kurz hakt"
     ]
   },
   {

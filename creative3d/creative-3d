@@ -143,7 +143,10 @@ def register_scheme():
     # bei Path-Syntax ist die Herkunft „opaque“ und Module/fetch werden per CORS blockiert.
     scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
     scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
-                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
+                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled
+                    # Neuere Browser-Engines laden über eigene Schemata per fetch() nur mit dieser Erlaubnis –
+                    # ohne sie konnte model-viewer die Figur nicht laden und es kam die einfache Vorschau
+                    | getattr(QWebEngineUrlScheme.Flag, "FetchApiAllowed", QWebEngineUrlScheme.Flag(0)))
     QWebEngineUrlScheme.registerScheme(scheme)
 
 
