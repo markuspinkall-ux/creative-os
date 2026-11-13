@@ -2,3 +2,4 @@ output/
 __pycache__/
 *.pyc
 *.iso
+viewer3d/model-viewer.min.js

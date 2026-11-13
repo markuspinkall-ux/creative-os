@@ -10,7 +10,8 @@
       "Anmeldebildschirm im Server-Modus mit eigenem Aufbau im Graphit- bzw. Porzellan-Look: einfarbiger Hintergrund, Server-Gehäuse mit blinkenden LEDs, Kennzeichen „SERVER-MODUS · ONLINE“ und die Adressen auf einen Blick – man sieht sofort, dass der PC als Server läuft",
       "Creative Broadcast: KI-Upscaling der Kamera auf 1080p – „Schnell“ oder „Beste Schärfe“, rechnet auf der NVIDIA-Grafikkarte und entfernt dabei auch JPEG-Klötzchen der Webcam. Die Rechenzeit pro Bild wird angezeigt, bei zu viel Last gibt es einen Hinweis",
       "Schreibtisch-Symbole lassen sich frei verschieben: einfach an die gewünschte Stelle ziehen, der Platz bleibt gespeichert – wie bei Windows",
-      "Update im Terminal mitlesen: „creative-update --verfolgen“ zeigt live, was das Update gerade tut – auch das automatische"
+      "Update im Terminal mitlesen: „creative-update --verfolgen“ zeigt live, was das Update gerade tut – auch das automatische",
+      "3D-Ansicht: GLB- und glTF-Dateien per Doppelklick ansehen wie Fotos – drehen, zoomen, mit den Pfeiltasten durch den Ordner blättern, auf Wunsch langsam drehen lassen. Steht direkt im Startmenü"
     ],
     "verbessert": [
       "Creative Broadcast nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s, z. B. 720p60) statt fest 30 – die virtuelle Kamera für OBS, Discord & Co. läuft entsprechend flüssiger. Angezeigt wird, was die Webcam liefert und was die Creative Kamera sendet",

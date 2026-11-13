@@ -1,0 +1,40 @@
+name: 3D-Ansicht prüfen
+# Selbsttest und Fotos der 3D-Ansicht (Graphit/Porzellan) mit einer Beispiel-Rakete.
+# Fotos im Branch „3d-ansicht-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [viewer3d/**, tools/glb-beispiel.py, .github/workflows/3d-ansicht-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf install -y -q --skip-unavailable python3 python3-pyside6 python3-pyside6-webengine qt6-qtwebengine mesa-dri-drivers liberation-sans-fonts git curl >/dev/null
+      - name: model-viewer holen
+        run: curl -fsSL -o viewer3d/model-viewer.min.js https://cdn.jsdelivr.net/npm/@google/model-viewer@4.1.0/dist/model-viewer.min.js
+      - name: Selbsttest
+        run: QT_QPA_PLATFORM=offscreen python3 viewer3d/creative-3dansicht --selftest
+      - name: Fotos
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
+          QTWEBENGINE_DISABLE_SANDBOX: "1"
+          V3D_WARTEN: "14000"
+        run: |
+          mkdir -p fotos m lib && cp shell/creative_shell/look.py lib/creative_look.py && python3 tools/glb-beispiel.py m/Rakete.glb && cp m/Rakete.glb m/Rakete-Kopie.glb
+          for d in graphit porzellan; do
+            H=$(mktemp -d); mkdir -p "$H/creative-os"; printf '[Look]\ndesign=%s\naccent=blau\n' "$d" > "$H/creative-os/look.conf"
+            PYTHONPATH=lib XDG_CONFIG_HOME="$H" HOME="$H" timeout 90 python3 viewer3d/creative-3dansicht --foto "fotos/3dansicht-$d.png" m/Rakete.glb 2>&1 | grep -v "^$" | tail -15 || true
+          done
+          ls -la fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b 3d-ansicht-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "3D-Ansicht ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" 3d-ansicht-fotos

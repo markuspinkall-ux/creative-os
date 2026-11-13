@@ -216,6 +216,12 @@ RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \
  && test -s /usr/lib/creative-3d/model-viewer.min.js \
  && ln -s /usr/lib/creative-3d/creative-3d /usr/bin/creative-3d \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3d --selftest
+# 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus Creative 3D)
+COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
+COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop
+COPY viewer3d/creative-3dansicht.svg /usr/share/icons/hicolor/scalable/apps/creative-3dansicht.svg
+RUN ln -s /usr/lib/creative-3dansicht/creative-3dansicht /usr/bin/creative-3dansicht \
+ && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3dansicht --selftest
 COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
@@ -428,6 +434,11 @@ RUN chmod 755 /usr/bin/creative-files \
  && cat /etc/xdg/mimeapps.list > /usr/share/creative-os/xdg/creative-mimeapps.list \
  && echo "inode/directory=creative-files.desktop" >> /usr/share/creative-os/xdg/creative-mimeapps.list \
  && echo "inode/directory=creative-files.desktop" >> /etc/xdg/mimeapps.list
+# 3D-Dateien (GLB, glTF) öffnet die 3D-Ansicht
+RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
+        printf 'model/gltf-binary=creative-3dansicht.desktop\nmodel/gltf+json=creative-3dansicht.desktop\n' >> "$f"; \
+    done \
+ && (update-desktop-database -q /usr/share/applications 2>/dev/null || true)
 
 # ---------------------------------------------------------------------------
 # 8b2) Systemsteuerung

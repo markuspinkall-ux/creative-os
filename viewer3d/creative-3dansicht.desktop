@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=3D-Ansicht
+GenericName=3D-Modelle ansehen
+Comment=GLB- und glTF-Dateien ansehen – drehen, zoomen, durchblättern
+Exec=creative-3dansicht %f
+Icon=creative-3dansicht
+Terminal=false
+Categories=Graphics;Viewer;3DGraphics;
+MimeType=model/gltf-binary;model/gltf+json;
+Keywords=3D;GLB;glTF;Modell;Figur;Betrachter;Viewer;Ansicht;
+StartupWMClass=creative-3dansicht

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Würfel zum Ansehen, darum ein Dreh-Pfeil -->
+  <path d="M32 18l12 6.8v13.6L32 45.2l-12-6.8V24.8z" fill="#dce6ff"/>
+  <path d="M20 24.8l12 6.8 12-6.8M32 31.6v13.6" fill="none" stroke="#232836" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M14.5 36a18 10 0 0 0 35 0" fill="none" stroke="#8fb3ff" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M49.5 36l-4.6-.6 2.4 4.1z" fill="#8fb3ff" stroke="#8fb3ff" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>
