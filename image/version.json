@@ -1,0 +1,8 @@
+{
+  "nummer": 1,
+  "codename": "Mighty Mercury",
+  "kurz": "mercury",
+  "naechste": ["Vivid Venus", "Easygoing Earth", "Mellow Mars", "Jolly Jupiter", "Shining Saturn",
+               "Upbeat Uranus", "Nimble Neptune", "Plucky Pluto", "Cheerful Ceres", "Eager Eris",
+               "Tenacious Titan", "Eloquent Europa", "Gallant Ganymede"]
+}

@@ -217,7 +217,7 @@ SettingsPage {
     NeuerungenDialog {
         id: news
         entries: system.changelog
-        version: u.version || ""
+        version: (system.info.release ? system.info.release.replace("Creative OS ", "") + (u.version ? " (Stand " + u.version + ")" : "") : (u.version || ""))
         Component.onCompleted: if (showNews) Qt.callLater(open)
     }
 }

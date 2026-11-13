@@ -86,6 +86,12 @@ ApplicationWindow {
                     color: Theme.text; font.pixelSize: 32; font.bold: true
                 }
                 Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: creativeRelease !== ""
+                    text: creativeRelease
+                    color: Theme.accent; font.pixelSize: 14; font.bold: true; font.letterSpacing: 1
+                }
+                Text {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
