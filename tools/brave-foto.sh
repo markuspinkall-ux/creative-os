@@ -35,5 +35,26 @@ sleep 10
 xdotool mousemove 360 20; sleep 3
 import -window root "$out/brave-kde-hover.png"
 convert "$out/brave-kde-hover.png" -crop 640x220+0+0 +repage "$out/brave-kde-hover-ausschnitt.png"
+# Variante: eigene Brave-Farbe (helleres Graphit-Blau) statt GTK – Tabs und Rechtsklick-Menü
+kill $bp 2>/dev/null; sleep 2
+python3 - "$prof/Default/Preferences" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d.setdefault("extensions", {}).setdefault("theme", {})["system_theme"] = 0
+t = d.setdefault("browser", {}).setdefault("theme", {})
+t["user_color"] = -13348737
+t["color_scheme"] = 2
+t["color_variant"] = 1
+json.dump(d, open(p, "w"))
+PY
+brave-browser --no-sandbox --no-first-run --disable-gpu --user-data-dir="$prof" --window-size=1280,800 --window-position=0,0 \\
+    "$p1" "$p2" >>/tmp/brave.log 2>&1 & bp=$!
+sleep 10
+xdotool mousemove 360 20; sleep 3
+import -window root "$out/brave-farbe-hover.png"
+convert "$out/brave-farbe-hover.png" -crop 640x220+0+0 +repage "$out/brave-farbe-hover-ausschnitt.png"
+xdotool mousemove 600 400 click 3; sleep 2
+import -window root "$out/brave-farbe-menue.png"
 kill $bp $xv 2>/dev/null
 tail -5 /tmp/brave.log
