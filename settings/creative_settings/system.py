@@ -647,7 +647,7 @@ class LookModel(QObject):
         default = _look.default_wallpaper(self._builtin.parent.parent)
         if default.exists():
             images.append({"path": "", "url": QUrl.fromLocalFile(str(default)).toString(),
-                           "label": "Planet (passt zum Design)"})
+                           "label": "Mighty Mercury (passt zum Design)"})
         home = Path.home()
         pics = home / "Bilder"
         if not pics.exists() and not pics.is_symlink():
