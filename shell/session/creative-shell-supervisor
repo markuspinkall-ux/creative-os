@@ -100,12 +100,6 @@ if command -v creative-backup >/dev/null 2>&1; then
     children="$children $!"
 fi
 
-# Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
-if command -v creative-assistant >/dev/null 2>&1; then
-    # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant
-    ( while true; do creative-assistant 2>&1 | systemd-cat -t creative-assistant; sleep 5; done ) &
-    children="$children $!"
-fi
 
 # Live-Umgebung (vom USB-Stick): statt Willkommen gleich die Creative-Installation öffnen
 if [ -e /run/creative-live ] && command -v creative-installer >/dev/null 2>&1; then

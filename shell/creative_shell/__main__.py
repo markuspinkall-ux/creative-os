@@ -29,7 +29,6 @@ from .icons import IconFiles
 from .network import NetworkModel
 from .bluetooth import BluetoothModel
 from .printers import PrinterModel
-from .assistant_client import AssistantClient
 from .session import SessionModel
 from .sni import TrayItems
 from .trash import TrashModel
@@ -49,10 +48,8 @@ POPUP_GAP = 10        # Abstand zwischen Leiste und Menü
 START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
-ASSIST_WIDTH = 320 + 8
-BUBBLE_WIDTH = 380 + 8
-POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth", "taskmenu")
-SURFACES = POPUPS + ("bubble",)
+POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu")
+SURFACES = POPUPS
 DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "ki")
 
 
@@ -306,21 +303,12 @@ class ShellController(QObject):
             elif key == "trash":
                 entry[key] = self._create(screen, "right", "TrashMenu.qml", TRASH_WIDTH,
                                           200 + POPUP_GAP, True, key)
-            elif key == "assistant":
-                entry[key] = self._create(screen, "right", "AssistantMenu.qml", ASSIST_WIDTH,
-                                          self._popup_height(screen, 620), True, key)
             elif key == "appmenu":
                 entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
                                           self._popup_height(screen, 460), True, key)
             elif key == "taskmenu":   # ganze Breite: die Karte sitzt über dem angeklickten Symbol
                 entry[key] = self._create(screen, "left", "TaskMenu.qml", screen.geometry().width(),
                                           190 + POPUP_GAP, True, key)
-            elif key == "chat":
-                entry[key] = self._create(screen, "right", "AssistantChat.qml", BUBBLE_WIDTH,
-                                          self._popup_height(screen, 560), True, key)
-            elif key == "bubble":
-                entry[key] = self._create(screen, "right", "AssistantBubble.qml", BUBBLE_WIDTH,
-                                          170 + POPUP_GAP, False, key)
         return entry[key]
 
     # ---- Für QML --------------------------------------------------------------
@@ -377,14 +365,6 @@ class ShellController(QObject):
     def toggleTrashMenu(self, name):
         self._toggle(name, "trash")
 
-    @Slot(str)
-    def toggleAssistantMenu(self, name):
-        self._toggle(name, "assistant")
-
-    @Slot(str)
-    def toggleChat(self, name):
-        self._toggle(name, "chat")
-
     @Slot(str, str)
     def toggleTrayAppMenu(self, name, item_key):
         self._tray_menu_key = item_key
@@ -406,28 +386,6 @@ class ShellController(QObject):
             self.closePopups()
         self._task_menu = dict(item, x=float(x))
         self._toggle(name, "taskmenu")
-
-    # Sprechblase des Assistenten (nimmt keinen Fokus, verschwindet von selbst)
-    def _bubble_screen(self):
-        if self._last_screen in self._surfaces:
-            return self._last_screen
-        prim = self._primary()
-        return prim if prim in self._surfaces else next(iter(self._surfaces), "")
-
-    @Slot()
-    def showBubble(self):
-        name = self._bubble_screen()
-        if self._open["assistant"] or self._open["chat"]:
-            return                        # Menü/Chat ist offen – das zeigt den Text schon
-        win = self._ensure(name, "bubble")
-        if win is not None and not _win_visible(win):
-            _win_show(win)
-
-    @Slot()
-    def hideBubble(self):
-        for entry in self._surfaces.values():
-            if entry.get("bubble") is not None and _win_visible(entry["bubble"]):
-                _win_hide(entry["bubble"])
 
     @Slot(str)
     def noteScreen(self, name):
@@ -455,10 +413,8 @@ class ShellController(QObject):
     quickPanelOpenOn = Property(str, lambda self: self._open["panel"], notify=openChanged)
     trashMenuOpenOn = Property(str, lambda self: self._open["trash"], notify=openChanged)
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
-    assistantMenuOpenOn = Property(str, lambda self: self._open["assistant"], notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
     taskMenu = Property("QVariantMap", lambda self: dict(self._task_menu), notify=openChanged)
-    chatOpenOn = Property(str, lambda self: self._open["chat"], notify=openChanged)
     screenNames = Property("QStringList", lambda self: list(self._surfaces), notify=screensChanged)
     widgetScreens = Property("QVariantMap", lambda self: self._widget_screens, notify=widgetScreensChanged)
 
@@ -519,7 +475,6 @@ def main():
         "session": SessionModel(),
         "trash": TrashModel(),
         "desktop": DesktopModel(),
-        "assistant": AssistantClient(),
         "trayApps": TrayItems(tasks),
         "desktopStats": DesktopStats(),
         "rssWidget": DesktopWidget("RSS"),
@@ -565,9 +520,6 @@ def main():
     shell.start()
     # Anmelde-Ton, sobald der Desktop gezeichnet ist (einmal pro Sitzung)
     QTimer.singleShot(1500, play_login_sound)
-    models["assistant"].spoke.connect(shell.showBubble)
-    models["assistant"].changed.connect(
-        lambda: shell.hideBubble() if models["assistant"].muted else None)
 
     # Fensterliste von KWin und Windows-Tastenkürzel über D-Bus
     bus = ShellBus(shell, tasks, apps, models["session"], {

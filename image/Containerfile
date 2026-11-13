@@ -489,12 +489,10 @@ RUN chmod 755 /usr/libexec/creative-ki-setup \
  && printf 'd /var/lib/creative-ki 0755 root root -\nd /var/lib/creative-ki/modelle 0755 root root -\n' > /usr/lib/tmpfiles.d/creative-ki.conf
 
 # ---------------------------------------------------------------------------
-# 8b4) Sprachassistent im Tray (Wetter, Timer, Musik) – Modelle laufen lokal
+# 8b4) Klang- und Medienwerkzeuge (Systemklänge, mpv)
 # ---------------------------------------------------------------------------
-RUN dnf install -y --skip-unavailable mpv espeak-ng sound-theme-freedesktop python3-pip python3-numpy \
+RUN dnf install -y --skip-unavailable mpv sound-theme-freedesktop python3-pip python3-numpy \
  && dnf clean all
-COPY assistant /tmp/creative-assistant
-RUN SKIP_DNF=1 sh /tmp/creative-assistant/install.sh && rm -rf /tmp/creative-assistant /root/.cache
 
 # Willkommens-Assistent beim ersten Start
 COPY welcome/creative_welcome /usr/lib/creative-welcome/creative_welcome
@@ -687,7 +685,6 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
         /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
-        /usr/lib/creative-shell/creative_shell/qml/surfaces/AssistantMenu.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/BluetoothMenu.qml \
         /usr/lib/creative-magazin/creative_magazin/qml/Main.qml \
         /usr/lib/creative-magazin/creative_magazin/qml/MagazinePage.qml \
