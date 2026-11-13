@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Spiele-Kacheln: die gewählte vorne, mit Start-Dreieck -->
+  <rect x="11" y="22" width="11" height="20" rx="3" fill="#dce6ff" opacity=".45"/>
+  <rect x="42" y="22" width="11" height="20" rx="3" fill="#dce6ff" opacity=".45"/>
+  <rect x="23" y="16" width="18" height="32" rx="4" fill="#8fb3ff"/>
+  <path d="M29 26.5v11l8.5-5.5z" fill="#232836"/>
+</svg>

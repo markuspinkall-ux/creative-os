@@ -308,6 +308,7 @@ RUN dnf install -y --skip-unavailable python3-evdev && dnf clean all
 COPY gamelauncher/creative_gamelauncher /usr/lib/creative-gamelauncher/creative_gamelauncher
 COPY gamelauncher/bin/creative-gamelauncher /usr/bin/creative-gamelauncher
 COPY gamelauncher/creative-gamelauncher.desktop /usr/share/applications/creative-gamelauncher.desktop
+COPY gamelauncher/creative-gamelauncher.svg /usr/share/icons/hicolor/scalable/apps/creative-gamelauncher.svg
 RUN chmod 755 /usr/bin/creative-gamelauncher
 
 # ---------------------------------------------------------------------------
