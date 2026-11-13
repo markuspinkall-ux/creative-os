@@ -66,9 +66,9 @@ ENV PYTHONPATH=/opt/trellis2 \
 
 # Schneller Import-Test (ohne Grafikkarte). FlexGEMM und damit die TRELLIS.2-Pipeline nutzen Triton,
 # das beim Import einen Grafiktreiber verlangt – die werden hier nur als vorhanden geprüft.
-RUN python3 -c "import torch, xformers, nvdiffrast.torch, cumesh, o_voxel, trimesh, transformers, importlib.util as u; \
+RUN python3 -c "import torch, xformers, nvdiffrast.torch, cumesh, trimesh, transformers, importlib.util as u; \
       from transformers import DINOv3ViTModel; \
-      assert u.find_spec('flex_gemm') and u.find_spec('trellis2.pipelines'), 'FlexGEMM/TRELLIS.2 fehlen'; \
+      assert u.find_spec('flex_gemm') and u.find_spec('o_voxel') and u.find_spec('trellis2.pipelines'), 'FlexGEMM/O-Voxel/TRELLIS.2 fehlen'; \
       print('TRELLIS.2-Bausteine ok, torch', torch.__version__)" \
  && python3 /opt/creative/run2.py --selftest
 
