@@ -536,18 +536,20 @@ COPY engine/flatpak/org.creativeos.Engine.svg /usr/share/icons/Creative/apps/sca
 RUN sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
         /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg \
         > /usr/share/icons/CreativePorzellan/apps/scalable/org.creativeos.Engine.svg
-# OBS Studio behält Namen und Original-Logo – nur auf einer Graphit-Kachel wie alle Symbole
-COPY obs/obs-icon.py /tmp/obs-icon.py
-RUN if rpm -q obs-studio >/dev/null 2>&1; then \
-      python3 /tmp/obs-icon.py /usr/share/icons/hicolor/256x256/apps/creative-obs.png \
-      && for n in com.obsproject.Studio obs obs-tray obs-tray-active; do cp /usr/share/icons/hicolor/256x256/apps/creative-obs.png /usr/share/icons/Creative/apps/scalable/$n.png; done \
-      && python3 /tmp/obs-icon.py /tmp/obs-hell.png --hell \
-      && for n in com.obsproject.Studio obs creative-obs obs-tray obs-tray-active; do cp /tmp/obs-hell.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; done \
-      ; rm -f /tmp/obs-hell.png; \
-      gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
-      gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null; \
-      gtk-update-icon-cache -q -f /usr/share/icons/CreativePorzellan 2>/dev/null; \
-    fi; rm -f /tmp/obs-icon.py
+# OBS Studio: Symbol im Creative-Stil (wie alle Apps) – ersetzt das Original überall
+# (Startmenü, Taskleiste, Tray, Titelleiste), auch bei der Flatpak-Version von OBS
+COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.svg
+RUN for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
+        rm -f /usr/share/icons/Creative/apps/scalable/$n.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; \
+        cp /usr/share/icons/hicolor/scalable/apps/creative-obs.svg /usr/share/icons/Creative/apps/scalable/$n.svg; \
+        sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
+            /usr/share/icons/hicolor/scalable/apps/creative-obs.svg \
+            > /usr/share/icons/CreativePorzellan/apps/scalable/$n.svg; \
+    done \
+ && rm -f /usr/share/icons/hicolor/256x256/apps/creative-obs.png \
+ && gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null; \
+    gtk-update-icon-cache -q -f /usr/share/icons/Creative 2>/dev/null; \
+    gtk-update-icon-cache -q -f /usr/share/icons/CreativePorzellan 2>/dev/null; true
 
 # ---------------------------------------------------------------------------
 # 8c2) Anmeldebildschirm im Graphit-Look (SDDM statt Plasma Login Manager)

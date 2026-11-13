@@ -15,7 +15,7 @@
       "Creative Engine hat ein neues Symbol im Stil aller Creative-Apps (Graphit- und Porzellan-Kachel)"
     ],
     "behoben": [
-      "OBS Studio zeigt im Tray nicht mehr sein eigenes Symbol, sondern das Creative-Symbol – die Kachel hat jetzt denselben blauen Rand wie alle anderen"
+      "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos"
     ]
   },
   {
