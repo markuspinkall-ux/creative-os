@@ -1,0 +1,402 @@
+#!/usr/bin/python3
+"""3D-Ansicht – GLB- und glTF-Dateien ansehen, so einfach wie Fotos.
+
+Doppelklick auf eine .glb-Datei öffnet sie hier: drehbar mit der Maus, Mausrad zoomt,
+Pfeiltasten blättern durch die anderen 3D-Dateien im selben Ordner.
+Angezeigt wird mit <model-viewer> (Google, Apache 2.0) in der eingebauten Browser-Engine.
+
+  creative-3dansicht [DATEI]
+  creative-3dansicht --foto BILD [DATEI]   nach dem Laden ein Bildschirmfoto speichern (Prüfung)
+  creative-3dansicht --selftest
+"""
+
+import os
+import sys
+from pathlib import Path
+
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QSettings, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeySequence, QShortcut
+from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QPushButton,
+                               QStackedWidget, QVBoxLayout, QWidget)
+
+try:  # Graphit-Dialoge von Creative OS
+    from creative_dialogs import QFileDialog  # noqa: F811
+except ImportError:
+    pass
+try:  # Graphit oder Porzellan, wie in den Einstellungen gewählt
+    from creative_look import install as _look_install, themed as T
+    _look_install()
+except ImportError:
+    def T(value):
+        return value
+
+try:
+    from PySide6.QtWebEngineCore import (QWebEnginePage, QWebEngineProfile, QWebEngineUrlRequestJob,
+                                         QWebEngineUrlScheme, QWebEngineUrlSchemeHandler)
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    WEB = True
+except ImportError:
+    WEB = False
+
+APP = "3D-Ansicht"
+TYPES = (".glb", ".gltf")
+MODEL_VIEWER = next((p for p in (Path(os.environ.get("CREATIVE_MODEL_VIEWER", "")),
+                                 Path("/usr/lib/creative-3d/model-viewer.min.js"),
+                                 Path(__file__).resolve().parent / "model-viewer.min.js") if p.is_file()), None)
+MIME = {".html": b"text/html", ".js": b"text/javascript", ".glb": b"model/gltf-binary",
+        ".gltf": b"model/gltf+json", ".bin": b"application/octet-stream", ".png": b"image/png",
+        ".jpg": b"image/jpeg", ".jpeg": b"image/jpeg", ".webp": b"image/webp", ".ktx2": b"image/ktx2"}
+
+VIEWER = """<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<style>
+  html, body { margin:0; height:100%; background:#12151b; overflow:hidden; font-family:Arial, sans-serif; }
+  model-viewer { width:100%; height:100%; --poster-color:transparent; --progress-bar-color:#8fb3ff; }
+  #msg { position:absolute; inset:0; display:none; align-items:center; justify-content:center; text-align:center;
+         color:rgba(220,230,255,0.62); font-size:15px; line-height:1.5; }
+</style>
+<script type="module" src="v3d://app/model-viewer.min.js"></script>
+</head><body>
+<model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="0.8" exposure="1.05"
+              environment-image="neutral" interaction-prompt="none" auto-rotate-delay="0"
+              rotation-per-second="18deg"></model-viewer>
+<div id="msg"></div>
+<script>
+  const mv = document.getElementById("mv"), msg = document.getElementById("msg");
+  (function () {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (!gl) { console.log("V3D:nowebgl"); return; }
+    customElements.whenDefined("model-viewer").then(() => console.log("V3D:ready"));
+  })();
+  mv.addEventListener("load", () => {
+    msg.style.display = "none";
+    const d = mv.getDimensions ? mv.getDimensions() : null;
+    console.log("V3D:loaded " + (d ? [d.x, d.y, d.z].map(v => v.toFixed(3)).join(" ") : ""));
+  });
+  mv.addEventListener("error", () => { mv.style.visibility = "hidden"; msg.style.display = "flex";
+    msg.innerHTML = "<div><b>Diese Datei lässt sich nicht anzeigen.</b><br>Ist sie beschädigt oder unvollständig?</div>";
+    console.log("V3D:error"); });
+  function show(url) { mv.style.visibility = "visible"; msg.style.display = "none"; mv.src = url; }
+  function rotate(on) { if (on) mv.setAttribute("auto-rotate", ""); else mv.removeAttribute("auto-rotate"); }
+  function reset() { mv.cameraOrbit = "0deg 75deg 105%"; mv.cameraTarget = "auto auto auto"; mv.fieldOfView = "auto";
+                     mv.jumpCameraToGoal(); }
+</script>
+</body></html>
+"""
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QWidget#bar { background:#1c2029; border-bottom:1px solid rgba(255,255,255,0.06); }
+    QLabel#name { font-size:15px; font-weight:700; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QLabel#empty { color:rgba(220,230,255,0.62); font-size:15px; }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:8px 13px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton:checked { background:#8fb3ff; color:#12151b; }
+    QPushButton:disabled { color:rgba(220,230,255,0.3); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+"""
+
+
+def human_size(n):
+    for unit in ("Bytes", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit == "Bytes" else f"{n:.1f} {unit}".replace(".", ",")
+        n /= 1024
+
+
+def siblings(path):
+    """Alle 3D-Dateien im selben Ordner, alphabetisch (zum Blättern wie bei Fotos)."""
+    try:
+        files = [p for p in path.parent.iterdir() if p.suffix.lower() in TYPES and p.is_file()]
+    except OSError:
+        return [path]
+    return sorted(files, key=lambda p: p.name.casefold()) or [path]
+
+
+def register_scheme():
+    if not WEB:
+        return
+    scheme = QWebEngineUrlScheme(b"v3d")
+    scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
+    scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
+                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
+    QWebEngineUrlScheme.registerScheme(scheme)
+
+
+if WEB:
+    class Scheme(QWebEngineUrlSchemeHandler):
+        """v3d://app/viewer.html, /model-viewer.min.js und /model/<n>/<Datei> (glTF darf
+        Nachbardateien wie .bin und Texturen aus demselben Ordner nachladen – nur von dort)."""
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.folder = None
+
+        def requestStarted(self, job):
+            path = QUrl.fromPercentEncoding(job.requestUrl().path().encode())
+            data = None
+            suffix = Path(path).suffix.lower()
+            try:
+                if path == "/viewer.html":
+                    data = T(VIEWER).encode("utf-8")
+                elif path == "/model-viewer.min.js" and MODEL_VIEWER:
+                    data = MODEL_VIEWER.read_bytes()
+                elif path.startswith("/model/") and self.folder:
+                    rel = path.split("/", 3)[3] if path.count("/") >= 3 else ""
+                    file = (self.folder / rel).resolve()
+                    if file.is_file() and file.is_relative_to(self.folder.resolve()):
+                        data = file.read_bytes()
+            except OSError:
+                data = None
+            if data is None:
+                job.fail(QWebEngineUrlRequestJob.Error.UrlNotFound)
+                return
+            buffer = QBuffer(job)
+            buffer.setData(QByteArray(data))
+            buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+            job.reply(MIME.get(suffix, b"application/octet-stream"), buffer)
+
+    class Page(QWebEnginePage):
+        message = Signal(str)
+
+        def javaScriptConsoleMessage(self, level, text, line, source):
+            if text.startswith("V3D:"):
+                self.message.emit(text[4:].strip())
+
+
+class Viewer(QMainWindow):
+    def __init__(self, web=True):
+        super().__init__()
+        self.setWindowTitle(APP)
+        self.setWindowIcon(QIcon.fromTheme("creative-3dansicht"))
+        self.resize(1180, 780)
+        self.setAcceptDrops(True)
+        self.setStyleSheet(T(STYLE))
+        self.settings = QSettings("Creative OS", APP)
+        self.files, self.index, self.counter = [], -1, 0
+        self.pending = None
+        self.web_ready = False
+
+        root = QWidget()
+        box = QVBoxLayout(root)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(0)
+        bar = QWidget(objectName="bar")
+        row = QHBoxLayout(bar)
+        row.setContentsMargins(16, 10, 16, 10)
+        row.setSpacing(8)
+        self.prev = QPushButton("‹")
+        self.prev.setToolTip("Vorherige 3D-Datei im Ordner (Pfeil links)")
+        self.next = QPushButton("›")
+        self.next.setToolTip("Nächste 3D-Datei im Ordner (Pfeil rechts)")
+        for b in (self.prev, self.next):
+            b.setFixedWidth(40)
+            row.addWidget(b)
+        names = QVBoxLayout()
+        names.setSpacing(0)
+        self.name = QLabel("Keine Datei geöffnet", objectName="name")
+        self.info = QLabel("", objectName="muted")
+        names.addWidget(self.name)
+        names.addWidget(self.info)
+        row.addSpacing(6)
+        row.addLayout(names, 1)
+        self.rotate = QPushButton("Drehen")
+        self.rotate.setCheckable(True)
+        self.rotate.setChecked(self.settings.value("drehen", True, type=bool))
+        self.rotate.setToolTip("Figur langsam drehen lassen (Leertaste)")
+        self.reset = QPushButton("Ansicht zurücksetzen")
+        self.folder = QPushButton("Im Ordner zeigen")
+        self.open = QPushButton("Öffnen …", objectName="primary")
+        for b in (self.rotate, self.reset, self.folder, self.open):
+            row.addWidget(b)
+        box.addWidget(bar)
+
+        self.stack = QStackedWidget()
+        self.empty = QLabel("Keine 3D-Datei geöffnet\n\nGLB- oder glTF-Datei hierher ziehen oder „Öffnen …“ wählen.\n"
+                            "Ziehen dreht, Mausrad zoomt, Pfeiltasten blättern.", objectName="empty")
+        self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.stack.addWidget(self.empty)
+        self.view = None
+        self.scheme = None
+        if WEB and web:
+            self.scheme = Scheme(self)
+            QWebEngineProfile.defaultProfile().installUrlSchemeHandler(b"v3d", self.scheme)
+            self.view = QWebEngineView()
+            page = Page(QWebEngineProfile.defaultProfile(), self.view)
+            page.message.connect(self.web_message)
+            self.view.setPage(page)
+            self.view.page().setBackgroundColor(QColor(T("#12151b")))
+            self.view.setUrl(QUrl("v3d://app/viewer.html"))
+            self.stack.addWidget(self.view)
+        box.addWidget(self.stack, 1)
+        self.setCentralWidget(root)
+
+        self.open.clicked.connect(self.choose)
+        self.prev.clicked.connect(lambda: self.step(-1))
+        self.next.clicked.connect(lambda: self.step(1))
+        self.rotate.toggled.connect(self.set_rotate)
+        self.reset.clicked.connect(lambda: self.js("reset()"))
+        self.folder.clicked.connect(self.show_folder)
+        for keys, fn in ((Qt.Key.Key_Left, lambda: self.step(-1)), (Qt.Key.Key_Right, lambda: self.step(1)),
+                         (Qt.Key.Key_Space, self.rotate.toggle), (Qt.Key.Key_F11, self.toggle_full),
+                         (Qt.Key.Key_Escape, self.leave_full), (QKeySequence.StandardKey.Open, self.choose)):
+            QShortcut(QKeySequence(keys), self, activated=fn)
+        self.refresh()
+
+    # ---- Dateien ----------------------------------------------------------------------
+    def load(self, path):
+        path = Path(path).expanduser()
+        if path.suffix.lower() not in TYPES or not path.is_file():
+            self.name.setText("Keine 3D-Datei")
+            self.info.setText(f"{path.name} ist keine GLB- oder glTF-Datei.")
+            return
+        self.files = siblings(path)
+        self.index = next((i for i, p in enumerate(self.files) if p == path), 0)
+        self.show_current()
+
+    def show_current(self):
+        if not (0 <= self.index < len(self.files)):
+            return
+        path = self.files[self.index]
+        self.setWindowTitle(f"{path.name} – {APP}")
+        self.name.setText(path.name)
+        try:
+            size = human_size(path.stat().st_size)
+        except OSError:
+            size = ""
+        pos = f"{self.index + 1} von {len(self.files)}" if len(self.files) > 1 else ""
+        self.info.setText(" · ".join(t for t in (size, pos) if t))
+        if self.view is not None:
+            self.stack.setCurrentWidget(self.view)
+            self.scheme.folder = path.parent
+            self.counter += 1
+            url = f"v3d://app/model/{self.counter}/" + QUrl.toPercentEncoding(path.name).data().decode()
+            self.pending = url
+            if self.web_ready:
+                self.js(f"show({url!r})")
+        self.refresh()
+
+    def step(self, delta):
+        if len(self.files) > 1:
+            self.index = (self.index + delta) % len(self.files)
+            self.show_current()
+
+    def choose(self):
+        start = str(self.files[self.index].parent) if self.files else str(Path.home())
+        path, _ = QFileDialog.getOpenFileName(self, "3D-Datei öffnen", start, "3D-Modelle (*.glb *.gltf)")
+        if path:
+            self.load(path)
+
+    def show_folder(self):
+        if self.files:
+            path = self.files[self.index]
+            if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent))):
+                pass
+
+    def refresh(self):
+        has = bool(self.files)
+        many = len(self.files) > 1
+        self.prev.setEnabled(many)
+        self.next.setEnabled(many)
+        for b in (self.rotate, self.reset, self.folder):
+            b.setEnabled(has)
+        if not has:
+            self.stack.setCurrentWidget(self.empty)
+
+    # ---- Anzeige -------------------------------------------------------------------------
+    def js(self, code):
+        if self.view is not None:
+            self.view.page().runJavaScript(code)
+
+    def web_message(self, text):
+        if text == "ready":
+            self.web_ready = True
+            self.set_rotate(self.rotate.isChecked())
+            if self.pending:
+                self.js(f"show({self.pending!r})")
+        elif text == "nowebgl":
+            self.info.setText("Die Grafikkarte steht der Anzeige nicht zur Verfügung – starte mit Software-Darstellung neu …")
+            self.settings.setValue("software", True)
+            self.settings.sync()
+            if not os.environ.get("V3D_SOFTGL"):
+                os.execv(sys.executable, [sys.executable, *sys.argv])
+        elif text.startswith("loaded"):
+            dims = text.split()[1:]
+            if len(dims) == 3:
+                try:
+                    x, y, z = (float(v) for v in dims)
+                    extra = f"{x:.2f} × {y:.2f} × {z:.2f} m".replace(".", ",")
+                    base = self.info.text().split(" · Größe")[0]
+                    self.info.setText(f"{base} · Größe {extra}")
+                except ValueError:
+                    pass
+
+    def set_rotate(self, on):
+        self.settings.setValue("drehen", bool(on))
+        self.js(f"rotate({'true' if on else 'false'})")
+
+    def toggle_full(self):
+        self.showNormal() if self.isFullScreen() else self.showFullScreen()
+
+    def leave_full(self):
+        if self.isFullScreen():
+            self.showNormal()
+
+    # ---- Ziehen und Ablegen ----------------------------------------------------------------
+    def dragEnterEvent(self, event):
+        if any(u.toLocalFile().lower().endswith(TYPES) for u in event.mimeData().urls()):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        for u in event.mimeData().urls():
+            if u.toLocalFile().lower().endswith(TYPES):
+                self.load(u.toLocalFile())
+                break
+
+
+def main():
+    args = [a for a in sys.argv[1:]]
+    selftest = "--selftest" in args
+    shot = None
+    if "--foto" in args:
+        i = args.index("--foto")
+        shot = args[i + 1]
+        del args[i:i + 2]
+    files = [a for a in args if not a.startswith("--")]
+    flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
+    extra = ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
+    if QSettings("Creative OS", APP).value("software", False, type=bool) or shot:
+        os.environ["V3D_SOFTGL"] = "1"
+        extra += ["--use-gl=angle", "--use-angle=swiftshader"]
+    for flag in extra:
+        if flag.split("=")[0] not in flags:
+            flags = (flags + " " + flag).strip()
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags
+    if not selftest:
+        register_scheme()
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    app = QApplication(sys.argv[:1])
+    app.setApplicationName(APP)
+    app.setDesktopFileName("creative-3dansicht")
+    window = Viewer(web=not selftest)
+    if selftest:
+        assert not window.rotate.isEnabled() and window.stack.currentWidget() is window.empty
+        assert human_size(1536) == "1,5 KB"
+        print("3D-Ansicht: Selbsttest bestanden" + ("" if MODEL_VIEWER else " (model-viewer fehlt!)"))
+        return 0 if MODEL_VIEWER else 1
+    if files:
+        window.load(files[0])
+    window.show()
+    if shot:
+        def grab():
+            window.grab().save(shot)
+            print("Foto gespeichert:", shot)
+            app.quit()
+        QTimer.singleShot(int(os.environ.get("V3D_WARTEN", "9000")), grab)
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
