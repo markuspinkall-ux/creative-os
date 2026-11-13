@@ -21,12 +21,13 @@ img.fill(Qt.GlobalColor.transparent)
 p = QPainter(img)
 p.setRenderHint(QPainter.RenderHint.Antialiasing)
 tile = QPainterPath()
-tile.addRoundedRect(QRectF(8, 8, SIZE - 16, SIZE - 16), 56, 56)
+tile.addRoundedRect(QRectF(16, 16, SIZE - 32, SIZE - 32), 64, 64)     # wie 4..60 von 64
 light = len(sys.argv) > 2 and sys.argv[2] == "--hell"     # Porzellan: helle Kachel
 p.fillPath(tile, QColor("#ffffff" if light else "#232836"))
-p.setPen(QPen(QColor(28, 36, 51, 40) if light else QColor(255, 255, 255, 30), 3))
+# Rand wie bei allen Creative-Symbolen (64er-Kachel: 2 px Akzent → hier 8 px)
+p.setPen(QPen(QColor("#3d6fe0" if light else "#8fb3ff"), 8))
 p.drawPath(tile)
-inner = QRectF(SIZE * 0.17, SIZE * 0.17, SIZE * 0.66, SIZE * 0.66)
+inner = QRectF(SIZE * 0.21, SIZE * 0.21, SIZE * 0.58, SIZE * 0.58)
 if cands:
     QSvgRenderer(cands[0]).render(p, inner)
 elif pngs:

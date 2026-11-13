@@ -1,207 +1,211 @@
 [
-  {
-    "datum": "2026-11-13",
-    "titel": "Server-Look und schärfere 3D-Figuren",
-    "neu": [
-      "Game Launcher: deine Steam-Spiele im Vollbild als Kacheln – mit dem Controller durchblättern, starten oder installieren, wie Big Picture. Passt sich Graphit und Porzellan an, läuft auf dem Hauptbildschirm und steht im Startmenü; mit ☰ geht es zurück zum Desktop",
-      "Systemsteuerung › System: „Game Launcher beim Start öffnen“ – nach der Anmeldung geht es direkt zu den Spielen",
-      "Creative 3D legt das Originalfoto auf die Vorderseite der Figur: Gesichter, Schrift und Muster werden so scharf wie im Bild – die Rückseite behält die berechnete Textur. Passt das Foto nicht genau zur Form, bleibt alles wie bisher",
-      "Anmeldebildschirm im Server-Modus mit eigenem Aufbau im Graphit- bzw. Porzellan-Look: einfarbiger Hintergrund, Server-Gehäuse mit blinkenden LEDs, Kennzeichen „SERVER-MODUS · ONLINE“ und die Adressen auf einen Blick – man sieht sofort, dass der PC als Server läuft",
-      "Creative Broadcast: KI-Upscaling der Kamera auf 1080p – „Schnell“ oder „Beste Schärfe“, rechnet auf der NVIDIA-Grafikkarte und entfernt dabei auch JPEG-Klötzchen der Webcam. Die Rechenzeit pro Bild wird angezeigt, bei zu viel Last gibt es einen Hinweis"
-    ],
-    "verbessert": [
-      "Creative Broadcast nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s, z. B. 720p60) statt fest 30 – die virtuelle Kamera für OBS, Discord & Co. läuft entsprechend flüssiger. Angezeigt wird, was die Webcam liefert und was die Creative Kamera sendet"
-    ],
-    "behoben": []
-  },
-  {
-    "datum": "2026-11-12",
-    "titel": "Creative Writer wie Word, helles Design für alle Apps und Ziehen & Ablegen",
-    "neu": [
-      "KI-Helfer als Desktop-Widget: Wissensfragen stellen („Wer war der erste Bundeskanzler?“), Dinge erklären lassen oder E-Mails formulieren – mit dem Open-Source-Modell Gemma 4, komplett auf dem eigenen PC, ohne Konto und ohne Cloud",
-      "Creative Writer im Stil von Word: Menüband, Datei-Bereich mit Vorlagen, Formatvorlagen, Inhaltsverzeichnis, Kopf- und Fußzeile mit Seitenzahlen, Zoom und Seitenansicht",
-      "Creative Writer öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown – mit Rechtschreibprüfung auf Deutsch",
-      "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
-      "Creative Software → „Eigene Apps“: die Creative Engine zum Herunterladen – Spiele per Klick bauen, mit Charakter-Editor",
-      "Systemsteuerung → Benutzerkonten: Konten hinzufügen und löschen (auf Wunsch mit Sicherung der Dateien), Passwort ändern, Konten ohne Passwort, Administrator-Rechte vergeben",
-      "Benutzerkonten ohne Passwort (nur Standardkonten) – am Anmelde- und Sperrbildschirm genügt Enter",
-      "Creative Engine: Sprechblasen-Dialoge für NPCs, freie Seiten in der Timeline mit Anzeigedauer in Sekunden und eigene Bilder oder Videos – auch im Vollbild",
-      "Creative Engine: mehrere Angriffe mit eigener Taste und Bewegung, Lebensanzeige (Herzen, Balken oder Zahl), Gegner mit Lebensbalken und eigene Grafiken für Anzeige und Sprechblasen",
-      "Creative 3D: neue Qualität „Sehr hoch“ – Textur per KI (Real-ESRGAN) auf 4096 × 4096 hochgerechnet",
-      "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
-      "Dateien: Ziehen & Ablegen – auf Ordner, in die Seitenleiste, zwischen Fenstern und in andere Programme (Strg = kopieren, Umschalt = verschieben)",
-      "Schreibtisch: Symbole auf Ordner, in „Dateien“ oder andere Programme ziehen und Dateien von außen ablegen",
-      "Taskleiste: Rechtsklick auf ein Programm → „Neues Fenster“ oder „Fenster schließen“",
-      "Installation im Graphit-Look – vom Startmenü bis „Fertig“",
-      "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
-    ],
-    "verbessert": [
-      "Helles Design „Porzellan“ jetzt auch in Art, Cut, FTP, 3D, Notes, Software, Widgets, OBS und auf der Brave-Startseite",
-      "Porzellan: Programmsymbole im Startmenü, in der Taskleiste und in den Titelleisten jetzt hell mit dunklen Strichen (eigenes Symbol-Design „Creative Porzellan“)",
-      "Creative 3D: KI-Einrichtung prüft Speicherplatz und Grafikkarte vorab, versucht das Laden bis zu dreimal und erkennt Abstürze von podman",
-      "Creative 3D: Bildverständnis (DINOv2) kommt jetzt von Hugging Face – unabhängig von Metas Download-Server",
-      "Creative 3D: Verbesserungen am Rechenteil kommen mit dem System-Update, ohne den 14-GB-Container neu zu laden",
-      "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
-      "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby",
-      "KI-Helfer: Antworten auf Wissensfragen stützen sich auf passende Wikipedia-Artikel (mit Quellen-Link); das Modell wird einmal für alle Konten geladen und gibt den Grafikspeicher nach 10 Minuten Ruhe wieder für Spiele frei",
-      "Anmeldebildschirm: Konten ohne Passwort zeigen kein Passwortfeld mehr – ein Klick auf das Profilbild (oder „Anmelden“) genügt",
-      "Neu angelegte Konten bekommen den Willkommens-Assistenten nicht mehr – das System ist ja schon eingerichtet",
-      "Tray: Programme wie Steam oder Discord lassen sich per Rechtsklick → „Beenden“ schließen (Systemprogramme, die immer laufen, ausgenommen)"
-    ],
-    "behoben": [
-      "Schwarzer Bildschirm nach der Anmeldung (vor allem bei der ersten Anmeldung neuer Konten): Die Oberfläche konnte beim Laden der App-Symbole hängen bleiben – Symbole kommen jetzt als fertige Bilddateien, Hintergrund-Ergebnisse laufen sicher über den Haupt-Thread",
-      "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
-      "Creative 3D: Die einfache Vorschau war oft dauerhaft an – jetzt startet die echte 3D-Vorschau notfalls per Software",
-      "Creative 3D und Creative Cut: aufgeklappte Auswahllisten waren durchsichtig",
-      "Benutzerkonten: Die Schalter „Kein Passwort?“ und „Administrator?“ hatten keine Beschriftung",
-      "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
-      "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab",
-      "Bluetooth einschalten: kein roher Fehlertext mehr („PowerState: off-enabling“) – braucht der Adapter einen Moment, wird automatisch erneut versucht",
-      "Anmeldebildschirm: konnte seine Einstellungen nicht lesen (Fedora überschrieb sie) – helles Design, Server-Modus-Anzeige und Konten ohne Passwort werden jetzt erkannt"
-    ]
-  },
-  {
-    "datum": "2026-11-11",
-    "titel": "Mail-Anmeldung, Restzeit beim Update und Feinschliff",
-    "neu": [
-      "Creative Mail: Anmeldung mit E-Mail-Adresse und Passwort bei Gmail, GMX, WEB.DE, T-Online, Yahoo, iCloud und anderen – ohne Google-Datei",
-      "Update-Center: Restzeit auch beim Entpacken und Einrichten, mit Schreibgeschwindigkeit der Festplatte",
-      "Anmelde-Ton, sobald der Desktop erscheint",
-      "Creative 3D: TRELLIS statt TripoSR – deutlich bessere 3D-Figuren aus Fotos"
-    ],
-    "verbessert": [
-      "Update-Center: genaue Restzeit beim Herunterladen",
-      "Claude-Fenster im Graphit-Look",
-      "OBS behält bei jedem Update sein Creative-Symbol",
-      "Der Passwortspeicher (KWallet) fragt nicht mehr nach einem eigenen Passwort"
-    ],
-    "behoben": [
-      "Update blieb scheinbar bei 92 % stehen – jetzt ist zu sehen, was passiert und wie lange es noch dauert",
-      "Creative Mail wollte eine Anmeldedatei von Google"
-    ]
-  },
-  {
-    "datum": "2026-11-10",
-    "titel": "Creative 3D, Server-Modus und Graphit überall",
-    "neu": [
-      "Creative 3D: aus einem Foto wird eine 3D-Figur, auf Wunsch mit Skelett",
-      "Server-Modus im Ein/Aus-Menü: nur „Mein Server“ bleibt online",
-      "Creative Cut: magnetische Zeitleiste, Übergänge, Looks, Tempo, Titel und Musik",
-      "Creative Art: Photoshop-Pinsel laden",
-      "Neue Creative Mail"
-    ],
-    "verbessert": [
-      "Graphit-Dialoge für alle Apps (Öffnen, Speichern, Rückfragen)",
-      "Terminal und Taskleiste im Graphit-Look",
-      "Startmenü: Graphit-Kacheln für alle Apps, FTP und Cut sichtbar",
-      "Profilbild im runden Avatar",
-      "Mein Server: echte Heimnetz-Adresse und Verbindungsprüfung",
-      "Tray zeigt die Symbole aller Hintergrund-Apps richtig"
-    ],
-    "behoben": [
-      "DuckDNS-Fehler bei „Mein Server“",
-      "Hintergrundbilder nur noch aus dem Ordner „Bilder“, nicht aus Unterordnern"
-    ]
-  },
-  {
-    "datum": "2026-11-09",
-    "titel": "Cut, FTP, Magazin und mehr",
-    "neu": [
-      "Creative Cut – Videoschnitt",
-      "Creative FTP – Dateien auf den eigenen Webspace laden",
-      "Creative Magazin – Nachrichten als Standard-App",
-      "Creative Art: Ebenenmasken, weiche Auswahl und freie Transformation",
-      "ChatGPT als offizielle OpenAI-App"
-    ],
-    "verbessert": [
-      "Creative Software: Entdecken alphabetisch in Zehnerseiten",
-      "Dateien: Kopiertes lässt sich in anderen Fenstern einfügen",
-      "Schreibtisch-Symbole lassen sich zwischen Monitoren verschieben",
-      "Google-Drive-Konten werden beim Anmelden eingebunden"
-    ],
-    "behoben": []
-  },
-  {
-    "datum": "2026-11-08",
-    "titel": "Creative Software und neue Apps",
-    "neu": [
-      "Creative Software ersetzt Discover als Software-Shop – mit eigenen Apps und Flatpak-Import",
-      "Creative Podcast",
-      "Brave-Knopf: YouTube-Videos direkt auf dem Desktop ansehen",
-      "Claude als App im Startmenü"
-    ],
-    "verbessert": [
-      "Updates laden nur noch die geänderten Teile – deutlich kleinere Downloads",
-      "Installations-ISOs werden nur noch bei Bedarf gebaut"
-    ],
-    "behoben": [
-      "MariaDB-Einrichtung brach bei der Rechtevergabe ab",
-      "Einige Creative-Apps starteten nicht aus dem Startmenü"
-    ]
-  },
-  {
-    "datum": "2026-11-07",
-    "titel": "Writer, Art und Widgets",
-    "neu": [
-      "Creative Writer – Textverarbeitung",
-      "Creative Art – Bildbearbeitung mit Ebenen",
-      "Creative Widgets mit Uhr zum Herunterladen und Twitch-Favoriten",
-      "Wikipedia-Suche und Systemlautstärke im Tray"
-    ],
-    "verbessert": [
-      "Desktop-Widgets lassen sich zwischen Monitoren verschieben",
-      "Papierkorb im Tray und in Dateien vollständig leeren",
-      "Mein Server: MariaDB lässt sich starten"
-    ],
-    "behoben": [
-      "Eingaben in den RSS- und Wetter-Widgets kamen nicht an"
-    ]
-  },
-  {
-    "datum": "2026-11-06",
-    "titel": "Widgets und OBS",
-    "neu": [
-      "Verschiebbare RSS- und Wetter-Gadgets auf dem Desktop"
-    ],
-    "verbessert": [
-      "OBS: Bildschirmaufnahme unter Wayland",
-      "Broadcast merkt sich das Mikrofon für die Rauschunterdrückung"
-    ],
-    "behoben": []
-  },
-  {
-    "datum": "2026-11-05",
-    "titel": "Google Drive und Benutzerkonten",
-    "neu": [
-      "Google Drive in Systemsteuerung und Dateien",
-      "Benutzerkonten und Desktop-Auswahl",
-      "MariaDB für „Mein Server“"
-    ],
-    "verbessert": [
-      "Capture: Wiedergabekanal wählbar"
-    ],
-    "behoben": [
-      "Ablage: App-Symbole luden manchmal nicht"
-    ]
-  },
-  {
-    "datum": "2026-11-04",
-    "titel": "Graphit-Sperrbildschirm und Laufwerke",
-    "neu": [
-      "Sperrbildschirm im Creative-Graphit-Stil",
-      "Tray: „Nicht stören“ und Bluetooth-Steuerung"
-    ],
-    "verbessert": [
-      "Laufwerke: sichere Reihenfolge beim Formatieren, ehrliche Fehlermeldungen",
-      "Datei-Dialoge anderer Programme im lesbaren Graphit-Stil",
-      "Dezente Transparenz im Terminal",
-      "Broadcast: CUDA für flüssige 30 Bilder pro Sekunde"
-    ],
-    "behoben": [
-      "Desktop fehlte nach dem Entsperren",
-      "Speicheranzeige zeigte falsche Werte",
-      "Capture nahm das Kameramikrofon statt des HDMI-Tons",
-      "Schwarze Zwischenbilder in der Broadcast-Vorschau"
-    ]
-  }
+ {
+  "datum": "2026-11-13",
+  "titel": "Server-Look und schärfere 3D-Figuren",
+  "neu": [
+   "Game Launcher: deine Steam-Spiele im Vollbild als Kacheln – mit dem Controller durchblättern, starten oder installieren, wie Big Picture. Passt sich Graphit und Porzellan an, läuft auf dem Hauptbildschirm und steht im Startmenü; mit ☰ geht es zurück zum Desktop",
+   "Systemsteuerung › System: „Game Launcher beim Start öffnen“ – nach der Anmeldung geht es direkt zu den Spielen",
+   "Creative 3D legt das Originalfoto auf die Vorderseite der Figur: Gesichter, Schrift und Muster werden so scharf wie im Bild – die Rückseite behält die berechnete Textur. Passt das Foto nicht genau zur Form, bleibt alles wie bisher",
+   "Anmeldebildschirm im Server-Modus mit eigenem Aufbau im Graphit- bzw. Porzellan-Look: einfarbiger Hintergrund, Server-Gehäuse mit blinkenden LEDs, Kennzeichen „SERVER-MODUS · ONLINE“ und die Adressen auf einen Blick – man sieht sofort, dass der PC als Server läuft",
+   "Creative Broadcast: KI-Upscaling der Kamera auf 1080p – „Schnell“ oder „Beste Schärfe“, rechnet auf der NVIDIA-Grafikkarte und entfernt dabei auch JPEG-Klötzchen der Webcam. Die Rechenzeit pro Bild wird angezeigt, bei zu viel Last gibt es einen Hinweis"
+  ],
+  "verbessert": [
+   "Creative Broadcast nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s, z. B. 720p60) statt fest 30 – die virtuelle Kamera für OBS, Discord & Co. läuft entsprechend flüssiger. Angezeigt wird, was die Webcam liefert und was die Creative Kamera sendet",
+   "„Creative Software“ heißt jetzt einfach „Software“ und steht direkt im Startmenü statt im Ordner „Creative Apps“",
+   "Creative Engine hat ein neues Symbol im Stil aller Creative-Apps (Graphit- und Porzellan-Kachel)"
+  ],
+  "behoben": [
+   "OBS Studio zeigt im Tray nicht mehr sein eigenes Symbol, sondern das Creative-Symbol – die Kachel hat jetzt denselben blauen Rand wie alle anderen"
+  ]
+ },
+ {
+  "datum": "2026-11-12",
+  "titel": "Creative Writer wie Word, helles Design für alle Apps und Ziehen & Ablegen",
+  "neu": [
+   "KI-Helfer als Desktop-Widget: Wissensfragen stellen („Wer war der erste Bundeskanzler?“), Dinge erklären lassen oder E-Mails formulieren – mit dem Open-Source-Modell Gemma 4, komplett auf dem eigenen PC, ohne Konto und ohne Cloud",
+   "Creative Writer im Stil von Word: Menüband, Datei-Bereich mit Vorlagen, Formatvorlagen, Inhaltsverzeichnis, Kopf- und Fußzeile mit Seitenzahlen, Zoom und Seitenansicht",
+   "Creative Writer öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown – mit Rechtschreibprüfung auf Deutsch",
+   "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
+   "Creative Software → „Eigene Apps“: die Creative Engine zum Herunterladen – Spiele per Klick bauen, mit Charakter-Editor",
+   "Systemsteuerung → Benutzerkonten: Konten hinzufügen und löschen (auf Wunsch mit Sicherung der Dateien), Passwort ändern, Konten ohne Passwort, Administrator-Rechte vergeben",
+   "Benutzerkonten ohne Passwort (nur Standardkonten) – am Anmelde- und Sperrbildschirm genügt Enter",
+   "Creative Engine: Sprechblasen-Dialoge für NPCs, freie Seiten in der Timeline mit Anzeigedauer in Sekunden und eigene Bilder oder Videos – auch im Vollbild",
+   "Creative Engine: mehrere Angriffe mit eigener Taste und Bewegung, Lebensanzeige (Herzen, Balken oder Zahl), Gegner mit Lebensbalken und eigene Grafiken für Anzeige und Sprechblasen",
+   "Creative 3D: neue Qualität „Sehr hoch“ – Textur per KI (Real-ESRGAN) auf 4096 × 4096 hochgerechnet",
+   "Helles Design „Porzellan“ unter Darstellung – mit Akzentfarben Blau, Grün, Orange und Lila, auch für Anmelde- und Sperrbildschirm",
+   "Dateien: Ziehen & Ablegen – auf Ordner, in die Seitenleiste, zwischen Fenstern und in andere Programme (Strg = kopieren, Umschalt = verschieben)",
+   "Schreibtisch: Symbole auf Ordner, in „Dateien“ oder andere Programme ziehen und Dateien von außen ablegen",
+   "Taskleiste: Rechtsklick auf ein Programm → „Neues Fenster“ oder „Fenster schließen“",
+   "Installation im Graphit-Look – vom Startmenü bis „Fertig“",
+   "Neuerungen erscheinen direkt hier im Update-Center statt auf GitHub"
+  ],
+  "verbessert": [
+   "Helles Design „Porzellan“ jetzt auch in Art, Cut, FTP, 3D, Notes, Software, Widgets, OBS und auf der Brave-Startseite",
+   "Porzellan: Programmsymbole im Startmenü, in der Taskleiste und in den Titelleisten jetzt hell mit dunklen Strichen (eigenes Symbol-Design „Creative Porzellan“)",
+   "Creative 3D: KI-Einrichtung prüft Speicherplatz und Grafikkarte vorab, versucht das Laden bis zu dreimal und erkennt Abstürze von podman",
+   "Creative 3D: Bildverständnis (DINOv2) kommt jetzt von Hugging Face – unabhängig von Metas Download-Server",
+   "Creative 3D: Verbesserungen am Rechenteil kommen mit dem System-Update, ohne den 14-GB-Container neu zu laden",
+   "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
+   "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby",
+   "KI-Helfer: Antworten auf Wissensfragen stützen sich auf passende Wikipedia-Artikel (mit Quellen-Link); das Modell wird einmal für alle Konten geladen und gibt den Grafikspeicher nach 10 Minuten Ruhe wieder für Spiele frei",
+   "Anmeldebildschirm: Konten ohne Passwort zeigen kein Passwortfeld mehr – ein Klick auf das Profilbild (oder „Anmelden“) genügt",
+   "Neu angelegte Konten bekommen den Willkommens-Assistenten nicht mehr – das System ist ja schon eingerichtet",
+   "Tray: Programme wie Steam oder Discord lassen sich per Rechtsklick → „Beenden“ schließen (Systemprogramme, die immer laufen, ausgenommen)"
+  ],
+  "behoben": [
+   "Schwarzer Bildschirm nach der Anmeldung (vor allem bei der ersten Anmeldung neuer Konten): Die Oberfläche konnte beim Laden der App-Symbole hängen bleiben – Symbole kommen jetzt als fertige Bilddateien, Hintergrund-Ergebnisse laufen sicher über den Haupt-Thread",
+   "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
+   "Creative 3D: Die einfache Vorschau war oft dauerhaft an – jetzt startet die echte 3D-Vorschau notfalls per Software",
+   "Creative 3D und Creative Cut: aufgeklappte Auswahllisten waren durchsichtig",
+   "Benutzerkonten: Die Schalter „Kein Passwort?“ und „Administrator?“ hatten keine Beschriftung",
+   "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
+   "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab",
+   "Bluetooth einschalten: kein roher Fehlertext mehr („PowerState: off-enabling“) – braucht der Adapter einen Moment, wird automatisch erneut versucht",
+   "Anmeldebildschirm: konnte seine Einstellungen nicht lesen (Fedora überschrieb sie) – helles Design, Server-Modus-Anzeige und Konten ohne Passwort werden jetzt erkannt"
+  ]
+ },
+ {
+  "datum": "2026-11-11",
+  "titel": "Mail-Anmeldung, Restzeit beim Update und Feinschliff",
+  "neu": [
+   "Creative Mail: Anmeldung mit E-Mail-Adresse und Passwort bei Gmail, GMX, WEB.DE, T-Online, Yahoo, iCloud und anderen – ohne Google-Datei",
+   "Update-Center: Restzeit auch beim Entpacken und Einrichten, mit Schreibgeschwindigkeit der Festplatte",
+   "Anmelde-Ton, sobald der Desktop erscheint",
+   "Creative 3D: TRELLIS statt TripoSR – deutlich bessere 3D-Figuren aus Fotos"
+  ],
+  "verbessert": [
+   "Update-Center: genaue Restzeit beim Herunterladen",
+   "Claude-Fenster im Graphit-Look",
+   "OBS behält bei jedem Update sein Creative-Symbol",
+   "Der Passwortspeicher (KWallet) fragt nicht mehr nach einem eigenen Passwort"
+  ],
+  "behoben": [
+   "Update blieb scheinbar bei 92 % stehen – jetzt ist zu sehen, was passiert und wie lange es noch dauert",
+   "Creative Mail wollte eine Anmeldedatei von Google"
+  ]
+ },
+ {
+  "datum": "2026-11-10",
+  "titel": "Creative 3D, Server-Modus und Graphit überall",
+  "neu": [
+   "Creative 3D: aus einem Foto wird eine 3D-Figur, auf Wunsch mit Skelett",
+   "Server-Modus im Ein/Aus-Menü: nur „Mein Server“ bleibt online",
+   "Creative Cut: magnetische Zeitleiste, Übergänge, Looks, Tempo, Titel und Musik",
+   "Creative Art: Photoshop-Pinsel laden",
+   "Neue Creative Mail"
+  ],
+  "verbessert": [
+   "Graphit-Dialoge für alle Apps (Öffnen, Speichern, Rückfragen)",
+   "Terminal und Taskleiste im Graphit-Look",
+   "Startmenü: Graphit-Kacheln für alle Apps, FTP und Cut sichtbar",
+   "Profilbild im runden Avatar",
+   "Mein Server: echte Heimnetz-Adresse und Verbindungsprüfung",
+   "Tray zeigt die Symbole aller Hintergrund-Apps richtig"
+  ],
+  "behoben": [
+   "DuckDNS-Fehler bei „Mein Server“",
+   "Hintergrundbilder nur noch aus dem Ordner „Bilder“, nicht aus Unterordnern"
+  ]
+ },
+ {
+  "datum": "2026-11-09",
+  "titel": "Cut, FTP, Magazin und mehr",
+  "neu": [
+   "Creative Cut – Videoschnitt",
+   "Creative FTP – Dateien auf den eigenen Webspace laden",
+   "Creative Magazin – Nachrichten als Standard-App",
+   "Creative Art: Ebenenmasken, weiche Auswahl und freie Transformation",
+   "ChatGPT als offizielle OpenAI-App"
+  ],
+  "verbessert": [
+   "Creative Software: Entdecken alphabetisch in Zehnerseiten",
+   "Dateien: Kopiertes lässt sich in anderen Fenstern einfügen",
+   "Schreibtisch-Symbole lassen sich zwischen Monitoren verschieben",
+   "Google-Drive-Konten werden beim Anmelden eingebunden"
+  ],
+  "behoben": []
+ },
+ {
+  "datum": "2026-11-08",
+  "titel": "Creative Software und neue Apps",
+  "neu": [
+   "Creative Software ersetzt Discover als Software-Shop – mit eigenen Apps und Flatpak-Import",
+   "Creative Podcast",
+   "Brave-Knopf: YouTube-Videos direkt auf dem Desktop ansehen",
+   "Claude als App im Startmenü"
+  ],
+  "verbessert": [
+   "Updates laden nur noch die geänderten Teile – deutlich kleinere Downloads",
+   "Installations-ISOs werden nur noch bei Bedarf gebaut"
+  ],
+  "behoben": [
+   "MariaDB-Einrichtung brach bei der Rechtevergabe ab",
+   "Einige Creative-Apps starteten nicht aus dem Startmenü"
+  ]
+ },
+ {
+  "datum": "2026-11-07",
+  "titel": "Writer, Art und Widgets",
+  "neu": [
+   "Creative Writer – Textverarbeitung",
+   "Creative Art – Bildbearbeitung mit Ebenen",
+   "Creative Widgets mit Uhr zum Herunterladen und Twitch-Favoriten",
+   "Wikipedia-Suche und Systemlautstärke im Tray"
+  ],
+  "verbessert": [
+   "Desktop-Widgets lassen sich zwischen Monitoren verschieben",
+   "Papierkorb im Tray und in Dateien vollständig leeren",
+   "Mein Server: MariaDB lässt sich starten"
+  ],
+  "behoben": [
+   "Eingaben in den RSS- und Wetter-Widgets kamen nicht an"
+  ]
+ },
+ {
+  "datum": "2026-11-06",
+  "titel": "Widgets und OBS",
+  "neu": [
+   "Verschiebbare RSS- und Wetter-Gadgets auf dem Desktop"
+  ],
+  "verbessert": [
+   "OBS: Bildschirmaufnahme unter Wayland",
+   "Broadcast merkt sich das Mikrofon für die Rauschunterdrückung"
+  ],
+  "behoben": []
+ },
+ {
+  "datum": "2026-11-05",
+  "titel": "Google Drive und Benutzerkonten",
+  "neu": [
+   "Google Drive in Systemsteuerung und Dateien",
+   "Benutzerkonten und Desktop-Auswahl",
+   "MariaDB für „Mein Server“"
+  ],
+  "verbessert": [
+   "Capture: Wiedergabekanal wählbar"
+  ],
+  "behoben": [
+   "Ablage: App-Symbole luden manchmal nicht"
+  ]
+ },
+ {
+  "datum": "2026-11-04",
+  "titel": "Graphit-Sperrbildschirm und Laufwerke",
+  "neu": [
+   "Sperrbildschirm im Creative-Graphit-Stil",
+   "Tray: „Nicht stören“ und Bluetooth-Steuerung"
+  ],
+  "verbessert": [
+   "Laufwerke: sichere Reihenfolge beim Formatieren, ehrliche Fehlermeldungen",
+   "Datei-Dialoge anderer Programme im lesbaren Graphit-Stil",
+   "Dezente Transparenz im Terminal",
+   "Broadcast: CUDA für flüssige 30 Bilder pro Sekunde"
+  ],
+  "behoben": [
+   "Desktop fehlte nach dem Entsperren",
+   "Speicheranzeige zeigte falsche Werte",
+   "Capture nahm das Kameramikrofon statt des HDMI-Tons",
+   "Schwarze Zwischenbilder in der Broadcast-Vorschau"
+  ]
+ }
 ]

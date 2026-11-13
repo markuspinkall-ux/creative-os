@@ -233,7 +233,7 @@ class Store(QWidget):
     def __init__(self, preview=False):
         super().__init__()
         self.preview = preview
-        self.setWindowTitle("Creative Software")
+        self.setWindowTitle("Software")
         self.resize(980, 690)
         self.setMinimumSize(630, 480)
         self.setStyleSheet(STYLE)
@@ -259,7 +259,7 @@ class Store(QWidget):
         banner.setContentsMargins(20, 14, 20, 14)
         banner.setSpacing(3)
         banner.addWidget(QLabel("CREATIVE OS  /  APP-KATALOG", objectName="eyebrow"))
-        banner.addWidget(QLabel("Creative Software", objectName="headline"))
+        banner.addWidget(QLabel("Software", objectName="headline"))
         banner.addWidget(QLabel("Entdecke Apps für Arbeit, Kreativität und Unterhaltung.", objectName="muted"))
         layout.addWidget(hero)
         controls = QHBoxLayout()
@@ -643,7 +643,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
         labels = {"install": "installieren", "uninstall": "entfernen", "update": "aktualisieren"}
         target = "nur für dich" if scope == "user" else "systemweit"
         message = f"{name} {target} {labels[verb]}?"
-        if QMessageBox.question(self, "Creative Software", message) != QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(self, "Software", message) != QMessageBox.StandardButton.Yes:
             return
         args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
         if verb == "install":
@@ -677,7 +677,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Creative Software")
+    app.setApplicationName("Software")
     app.setDesktopFileName("creative-software")
     preview = "--preview" in sys.argv
     window = Store(preview or "--selftest" in sys.argv)

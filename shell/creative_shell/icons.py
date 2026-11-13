@@ -26,6 +26,11 @@ ALIASES = {
     "com.obsproject.studio": "com.obsproject.Studio",
     "obs": "com.obsproject.Studio",
     "obs-studio": "com.obsproject.Studio",
+    # OBS setzt im Tray eigene Symbolnamen (Breeze bringt dafür ein eigenes Symbol mit)
+    "obs-tray": "com.obsproject.Studio",
+    "obs-tray-active": "com.obsproject.Studio",
+    "com.obsproject.studio-tray": "com.obsproject.Studio",
+    "creative-engine": "org.creativeos.Engine",
 }
 
 
