@@ -1,0 +1,6 @@
+[Flatpak Repo]
+Title=Creative OS – Eigene Apps
+Url=https://raw.githubusercontent.com/markuspinkall-ux/creative-os/flatpak-repo/
+Homepage=https://github.com/markuspinkall-ux/creative-os
+Comment=Programme von Creative OS, die nicht im System stecken (z. B. Creative Engine)
+RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
