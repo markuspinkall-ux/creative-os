@@ -44,4 +44,7 @@ rows = {r["path"]: i for i, r in enumerate(m2._rows)}
 m2.selectRows([rows[a], rows[c]])
 m2.placeDragged(c, "HDMI-1", 1, 4)
 assert m2.cells["HDMI-1"][c] == [1, 4] and m2.cells["HDMI-1"][a] == [1, 5], m2.cells
+# Festhalten: vorhandene Plätze bleiben, neue kommen dazu
+m2.pinCells("HDMI-1", {a: [9, 9], c: [7, 7], "/gibt/es/nicht": [0, 0]})
+assert m2.cells["HDMI-1"][a] == [1, 5] and m2.cells["HDMI-1"][c] == [1, 4], m2.cells
 print("Schreibtisch-Plätze: alles in Ordnung")

@@ -139,6 +139,7 @@ Item {
             const sel = desktop.selectedPaths()
             desktop.dropUrls((sel.includes(path) ? sel : [path]).map(p => "file://" + p), moveFolder, "auto")
         } else if (moveCell) {
+            desktop.pinCells(root.screenName, icons.slots)    // die anderen bleiben, wo sie sind
             desktop.placeDragged(path, root.screenName, moveCell[0], moveCell[1])
         }
         cancelMove()

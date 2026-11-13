@@ -267,6 +267,20 @@ class DesktopModel(QAbstractListModel):
             cells[p] = target
         self._save_cells()
 
+    @Slot(str, "QVariantMap")
+    def pinCells(self, screen, slots):
+        """Aktuelle Plätze festhalten (wie bei Windows: wer ein Symbol verschiebt, bringt die
+        anderen nicht durcheinander). Bereits gespeicherte Plätze bleiben."""
+        present = {r["path"] for r in self._rows}
+        cells = self._cells.setdefault(screen, {})
+        changed = False
+        for path, c in (slots or {}).items():
+            if path in present and path not in cells and isinstance(c, (list, tuple)) and len(c) == 2:
+                cells[path] = [int(c[0]), int(c[1])]
+                changed = True
+        if changed:
+            config.set_value("desktopIconCells", self._cells)
+
     def _forget_missing(self):
         present = {r["path"] for r in self._rows}
         changed = False
