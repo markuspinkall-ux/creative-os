@@ -25,9 +25,7 @@ Item {
     // Server-Modus: eigener Aufbau (Raster, Gehäuse, Kennzeichen) in den Farben von Graphit/Porzellan
     readonly property color srvAccent: !serverHealthy ? flame : accent
     readonly property color srvStatus: serverHealthy ? okColor : flame
-    readonly property color srvTop: light ? "#f3f6fb" : "#14181f"
-    readonly property color srvBottom: light ? "#e2e8f2" : "#0e1116"
-    readonly property color srvLine: tint(light ? 0.06 : 0.045)
+    readonly property color srvBack: light ? "#eef2f8" : "#12151b"
     function tint(a) { return light ? Qt.rgba(20 / 255, 30 / 255, 50 / 255, a * 0.9) : Qt.rgba(1, 1, 1, a) }
     function panel(a) { return light ? Qt.rgba(1, 1, 1, Math.min(1, a + 0.04)) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, a) }
     function readLook() {
@@ -190,7 +188,7 @@ Item {
     }
     Rectangle { anchors.fill: parent; color: root.light ? Qt.rgba(0.93, 0.95, 0.98, 0.35) : Qt.rgba(0.05, 0.06, 0.08, 0.55) }
 
-    // ---- Server-Modus: eigene Szene (Raster, Leiterbahnen, Datenpulse) ---------------
+    // ---- Server-Modus: eigene Szene (einfarbig, Server-Gehäuse, Kennzeichen) --------
     Item {
         id: serverScene
         anchors.fill: parent
@@ -198,81 +196,8 @@ Item {
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 500 } }
 
-        Rectangle {
-            anchors.fill: parent
-            gradient: Gradient {
-                GradientStop { position: 0; color: root.srvTop }
-                GradientStop { position: 1; color: root.srvBottom }
-            }
-        }
-        // Raster und Leiterbahnen – einmal gezeichnet
-        Canvas {
-            id: grid
-            anchors.fill: parent
-            property color line: root.srvLine
-            property color trace: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, root.light ? 0.22 : 0.16)
-            onLineChanged: requestPaint()
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            onPaint: {
-                const g = getContext("2d")
-                g.reset()
-                const step = 48
-                g.strokeStyle = line
-                g.lineWidth = 1
-                for (let x = 0; x <= width; x += step) { g.beginPath(); g.moveTo(x + 0.5, 0); g.lineTo(x + 0.5, height); g.stroke() }
-                for (let y = 0; y <= height; y += step) { g.beginPath(); g.moveTo(0, y + 0.5); g.lineTo(width, y + 0.5); g.stroke() }
-                // Leiterbahnen mit Knoten (fest „zufällig“, damit sie nicht springen)
-                let seed = 7
-                const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 }
-                g.strokeStyle = trace
-                g.fillStyle = trace
-                g.lineWidth = 2
-                for (let n = 0; n < 26; n++) {
-                    let x = Math.round(rnd() * width / step) * step
-                    let y = Math.round(rnd() * height / step) * step
-                    g.beginPath(); g.moveTo(x, y)
-                    for (let k = 0; k < 4; k++) {
-                        if (rnd() < 0.5) x += (rnd() < 0.5 ? -1 : 1) * step * (1 + Math.floor(rnd() * 4))
-                        else y += (rnd() < 0.5 ? -1 : 1) * step * (1 + Math.floor(rnd() * 3))
-                        g.lineTo(x, y)
-                    }
-                    g.stroke()
-                    g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill()
-                }
-            }
-        }
-        // Datenpulse wandern über das Raster
-        Repeater {
-            model: 7
-            delegate: Rectangle {
-                id: pulse
-                required property int index
-                readonly property bool horizontal: index % 2 === 0
-                width: horizontal ? 90 : 2
-                height: horizontal ? 2 : 90
-                radius: 1
-                y: horizontal ? 48 * (2 + (index * 5) % Math.max(1, Math.floor(serverScene.height / 48) - 3)) : 0
-                x: horizontal ? 0 : 48 * (3 + (index * 7) % Math.max(1, Math.floor(serverScene.width / 48) - 5))
-                gradient: Gradient {
-                    orientation: pulse.horizontal ? Gradient.Horizontal : Gradient.Vertical
-                    GradientStop { position: 0; color: "transparent" }
-                    GradientStop { position: 1; color: root.srvAccent }
-                }
-                NumberAnimation on x {
-                    running: pulse.horizontal && root.serverView && !root.dimmed
-                    from: -120; to: serverScene.width + 120
-                    duration: 5200 + pulse.index * 900
-                    loops: Animation.Infinite
-                }
-                NumberAnimation on y {
-                    running: !pulse.horizontal && root.serverView && !root.dimmed
-                    from: -120; to: serverScene.height + 120
-                    duration: 4600 + pulse.index * 700
-                    loops: Animation.Infinite
-                }
-            }
-        }
+        // Einfarbiger Hintergrund
+        Rectangle { anchors.fill: parent; color: root.srvBack }
 
         // Kennzeichen oben links
         Rectangle {
