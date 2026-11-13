@@ -27,6 +27,9 @@ MENU_IF = "com.canonical.dbusmenu"
 
 # Bekannte Programme bekommen das passende Creative-Symbol
 CREATIVE_ICONS = {"steam": "games", "discord": "chat", "brave": "browser", "creative": "rocket"}
+# Programme, deren Tray-Symbol durch das Creative-App-Symbol ersetzt wird (Id/IconName → Symbol)
+APP_ICONS = {"obs": "com.obsproject.Studio", "obs-tray": "com.obsproject.Studio",
+             "obs-tray-active": "com.obsproject.Studio", "com.obsproject.studio": "com.obsproject.Studio"}
 
 
 # Gehören zum System und laufen ab dem Start immer – die lassen sich im Tray nicht beenden
@@ -294,7 +297,8 @@ class TrayItems(QObject):
             return
         name = (r["Id"] + " " + r["Title"] + " " + r["IconName"]).lower()
         creative = next((c for k, c in CREATIVE_ICONS.items() if k in name), "")
-        new = {**it, "id": r["Id"], "title": r["Title"] or r["Id"], "icon": r.get("Icon", r["IconName"]), "menu": r["Menu"],
+        icon = APP_ICONS.get(r["Id"].lower()) or APP_ICONS.get(r["IconName"].lower()) or r.get("Icon", r["IconName"])
+        new = {**it, "id": r["Id"], "title": r["Title"] or r["Id"], "icon": icon, "menu": r["Menu"],
                "status": r["Status"] or "Active", "creative": creative}
         if new != it:
             self._items[entry] = new

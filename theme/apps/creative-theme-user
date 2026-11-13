@@ -189,7 +189,7 @@ if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/nul
     fi
 fi
 
-# Katalog „Eigene Apps“ (z. B. Creative Engine) einmal einrichten – erscheint in Creative Software.
+# Katalog „Eigene Apps“ (z. B. Creative Engine) einmal einrichten – erscheint in „Software“.
 # Entfernt der Benutzer ihn später selbst, bleibt er entfernt (Merker-Datei).
 mark="${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/eigene-apps-katalog"
 if [ ! -e "$mark" ] && command -v flatpak >/dev/null 2>&1; then
