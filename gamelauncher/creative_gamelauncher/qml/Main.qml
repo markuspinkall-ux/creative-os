@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls.Basic
+import QtCore
 import Creative
 
 // Game Launcher – Steam-Spiele im Vollbild, mit Controller, Tastatur oder Maus.
@@ -16,6 +17,16 @@ Window {
     // Maßstab: alles ist für 1920 × 1080 entworfen
     readonly property real s: Math.max(0.5, Math.min(width / 1920, height / 1080))
     function px(v) { return Math.round(v * s) }
+
+    // ---- Ansicht: große Kacheln oder Liste (bleibt gespeichert) ------------------------------------
+    Settings {
+        id: prefs
+        location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/creative-os/gamelauncher-ansicht.conf"
+        category: "Ansicht"
+        property string view: "kacheln"
+    }
+    readonly property bool listMode: prefs.view === "liste"
+    function toggleView() { prefs.view = listMode ? "kacheln" : "liste"; Qt.callLater(() => move(0)) }
 
     // ---- Daten -----------------------------------------------------------------------------
     readonly property var tabs: [
@@ -40,7 +51,7 @@ Window {
     readonly property var game: shown.length ? shown[Math.min(index, shown.length - 1)] : null
     readonly property int installedCount: launcher.games.filter(g => g.installed).length
 
-    onTabChanged: { index = 0; tiles.positionViewAtBeginning() }
+    onTabChanged: { index = 0; tiles.positionViewAtBeginning(); gameList.positionViewAtBeginning() }
     onShownChanged: if (index >= shown.length) index = Math.max(0, shown.length - 1)
 
     function primary() {
@@ -54,19 +65,23 @@ Window {
         if (!shown.length) return
         index = Math.max(0, Math.min(shown.length - 1, index + d))
         tiles.positionViewAtIndex(index, ListView.Contain)
+        gameList.positionViewAtIndex(index, ListView.Contain)
     }
     function handle(name) {
         if (!win.active) return              // Spiel läuft oder anderes Fenster vorne
         switch (name) {
-        case "left": move(-1); break
-        case "right": move(1); break
+        case "left": if (!listMode) move(-1); break
+        case "right": if (!listMode) move(1); break
+        case "up": if (listMode) move(-1); break
+        case "down": if (listMode) move(1); break
         case "lb": tab = (tab + tabs.length - 1) % tabs.length; break
         case "rb": tab = (tab + 1) % tabs.length; break
         case "a": primary(); break
         case "x": if (game && !game.installed) launcher.install(game.appid, game.name); break
         case "y": if (game) launcher.details(game.appid); break
         case "menu": Qt.quit(); break
-        case "view": launcher.refresh(); break
+        case "view": toggleView(); break
+        case "refresh": launcher.refresh(); break
         }
     }
 
@@ -83,11 +98,12 @@ Window {
         focus: true
         Keys.onPressed: (event) => {
             const map = {}
-            map[Qt.Key_Left] = "left"; map[Qt.Key_Right] = "right"
+            map[Qt.Key_Left] = "left"; map[Qt.Key_Right] = "right"; map[Qt.Key_Up] = "up"; map[Qt.Key_Down] = "down"
+            map[Qt.Key_V] = "view"
             map[Qt.Key_Return] = "a"; map[Qt.Key_Enter] = "a"; map[Qt.Key_Space] = "a"
             map[Qt.Key_I] = "x"; map[Qt.Key_D] = "y"
             map[Qt.Key_PageUp] = "lb"; map[Qt.Key_PageDown] = "rb"
-            map[Qt.Key_F5] = "view"
+            map[Qt.Key_F5] = "refresh"
             if (event.key === Qt.Key_Tab) { win.handle(event.modifiers & Qt.ShiftModifier ? "lb" : "rb"); event.accepted = true; return }
             if (map[event.key] !== undefined) { win.handle(map[event.key]); event.accepted = true }
         }
@@ -195,6 +211,35 @@ Window {
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: win.px(16)
                 }
             }
+            // Ansicht: Kacheln | Liste
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                height: win.px(40)
+                width: viewRow.implicitWidth + win.px(8)
+                radius: height / 2
+                color: Theme.light ? "#ffffff" : Theme.raised
+                border.color: Theme.hairline
+                Row {
+                    id: viewRow
+                    anchors.centerIn: parent
+                    spacing: win.px(2)
+                    Repeater {
+                        model: [{ k: "kacheln", t: "Kacheln" }, { k: "liste", t: "Liste" }]
+                        delegate: Rectangle {
+                            required property var modelData
+                            readonly property bool on: prefs.view === modelData.k
+                            width: vText.implicitWidth + win.px(28)
+                            height: win.px(32)
+                            radius: height / 2
+                            color: on ? Theme.text : (vMouse.containsMouse ? Theme.pressed : "transparent")
+                            Text { id: vText; anchors.centerIn: parent; text: parent.modelData.t; color: parent.on ? Theme.ground : Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(15); font.bold: parent.on }
+                            MouseArea { id: vMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!parent.on) win.toggleView() }
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Ansicht: " + modelData.t
+                        }
+                    }
+                }
+            }
             Text { id: clock; anchors.verticalCenter: parent.verticalCenter; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(22); font.bold: true }
             Rectangle {
                 id: deskBtn
@@ -223,10 +268,10 @@ Window {
 
     // ---- Infos zum gewählten Spiel ------------------------------------------------------------
     Column {
-        x: win.px(64)
-        y: win.px(200)
-        width: win.px(860)
-        spacing: win.px(22)
+        x: win.listMode ? win.width * 0.47 : win.px(64)
+        y: win.listMode ? win.px(560) : win.px(150)
+        width: win.listMode ? win.width * 0.53 - win.px(64) : win.px(900)
+        spacing: win.px(win.listMode ? 18 : 16)
         visible: win.tabKey === "shop" || win.game !== null
         Text {
             text: {
@@ -242,8 +287,8 @@ Window {
         Text {
             width: parent.width
             text: win.tabKey === "shop" ? "Neue Spiele finden" : (win.game ? win.game.name : "")
-            color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(84); font.bold: true
-            wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
+            color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(win.listMode ? 64 : 60); font.bold: true
+            wrapMode: Text.Wrap; maximumLineCount: win.listMode ? 2 : 1; elide: Text.ElideRight
             lineHeight: 0.95
         }
         Row {
@@ -291,10 +336,10 @@ Window {
     // ---- Kachel-Band ---------------------------------------------------------------------------
     Column {
         x: win.px(64)
-        y: win.px(596)
+        y: win.px(452)
         width: parent.width - x
-        spacing: win.px(18)
-        visible: win.tabKey !== "shop"
+        spacing: win.px(14)
+        visible: win.tabKey !== "shop" && !win.listMode
         Row {
             spacing: win.px(16)
             Text { text: win.tabs[win.tab].label; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(24); font.bold: true }
@@ -307,9 +352,9 @@ Window {
         ListView {
             id: tiles
             width: parent.width
-            height: win.px(340)
+            height: win.px(530)
             orientation: ListView.Horizontal
-            spacing: win.px(22)
+            spacing: win.px(26)
             model: win.shown
             currentIndex: win.index
             highlightFollowsCurrentItem: false
@@ -321,7 +366,7 @@ Window {
                 required property var modelData
                 required property int index
                 readonly property bool on: index === win.index
-                width: on ? win.px(220) : win.px(180)
+                width: on ? win.px(346) : win.px(300)
                 height: tiles.height
                 Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                 Rectangle {
@@ -329,7 +374,7 @@ Window {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: win.px(6)
                     width: parent.width
-                    height: tile.on ? win.px(330) : win.px(270)
+                    height: tile.on ? win.px(519) : win.px(450)
                     Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                     radius: win.px(16)
                     color: Theme.raised
@@ -340,7 +385,7 @@ Window {
                         source: tile.modelData.cover
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
-                        sourceSize.width: win.px(440)
+                        sourceSize.width: win.px(692)
                         visible: status === Image.Ready
                     }
                     // Ohne Bild: Name groß
@@ -352,11 +397,11 @@ Window {
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
                         color: Theme.text
-                        font.family: Theme.fontFamily; font.pixelSize: win.px(20); font.bold: true
+                        font.family: Theme.fontFamily; font.pixelSize: win.px(26); font.bold: true
                     }
                     Rectangle {
                         anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-                        height: win.px(70)
+                        height: win.px(96)
                         visible: tile.modelData.cover !== ""
                         gradient: Gradient {
                             GradientStop { position: 0; color: "transparent" }
@@ -364,19 +409,19 @@ Window {
                         }
                         Text {
                             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-                            anchors.margins: win.px(14)
+                            anchors.margins: win.px(18)
                             text: tile.modelData.name
                             elide: Text.ElideRight
                             color: "#ffffff"
-                            font.family: Theme.fontFamily; font.pixelSize: win.px(17); font.bold: true
+                            font.family: Theme.fontFamily; font.pixelSize: win.px(22); font.bold: true
                         }
                     }
                     // Nicht installiert / lädt
                     Rectangle {
                         visible: !tile.modelData.installed || !tile.modelData.ready
                         anchors.top: parent.top; anchors.right: parent.right; anchors.margins: win.px(10)
-                        height: win.px(28)
-                        width: badgeText.implicitWidth + win.px(20)
+                        height: win.px(34)
+                        width: badgeText.implicitWidth + win.px(24)
                         radius: height / 2
                         color: Theme.light ? "#ffffff" : Qt.rgba(0.06, 0.07, 0.09, 0.88)
                         Text {
@@ -384,7 +429,7 @@ Window {
                             anchors.centerIn: parent
                             text: tile.modelData.installed ? Math.round(tile.modelData.progress * 100) + " %" : "↓ Installieren"
                             color: tile.modelData.installed ? Theme.accent : Theme.flame
-                            font.family: Theme.fontFamily; font.pixelSize: win.px(13); font.bold: true
+                            font.family: Theme.fontFamily; font.pixelSize: win.px(16); font.bold: true
                         }
                     }
                     Rectangle {
@@ -414,6 +459,119 @@ Window {
             }
             WheelHandler {
                 onWheel: (event) => win.move(event.angleDelta.y > 0 || event.angleDelta.x > 0 ? -1 : 1)
+            }
+        }
+    }
+
+    // ---- Liste (optional) ---------------------------------------------------------------------------
+    Column {
+        x: win.px(64)
+        y: win.px(130)
+        width: win.width * 0.47 - win.px(110)
+        height: win.height - y - win.px(96)
+        spacing: win.px(14)
+        visible: win.tabKey !== "shop" && win.listMode
+        Row {
+            spacing: win.px(16)
+            Text { text: win.tabs[win.tab].label; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(24); font.bold: true }
+            Text {
+                anchors.baseline: parent.children[0].baseline
+                text: win.shown.length + (win.shown.length === 1 ? " Spiel" : " Spiele")
+                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: win.px(16)
+            }
+        }
+        ListView {
+            id: gameList
+            width: parent.width
+            height: parent.height - win.px(50)
+            clip: true
+            spacing: win.px(6)
+            model: win.shown
+            currentIndex: win.index
+            highlightFollowsCurrentItem: false
+            boundsBehavior: Flickable.StopAtBounds
+            delegate: Rectangle {
+                id: row
+                required property var modelData
+                required property int index
+                readonly property bool on: index === win.index
+                width: gameList.width
+                height: win.px(104)
+                radius: win.px(16)
+                color: on ? (Theme.light ? "#ffffff" : Theme.raised) : (rowMouse.containsMouse ? Theme.subtle : "transparent")
+                border.color: on ? Theme.accent : "transparent"
+                border.width: win.px(3)
+                Rectangle {
+                    id: thumb
+                    x: win.px(12)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: win.px(56); height: win.px(84)
+                    radius: win.px(8)
+                    color: Theme.track
+                    clip: true
+                    Image {
+                        anchors.fill: parent
+                        source: row.modelData.cover
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize.width: win.px(112)
+                        visible: status === Image.Ready
+                    }
+                }
+                Column {
+                    anchors.left: thumb.right
+                    anchors.leftMargin: win.px(18)
+                    anchors.right: rowBadge.left
+                    anchors.rightMargin: win.px(12)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: win.px(6)
+                    Text {
+                        width: parent.width
+                        text: row.modelData.name
+                        elide: Text.ElideRight
+                        color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: win.px(24); font.bold: true
+                    }
+                    Text {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        text: {
+                            const g = row.modelData
+                            if (!g.installed) return [g.sizeText, "nicht installiert"].filter(t => t).join(" · ")
+                            if (!g.ready) return "Wird installiert · " + Math.round(g.progress * 100) + " %"
+                            return [g.lastText ? "Zuletzt " + g.lastText : "", g.playText, g.sizeText].filter(t => t).join(" · ")
+                        }
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: win.px(16)
+                    }
+                }
+                Rectangle {
+                    id: rowBadge
+                    anchors.right: parent.right
+                    anchors.rightMargin: win.px(16)
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: win.px(36)
+                    width: rowBadgeText.implicitWidth + win.px(28)
+                    radius: height / 2
+                    color: row.on ? (row.modelData.installed ? Theme.accent : Theme.flame) : Theme.subtle
+                    Text {
+                        id: rowBadgeText
+                        anchors.centerIn: parent
+                        text: row.modelData.installed ? (row.modelData.ready ? "▶ Spielen" : Math.round(row.modelData.progress * 100) + " %") : "↓ Installieren"
+                        color: row.on ? (Theme.light ? "#ffffff" : Theme.ground) : (row.modelData.installed ? Theme.text : Theme.flame)
+                        font.family: Theme.fontFamily; font.pixelSize: win.px(15); font.bold: true
+                    }
+                }
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: row.on ? win.primary() : (win.index = row.index)
+                }
+                Accessible.role: Accessible.ListItem
+                Accessible.name: modelData.name + (modelData.installed ? "" : ", nicht installiert")
+            }
+            WheelHandler {
+                onWheel: (event) => win.move(event.angleDelta.y > 0 ? -1 : 1)
             }
         }
     }
@@ -458,6 +616,7 @@ Window {
                 { g: "A", t: win.tabKey === "shop" ? "Öffnen" : (win.game && !win.game.installed ? "Installieren" : "Spielen") },
                 { g: "Y", t: "Details" },
                 { g: "LB / RB", t: "Bereich wechseln" },
+                { g: "⧉", t: win.listMode ? "Kacheln" : "Liste" },
                 { g: "☰", t: "Desktop" }
             ]
             delegate: Row {
