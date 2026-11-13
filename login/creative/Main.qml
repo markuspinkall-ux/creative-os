@@ -22,11 +22,12 @@ Item {
     readonly property color dark: light ? "#e9eef6" : "#12151b"
     readonly property color flame: light ? "#d9773a" : "#ffb07a"
     readonly property color okColor: light ? "#1f9e7f" : "#6fdcc0"
-    // Server-Modus: eigener Look in Petrol/Türkis – man sieht sofort, dass der PC als Server läuft
-    readonly property color srvAccent: !serverHealthy ? flame : okColor
-    readonly property color srvTop: light ? "#e3f3ef" : "#061317"
-    readonly property color srvBottom: light ? "#cfe7e1" : "#0b2329"
-    readonly property color srvLine: light ? Qt.rgba(31 / 255, 158 / 255, 127 / 255, 0.16) : Qt.rgba(111 / 255, 220 / 255, 192 / 255, 0.10)
+    // Server-Modus: eigener Aufbau (Raster, Gehäuse, Kennzeichen) in den Farben von Graphit/Porzellan
+    readonly property color srvAccent: !serverHealthy ? flame : accent
+    readonly property color srvStatus: serverHealthy ? okColor : flame
+    readonly property color srvTop: light ? "#f3f6fb" : "#14181f"
+    readonly property color srvBottom: light ? "#e2e8f2" : "#0e1116"
+    readonly property color srvLine: tint(light ? 0.06 : 0.045)
     function tint(a) { return light ? Qt.rgba(20 / 255, 30 / 255, 50 / 255, a * 0.9) : Qt.rgba(1, 1, 1, a) }
     function panel(a) { return light ? Qt.rgba(1, 1, 1, Math.min(1, a + 0.04)) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, a) }
     function readLook() {
@@ -209,7 +210,7 @@ Item {
             id: grid
             anchors.fill: parent
             property color line: root.srvLine
-            property color trace: root.light ? Qt.rgba(31 / 255, 158 / 255, 127 / 255, 0.30) : Qt.rgba(111 / 255, 220 / 255, 192 / 255, 0.22)
+            property color trace: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, root.light ? 0.22 : 0.16)
             onLineChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
@@ -279,8 +280,8 @@ Item {
             width: badgeRow.implicitWidth + 30
             height: 38
             radius: 19
-            color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, root.light ? 0.14 : 0.12)
-            border.color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, 0.45)
+            color: root.panel(0.9)
+            border.color: root.tint(0.10)
             Row {
                 id: badgeRow
                 anchors.centerIn: parent
@@ -288,12 +289,12 @@ Item {
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 9; height: 9; radius: 5
-                    color: root.srvAccent
+                    color: root.srvStatus
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "SERVER-MODUS  ·  " + (root.serverHealthy ? "ONLINE" : "STÖRUNG")
-                    color: root.srvAccent
+                    color: root.textColor
                     font.family: root.fontFamily
                     font.pixelSize: 13
                     font.bold: true
@@ -320,8 +321,8 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, root.light ? 0.08 : 0.06)
-                border.color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, 0.25)
+                color: root.panel(root.light ? 0.7 : 0.6)
+                border.color: root.tint(0.10)
                 border.width: 1
             }
             Canvas {
@@ -355,8 +356,8 @@ Item {
                         id: unit
                         required property int index
                         width: 112; height: 26; radius: 6
-                        color: root.light ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(22 / 255, 40 / 255, 46 / 255, 0.95)
-                        border.color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, 0.45)
+                        color: root.light ? "#ffffff" : "#232936"
+                        border.color: root.tint(0.14)
                         Row {
                             anchors.left: parent.left
                             anchors.leftMargin: 10
@@ -368,7 +369,7 @@ Item {
                                     id: led
                                     required property int index
                                     width: 7; height: 7; radius: 4
-                                    color: led.index === 0 ? root.srvAccent : (root.light ? "#3d6fe0" : "#8fb3ff")
+                                    color: led.index === 0 ? root.srvStatus : root.accent
                                     SequentialAnimation on opacity {
                                         running: root.serverView && root.serverHealthy && !root.dimmed
                                         loops: Animation.Infinite
@@ -596,8 +597,8 @@ Item {
         width: 540
         height: serverColumn.implicitHeight + 64
         radius: 22
-        color: root.light ? Qt.rgba(1, 1, 1, 0.88) : Qt.rgba(10 / 255, 28 / 255, 33 / 255, 0.88)
-        border.color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, 0.35)
+        color: root.panel(0.92)
+        border.color: root.tint(0.08)
 
         Column {
             id: serverColumn
@@ -613,7 +614,7 @@ Item {
                     id: statusDot
                     anchors.verticalCenter: parent.verticalCenter
                     width: 12; height: 12; radius: 6
-                    color: root.srvAccent
+                    color: root.srvStatus
                     SequentialAnimation on opacity {
                         running: root.serverView && root.serverHealthy
                         loops: Animation.Infinite
@@ -642,7 +643,7 @@ Item {
                 lineHeight: 1.3
             }
 
-            Rectangle { width: parent.width; height: 1; color: Qt.rgba(root.srvAccent.r, root.srvAccent.g, root.srvAccent.b, 0.22) }
+            Rectangle { width: parent.width; height: 1; color: root.tint(0.08) }
 
             // Adressen
             Repeater {
