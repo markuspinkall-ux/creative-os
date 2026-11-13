@@ -5,7 +5,7 @@ import ".."
 SettingsPage {
     PageHeader {
         title: "Darstellung"
-        subtitle: "Design, Akzentfarbe, Hintergrundbild, Musik-Visualizer, Leistungsanzeige, Wetter, RSS"
+        subtitle: "Design, Akzentfarbe, Hintergrundbild, Musik-Visualizer, Leistungsanzeige, Widgets"
         CButton { text: "Aktualisieren"; onClicked: look.refresh() }
     }
 
@@ -199,26 +199,36 @@ SettingsPage {
     }
 
     Card {
-        title: "Schreibtisch-Gadgets"
-        subtitle: "Kleine Anzeigen auf dem Schreibtisch – Ort bzw. Feeds stellst du direkt am Gadget ein"
-        SettingRow {
-            label: "Wetter"
-            hint: "Wetter für deinen Ort (Daten: Open-Meteo)"
-            CSwitch {
-                checked: look.weatherGadget
-                label: "Wetter-Gadget anzeigen"
-                onToggled: (v) => look.setGadget("weather", v)
+        title: "Widgets"
+        subtitle: "Auf dem Schreibtisch – wie in Creative Widgets. Ort, Feeds und Kanäle stellst du am Widget selbst ein"
+        Repeater {
+            model: [
+                { k: "shelf", t: "Ablage", h: "Dateien kurz zwischenlagern" },
+                { k: "weather", t: "Wetter", h: "Wetter für deinen Ort (Daten: Open-Meteo)" },
+                { k: "rss", t: "RSS-Nachrichten", h: "Schlagzeilen aus bis zu fünf Feeds" },
+                { k: "ki", t: "KI-Helfer", h: "Lokale KI zum Fragen und Formulieren (Open Source)" },
+                { k: "twitch", t: "Twitch-Favoriten", h: "Wer von deinen Kanälen gerade live ist" },
+                { k: "clock", t: "Analoge Uhr", h: look.widgets.clockInstalled ? "Uhr mit Sekundenzeiger" : "Erst in Creative Widgets herunterladen" }
+            ]
+            delegate: SettingRow {
+                required property var modelData
+                label: modelData.t
+                hint: modelData.h
+                enabled: look.widgets.shell && (modelData.k !== "clock" || look.widgets.clockInstalled)
+                opacity: enabled ? 1 : 0.45
+                CSwitch {
+                    checked: !!look.widgets[modelData.k]
+                    label: modelData.t + " anzeigen"
+                    onToggled: (v) => look.setGadget(modelData.k, v)
+                }
             }
         }
         SettingRow {
-            label: "RSS-Nachrichten"
-            hint: "Schlagzeilen aus bis zu fünf Feeds"
+            label: "Bildschirm und mehr"
+            hint: look.widgets.shell ? "Auf welchem Monitor ein Widget erscheint, neue Widgets herunterladen"
+                                     : "Der Schreibtisch ist gerade nicht erreichbar – Widgets lassen sich nach der Anmeldung schalten"
             last: true
-            CSwitch {
-                checked: look.rssGadget
-                label: "RSS-Gadget anzeigen"
-                onToggled: (v) => look.setGadget("rss", v)
-            }
+            CButton { text: "Creative Widgets öffnen"; onClicked: look.openWidgets() }
         }
     }
 }

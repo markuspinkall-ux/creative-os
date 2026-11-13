@@ -609,42 +609,73 @@ class LookModel(QObject):
         shell_config.set_value("desktopStats", self._stats_on)
         self.changed.emit()
 
-    # ---- Schreibtisch-Gadgets (Wetter, RSS): schaltet die laufende Shell per D-Bus ----
+    # ---- Widgets (wie in Creative Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
     GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
+    WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "twitch", "ki", "viz")
+
+    def _bus(self):
+        from PySide6.QtDBus import QDBusConnection, QDBusInterface
+        from creative_shell.dbus_service import PATH, SERVICE
+        bus = QDBusInterface(SERVICE, PATH, SERVICE, QDBusConnection.sessionBus())
+        bus.setTimeout(1500)
+        return bus
 
     def _read_gadgets(self, cfg):
         new = {name: bool((cfg.get(key) or {}).get("enabled")) for name, key in self.GADGETS.items()}
         new["viz"] = bool(cfg.get("taskbarVisualizer", True))
         new["stats"] = bool(cfg.get("desktopStats", True))
+        new["clockInstalled"] = False
+        new["shell"] = False
+        try:
+            from PySide6.QtDBus import QDBusMessage
+            bus = self._bus()
+            reply = bus.call("widgetState") if bus.isValid() else None
+            if reply is not None and reply.type() != QDBusMessage.MessageType.ErrorMessage and reply.arguments():
+                state = json.loads(reply.arguments()[0])
+                new.update({k: bool(state.get(k, False)) for k in self.WIDGETS})
+                new["clockInstalled"] = bool(state.get("clockInstalled"))
+                new["shell"] = True
+        except (ValueError, TypeError, ImportError):
+            pass
         changed = new != self._gadgets
         self._gadgets = new
         return changed
 
     def _reload_gadgets(self):
-        cfg = shell_config.load()
-        if self._read_gadgets(cfg):
+        if self._read_gadgets(shell_config.load()):
             self._viz_on = self._gadgets["viz"]
             self._stats_on = self._gadgets["stats"]
             self.changed.emit()
 
     @Slot(str, bool)
     def setGadget(self, name, on):
-        if name not in self.GADGETS:
+        if name not in self.WIDGETS:
             return
         on = bool(on)
-        from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
-        from creative_shell.dbus_service import PATH, SERVICE
-        bus = QDBusInterface(SERVICE, PATH, SERVICE, QDBusConnection.sessionBus())
-        bus.setTimeout(1500)
+        from PySide6.QtDBus import QDBusMessage
+        bus = self._bus()
         reply = bus.call("setWidgetEnabled", name, on) if bus.isValid() else None
-        if reply is None or reply.type() == QDBusMessage.MessageType.ErrorMessage:
+        ok = reply is not None and reply.type() != QDBusMessage.MessageType.ErrorMessage
+        if not ok and name in self.GADGETS:
             # Shell läuft gerade nicht: direkt in die Einstellungen schreiben
             key = self.GADGETS[name]
             data = dict(shell_config.load().get(key) or {})
             data["enabled"] = on
             shell_config.set_value(key, data)
+        elif not ok and name == "viz":
+            shell_config.set_value("taskbarVisualizer", on)
+        elif not ok and name == "stats":
+            shell_config.set_value("desktopStats", on)
         self._gadgets[name] = on
+        if name == "viz":
+            self._viz_on = on
+        if name == "stats":
+            self._stats_on = on
         self.changed.emit()
+
+    @Slot()
+    def openWidgets(self):
+        spawn_detached(["creative-widgets"])
 
     @Slot(bool)
     def setLoginSound(self, on):
@@ -704,7 +735,6 @@ class LookModel(QObject):
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
     desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
     nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
-    weatherGadget = Property(bool, lambda self: self._gadgets.get("weather", False), notify=changed)
-    rssGadget = Property(bool, lambda self: self._gadgets.get("rss", False), notify=changed)
+    widgets = Property("QVariantMap", lambda self: dict(self._gadgets), notify=changed)
     loginSound = Property(bool, lambda self: self._login_sound, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)

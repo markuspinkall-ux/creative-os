@@ -1199,9 +1199,7 @@ Item {
             { label: "Neuer Ordner", icon: "folder-plus", act: "new" },
             { label: "Schreibtisch in Dateien öffnen", icon: "files", act: "folder" },
             { sep: true },
-            { label: kiHelper.enabled ? "KI-Helfer ausblenden" : "KI-Helfer einblenden", icon: "sparkle", act: "ki" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
-            { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "Creative Widgets öffnen", icon: "settings", act: "widgets" },
             { label: "Einstellungen", icon: "settings", act: "settings" }
@@ -1212,9 +1210,7 @@ Item {
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
             else if (act === "widgets") shell.openWidgetManager()
-            else if (act === "ki") kiHelper.toggle()
             else if (act === "taskmanager") desktopStats.openTaskManager()
-            else if (act === "shelf") shelf.setEnabled(!shelf.enabled)
         }
     }
 

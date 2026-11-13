@@ -11,9 +11,9 @@
     ],
     "verbessert": [
       "Creative Broadcast nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s, z. B. 720p60) statt fest 30 – die virtuelle Kamera für OBS, Discord & Co. läuft entsprechend flüssiger. Angezeigt wird, was die Webcam liefert und was die Creative Kamera sendet",
-      "Rechtsklick auf den Schreibtisch aufgeräumt: RSS, Wetter, Leistungsanzeige und Musik-Visualizer schaltest du jetzt in Systemsteuerung › Darstellung oder in Creative Widgets ein und aus",
-      "Systemsteuerung › Darstellung: neue Karte „Schreibtisch-Gadgets“ mit Wetter und RSS-Nachrichten",
-      "Creative Widgets listet jetzt alle Widgets, auch den Musik-Visualizer"
+      "Creative Widgets listet jetzt alle Widgets, auch den Musik-Visualizer",
+      "Rechtsklick auf den Schreibtisch aufgeräumt: Widgets (Ablage, Wetter, RSS, KI-Helfer, Leistungsanzeige, Musik-Visualizer) schaltest du jetzt in Creative Widgets oder in Systemsteuerung › Darstellung ein und aus",
+      "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets"
     ],
     "behoben": []
   },
