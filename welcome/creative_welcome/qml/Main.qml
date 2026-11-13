@@ -252,7 +252,7 @@ ApplicationWindow {
                         { icon: "files", title: "Dateien", text: "Windows-Taste + E. Gelöschtes landet im Papierkorb unten rechts und lässt sich zurückholen." },
                         { icon: "settings", title: "Systemsteuerung", text: "Windows-Taste + I: WLAN, Bildschirme, Ton, Drucker, Updates und „Mein Server“." },
                         { icon: "games", title: "Spielen", text: "Steam ist schon dabei – einfach anmelden und loslegen." },
-                        { icon: "mic", title: "Sprachassistent", text: "Sag „Computer“ oder klick aufs Mikrofon unten rechts – für Wetter, Timer und Musik." }
+                        { icon: "sparkle", title: "KI-Helfer", text: "Frag das Widget auf dem Schreibtisch – Allgemeinwissen, Erklärungen oder eine E-Mail. Läuft komplett auf deinem PC." }
                     ]
                     delegate: Row {
                         spacing: 14
