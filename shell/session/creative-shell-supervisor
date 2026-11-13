@@ -100,8 +100,9 @@ if command -v creative-backup >/dev/null 2>&1; then
     children="$children $!"
 fi
 
-# Sprachassistent (läuft im Hintergrund, wird bei einem Absturz neu gestartet)
-if command -v creative-assistant >/dev/null 2>&1; then
+# Sprachassistent: abgelöst vom KI-Helfer (Schreibtisch-Widget). Läuft nur noch, wenn man ihn
+# ausdrücklich wieder einschaltet:  touch ~/.config/creative-os/sprachassistent-an
+if command -v creative-assistant >/dev/null 2>&1 && [ -e "${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/sprachassistent-an" ]; then
     # Meldungen landen im Systemprotokoll: journalctl --user -t creative-assistant
     ( while true; do creative-assistant 2>&1 | systemd-cat -t creative-assistant; sleep 5; done ) &
     children="$children $!"

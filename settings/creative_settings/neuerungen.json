@@ -15,7 +15,8 @@
       "Creative Engine hat ein neues Symbol im Stil aller Creative-Apps (Graphit- und Porzellan-Kachel)",
       "Creative Widgets listet jetzt alle Widgets, auch den Musik-Visualizer",
       "Rechtsklick auf den Schreibtisch aufgeräumt: Widgets (Ablage, Wetter, RSS, KI-Helfer, Leistungsanzeige, Musik-Visualizer) schaltest du jetzt in Creative Widgets oder in Systemsteuerung › Darstellung ein und aus",
-      "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets"
+      "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets",
+      "Der alte Sprachassistent ist aus dem Tray verschwunden und läuft nicht mehr im Hintergrund (kein Mikrofon mehr dauerhaft offen) – Fragen beantwortet jetzt der KI-Helfer auf dem Schreibtisch"
     ],
     "behoben": [
       "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos"
