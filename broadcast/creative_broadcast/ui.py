@@ -20,6 +20,11 @@ class Broadcast(QObject):
         self._cfg = daemon.load_config()
         self._status = {}
         self._cameras = daemon.list_cameras()
+        try:
+            from . import upscale
+            self._up_reason = upscale.available()[1]
+        except Exception as exc:
+            self._up_reason = exc.__class__.__name__
         self._microphones = []
         self._preview_rev = 0
         self._preview_on = False
@@ -116,6 +121,11 @@ class Broadcast(QObject):
     def setQuality(self, q):
         self._set(quality=q)
 
+    @Slot(str)
+    def setUpscale(self, level):
+        if level in ("aus", "schnell", "beste"):
+            self._set(upscale=level)
+
     @Slot(bool)
     def setPreview(self, on):
         self._preview_on = bool(on)
@@ -161,3 +171,12 @@ class Broadcast(QObject):
     engine = Property(str, lambda self: self._status.get("engine", ""), notify=statusChanged)
     deepFilter = Property(bool, lambda self: daemon.ladspa_plugin() is not None, constant=True)
     previewUrl = Property(str, _preview_url, notify=previewChanged)
+    upscale = Property(str, lambda self: self._cfg.get("upscale", "aus"), notify=changed)
+    upscaleState = Property(str, lambda self: self._status.get("upscale", "aus"), notify=statusChanged)
+    upscaleMs = Property(float, lambda self: float(self._status.get("upscaleMs", 0) or 0), notify=statusChanged)
+    processingMs = Property(float, lambda self: float(self._status.get("processingMs", 0) or 0), notify=statusChanged)
+    budgetMs = Property(float, lambda self: float(self._status.get("budgetMs", 0) or 0), notify=statusChanged)
+    slow = Property(bool, lambda self: bool(self._status.get("slow", False)), notify=statusChanged)
+    cameraMode = Property(str, lambda self: self._status.get("mode", ""), notify=statusChanged)
+    outputMode = Property(str, lambda self: self._status.get("output", ""), notify=statusChanged)
+    upscaleAvailable = Property(str, lambda self: self._up_reason, constant=True)

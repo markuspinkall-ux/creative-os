@@ -27,7 +27,7 @@ LADSPA = [Path("/usr/lib64/ladspa/libdeep_filter_ladspa.so"), Path("/usr/lib/lad
 MODEL = Path("/usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx")
 VOICE_NODE = "creative_voice"
 DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "voiceInput": "", "camera": False, "cameraDevice": "",
-            "effect": "blur", "background": "", "quality": "sparsam"}
+            "effect": "blur", "background": "", "quality": "sparsam", "upscale": "aus"}
 
 for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
     if _v.is_dir() and str(_v) not in sys.path:
@@ -295,7 +295,10 @@ class Matting:
 
 
 class Camera:
+    # Ersatzwerte, falls die Kamera nichts über sich verrät
     W, H, FPS = 1280, 720, 30
+    FOURCC = "MJPG"
+    OW, OH = W, H          # Ausgabe (mit Upscaling 1920×1080)
 
     def __init__(self):
         self.thread = None
@@ -304,7 +307,7 @@ class Camera:
 
     def apply(self, cfg):
         want = bool(cfg["camera"])
-        key = (cfg["cameraDevice"], cfg["quality"])
+        key = (cfg["cameraDevice"], cfg["quality"], cfg.get("upscale", "aus"))
         if not want:
             self.stop()
             return
@@ -322,6 +325,33 @@ class Camera:
             self.thread.join(timeout=5)
         self.thread = None
         STATUS.set(camera="aus", fps=0)
+
+    def _pick_mode(self, device):
+        """Beste Einstellung der Kamera: höchste Bildrate (bis 60), dann größte Auflösung (bis 1080p)."""
+        from . import v4l2modes
+        devices = [device] if device else [c["device"] for c in list_cameras()]
+        for d in devices:
+            mode = v4l2modes.best_mode(v4l2modes.list_modes(d))
+            if mode:
+                self.W, self.H, self.FPS, self.FOURCC = mode["width"], mode["height"], mode["fps"], mode["format"]
+                return mode
+        self.W, self.H, self.FPS, self.FOURCC = Camera.W, Camera.H, Camera.FPS, Camera.FOURCC
+        return None
+
+    def _make_upscaler(self, level):
+        """(Upscaler oder None, Zustand) – Zustand wird in der Oberfläche angezeigt."""
+        if level not in ("schnell", "beste"):
+            return None, "aus"
+        from . import upscale
+        if self.H >= upscale.OUT_H:
+            return None, "nicht nötig – Kamera liefert schon 1080p"
+        ok, why = upscale.available()
+        if not ok:
+            return None, f"nicht möglich: {why}"
+        try:
+            return upscale.Upscaler(level), "aktiv"
+        except Exception as exc:
+            return None, f"nicht möglich: {exc.__class__.__name__}"
 
     def _run(self, cfg):
         try:
@@ -343,8 +373,17 @@ class Camera:
             STATUS.set(camera=f"fehlt: KI ({exc.__class__.__name__})")
             return
         STATUS.set(engine=matting.engine)
+        mode = self._pick_mode(cfg["cameraDevice"])
+        upscaler, up_state = self._make_upscaler(cfg.get("upscale", "aus"))
+        from . import upscale as _up
+        self.OW, self.OH = (_up.OUT_W, _up.OUT_H) if upscaler else (self.W, self.H)
+        budget_ms = 1000.0 / self.FPS
+        STATUS.set(mode=(f"{self.W}×{self.H} · {self.FPS:g} Bilder/s ({self.FOURCC})" if mode
+                         else f"{self.W}×{self.H} · {self.FPS:g} Bilder/s (Standard)"),
+                   output=f"{self.OW}×{self.OH} · {self.FPS:g} Bilder/s", upscale=up_state, upscaleMs=0,
+                   budgetMs=round(budget_ms, 1))
         ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
-                               "-s", f"{self.W}x{self.H}", "-r", str(self.FPS), "-i", "-",
+                               "-s", f"{self.OW}x{self.OH}", "-r", f"{self.FPS:g}", "-i", "-",
                                "-f", "v4l2", "-pix_fmt", "yuv420p", dev], stdin=subprocess.PIPE)
         own = {os.getpid(), ff.pid}
         cap = None
@@ -402,6 +441,18 @@ class Camera:
                     a3 = a[:, :, None]
                     out = (frame.astype(np.float32) * a3 + bg.astype(np.float32) * (1 - a3)).astype(np.uint8)
                 processing_ms = (time.monotonic() - processing_start) * 1000
+                upscale_ms = 0.0
+                if upscaler is not None:
+                    up_start = time.monotonic()
+                    try:
+                        out = upscaler.run(out)
+                    except Exception as exc:          # z. B. Grafikspeicher voll → normal weiter
+                        print(f"Creative Broadcast: Upscaling aus ({exc})", file=sys.stderr)
+                        upscaler = None
+                        STATUS.set(upscale=f"abgeschaltet: {exc.__class__.__name__}")
+                    upscale_ms = (time.monotonic() - up_start) * 1000
+                if out.shape[1] != self.OW or out.shape[0] != self.OH:
+                    out = cv2.resize(out, (self.OW, self.OH), interpolation=cv2.INTER_CUBIC)
                 output_start = time.monotonic()
                 ff.stdin.write(out.tobytes())
                 output_ms = (time.monotonic() - output_start) * 1000
@@ -415,7 +466,8 @@ class Camera:
                 if measured_at - t_frames >= 2:
                     STATUS.set(camera="aktiv", fps=round(n_frames / (measured_at - t_frames)),
                                captureMs=round(capture_ms, 1), processingMs=round(processing_ms, 1),
-                               outputMs=round(output_ms, 1))
+                               outputMs=round(output_ms, 1), upscaleMs=round(upscale_ms, 1),
+                               slow=(processing_ms + upscale_ms + output_ms) > budget_ms * 0.95)
                     t_frames, n_frames = measured_at, 0
         except (BrokenPipeError, OSError) as exc:
             STATUS.set(camera=f"Fehler: {exc.__class__.__name__}")
@@ -434,7 +486,7 @@ class Camera:
             cap = cv2.VideoCapture(d, cv2.CAP_V4L2)
             if not cap.isOpened():
                 continue
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*(self.FOURCC if len(self.FOURCC) == 4 else "MJPG")))
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.W)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.H)
             cap.set(cv2.CAP_PROP_FPS, self.FPS)
@@ -444,7 +496,7 @@ class Camera:
 
     def _idle_frame(self, np, cv2):
         # schlichte Graphit-Fläche, ohne Schrift (sieht in Discord, Teams & Co. neutral aus)
-        return np.full((self.H, self.W, 3), (34, 27, 21), dtype=np.uint8)     # Graphit (BGR)
+        return np.full((self.OH, self.OW, 3), (34, 27, 21), dtype=np.uint8)     # Graphit (BGR)
 
     def _background(self, np, cv2, frame, effect, path, cache):
         if effect == "green":
@@ -480,6 +532,19 @@ def selftest():
         print(f"Creative Broadcast: KI-Freistellung ok ({m.engine}, {a.shape[1]}×{a.shape[0]})")
     except Exception as exc:
         print(f"Creative Broadcast: KI-Freistellung FEHLT ({exc})")
+    try:
+        from . import upscale
+        ok, why = upscale.available()
+        if upscale.MODEL.exists():
+            import numpy as np
+            up = upscale.Upscaler("schnell", providers=None if ok else ["CPUExecutionProvider"])
+            y = up.run(np.full((360, 640, 3), 128, dtype=np.uint8))
+            print(f"Creative Broadcast: KI-Upscaling ok ({up.engine}, {y.shape[1]}×{y.shape[0]})"
+                  + ("" if ok else f" – im Betrieb {why}"))
+        else:
+            print("Creative Broadcast: KI-Upscaling FEHLT (Modell)")
+    except Exception as exc:
+        print(f"Creative Broadcast: KI-Upscaling FEHLT ({exc})")
     return 0
 
 

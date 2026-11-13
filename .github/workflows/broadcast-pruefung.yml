@@ -1,0 +1,91 @@
+name: Creative Broadcast prüfen
+# Kamera-Modi (V4L2), KI-Upscaling (Modell rechnet richtig?) und Fotos der Oberfläche.
+# Fotos landen im Branch „broadcast-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [broadcast/**, tools/broadcast-vorschau.py, .github/workflows/broadcast-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: broadcast-pruefung
+  cancel-in-progress: false
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation
+          pip install -q PySide6 onnxruntime opencv-python-headless numpy
+      - name: Kamera-Modi lesen (Testkamera vivid, falls der Kernel sie hat)
+        run: |
+          sudo apt-get install -y -q "linux-modules-extra-$(uname -r)" >/dev/null 2>&1 || true
+          if sudo modprobe vivid n_devs=1 node_types=0x1 2>/dev/null; then
+            sleep 1; ls -l /dev/video* || true
+            sudo chmod 666 /dev/video* || true
+            cd broadcast && for d in /dev/video*; do python3 -m creative_broadcast.v4l2modes "$d" | tail -8; done
+          else
+            echo "vivid nicht verfügbar – nur Formeltest"
+          fi
+          cd "$GITHUB_WORKSPACE/broadcast" && python3 - <<'PY'
+          from creative_broadcast.v4l2modes import best_mode
+          c920 = [{"format": "MJPG", "width": 1920, "height": 1080, "fps": 30.0}, {"format": "MJPG", "width": 1280, "height": 720, "fps": 30.0},
+                  {"format": "YUYV", "width": 1920, "height": 1080, "fps": 5.0}, {"format": "MJPG", "width": 640, "height": 480, "fps": 30.0}]
+          c922 = c920 + [{"format": "MJPG", "width": 1280, "height": 720, "fps": 60.0}]
+          brio = [{"format": "MJPG", "width": 3840, "height": 2160, "fps": 30.0}, {"format": "MJPG", "width": 1920, "height": 1080, "fps": 60.0}]
+          for name, modes, want in (("C920", c920, (1920, 1080, 30)), ("C922", c922, (1280, 720, 60)), ("Brio", brio, (1920, 1080, 60))):
+              m = best_mode(modes)
+              got = (m["width"], m["height"], m["fps"])
+              print(name, "→", got)
+              assert got == want, (name, got, want)
+          print("Auswahl ok")
+          PY
+      - name: KI-Upscaling rechnen (Prozessor, nur Richtigkeit)
+        run: |
+          sudo mkdir -p /usr/share/creative-broadcast
+          sudo curl -fsSL -o /usr/share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx \
+            https://github.com/Phhofm/models/releases/download/2xNomosUni_span_multijpg/2xNomosUni_span_multijpg_fp16_opset17.onnx
+          cd broadcast && python3 - <<'PY'
+          import time, cv2, numpy as np
+          from creative_broadcast import upscale
+          print("verfügbar:", upscale.available())
+          up = upscale.Upscaler("schnell", providers=["CPUExecutionProvider"])
+          print("Eingang:", up.sess.get_inputs()[0], "Ausgang:", up.sess.get_outputs()[0])
+          # Testbild: Kanten und Text, verkleinert – nach dem Upscaling muss es dem Original ähneln
+          hr = np.full((1080, 1920, 3), 200, np.uint8)
+          for i in range(0, 1920, 60):
+              cv2.line(hr, (i, 0), (i + 300, 1080), (40, 60, 90), 3)
+          cv2.putText(hr, "Creative OS", (300, 600), cv2.FONT_HERSHEY_SIMPLEX, 8, (20, 20, 20), 18)
+          lr = cv2.resize(hr, (960, 540), interpolation=cv2.INTER_AREA)
+          t = time.monotonic(); y = up.run(lr); ms = (time.monotonic() - t) * 1000
+          bic = cv2.resize(lr, (1920, 1080), interpolation=cv2.INTER_CUBIC)
+          psnr = lambda a, b: 10 * np.log10(255 ** 2 / np.mean((a.astype(np.float32) - b.astype(np.float32)) ** 2))
+          print(f"Ausgabe {y.shape}, Prozessor {ms:.0f} ms (auf der Grafikkarte viel schneller)")
+          print(f"PSNR KI {psnr(y, hr):.2f} dB, bikubisch {psnr(bic, hr):.2f} dB")
+          assert y.shape == (1080, 1920, 3)
+          assert psnr(y, hr) > psnr(bic, hr) - 1.0, "KI-Bild deutlich schlechter als bikubisch?"
+          cv2.imwrite("/tmp/up-vergleich.jpg", np.hstack([bic[300:700, 200:900], y[300:700, 200:900]]))
+          PY
+          mkdir -p "$GITHUB_WORKSPACE/vorschau" && cp /tmp/up-vergleich.jpg "$GITHUB_WORKSPACE/vorschau/"
+      - name: Selbsttest Dienst
+        run: cd broadcast && XDG_RUNTIME_DIR=/tmp python3 -m creative_broadcast.daemon --selftest || true
+      - name: Fotos der Oberfläche
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: |
+          mkdir -p vorschau
+          timeout 40 python3 tools/broadcast-vorschau.py vorschau/broadcast-graphit.png graphit
+          timeout 40 python3 tools/broadcast-vorschau.py vorschau/broadcast-porzellan.png porzellan
+          timeout 40 python3 tools/broadcast-vorschau.py vorschau/broadcast-zu-langsam.png graphit langsam
+      - name: Ablegen
+        if: always()
+        run: |
+          cd vorschau && git init -q -b broadcast-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" broadcast-fotos
