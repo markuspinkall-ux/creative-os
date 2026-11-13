@@ -48,7 +48,7 @@ t["color_scheme"] = 2
 t["color_variant"] = 1
 json.dump(d, open(p, "w"))
 PY
-brave-browser --no-sandbox --no-first-run --disable-gpu --user-data-dir="$prof" --window-size=1280,800 --window-position=0,0 \\
+brave-browser --no-sandbox --no-first-run --disable-gpu --user-data-dir="$prof" --window-size=1280,800 --window-position=0,0 \
     "$p1" "$p2" >>/tmp/brave.log 2>&1 & bp=$!
 sleep 10
 xdotool mousemove 360 20; sleep 3
