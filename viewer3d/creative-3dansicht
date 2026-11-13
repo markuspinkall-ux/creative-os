@@ -156,6 +156,11 @@ if WEB:
             buffer = QBuffer(job)
             buffer.setData(QByteArray(data))
             buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+            if hasattr(job, "setAdditionalResponseHeaders"):        # Qt ≥ 6.6: Laden per fetch erlauben
+                try:
+                    job.setAdditionalResponseHeaders({QByteArray(b"Access-Control-Allow-Origin"): QByteArray(b"*")})
+                except TypeError:
+                    pass
             job.reply(MIME.get(suffix, b"application/octet-stream"), buffer)
 
     class Page(QWebEnginePage):
@@ -164,6 +169,8 @@ if WEB:
         def javaScriptConsoleMessage(self, level, text, line, source):
             if text.startswith("V3D:"):
                 self.message.emit(text[4:].strip())
+            elif level == QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel:
+                print(f"3D-Ansicht: {text} ({source}:{line})", file=sys.stderr)
 
 
 class Viewer(QMainWindow):
