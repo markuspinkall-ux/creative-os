@@ -46,7 +46,7 @@ OUTPUT = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "cre
 IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
 IMAGE = os.environ.get("CREATIVE3D_IMAGE", "ghcr.io/markuspinkall-ux/creative-trellis:latest")
 IMAGE2 = os.environ.get("CREATIVE3D_IMAGE2", "ghcr.io/markuspinkall-ux/creative-trellis2:latest")
-MODELS = [("trellis", "TRELLIS – schnell"), ("trellis2", "TRELLIS.2 – genauer, langsamer (4 Mrd. Parameter)")]
+MODELS = [("trellis", "TRELLIS – schnell"), ("trellis2", "TRELLIS.2 – genauer, langsamer")]
 DINOV3_URL = "https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m"
 HF_JOIN_URL = "https://huggingface.co/join"
 HF_TOKEN_URL = "https://huggingface.co/settings/tokens"
@@ -630,6 +630,7 @@ class Creative3D(QMainWindow):
         self.refresh()
 
     def setup_texts(self):
+        link = "color:" + T("#8fb3ff") + "; font-weight:700; text-decoration:none;"
         if self.current_model() == "trellis2":
             self.setup_title.setText("TRELLIS.2 einmalig einrichten")
             self.setup_text.setText(
@@ -639,9 +640,9 @@ class Creative3D(QMainWindow):
                 "Das dauert länger als bei TRELLIS, dein Bild verlässt den Rechner trotzdem nicht.<br><br>"
                 "Geladen werden ein Container (≈ 18 GB) und die Modelle (≈ 13 GB). Ein Bildmodell (DINOv3 von Meta) "
                 "gibt Meta nur nach Freischaltung heraus:<br>"
-                f"1. Kostenloses Konto anlegen: <a href='{HF_JOIN_URL}'>huggingface.co/join</a><br>"
-                f"2. Zugang beantragen: <a href='{DINOV3_URL}'>DINOv3 auf Hugging Face</a> – Meta schaltet von Hand frei<br>"
-                f"3. Schlüssel erstellen (Art „Read“): <a href='{HF_TOKEN_URL}'>huggingface.co/settings/tokens</a> "
+                f"1. Kostenloses Konto anlegen: <a style='{link}' href='{HF_JOIN_URL}'>huggingface.co/join</a><br>"
+                f"2. Zugang beantragen: <a style='{link}' href='{DINOV3_URL}'>DINOv3 auf Hugging Face</a> – Meta schaltet von Hand frei<br>"
+                f"3. Schlüssel erstellen (Art „Read“): <a style='{link}' href='{HF_TOKEN_URL}'>huggingface.co/settings/tokens</a> "
                 "und unten einfügen.<br><br>Der Schlüssel bleibt auf diesem PC und wird nur zum Laden der Modelle benutzt.")
             self.token_box.show()
             self.setup_button.setText("TRELLIS.2 einrichten")
