@@ -121,7 +121,8 @@ def register_scheme():
     scheme = QWebEngineUrlScheme(b"v3d")
     scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
     scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
-                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
+                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled
+                    | getattr(QWebEngineUrlScheme.Flag, "FetchApiAllowed", QWebEngineUrlScheme.Flag(0)))
     QWebEngineUrlScheme.registerScheme(scheme)
 
 
