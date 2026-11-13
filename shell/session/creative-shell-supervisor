@@ -121,6 +121,12 @@ elif command -v creative-welcome >/dev/null 2>&1 && id -nG 2>/dev/null | tr ' ' 
     (sleep 3; creative-welcome) >"$HOME/.cache/creative-welcome.log" 2>&1 &
 fi
 
+# Game Launcher beim Start öffnen (Systemsteuerung › System › Game Launcher)
+if [ ! -e /run/creative-live ] && command -v creative-gamelauncher >/dev/null 2>&1 \
+   && grep -q '"autostart": *true' "${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/gamelauncher.json" 2>/dev/null; then
+    ( sleep 5; creative-gamelauncher 2>&1 | systemd-cat -t creative-gamelauncher ) &
+fi
+
 crashes=0
 window_start=$(date +%s)
 # Zustand für die Gesundheitsprüfung des Systems (creative-session-health):

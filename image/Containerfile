@@ -301,6 +301,15 @@ COPY taskmanager/creative-taskmanager.desktop /usr/share/applications/creative-t
 RUN chmod 755 /usr/bin/creative-taskmanager
 
 # ---------------------------------------------------------------------------
+# 8a3b) Game Launcher – Steam-Spiele im Vollbild mit dem Controller (wie Big Picture)
+# ---------------------------------------------------------------------------
+RUN dnf install -y --skip-unavailable python3-evdev && dnf clean all
+COPY gamelauncher/creative_gamelauncher /usr/lib/creative-gamelauncher/creative_gamelauncher
+COPY gamelauncher/bin/creative-gamelauncher /usr/bin/creative-gamelauncher
+COPY gamelauncher/creative-gamelauncher.desktop /usr/share/applications/creative-gamelauncher.desktop
+RUN chmod 755 /usr/bin/creative-gamelauncher
+
+# ---------------------------------------------------------------------------
 # 8a4) Creative Pictures (Bildbetrachter) und Creative Shots (Bildschirmfotos)
 # ---------------------------------------------------------------------------
 RUN dnf install -y --skip-unavailable python3-pillow qt6-qtimageformats kf6-kimageformats spectacle xdg-user-dirs \
@@ -640,6 +649,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-media/creative_media/qml/YtWeb.qml \
         /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/Main.qml \
+        /usr/lib/creative-gamelauncher/creative_gamelauncher/qml/Main.qml \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/ProcessesPage.qml \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/PerformancePage.qml \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/StartupPage.qml \
@@ -675,6 +685,8 @@ RUN python3 /tmp/qml-check.py \
 # Taskmanager kurz ohne Bildschirm durchtesten (Warnungen landen im Bau-Protokoll)
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-taskmanager --selftest \
     || echo "TASKMANAGER-SELBSTTEST FEHLGESCHLAGEN"
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/gl-home timeout 60 /usr/bin/creative-gamelauncher --selftest \
+    || echo "GAMELAUNCHER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/gl-home
 # Creative Shots und Creative Pictures kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-shots --selftest \
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \

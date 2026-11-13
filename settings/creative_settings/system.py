@@ -157,6 +157,41 @@ class SystemModel(QObject):
         return sorted(accounts, key=lambda account: account["name"].casefold())
 
     accounts = Property("QVariantList", _localAccounts, notify=accountsChanged)
+
+    # ---- Game Launcher -------------------------------------------------------------------------
+    gameLauncherChanged = Signal()
+
+    @staticmethod
+    def _gl_config():
+        import json
+        path = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os" / "gamelauncher.json"
+        try:
+            return path, json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return path, {}
+
+    def _gl_autostart(self):
+        return bool(self._gl_config()[1].get("autostart", False))
+
+    @Slot(bool)
+    def setGameLauncherAutostart(self, on):
+        import json
+        path, data = self._gl_config()
+        data["autostart"] = bool(on)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.replace(path)
+        self.gameLauncherChanged.emit()
+
+    @Slot()
+    def openGameLauncher(self):
+        from PySide6.QtCore import QProcess
+        QProcess.startDetached("creative-gamelauncher", [])
+
+    gameLauncherAutostart = Property(bool, _gl_autostart, notify=gameLauncherChanged)
+    gameLauncherInstalled = Property(bool, lambda self: shutil.which("creative-gamelauncher") is not None,
+                                     constant=True)
     accountBusy = Property(bool, lambda self: self._accountBusy, notify=accountsChanged)
 
     @Slot(int, str)

@@ -1,0 +1,25 @@
+name: Game Launcher prüfen
+# Künstliche Steam-Bibliothek lesen (inkl. appinfo.vdf) und Fotos in Graphit und Porzellan.
+# Fotos im Branch „gamelauncher-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [gamelauncher/**, tools/gamelauncher-test.py, .github/workflows/gamelauncher-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf install -y -q python3 python3-pyside6 python3-pillow python3-evdev git liberation-sans-fonts google-noto-sans-fonts >/dev/null
+      - name: Bibliothek und Fotos
+        run: python3 tools/gamelauncher-test.py fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b gamelauncher-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Game Launcher ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" gamelauncher-fotos

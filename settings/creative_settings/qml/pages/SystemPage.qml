@@ -137,6 +137,26 @@ SettingsPage {
     }
 
     Card {
+        title: "Game Launcher"
+        subtitle: "Steam-Spiele im Vollbild mit dem Controller starten und installieren – wie Big Picture. Zurück zum Desktop mit der ☰-Taste."
+        visible: system.gameLauncherInstalled
+        SettingRow {
+            label: "Beim Start öffnen"
+            hint: "Nach der Anmeldung öffnet sich der Game Launcher auf dem Hauptbildschirm."
+            CSwitch {
+                checked: system.gameLauncherAutostart
+                label: "Game Launcher beim Start öffnen"
+                onToggled: (v) => system.setGameLauncherAutostart(v)
+            }
+        }
+        SettingRow {
+            label: "Jetzt öffnen"
+            last: true
+            CButton { text: "Game Launcher öffnen"; onClicked: system.openGameLauncher() }
+        }
+    }
+
+    Card {
         title: "Gerät"
         SettingRow { label: "Prozessor"; Text { text: system.info.cpu; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true } }
         SettingRow { label: "Arbeitsspeicher"; Text { text: system.info.ram; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true } }
