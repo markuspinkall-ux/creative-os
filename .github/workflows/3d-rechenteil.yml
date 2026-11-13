@@ -3,7 +3,7 @@ name: Creative 3D Rechenteil prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [creative3d/trellis/run.py, .github/workflows/3d-rechenteil.yml]
+    paths: [creative3d/trellis/run.py, creative3d/trellis/foto_projektion.py, tools/foto-projektion-test.py, .github/workflows/3d-rechenteil.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,7 +20,7 @@ jobs:
       - name: Selbsttest und Hochrechnen
         run: |
           mkdir -p cache fotos
-          R="podman run --rm -v $PWD/creative3d/trellis/run.py:/opt/creative/run.py:ro -v $PWD/cache:/cache -v $PWD/fotos:/fotos"
+          R="podman run --rm -v $PWD/creative3d/trellis/run.py:/opt/creative/run.py:ro -v $PWD/creative3d/trellis/foto_projektion.py:/opt/creative/foto_projektion.py:ro -v $PWD/tools/foto-projektion-test.py:/opt/creative/foto-projektion-test.py:ro -v $PWD/cache:/cache -v $PWD/fotos:/fotos"
           $R ghcr.io/markuspinkall-ux/creative-trellis:latest --selftest
           $R --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
           import sys, time
@@ -40,6 +40,26 @@ jobs:
           assert big.size == (512, 512)
           big.save('/fotos/textur-ki.png')
           img.resize((512, 512), Image.BICUBIC).save('/fotos/textur-einfach.png')
+          "
+      - name: Foto-Projektion und Freistellen (im Container, ohne Grafikkarte)
+        run: |
+          R="podman run --rm -v $PWD/creative3d/trellis/run.py:/opt/creative/run.py:ro -v $PWD/creative3d/trellis/foto_projektion.py:/opt/creative/foto_projektion.py:ro -v $PWD/tools/foto-projektion-test.py:/opt/creative/foto-projektion-test.py:ro -v $PWD/cache:/cache -v $PWD/fotos:/fotos"
+          $R --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest /opt/creative/foto-projektion-test.py /fotos 4
+          $R -e U2NET_HOME=/cache/u2net --entrypoint python3 ghcr.io/markuspinkall-ux/creative-trellis:latest -c "
+          import sys
+          sys.path.insert(0, '/opt/creative')
+          import run
+          from PIL import Image, ImageDraw
+          img = Image.new('RGB', (800, 600), (245, 245, 245))
+          d = ImageDraw.Draw(img)
+          d.ellipse([330, 80, 470, 220], fill=(230, 180, 140))
+          d.rectangle([310, 220, 490, 520], fill=(40, 90, 200))
+          class P: pass
+          rgba, rgb = run.freistellen(P(), img)
+          print('freigestellt', rgba.size, rgba.mode, rgb.mode)
+          a = rgba.getchannel('A')
+          assert rgba.size == (518, 518) and a.getextrema() == (0, 255)
+          rgba.save('/fotos/freigestellt.png')
           "
       - name: Fotos ablegen
         run: |

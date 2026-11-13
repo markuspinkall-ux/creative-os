@@ -207,6 +207,7 @@ COPY creative3d/viewer.html \
      creative3d/creative3d_rig.py creative3d/creative3d_rigeditor.py creative3d/creative3d_softview.py creative3d/dinov2_from_timm.py \
      /usr/lib/creative-3d/
 COPY creative3d/trellis/run.py /usr/lib/creative-3d/trellis-run.py
+COPY creative3d/trellis/foto_projektion.py /usr/lib/creative-3d/trellis-foto_projektion.py
 COPY creative3d/creative-3d.desktop /usr/share/applications/creative-3d.desktop
 COPY creative3d/creative-3d.svg /usr/share/icons/hicolor/scalable/apps/creative-3d.svg
 RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \

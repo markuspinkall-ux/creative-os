@@ -185,6 +185,53 @@ def upscale_texture(image, target, tile=384, pad=16):
     return big
 
 
+# ── Freistellen (wie TRELLIS, aber mit Maske für die Foto-Projektion) ─────
+
+def freistellen(pipeline, image):
+    """Wie TrellisImageTo3DPipeline.preprocess_image – liefert zusätzlich das RGBA-Bild.
+
+    Rückgabe: (rgba 518×518 mit Maske, rgb vormultipliert für TRELLIS)."""
+    import numpy as np
+    from PIL import Image
+    has_alpha = image.mode == "RGBA" and not np.all(np.asarray(image)[:, :, 3] == 255)
+    if has_alpha:
+        output = image
+    else:
+        image = image.convert("RGB")
+        scale = min(1, 1024 / max(image.size))
+        if scale < 1:
+            image = image.resize((int(image.width * scale), int(image.height * scale)), Image.Resampling.LANCZOS)
+        import rembg
+        if getattr(pipeline, "rembg_session", None) is None:
+            pipeline.rembg_session = rembg.new_session("u2net")
+        output = rembg.remove(image, session=pipeline.rembg_session)
+    alpha = np.asarray(output)[:, :, 3]
+    pts = np.argwhere(alpha > 0.8 * 255)
+    if len(pts) == 0:
+        raise ValueError("Im Bild wurde kein Motiv gefunden.")
+    x0, y0, x1, y1 = pts[:, 1].min(), pts[:, 0].min(), pts[:, 1].max(), pts[:, 0].max()
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    size = int(max(x1 - x0, y1 - y0) * 1.2)
+    rgba = output.crop((cx - size // 2, cy - size // 2, cx + size // 2, cy + size // 2)) \
+        .resize((518, 518), Image.Resampling.LANCZOS).convert("RGBA")
+    arr = np.asarray(rgba).astype(np.float32) / 255
+    rgb = Image.fromarray(((arr[:, :, :3] * arr[:, :, 3:4]) * 255).astype(np.uint8))
+    return rgba, rgb
+
+
+def foto_auf_front(glb, photo):
+    """Originalfoto auf die sichtbare Vorderseite der Textur legen (siehe foto_projektion.py)."""
+    from foto_projektion import project_photo
+    material = glb.visual.material
+    key = "baseColorTexture" if getattr(material, "baseColorTexture", None) is not None else "image"
+    texture = getattr(material, key)
+    new, info = project_photo(glb.vertices, glb.faces, glb.visual.uv, glb.vertex_normals, texture, photo,
+                              log=lambda text: None)
+    if info.get("projiziert"):
+        setattr(material, key, new)
+    return info
+
+
 # ── Hilfen für die Ausgabe ────────────────────────────────────────────────
 
 def vertex_colors(mesh):
@@ -284,8 +331,8 @@ def generate(args):
     progress(17, "Entferne den Hintergrund und schneide zu …")
     image = Image.open(args.image)
     image.load()
-    prepared = pipeline.preprocess_image(image)
-    prepared.save(out / "eingabe.png")
+    photo, prepared = freistellen(pipeline, image)
+    photo.save(out / "eingabe.png")
 
     hook_sampler_progress([(20, 45, "Erzeuge die Grundform"), (45, 70, "Erzeuge Details und Farben")])
     with torch.no_grad():
@@ -308,6 +355,13 @@ def generate(args):
     if glb is None or len(glb.faces) == 0:
         say("ERR", "Aus diesem Bild ließ sich keine Figur formen. Versuch ein Bild mit klarem Motiv.")
         return 2
+    progress(84, "Lege das Originalfoto auf die Vorderseite …")
+    try:
+        info = foto_auf_front(glb, photo)
+        if not info.get("projiziert"):
+            progress(85, "Foto passt nicht genau genug auf die Form – behalte die gebackene Textur")
+    except Exception as error:  # noqa: BLE001 – lieber ohne Projektion als gar keine Figur
+        progress(85, f"Foto-Projektion ging nicht ({error})")
     if settings.get("upscale"):
         progress(86, f"Rechne die Textur per KI auf {settings['upscale']} × {settings['upscale']} hoch …")
         try:
@@ -349,6 +403,16 @@ def selftest():
         for rel in files.values():
             assert (Path(tmp) / rel).is_file(), rel
     assert safe_name("Mein Bild!.png".rsplit(".", 1)[0]) == "Mein_Bild_"
+    # Foto-Projektion: Kugel, rotes Foto von vorne → Vorderseite rot, Rückseite unverändert
+    from PIL import ImageDraw
+    from foto_projektion import project_photo
+    sphere = trimesh.creation.uv_sphere(radius=1.0, count=[32, 32])
+    if getattr(sphere.visual, "uv", None) is not None:
+        photo = Image.new("RGBA", (518, 518), (0, 0, 0, 0))
+        ImageDraw.Draw(photo).ellipse([109, 109, 409, 409], fill=(220, 30, 30, 255))
+        tex, info = project_photo(sphere.vertices, sphere.faces, sphere.visual.uv, sphere.vertex_normals,
+                                  Image.new("RGB", (128, 128), (128, 128, 128)), photo, log=lambda t: None)
+        assert info["projiziert"], info
     print("TRELLIS-Rechenteil: Selbsttest bestanden")
     return 0
 

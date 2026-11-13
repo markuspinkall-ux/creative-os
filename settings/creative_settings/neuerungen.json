@@ -1,5 +1,15 @@
 [
   {
+    "datum": "2026-11-13",
+    "titel": "Server-Look und schärfere 3D-Figuren",
+    "neu": [
+      "Creative 3D legt das Originalfoto auf die Vorderseite der Figur: Gesichter, Schrift und Muster werden so scharf wie im Bild – die Rückseite behält die berechnete Textur. Passt das Foto nicht genau zur Form, bleibt alles wie bisher",
+      "Anmeldebildschirm im Server-Modus mit eigenem Look: Petrol-Raster mit wandernden Datenpulsen, Server-Gehäuse mit blinkenden LEDs, Kennzeichen „SERVER-MODUS · ONLINE“ und die Adressen auf einen Blick – man sieht sofort, dass der PC als Server läuft"
+    ],
+    "verbessert": [],
+    "behoben": []
+  },
+  {
     "datum": "2026-11-12",
     "titel": "Creative Writer wie Word, helles Design für alle Apps und Ziehen & Ablegen",
     "neu": [
