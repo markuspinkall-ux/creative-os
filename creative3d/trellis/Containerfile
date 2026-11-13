@@ -52,6 +52,7 @@ RUN git clone https://github.com/microsoft/TRELLIS.git /opt/trellis \
  && cd /opt/trellis && git checkout -q "$TRELLIS_COMMIT" && git submodule update -q --init --recursive && rm -rf .git assets/example_*
 
 COPY run.py /opt/creative/run.py
+COPY foto_projektion.py /opt/creative/foto_projektion.py
 ENV PYTHONPATH=/opt/trellis \
     ATTN_BACKEND=xformers \
     SPCONV_ALGO=native \

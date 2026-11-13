@@ -91,7 +91,13 @@ def run_override():
     """Neuere Fassung des Rechenteils aus Creative OS in den Container legen – so kommen
     Verbesserungen (z. B. „Sehr hoch“) mit dem System-Update, ohne den 14-GB-Container neu zu laden."""
     newer = LIB / "trellis-run.py"
-    return ["-v", f"{newer}:/opt/creative/run.py:ro"] if newer.is_file() else []
+    if not newer.is_file():
+        return []
+    args = ["-v", f"{newer}:/opt/creative/run.py:ro"]
+    helper = LIB / "trellis-foto_projektion.py"
+    if helper.is_file():
+        args += ["-v", f"{helper}:/opt/creative/foto_projektion.py:ro"]
+    return args
 
 
 def gpu_name():

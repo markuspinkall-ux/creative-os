@@ -22,6 +22,10 @@ Item {
     readonly property color dark: light ? "#e9eef6" : "#12151b"
     readonly property color flame: light ? "#d9773a" : "#ffb07a"
     readonly property color okColor: light ? "#1f9e7f" : "#6fdcc0"
+    // Server-Modus: eigener Aufbau (Raster, Gehäuse, Kennzeichen) in den Farben von Graphit/Porzellan
+    readonly property color srvAccent: !serverHealthy ? flame : accent
+    readonly property color srvStatus: serverHealthy ? okColor : flame
+    readonly property color srvBack: light ? "#eef2f8" : "#12151b"
     function tint(a) { return light ? Qt.rgba(20 / 255, 30 / 255, 50 / 255, a * 0.9) : Qt.rgba(1, 1, 1, a) }
     function panel(a) { return light ? Qt.rgba(1, 1, 1, Math.min(1, a + 0.04)) : Qt.rgba(28 / 255, 32 / 255, 41 / 255, a) }
     function readLook() {
@@ -184,8 +188,143 @@ Item {
     }
     Rectangle { anchors.fill: parent; color: root.light ? Qt.rgba(0.93, 0.95, 0.98, 0.35) : Qt.rgba(0.05, 0.06, 0.08, 0.55) }
 
+    // ---- Server-Modus: eigene Szene (einfarbig, Server-Gehäuse, Kennzeichen) --------
+    Item {
+        id: serverScene
+        anchors.fill: parent
+        opacity: root.serverView ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 500 } }
+
+        // Einfarbiger Hintergrund
+        Rectangle { anchors.fill: parent; color: root.srvBack }
+
+        // Kennzeichen oben links
+        Rectangle {
+            x: 28; y: 26
+            width: badgeRow.implicitWidth + 30
+            height: 38
+            radius: 19
+            color: root.panel(0.9)
+            border.color: root.tint(0.10)
+            Row {
+                id: badgeRow
+                anchors.centerIn: parent
+                spacing: 10
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 9; height: 9; radius: 5
+                    color: root.srvStatus
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "SERVER-MODUS  ·  " + (root.serverHealthy ? "ONLINE" : "STÖRUNG")
+                    color: root.textColor
+                    font.family: root.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.letterSpacing: 2
+                }
+            }
+        }
+        // Uhr klein oben rechts
+        Column {
+            anchors.right: parent.right
+            anchors.rightMargin: 32
+            y: 22
+            spacing: 2
+            Text { id: srvClock; anchors.right: parent.right; color: root.textColor; font.family: root.fontFamily; font.pixelSize: 34; font.bold: true }
+            Text { id: srvDate; anchors.right: parent.right; color: root.muted; font.family: root.fontFamily; font.pixelSize: 14 }
+        }
+
+        // Server-Gehäuse mit blinkenden LEDs im drehenden Ring
+        Item {
+            id: rack
+            width: 220; height: 220
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: parent.height * 0.13
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: root.panel(root.light ? 0.7 : 0.6)
+                border.color: root.tint(0.10)
+                border.width: 1
+            }
+            Canvas {
+                id: arc
+                anchors.fill: parent
+                property color c: root.srvAccent
+                onCChanged: requestPaint()
+                onPaint: {
+                    const g = getContext("2d")
+                    g.reset()
+                    g.strokeStyle = c
+                    g.lineWidth = 3
+                    g.lineCap = "round"
+                    g.beginPath(); g.arc(width / 2, height / 2, width / 2 - 3, -0.5, 0.9); g.stroke()
+                    g.globalAlpha = 0.5
+                    g.beginPath(); g.arc(width / 2, height / 2, width / 2 - 3, 2.6, 3.3); g.stroke()
+                }
+                RotationAnimator on rotation {
+                    running: root.serverView && !root.dimmed
+                    from: 0; to: 360
+                    duration: 9000
+                    loops: Animation.Infinite
+                }
+            }
+            Column {
+                anchors.centerIn: parent
+                spacing: 7
+                Repeater {
+                    model: 3
+                    delegate: Rectangle {
+                        id: unit
+                        required property int index
+                        width: 112; height: 26; radius: 6
+                        color: root.light ? "#ffffff" : "#232936"
+                        border.color: root.tint(0.14)
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 6
+                            Repeater {
+                                model: 2
+                                delegate: Rectangle {
+                                    id: led
+                                    required property int index
+                                    width: 7; height: 7; radius: 4
+                                    color: led.index === 0 ? root.srvStatus : root.accent
+                                    SequentialAnimation on opacity {
+                                        running: root.serverView && root.serverHealthy && !root.dimmed
+                                        loops: Animation.Infinite
+                                        PauseAnimation { duration: 180 * (unit.index * 2 + led.index + 1) }
+                                        NumberAnimation { to: 0.2; duration: 90 }
+                                        NumberAnimation { to: 1; duration: 90 }
+                                        PauseAnimation { duration: 700 + 260 * unit.index }
+                                    }
+                                }
+                            }
+                        }
+                        Column {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 3
+                            Repeater {
+                                model: 3
+                                delegate: Rectangle { width: 34; height: 2; radius: 1; color: root.tint(0.18) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ---- Uhr ------------------------------------------------------------------------
     Column {
+        visible: !root.serverView
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.14
         spacing: 6
@@ -213,10 +352,12 @@ Item {
         onTriggered: {
             const now = new Date()
             clock.text = Qt.formatTime(now, "HH:mm")
+            srvClock.text = clock.text
             const days = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
             const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August",
                             "September", "Oktober", "November", "Dezember"]
             date.text = days[now.getDay()] + ", " + now.getDate() + ". " + months[now.getMonth()]
+            srvDate.text = date.text
         }
     }
 
@@ -377,10 +518,10 @@ Item {
         id: serverCard
         visible: root.serverView
         anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height * 0.44
-        width: 520
+        y: parent.height * 0.13 + 250
+        width: 540
         height: serverColumn.implicitHeight + 64
-        radius: 20
+        radius: 22
         color: root.panel(0.92)
         border.color: root.tint(0.08)
 
@@ -398,7 +539,7 @@ Item {
                     id: statusDot
                     anchors.verticalCenter: parent.verticalCenter
                     width: 12; height: 12; radius: 6
-                    color: root.serverHealthy ? root.okColor : root.flame
+                    color: root.srvStatus
                     SequentialAnimation on opacity {
                         running: root.serverView && root.serverHealthy
                         loops: Animation.Infinite
@@ -408,7 +549,7 @@ Item {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Server-Modus"
+                    text: root.serverHealthy ? "Server läuft" : "Server antwortet nicht"
                     color: root.textColor
                     font.family: root.fontFamily
                     font.pixelSize: 26
@@ -450,9 +591,9 @@ Item {
                     Text {
                         text: parent.modelData.v
                         color: root.textColor
-                        font.family: root.fontFamily
                         font.pixelSize: 14
                         font.bold: true
+                        font.family: "monospace"
                     }
                 }
             }
@@ -465,7 +606,7 @@ Item {
                 width: backLabel.implicitWidth + 48
                 height: 46
                 radius: 23
-                color: backMouse.pressed ? Qt.darker(root.accent, 1.15) : root.accent
+                color: backMouse.pressed ? Qt.darker(root.srvAccent, 1.15) : root.srvAccent
                 Text {
                     id: backLabel
                     anchors.centerIn: parent
