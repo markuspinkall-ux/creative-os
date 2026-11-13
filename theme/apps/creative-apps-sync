@@ -46,6 +46,7 @@ VISIBLE = {
     "creative-twitch.desktop": (None, None),
     "creative-whatsapp.desktop": (None, None),
     "steam.desktop": ("Steam", "creative-games"),
+    "creative-gamelauncher.desktop": (None, None),
     "discord.desktop": ("Discord", "creative-chat"),
     "creative-software.desktop": (None, None),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),

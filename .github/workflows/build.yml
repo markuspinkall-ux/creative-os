@@ -56,7 +56,9 @@ jobs:
         run: python3 -m unittest tests/test_magazin.py
 
       - name: Containerfile – alle kopierten Dateien vorhanden?
-        run: python3 image/check-copy-sources.py image/Containerfile image/Containerfile.apps
+        run: |
+          python3 image/check-copy-sources.py image/Containerfile image/Containerfile.apps
+          python3 tools/startmenue-check.py
 
       - name: Creative Cut – Zeitleiste, Projektformat und Export prüfen
         run: python3 -m unittest tests/test_cut.py
