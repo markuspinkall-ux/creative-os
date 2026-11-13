@@ -1,0 +1,30 @@
+name: Brave Vorschau
+# Brave mit dem Graphit-GTK-Design starten und Tabs (auch beim Drüberfahren) fotografieren.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [theme/gtk/**, tools/brave-foto.sh, .github/workflows/brave-vorschau.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  foto:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Brave und Werkzeuge
+        run: |
+          dnf install -y -q dnf-plugins-core xorg-x11-server-Xvfb xdotool ImageMagick gtk3 liberation-sans-fonts git >/dev/null
+          rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+          curl -fsSLo /etc/yum.repos.d/brave-browser.repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+          dnf install -y -q brave-browser >/dev/null && brave-browser --version
+      - name: Fotos
+        run: bash tools/brave-foto.sh fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b brave-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Brave ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" brave-fotos
