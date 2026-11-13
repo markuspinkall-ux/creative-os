@@ -1,0 +1,76 @@
+# Creative 3D – TRELLIS.2 (Microsoft, MIT, 4 Mrd. Parameter) fertig kompiliert für NVIDIA.
+# Gebaut von GitHub (.github/workflows/trellis2.yml) → ghcr.io/<besitzer>/creative-trellis2
+# Bau-Kontext: creative3d/  (nutzt auch trellis/run.py und trellis/foto_projektion.py)
+#
+# Die Modelle (≈ 13 GB) liegen nicht im Abbild, sondern werden beim Einrichten nach
+# ~/.local/share/creative-3d/modelle geladen (gemountet als /cache). DINOv3 (Meta) ist
+# freischaltpflichtig – dafür braucht es einmal einen Hugging-Face-Schlüssel.
+FROM docker.io/nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+ARG TRELLIS2_COMMIT=75fbf0183001ed9876c8dbb35de6b68552ee08bd
+ARG CUMESH_COMMIT=12289e1062f0603f2f0d0771b02e1395d247f26f
+ARG FLEXGEMM_COMMIT=6dd94a859c26ee8246888502eada3dd8ad85532e
+ARG NVDIFFRAST_TAG=v0.4.0
+# RTX 20/30/40, A-/H-Karten; PTX für Neueres
+ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0+PTX" \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1 \
+    MAX_JOBS=4
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.10 python3.10-dev python3-pip git ninja-build build-essential libjpeg-dev \
+      libgl1 libglib2.0-0 libegl1 libgomp1 libxrender1 libsm6 libxext6 ca-certificates \
+ && ln -sf /usr/bin/python3.10 /usr/bin/python \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip wheel setuptools \
+ && python3 -m pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124 \
+ && python3 -m pip install xformers==0.0.29.post3 --index-url https://download.pytorch.org/whl/cu124
+
+# Grundpakete wie in TRELLIS.2/setup.sh --basic (ohne Gradio/Training) + Freistellen und Ausgabe
+RUN python3 -m pip install "numpy<2" pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless ninja \
+      trimesh "transformers==4.57.1" huggingface-hub safetensors zstandard plyfile kornia timm scipy \
+      "rembg==2.0.59" onnxruntime xatlas \
+ && python3 -m pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+
+# CUDA-Erweiterungen (ohne Grafikkarte für alle oben genannten Karten kompiliert)
+RUN mkdir -p /tmp/ext && cd /tmp/ext \
+ && git clone -q -b "$NVDIFFRAST_TAG" https://github.com/NVlabs/nvdiffrast.git \
+ && python3 -m pip install --no-build-isolation ./nvdiffrast \
+ && git clone -q --recursive https://github.com/JeffreyXiang/CuMesh.git \
+ && (cd CuMesh && git checkout -q "$CUMESH_COMMIT" && git submodule update -q --init --recursive) \
+ && python3 -m pip install --no-build-isolation ./CuMesh \
+ && git clone -q --recursive https://github.com/JeffreyXiang/FlexGEMM.git \
+ && (cd FlexGEMM && git checkout -q "$FLEXGEMM_COMMIT" && git submodule update -q --init --recursive) \
+ && python3 -m pip install --no-build-isolation ./FlexGEMM \
+ && cd / && rm -rf /tmp/ext
+
+# TRELLIS.2 selbst (fester Stand) und o-voxel aus demselben Stand
+RUN git clone -q https://github.com/microsoft/TRELLIS.2.git /opt/trellis2 \
+ && cd /opt/trellis2 && git checkout -q "$TRELLIS2_COMMIT" && git submodule update -q --init --recursive \
+ && python3 -m pip install --no-build-isolation ./o-voxel \
+ && rm -rf .git assets data_toolkit
+
+COPY trellis/run.py /opt/creative/run.py
+COPY trellis/foto_projektion.py /opt/creative/foto_projektion.py
+COPY trellis2/run2.py /opt/creative/run2.py
+ENV PYTHONPATH=/opt/trellis2 \
+    ATTN_BACKEND=xformers \
+    SPARSE_ATTN_BACKEND=xformers \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    OPENCV_IO_ENABLE_OPENEXR=1 \
+    HF_HOME=/cache/hf \
+    TORCH_HOME=/cache/torch \
+    U2NET_HOME=/cache/u2net
+
+# Schneller Import-Test (ohne Grafikkarte). FlexGEMM und damit die TRELLIS.2-Pipeline nutzen Triton,
+# das beim Import einen Grafiktreiber verlangt – die werden hier nur als vorhanden geprüft.
+RUN python3 -c "import torch, xformers, nvdiffrast.torch, cumesh, trimesh, transformers, importlib.util as u; \
+      from transformers import DINOv3ViTModel; \
+      assert u.find_spec('flex_gemm') and u.find_spec('o_voxel') and u.find_spec('trellis2.pipelines'), 'FlexGEMM/O-Voxel/TRELLIS.2 fehlen'; \
+      print('TRELLIS.2-Bausteine ok, torch', torch.__version__)" \
+ && python3 /opt/creative/run2.py --selftest
+
+WORKDIR /opt/creative
+ENTRYPOINT ["python3", "/opt/creative/run2.py"]

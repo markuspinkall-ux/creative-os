@@ -228,6 +228,9 @@ def foto_auf_front(glb, photo):
     new, info = project_photo(glb.vertices, glb.faces, glb.visual.uv, glb.vertex_normals, texture, photo,
                               log=lambda text: None)
     if info.get("projiziert"):
+        if getattr(texture, "mode", "") == "RGBA":          # Transparenz (TRELLIS.2) behalten
+            new = new.convert("RGBA")
+            new.putalpha(texture.getchannel("A"))
         setattr(material, key, new)
     return info
 
