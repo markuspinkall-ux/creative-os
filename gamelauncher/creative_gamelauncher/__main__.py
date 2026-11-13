@@ -86,7 +86,7 @@ def main():
     app.setApplicationName("Game Launcher")
     app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-gamelauncher")
-    app.setWindowIcon(QIcon.fromTheme("input-gaming"))
+    app.setWindowIcon(QIcon.fromTheme("creative-gamelauncher", QIcon.fromTheme("input-gaming")))
 
     from creative_shell.mainthread import install
     from .backend import Launcher
