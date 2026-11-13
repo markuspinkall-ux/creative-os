@@ -32,7 +32,8 @@ fi
 # (selbst in den Standby schicken geht weiterhin).
 if [ -z "${CREATIVE_WACH:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 && systemd-inhibit --list >/dev/null 2>&1; then
     export CREATIVE_WACH=1
-    exec systemd-inhibit --what=idle --mode=block --who="Creative 3D" --why="KI wird eingerichtet" "$0" "$@"
+    # Die Modellwahl wurde oben schon ausgelesen (und aus "$@" entfernt) – beim Neustart wieder mitgeben
+    exec systemd-inhibit --what=idle --mode=block --who="Creative 3D" --why="KI wird eingerichtet" "$0" --modell "$MODELL" "$@"
 fi
 rm -f "$MARK" "$DATA/ready"
 

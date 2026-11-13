@@ -143,7 +143,10 @@ def register_scheme():
     # bei Path-Syntax ist die Herkunft „opaque“ und Module/fetch werden per CORS blockiert.
     scheme.setSyntax(QWebEngineUrlScheme.Syntax.Host)
     scheme.setFlags(QWebEngineUrlScheme.Flag.SecureScheme | QWebEngineUrlScheme.Flag.LocalScheme
-                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled)
+                    | QWebEngineUrlScheme.Flag.LocalAccessAllowed | QWebEngineUrlScheme.Flag.CorsEnabled
+                    # Neuere Browser-Engines laden über eigene Schemata per fetch() nur mit dieser Erlaubnis –
+                    # ohne sie konnte model-viewer die Figur nicht laden und es kam die einfache Vorschau
+                    | getattr(QWebEngineUrlScheme.Flag, "FetchApiAllowed", QWebEngineUrlScheme.Flag(0)))
     QWebEngineUrlScheme.registerScheme(scheme)
 
 
@@ -517,7 +520,11 @@ class Creative3D(QMainWindow):
         self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte – TRELLIS braucht eine")
         self.stack.setCurrentIndex(0 if is_ready else 1)
         self.generate.setEnabled(is_ready and bool(self.image) and not busy)
-        self.generate.setToolTip("" if is_ready else "Zuerst rechts die KI einrichten")
+        self.generate.setToolTip(
+            "Rechnet gerade – bitte warten" if busy
+            else "Zuerst rechts die KI einrichten" if not is_ready
+            else "Zuerst links ein Foto wählen oder hineinziehen" if not self.image
+            else "")
         self.setup_button.setEnabled(not busy)
         for b in self.export_buttons + [self.folder_button]:
             b.setEnabled(bool(self.result) and not busy)
@@ -536,8 +543,9 @@ class Creative3D(QMainWindow):
         if not ok:
             self.use_soft("Die Vorschau-Seite ließ sich nicht laden.")
             return
-        # model-viewer muss sich innerhalb weniger Sekunden melden, sonst Ausweich-Vorschau
-        QTimer.singleShot(15000, lambda: None if self.web_ok else self.use_soft("Die 3D-Vorschau hat nicht geantwortet."))
+        # model-viewer meldet sich normalerweise nach Sekunden. Dauert es lange (z. B. weil die
+        # Grafikkarte gerade rechnet), nicht von selbst umschalten – nur Bescheid geben.
+        QTimer.singleShot(45000, lambda: None if self.web_ok else self.web_problem("Die 3D-Vorschau braucht ungewöhnlich lange."))
 
     def web_message(self, text):
         if text.startswith("ready webgl"):
@@ -548,9 +556,16 @@ class Creative3D(QMainWindow):
         elif text.startswith("nowebgl"):
             self.use_soft("Die Grafikkarte steht der eingebauten Browser-Engine nicht zur Verfügung (kein WebGL).")
         elif text.startswith("error") and not self.web_ok:
-            self.use_soft("Die 3D-Vorschau konnte nicht starten.")
+            self.web_problem("Die 3D-Vorschau hatte einen Fehler beim Start.")
         elif text.startswith("modelerror"):
-            self.use_soft("Die Figur ließ sich in der 3D-Vorschau nicht laden.")
+            # einmal neu laden (z. B. Datei war beim ersten Versuch noch nicht ganz geschrieben)
+            if not getattr(self, "model_retry", False) and self.result:
+                self.model_retry = True
+                QTimer.singleShot(1500, lambda: self.preview(self.rigged or self.result["files"]["glb"]))
+            else:
+                self.web_problem("Die Figur ließ sich in der 3D-Vorschau nicht anzeigen.")
+        elif text.startswith("modelloaded"):
+            self.model_retry = False
 
     def set_simple(self, on):
         self.settings.setValue("simplePreview", on)
@@ -565,6 +580,13 @@ class Creative3D(QMainWindow):
 
     def busy(self):
         return self.proc.state() != QProcess.ProcessState.NotRunning
+
+    def web_problem(self, reason):
+        """Vorschau hakt – nicht von selbst auf die einfache Vorschau umschalten (das hat genervt),
+        sondern Bescheid geben. Wer will, schaltet „Einfache Vorschau“ selbst ein."""
+        print(f"Creative 3D: Vorschau – {reason}", file=sys.stderr)
+        if hasattr(self, "status") and not self.simple.isChecked():
+            self.status.setText(reason + " Falls die Figur nicht erscheint: oben „Einfache Vorschau“ einschalten.")
 
     def use_soft(self, reason):
         if self.web_failed:
