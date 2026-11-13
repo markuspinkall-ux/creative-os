@@ -54,9 +54,9 @@ shot login
 # Stand dieses Branches vorab einspielen (vorübergehend beschreibbares /usr, bis zum Neustart)
 if [ "${BRANCH_EINSPIELEN:-1}" = 1 ] && [ -d shell/creative_shell ]; then
     echo "--- Branch-Stand wird in die VM eingespielt …"
-    tar -czf "$W/branch.tgz" shell/creative_shell shell/session/creative-shell-supervisor users/creative-users-helper login/creative
+    tar -czf "$W/branch.tgz" shell/creative_shell shell/session/creative-shell-supervisor users/creative-users-helper login/creative login/sddm-creative.conf
     scp -i "$W/key" -P 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$W/branch.tgz" tester@127.0.0.1:/tmp/branch.tgz
-    $SSH "echo creative-test | sudo -S sh -c 'rpm-ostree usroverlay >/dev/null 2>&1 || ostree admin unlock >/dev/null 2>&1; mkdir -p /tmp/b && tar -xzf /tmp/branch.tgz -C /tmp/b && rm -rf /usr/lib/creative-shell/creative_shell && cp -r /tmp/b/shell/creative_shell /usr/lib/creative-shell/ && install -m755 /tmp/b/shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor && install -m755 /tmp/b/users/creative-users-helper /usr/libexec/creative-users-helper && cp /tmp/b/login/creative/Main.qml /usr/share/sddm/themes/creative/Main.qml && echo eingespielt'" 2>&1 | tail -2
+    $SSH "echo creative-test | sudo -S sh -c 'rpm-ostree usroverlay >/dev/null 2>&1 || ostree admin unlock >/dev/null 2>&1; mkdir -p /tmp/b && tar -xzf /tmp/branch.tgz -C /tmp/b && rm -rf /usr/lib/creative-shell/creative_shell && cp -r /tmp/b/shell/creative_shell /usr/lib/creative-shell/ && install -m755 /tmp/b/shell/session/creative-shell-supervisor /usr/libexec/creative-shell-supervisor && install -m755 /tmp/b/users/creative-users-helper /usr/libexec/creative-users-helper && cp /tmp/b/login/creative/Main.qml /usr/share/sddm/themes/creative/Main.qml && rm -f /usr/lib/sddm/sddm.conf.d/10-creative.conf && cp /tmp/b/login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/zz-creative.conf && ls /usr/lib/sddm/sddm.conf.d /etc/sddm.conf.d && grep -rh GreeterEnvironment /usr/lib/sddm/sddm.conf.d /etc/sddm.conf.d /etc/sddm.conf 2>/dev/null; echo eingespielt'" 2>&1 | tail -12
 fi
 $SSH "echo creative-test | sudo -S sh -c 'python3 -m venv /tmp/ps >/dev/null 2>&1 && /tmp/ps/bin/pip -q install py-spy >/dev/null 2>&1; ls /tmp/ps/bin/py-spy'" 2>&1 | tail -1
 echo "System läuft. Anmeldung wird automatisch durchgeführt …"
@@ -106,7 +106,7 @@ if [ "${ZWEITKONTO:-1}" = 1 ]; then
     sleep 40
     shot anmeldung-frau
     echo "--- Anmeldemaske (Theme, Greeter-Meldungen):"
-    $SSH "echo creative-test | sudo -S sh -c 'grep -c passwordless /usr/share/sddm/themes/creative/Main.qml; ls -la /var/lib/creative-os/; journalctl -b --no-pager -u sddm _COMM=sddm-greeter-qt6 2>/dev/null | tail -5; journalctl -b --no-pager | grep -iE \"sddm-greeter|Main.qml|qml:\" | grep -viE \"MESA\" | tail -40'" 2>&1 | grep -v "password for" | tail -50
+    $SSH "echo creative-test | sudo -S sh -c 'echo Theme-Zeilen: \$(grep -c passwordless /usr/share/sddm/themes/creative/Main.qml); ls -la /var/lib/creative-os/; journalctl -b --no-pager -u sddm _COMM=sddm-greeter-qt6 2>/dev/null | tail -5; journalctl -b --no-pager | grep -iE \"sddm-greeter|Main.qml|qml:\" | grep -viE \"MESA\" | tail -40'" 2>&1 | grep -v "password for" | tail -50
     R="echo creative-test | sudo -S"
     haenger=0
     for runde in 1 2 3; do

@@ -11,7 +11,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ "${1:-}" = "--zurueck" ]; then
-    rm -f /etc/sddm.conf.d/10-creative.conf
+    rm -f /etc/sddm.conf.d/10-creative.conf /etc/sddm.conf.d/zz-creative.conf
     if systemctl list-unit-files plasmalogin.service >/dev/null 2>&1; then
         systemctl disable sddm.service 2>/dev/null || true
         systemctl enable --force plasmalogin.service
@@ -31,7 +31,7 @@ if [ "${1:-}" = "--test" ]; then
     exit 0
 fi
 
-install -Dm644 sddm-creative.conf /etc/sddm.conf.d/10-creative.conf
+install -Dm644 sddm-creative.conf /etc/sddm.conf.d/zz-creative.conf
 systemctl disable plasmalogin.service 2>/dev/null || true
 systemctl enable --force sddm.service
 echo "Fertig. Nach dem nächsten Neustart erscheint der Creative-Anmeldebildschirm."

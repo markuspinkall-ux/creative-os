@@ -535,7 +535,7 @@ RUN if rpm -q obs-studio >/dev/null 2>&1; then \
 # ---------------------------------------------------------------------------
 RUN dnf install -y --skip-unavailable sddm sddm-wayland-plasma && dnf clean all
 COPY login/creative /usr/share/sddm/themes/creative
-COPY login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/10-creative.conf
+COPY login/sddm-creative.conf /usr/lib/sddm/sddm.conf.d/zz-creative.conf
 # Design des Anmeldebildschirms (Graphit/Porzellan) – gesetzt aus Einstellungen → Darstellung
 COPY --chmod=755 login/creative-login-look /usr/libexec/creative-login-look
 COPY login/org.creativeos.login-look.policy /usr/share/polkit-1/actions/org.creativeos.login-look.policy
