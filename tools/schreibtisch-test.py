@@ -18,7 +18,10 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 app = QGuiApplication(sys.argv)
 from creative_shell import config  # noqa: E402
+from creative_shell import desktop as dm  # noqa: E402
 from creative_shell.desktop import DesktopModel  # noqa: E402
+
+dm.desktop_dir = lambda: home / "Schreibtisch"
 
 m = DesktopModel()
 d = str(home / "Schreibtisch")
