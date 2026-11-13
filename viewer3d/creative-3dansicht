@@ -88,6 +88,7 @@ VIEWER = """<!DOCTYPE html>
 STYLE = """
     QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
     QWidget#bar { background:#1c2029; border-bottom:1px solid rgba(255,255,255,0.06); }
+    QWidget#bar QLabel { background:transparent; }
     QLabel#name { font-size:15px; font-weight:700; }
     QLabel#muted { color:rgba(220,230,255,0.6); }
     QLabel#empty { color:rgba(220,230,255,0.62); font-size:15px; }
