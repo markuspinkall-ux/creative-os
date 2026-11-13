@@ -22,6 +22,8 @@ DEFAULTS = {
     "desktopExtras": {},
     "desktopWidgetScreens": {},
     "desktopIconScreens": {},
+    # Platz der Schreibtisch-Symbole je Monitor: {Monitor: {Pfad: [Spalte, Zeile]}}
+    "desktopIconCells": {},
     # Musik-Visualizer hinter der Taskleiste
     "taskbarVisualizer": True,
     "visualizerOpacity": 0.1,

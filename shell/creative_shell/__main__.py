@@ -205,7 +205,8 @@ class ShellController(QObject):
         entry.update({key: None for key in SURFACES})
         self._surfaces[name] = entry
         geo = screen.geometry()
-        if self._layer:  # im Testmodus kein Hintergrund, sonst wäre der Desktop verdeckt
+        # im Testmodus kein Hintergrund, sonst wäre der Desktop verdeckt (außer für Prüf-Fotos)
+        if self._layer or os.environ.get("CREATIVE_TEST_BACKGROUND"):
             entry["bg"] = self._create(screen, "background", "Wallpaper.qml", geo.width(), geo.height(), True)
             _win_show(entry["bg"])
         entry["bar"] = self._create(screen, "bar", "Taskbar.qml", geo.width(), BAR_HEIGHT, False)
