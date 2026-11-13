@@ -53,6 +53,18 @@ set_password() {   # set_password <login> <passwort|leer>
     fi
 }
 
+# Neues Konto auf einem eingerichteten System: kein Willkommens-Assistent
+# (der gehört zur Ersteinrichtung nach der Installation).
+prepare_home() {
+    local home
+    home=$(getent passwd "$1" | cut -d: -f6)
+    [ -n "$home" ] && [ -d "$home" ] || return 0
+    install -d -o "$1" -g "$1" -m 700 "$home/.config"
+    install -d -o "$1" -g "$1" -m 755 "$home/.config/creative-os"
+    printf '1\n' > "$home/.config/creative-os/welcome-done"
+    chown "$1": "$home/.config/creative-os/welcome-done"
+}
+
 cmd="${1:-}"
 case "$cmd" in
 add)
@@ -69,6 +81,7 @@ add)
     useradd -m -c "$name" -s /bin/bash $groups "$login" 2>&1 >/dev/null | head -1 >&2
     getent passwd "$login" >/dev/null || die "Das Konto ließ sich nicht anlegen."
     set_password "$login" "$pw" || { userdel -r "$login" >/dev/null 2>&1; mark_nopw "$login" 0; die "Das Passwort ließ sich nicht setzen."; }
+    prepare_home "$login"
     if [ -z "$pw" ]; then echo "Konto „$login“ ohne Passwort angelegt."; else echo "Konto „$login“ angelegt."; fi
     ;;
 delete)

@@ -239,7 +239,7 @@ Item {
                                 height: 11
                                 sourceSize.width: 24
                                 sourceSize.height: 24
-                                source: "image://icon/" + modelData
+                                source: iconFiles.url(modelData)
                                 asynchronous: true
                                 smooth: true
                             }
@@ -267,7 +267,7 @@ Item {
                     height: 26
                     sourceSize.width: 52
                     sourceSize.height: 52
-                    source: "image://icon/" + row.icon
+                    source: iconFiles.url(row.icon)
                     asynchronous: true
                     smooth: true
                 }

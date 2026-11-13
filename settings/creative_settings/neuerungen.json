@@ -3,6 +3,7 @@
     "datum": "2026-11-12",
     "titel": "Creative Writer wie Word, helles Design für alle Apps und Ziehen & Ablegen",
     "neu": [
+      "KI-Helfer als Desktop-Widget: Wissensfragen stellen („Wer war der erste Bundeskanzler?“), Dinge erklären lassen oder E-Mails formulieren – mit dem Open-Source-Modell Gemma 4, komplett auf dem eigenen PC, ohne Konto und ohne Cloud",
       "Creative Writer im Stil von Word: Menüband, Datei-Bereich mit Vorlagen, Formatvorlagen, Inhaltsverzeichnis, Kopf- und Fußzeile mit Seitenzahlen, Zoom und Seitenansicht",
       "Creative Writer öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown – mit Rechtschreibprüfung auf Deutsch",
       "Startmenü: alle Creative-Programme im Ordner „Creative Apps“",
@@ -26,15 +27,22 @@
       "Creative 3D: Bildverständnis (DINOv2) kommt jetzt von Hugging Face – unabhängig von Metas Download-Server",
       "Creative 3D: Verbesserungen am Rechenteil kommen mit dem System-Update, ohne den 14-GB-Container neu zu laden",
       "Brave: Menüs und Rechtsklick-Menü im Graphit-Look",
-      "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby"
+      "Während ein Update oder die Creative-3D-KI lädt, geht der PC nicht mehr von selbst in den Standby",
+      "KI-Helfer: Antworten auf Wissensfragen stützen sich auf passende Wikipedia-Artikel (mit Quellen-Link); das Modell wird einmal für alle Konten geladen und gibt den Grafikspeicher nach 10 Minuten Ruhe wieder für Spiele frei",
+      "Anmeldebildschirm: Konten ohne Passwort zeigen kein Passwortfeld mehr – ein Klick auf das Profilbild (oder „Anmelden“) genügt",
+      "Neu angelegte Konten bekommen den Willkommens-Assistenten nicht mehr – das System ist ja schon eingerichtet",
+      "Tray: Programme wie Steam oder Discord lassen sich per Rechtsklick → „Beenden“ schließen (Systemprogramme, die immer laufen, ausgenommen)"
     ],
     "behoben": [
+      "Schwarzer Bildschirm nach der Anmeldung (vor allem bei der ersten Anmeldung neuer Konten): Die Oberfläche konnte beim Laden der App-Symbole hängen bleiben – Symbole kommen jetzt als fertige Bilddateien, Hintergrund-Ergebnisse laufen sicher über den Haupt-Thread",
       "Creative 3D: KI-Einrichtung brach mit „401 Client Error“ ab – die Modelle werden jetzt mit Grafikkarte geladen",
       "Creative 3D: Die einfache Vorschau war oft dauerhaft an – jetzt startet die echte 3D-Vorschau notfalls per Software",
       "Creative 3D und Creative Cut: aufgeklappte Auswahllisten waren durchsichtig",
       "Benutzerkonten: Die Schalter „Kein Passwort?“ und „Administrator?“ hatten keine Beschriftung",
       "Die Entf-Taste auf dem Schreibtisch kam nicht an – jetzt landen ausgewählte Symbole im Papierkorb",
-      "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab"
+      "Creative 3D: „KI einrichten“ brach mit einem libusb-Fehler ab",
+      "Bluetooth einschalten: kein roher Fehlertext mehr („PowerState: off-enabling“) – braucht der Adapter einen Moment, wird automatisch erneut versucht",
+      "Anmeldebildschirm: konnte seine Einstellungen nicht lesen (Fedora überschrieb sie) – helles Design, Server-Modus-Anzeige und Konten ohne Passwort werden jetzt erkannt"
     ]
   },
   {

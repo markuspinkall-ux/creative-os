@@ -43,7 +43,7 @@ Item {
                 x: 16
                 anchors.verticalCenter: parent.verticalCenter
                 width: 28; height: 28
-                source: modelData.icon ? "image://icon/" + modelData.icon : "image://icon/application-x-executable"
+                source: iconFiles.url(modelData.icon || "application-x-executable")
                 sourceSize.width: 56
                 sourceSize.height: 56
                 asynchronous: true

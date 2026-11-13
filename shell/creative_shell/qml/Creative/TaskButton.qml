@@ -41,7 +41,7 @@ Item {
         height: 32
         sourceSize.width: 64
         sourceSize.height: 64
-        source: root.icon.length === 0 ? "image://icon/" + root.themeIcon : ""
+        source: root.icon.length === 0 ? iconFiles.url(root.themeIcon) : ""
         asynchronous: true
         smooth: true
     }

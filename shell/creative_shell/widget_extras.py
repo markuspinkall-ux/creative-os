@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from PySide6.QtCore import QObject, Property, QTimer, Signal, Slot
 
 from . import config
+from .mainthread import post
 
 CLOCK_URL = ("https://raw.githubusercontent.com/markuspinkall-ux/creative-os/"
              "main/widgets/catalog/analog-clock.json")
@@ -79,7 +80,8 @@ class WidgetExtras(QObject):
         QTimer.singleShot(0, self.refresh)
 
     def _save(self, **changes):
-        settings = {**self._settings, **changes}
+        # frisch lesen: der KI-Helfer speichert im selben Abschnitt
+        settings = {**config.load()["desktopExtras"], **changes}
         if not config.set_value("desktopExtras", settings):
             return False
         self._settings = settings
@@ -136,7 +138,7 @@ class WidgetExtras(QObject):
         def work():
             with ThreadPoolExecutor(max_workers=4) as pool:
                 rows = list(pool.map(twitch_status, names))
-            self._ready.emit((names, rows))
+            post(self._ready.emit, (names, rows))
 
         threading.Thread(target=work, daemon=True).start()
 

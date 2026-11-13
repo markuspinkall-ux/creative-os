@@ -25,7 +25,7 @@ from .dbus_service import ShellBus
 from .kwin import KWinBridge
 from .desktop import DesktopModel
 from .tasks import TaskModel
-from .icons import IconProvider
+from .icons import IconFiles
 from .network import NetworkModel
 from .bluetooth import BluetoothModel
 from .printers import PrinterModel
@@ -36,6 +36,7 @@ from .trash import TrashModel
 from .desktopstats import DesktopStats
 from .desktopwidgets import DesktopWidget
 from .widget_extras import WidgetExtras
+from .ki import KiHelfer
 from .visualizer import Visualizer
 from .loginsound import play_login_sound
 from .nowplaying import NowPlaying
@@ -52,7 +53,7 @@ ASSIST_WIDTH = 320 + 8
 BUBBLE_WIDTH = 380 + 8
 POPUPS = ("start", "panel", "trash", "assistant", "appmenu", "chat", "bluetooth", "taskmenu")
 SURFACES = POPUPS + ("bubble",)
-DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch")
+DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "ki")
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
@@ -493,10 +494,15 @@ def main():
     app.setApplicationName("creative-shell")
     app.setDesktopFileName("creative-shell")
     app.setQuitOnLastWindowClosed(False)
+    # Ergebnisse von Hintergrund-Threads nur im Haupt-Thread verarbeiten (siehe mainthread.py)
+    from .mainthread import install as _install_mainthread
+    _mainthread_timer = _install_mainthread()  # noqa: F841 – muss am Leben bleiben
 
     engine = QQmlApplicationEngine()
     engine.addImportPath(str(QML_DIR))
-    engine.addImageProvider("icon", IconProvider())
+    # Symbole als Dateien (kein Python-Bildlieferant – der konnte den Start verklemmen)
+    icon_files = IconFiles()
+    engine.rootContext().setContextProperty("iconFiles", icon_files)
 
     cfg = config.load()
     apps = AppModel(cfg["pinned"])
@@ -517,6 +523,7 @@ def main():
         "desktopStats": DesktopStats(),
         "rssWidget": DesktopWidget("RSS"),
         "widgetExtras": WidgetExtras(),
+        "kiHelper": KiHelfer(),
         "weatherWidget": DesktopWidget("Weather"),
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
@@ -565,7 +572,7 @@ def main():
     bus = ShellBus(shell, tasks, apps, models["session"], {
         "shelf": models["shelf"], "stats": models["desktopStats"],
         "rss": models["rssWidget"], "weather": models["weatherWidget"],
-        "extras": models["widgetExtras"],
+        "extras": models["widgetExtras"], "ki": models["kiHelper"],
     })
     bus.register()
 

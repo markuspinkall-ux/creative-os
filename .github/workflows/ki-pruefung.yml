@@ -1,0 +1,49 @@
+name: KI-Helfer prüfen
+# Lädt llama.cpp (Vulkan-Fassung, wie im Abbild) und das kleine Modell, stellt echte Fragen
+# (auf dem Prozessor) und fotografiert Karte und Chat-Fenster. Fotos im Branch „ki-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [ki/**, shell/creative_shell/ki.py, shell/creative_shell/qml/surfaces/Ki*.qml, tools/ki-test.py, .github/workflows/ki-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pakete
+        run: dnf install -y -q python3 python3-pyside6 vulkan-loader mesa-vulkan-drivers libgomp curl tar git liberation-sans-fonts google-noto-sans-fonts >/dev/null
+      - name: KI-Rechenteil (wie im Abbild)
+        run: sh ki/install-llama.sh /usr/lib/creative-ki/llama && ls -la /usr/lib/creative-ki/llama
+      - name: Modellliste und Lade-Helfer (wie im Abbild)
+        run: |
+          install -Dm644 ki/modelle.json /usr/lib/creative-ki/modelle.json
+          install -Dm755 ki/creative-ki-setup /usr/libexec/creative-ki-setup
+          python3 -c "import json; [print(k, v['name'], v['groesse']) for k, v in json.load(open('ki/modelle.json')).items()]"
+      - name: Einrichten und fragen (Graphit)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          KI_EINRICHTEN: "1"
+        run: python3 tools/ki-test.py fotos graphit
+      - name: Foto Porzellan
+        if: always()
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          KI_FRAGEN: "0"
+          XDG_CONFIG_HOME: /tmp/hell
+        run: python3 tools/ki-test.py fotos porzellan || true
+      - name: Protokoll
+        if: always()
+        run: tail -40 ~/.cache/creative-ki.log || true
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && rm -f *.qml && git init -q -b ki-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "KI-Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" ki-fotos

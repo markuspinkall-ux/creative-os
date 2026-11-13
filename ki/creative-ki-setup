@@ -1,0 +1,112 @@
+#!/usr/bin/python3 -I
+"""Lädt ein KI-Modell für den KI-Helfer nach /var/lib/creative-ki/modelle.
+
+Läuft als root über pkexec (polkit: org.creativeos.ki.setup) – so teilen sich alle
+Benutzerkonten dasselbe Modell und es liegt nur einmal auf der Platte.
+
+  creative-ki-setup laden <gross|mittel|klein>
+
+Ausgabe: Zeilen „FORTSCHRITT <prozent> <text>“, am Ende „FERTIG“ oder „FEHLER <text>“.
+Nur Modelle aus der festen Liste (modelle.json) mit geprüfter SHA-256-Summe.
+"""
+
+import hashlib
+import json
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+LISTE = Path("/usr/lib/creative-ki/modelle.json")
+ZIEL = Path("/var/lib/creative-ki/modelle")
+
+
+def melde(text):
+    print(text, flush=True)
+
+
+def fehler(text):
+    melde("FEHLER " + text)
+    sys.exit(1)
+
+
+def lade(info):
+    ZIEL.mkdir(parents=True, exist_ok=True)
+    os.chmod(ZIEL.parent, 0o755)
+    os.chmod(ZIEL, 0o755)
+    ziel = ZIEL / info["datei"]
+    if ziel.is_file() and ziel.stat().st_size == info["groesse"]:
+        melde("FORTSCHRITT 100 Schon vorhanden")
+        melde("FERTIG")
+        return
+    frei = shutil.disk_usage(ZIEL).free
+    teil = ZIEL / (info["datei"] + ".teil")
+    schon = teil.stat().st_size if teil.is_file() else 0
+    if schon > info["groesse"]:
+        teil.unlink()
+        schon = 0
+    if frei < info["groesse"] - schon + 512 * 1024 * 1024:
+        fehler(f"Zu wenig Speicherplatz: {info['groesse'] / 1e9:.1f} GB werden gebraucht.")
+    gesamt = info["groesse"]
+    # Abgebrochene Downloads werden fortgesetzt (Range)
+    for versuch in range(4):
+        try:
+            kopf = {"User-Agent": "CreativeOS-KI/1.0"}
+            if schon:
+                kopf["Range"] = f"bytes={schon}-"
+            with urlopen(Request(info["url"], headers=kopf), timeout=30) as antwort:
+                if schon and antwort.status != 206:
+                    schon = 0          # Server kann nicht fortsetzen: neu anfangen
+                with open(teil, "ab" if schon else "wb") as f:
+                    zuletzt = 0.0
+                    start, start_bytes = time.monotonic(), schon
+                    while True:
+                        block = antwort.read(1 << 20)
+                        if not block:
+                            break
+                        f.write(block)
+                        schon += len(block)
+                        jetzt = time.monotonic()
+                        if jetzt - zuletzt > 0.5:
+                            zuletzt = jetzt
+                            rate = (schon - start_bytes) / max(0.1, jetzt - start)
+                            rest = (gesamt - schon) / rate if rate > 0 else 0
+                            min_, sek = divmod(int(rest), 60)
+                            melde(f"FORTSCHRITT {schon * 95 // gesamt} {schon / 1e9:.1f} von {gesamt / 1e9:.1f} GB"
+                                  f" · noch {min_} min {sek:02d} s")
+            if schon >= gesamt:
+                break
+        except OSError as exc:
+            melde(f"FORTSCHRITT {schon * 95 // gesamt} Verbindung unterbrochen ({exc.__class__.__name__}) – neuer Versuch …")
+            time.sleep(3 + versuch * 3)
+            schon = teil.stat().st_size if teil.is_file() else 0
+    if not teil.is_file() or teil.stat().st_size != gesamt:
+        fehler("Der Download ist nicht vollständig. Bitte später noch einmal versuchen.")
+    melde("FORTSCHRITT 96 Datei wird geprüft …")
+    h = hashlib.sha256()
+    with open(teil, "rb") as f:
+        for block in iter(lambda: f.read(1 << 22), b""):
+            h.update(block)
+    if h.hexdigest() != info["sha256"]:
+        teil.unlink()
+        fehler("Die geladene Datei ist beschädigt (Prüfsumme falsch). Bitte noch einmal versuchen.")
+    os.chmod(teil, 0o644)
+    teil.replace(ziel)
+    melde("FORTSCHRITT 100 Fertig")
+    melde("FERTIG")
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] != "laden":
+        fehler("Aufruf: creative-ki-setup laden <gross|mittel|klein>")
+    modelle = json.loads(LISTE.read_text(encoding="utf-8"))
+    info = modelle.get(sys.argv[2])
+    if info is None:
+        fehler("Unbekanntes Modell.")
+    lade(info)
+
+
+if __name__ == "__main__":
+    main()

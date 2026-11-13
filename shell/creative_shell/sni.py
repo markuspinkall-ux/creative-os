@@ -10,6 +10,8 @@ import glob
 import hashlib
 import json
 import os
+import re
+import signal
 import struct
 import tempfile
 import zlib
@@ -25,6 +27,23 @@ MENU_IF = "com.canonical.dbusmenu"
 
 # Bekannte Programme bekommen das passende Creative-Symbol
 CREATIVE_ICONS = {"steam": "games", "discord": "chat", "brave": "browser", "creative": "rocket"}
+
+
+# Gehören zum System und laufen ab dem Start immer – die lassen sich im Tray nicht beenden
+SYSTEM_PROCS = ("creative", "kded", "polkit", "xembedsniproxy", "kwalletd", "plasmashell", "powerdevil",
+                "pipewire", "wireplumber", "kwin", "ksmserver", "nm-applet", "kaccess")
+QUIT_LABEL = re.compile(r"^\s*(beenden|quit|exit|schließen|programm beenden)\b|\b(beenden|quit|exit)\s*$|^\s*(quit|exit)\s+\S+",
+                        re.I)
+
+
+def process_info(pid):
+    """(Befehlszeile, gehört zum System?) eines Prozesses."""
+    try:
+        cmd = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode("utf-8", "replace").strip()
+    except OSError:
+        return "", True
+    low = cmd.lower()
+    return cmd, any(p in low for p in SYSTEM_PROCS)
 
 
 def _data(v):
@@ -223,6 +242,23 @@ class TrayItems(QObject):
 
         for n in names:
             self._busctl(["get-property", it["service"], it["path"], ITEM_IF, n], got(n))
+        if not it.get("pid"):
+            def pid_done(code, out, _err):
+                cur = self._items.get(entry)
+                if not cur or code != 0:
+                    return
+                try:
+                    result = _data(json.loads(out))
+                    pid = int(result[0] if isinstance(result, list) and result else result)
+                except (ValueError, TypeError):
+                    return
+                _cmd, system = process_info(pid)
+                if pid != cur.get("pid") or system != cur.get("system"):
+                    self._items[entry] = {**cur, "pid": pid, "system": system}
+                    self.changed.emit()
+                    self.menuChanged.emit()
+            self._busctl(["call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+                          "GetConnectionUnixProcessID", "s", it["service"]], pid_done)
 
     def _resolve_icon(self, entry, r):
         """Symbol in dieser Reihenfolge suchen (wie KDE):
@@ -315,12 +351,56 @@ class TrayItems(QObject):
             self._run.run(["busctl", "--user", "call", it["service"], it["menu"], MENU_IF, "Event", "isvu",
                            str(item_id), "clicked", "s", "", "0"])
 
+    @Slot(str)
+    def quit(self, key):
+        """Programm beenden: zuerst über seinen eigenen „Beenden“-Eintrag (sauber, speichert),
+        sonst – oder wenn es nach 4 s noch läuft – mit SIGTERM."""
+        it = self._items.get(key)
+        if not it or it.get("system", True) or not it.get("pid"):
+            return
+        pid = it["pid"]
+        entry = next((m for m in (self._menu if self._menu_key == key else [])
+                      if not m["separator"] and m["enabled"] and QUIT_LABEL.search(m["label"].strip())), None)
+
+        def term():
+            cmd = process_info(pid)[0]
+            if not cmd:
+                return                     # schon beendet
+            # Flatpak-Programme hängen hinter einem D-Bus-Vermittler: dann das Programm selbst beenden
+            m = re.search(r"\.flatpak/([0-9]+)/", cmd) if "xdg-dbus-proxy" in cmd else None
+            if m:
+                import subprocess
+                try:
+                    out = subprocess.run(["flatpak", "ps", "--columns=instance,application"],
+                                         capture_output=True, text=True, timeout=5).stdout
+                except (OSError, subprocess.SubprocessError):
+                    return
+                app = next((line.split()[1] for line in out.splitlines()
+                            if line.split() and line.split()[0] == m.group(1) and len(line.split()) > 1), "")
+                if app:
+                    self._run.run(["flatpak", "kill", app])
+                return
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        if entry is not None and it.get("menu"):
+            self._run.run(["busctl", "--user", "call", it["service"], it["menu"], MENU_IF, "Event", "isvu",
+                           str(entry["id"]), "clicked", "s", "", "0"])
+            QTimer.singleShot(4000, term)
+        else:
+            term()
+
     def _list(self):
         return [{"key": i["key"], "title": i["title"], "icon": i["icon"], "creative": i["creative"],
-                 "hasMenu": bool(i["menu"])}
+                 "hasMenu": bool(i["menu"]), "canQuit": bool(i.get("pid")) and not i.get("system", True)}
                 for i in self._items.values() if i["status"] != "Passive" and (i["id"] or i["icon"])]
 
     items = Property("QVariantList", _list, notify=changed)
     menu = Property("QVariantList", lambda self: self._menu, notify=menuChanged)
     menuTitle = Property(str, lambda self: self._items.get(self._menu_key, {}).get("title", ""), notify=menuChanged)
     menuKey = Property(str, lambda self: self._menu_key, notify=menuChanged)
+    menuHasItems = Property(bool, lambda self: bool(self._items.get(self._menu_key, {}).get("menu")), notify=menuChanged)
+    menuCanQuit = Property(bool, lambda self: (lambda i: bool(i.get("pid")) and not i.get("system", True))(
+        self._items.get(self._menu_key, {})), notify=menuChanged)

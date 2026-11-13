@@ -27,7 +27,7 @@ def main():
     app.setDesktopFileName("creative-taskmanager")
     app.setWindowIcon(QIcon.fromTheme("creative-taskmanager"))
 
-    from creative_shell.icons import IconProvider
+    from creative_shell.icons import IconFiles
     from .backend import TaskManager
 
     engine = QQmlApplicationEngine()
@@ -35,7 +35,8 @@ def main():
         if (d / "Creative" / "qmldir").exists():
             engine.addImportPath(str(d))
             break
-    engine.addImageProvider("icon", IconProvider())
+    icon_files = IconFiles()
+    engine.rootContext().setContextProperty("iconFiles", icon_files)
 
     page = "processes"
     for flag, name in (("--leistung", "performance"), ("--autostart", "startup"), ("--details", "details")):

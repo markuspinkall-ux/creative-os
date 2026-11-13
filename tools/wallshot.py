@@ -11,11 +11,13 @@ from PySide6.QtQuick import QQuickView
 from PySide6.QtQuickControls2 import QQuickStyle
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)
+from creative_shell.mainthread import install as _mt_install
+_mt_timer = _mt_install()
 from creative_shell.apps import AppModel
 from creative_shell.desktop import DesktopModel
 from creative_shell.desktopstats import DesktopStats
 from creative_shell.shelf import ShelfModel
-from creative_shell.icons import IconProvider
+from creative_shell.icons import IconFiles
 from creative_shell import config
 
 
@@ -38,7 +40,8 @@ class Fake(QObject):
 
 view = QQuickView()
 view.engine().addImportPath(str(Path("shell/creative_shell/qml").resolve()))
-view.engine().addImageProvider("icon", IconProvider())
+icon_files = IconFiles()
+view.rootContext().setContextProperty("iconFiles", icon_files)
 apps = AppModel(config.load()["pinned"])
 ctx = view.rootContext()
 for k, v in {"shell": FakeShell(), "desktop": DesktopModel(), "desktopStats": DesktopStats(), "shelf": ShelfModel(apps),

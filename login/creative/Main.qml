@@ -39,6 +39,23 @@ Item {
     readonly property string fontFamily: "Arial"
 
     property int userIndex: Math.max(0, userModel.lastIndex)
+    // Konten ohne Passwort (Systemsteuerung › Benutzerkonten) – Liste vom Konto-Helfer
+    property var noPassword: []
+    readonly property bool passwordless: noPassword.indexOf(userName()) >= 0
+    function readNoPassword() {
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== XMLHttpRequest.DONE)
+                return
+            root.noPassword = String(xhr.responseText || "").split("\n").map(l => l.trim()).filter(l => l.length > 0)
+        }
+        xhr.open("GET", "file:///var/lib/creative-os/ohne-passwort")
+        xhr.send()
+    }
+    function focusField() {
+        if (root.passwordless) root.forceActiveFocus()
+        else password.forceActiveFocus()
+    }
     property string message: ""
     property bool busy: false
 
@@ -128,16 +145,23 @@ Item {
         if (busy)
             return
         // Leeres Feld: Konten ohne Passwort melden sich so an (Enter oder Pfeil)
-        triedEmpty = password.text.length === 0
+        triedEmpty = password.text.length === 0 && !passwordless
         busy = true
         message = ""
-        sddm.login(userName(), password.text, sessionIndex())
+        sddm.login(userName(), passwordless ? "" : password.text, sessionIndex())
     }
 
     Connections {
         target: sddm
         function onLoginFailed() {
             root.busy = false
+            if (root.passwordless) {
+                // Konto hat doch ein Passwort bekommen: Feld wieder zeigen
+                root.message = "Bitte dein Passwort eingeben."
+                root.noPassword = root.noPassword.filter(n => n !== root.userName())
+                password.forceActiveFocus()
+                return
+            }
             root.message = root.triedEmpty ? "Bitte dein Passwort eingeben." : "Falsches Passwort. Bitte noch einmal versuchen."
             password.text = ""
             password.forceActiveFocus()
@@ -205,9 +229,34 @@ Item {
         spacing: 16
 
         Rectangle {
+            id: avatar
             anchors.horizontalCenter: parent.horizontalCenter
             width: 96; height: 96; radius: 48
             color: face.status === Image.Ready ? "transparent" : root.accent
+            scale: root.passwordless && avatarMouse.containsMouse ? 1.06 : 1
+            Behavior on scale { NumberAnimation { duration: 120 } }
+            // Ring zeigt: hier klicken zum Anmelden
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -5
+                radius: width / 2
+                color: "transparent"
+                border.color: root.accent
+                border.width: 2
+                visible: root.passwordless
+                opacity: avatarMouse.containsMouse ? 1 : 0.55
+            }
+            MouseArea {
+                id: avatarMouse
+                anchors.fill: parent
+                anchors.margins: -5
+                enabled: root.passwordless
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.login()
+            }
+            Accessible.role: root.passwordless ? Accessible.Button : Accessible.Graphic
+            Accessible.name: root.passwordless ? "Als " + root.realName() + " anmelden" : root.realName()
             Text {
                 anchors.centerIn: parent
                 visible: face.status !== Image.Ready
@@ -239,8 +288,29 @@ Item {
             font.bold: true
         }
 
+        Rectangle {
+            id: signIn
+            visible: root.passwordless
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 200; height: 50; radius: 25
+            color: signInMouse.pressed ? Qt.darker(root.accent, 1.15) : root.accent
+            opacity: signInMouse.containsMouse ? 1 : 0.92
+            Text {
+                anchors.centerIn: parent
+                text: root.busy ? "Anmelden …" : "Anmelden  →"
+                color: root.accentText
+                font.family: root.fontFamily
+                font.pixelSize: 16
+                font.bold: true
+            }
+            MouseArea { id: signInMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.login() }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Anmelden"
+            Accessible.onPressAction: root.login()
+        }
         Item {
             id: field
+            visible: !root.passwordless
             anchors.horizontalCenter: parent.horizontalCenter
             width: 340
             height: 50
@@ -478,7 +548,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: { root.userIndex = index; password.text = ""; password.forceActiveFocus() }
+                    onClicked: { root.userIndex = index; password.text = ""; root.message = ""; root.focusField() }
                 }
             }
         }
@@ -524,9 +594,15 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 800 } }
         MouseArea { anchors.fill: parent; onClicked: root.wake() }
     }
-    Keys.onPressed: root.wake()
+    Keys.onPressed: (event) => {
+        root.wake()
+        // Ohne Passwort: Enter meldet direkt an
+        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.passwordless && !root.serverView)
+            root.login()
+    }
     onLoginRequestedChanged: if (!loginRequested) backToMask.stop()
-    onServerViewChanged: serverView ? root.forceActiveFocus() : password.forceActiveFocus()
+    onServerViewChanged: serverView ? root.forceActiveFocus() : root.focusField()
+    onPasswordlessChanged: if (!serverView) root.focusField()
 
-    Component.onCompleted: { readLook(); password.forceActiveFocus() }
+    Component.onCompleted: { readLook(); readNoPassword(); root.focusField() }
 }

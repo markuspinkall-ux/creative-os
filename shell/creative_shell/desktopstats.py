@@ -5,6 +5,7 @@ import threading
 from PySide6.QtCore import Property, QFileSystemWatcher, QObject, QTimer, Signal, Slot
 
 from . import config, sysstats
+from .mainthread import post
 
 
 class DesktopStats(QObject):
@@ -46,10 +47,10 @@ class DesktopStats(QObject):
                 if self._sampler is None:
                     self._sampler = sysstats.Sampler()
                 s = self._sampler.sample()
-                self._sampled.emit(sysstats.tiles(s, self._sampler))
+                post(self._sampled.emit, sysstats.tiles(s, self._sampler))
             except Exception as exc:          # Anzeige darf die Shell nie stören
                 print(f"creative-shell: Leistungsanzeige: {exc}")
-                self._sampled.emit([])
+                post(self._sampled.emit, [])
         threading.Thread(target=work, daemon=True).start()
 
     def _apply(self, tiles):

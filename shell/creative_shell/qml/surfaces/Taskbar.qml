@@ -198,7 +198,7 @@ Item {
                             visible: modelData.creative === ""
                             width: 17; height: 17
                             sourceSize.width: 34; sourceSize.height: 34
-                            source: modelData.creative === "" && modelData.icon ? "image://icon/" + modelData.icon : ""
+                            source: modelData.creative === "" && modelData.icon ? iconFiles.url(modelData.icon) : ""
                         }
                         MouseArea {
                             id: am
@@ -208,7 +208,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: (mouse) => {
                                 shell.noteScreen(root.screenName)
-                                if (mouse.button === Qt.RightButton && modelData.hasMenu) {
+                                if (mouse.button === Qt.RightButton && (modelData.hasMenu || modelData.canQuit)) {
                                     trayApps.loadMenu(modelData.key)
                                     shell.toggleTrayAppMenu(root.screenName, modelData.key)
                                 } else {
