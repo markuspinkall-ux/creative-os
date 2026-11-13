@@ -4,7 +4,7 @@ name: Schreibtisch prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/desktop.py, shell/creative_shell/qml/surfaces/Wallpaper.qml, tools/schreibtisch-test.py, .github/workflows/schreibtisch-pruefung.yml]
+    paths: [shell/creative_shell/desktop.py, shell/creative_shell/__main__.py, shell/creative_shell/qml/surfaces/Wallpaper.qml, tools/schreibtisch-test.py, .github/workflows/schreibtisch-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -40,7 +40,7 @@ jobs:
            "desktopWidgetRSS": {"enabled": true, "x": 0.0, "y": 0.55, "value": ""},
            "desktopStats": true}
           JSON
-          cd shell && PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_DELAY=4000 \
+          cd shell && CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_DELAY=4000 \
             PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/schreibtisch.png" \
             timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -v "^$" | tail -30 || true
           ls -la "$GITHUB_WORKSPACE/fotos"
