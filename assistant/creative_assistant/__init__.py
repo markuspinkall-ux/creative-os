@@ -1,1 +1,0 @@
-"""Sprachassistent von Creative OS."""

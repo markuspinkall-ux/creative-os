@@ -222,7 +222,6 @@ SettingsPage {
                 { app: "Bildschirmfoto-Dienst für Creative Shots", base: "Spectacle (KDE)" },
                 { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
                 { app: "YouTube Music im Creative Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
-                { app: "Sprachassistent", base: "Vosk, faster-whisper, Piper; Wetter von Open-Meteo" },
                 { app: "Mein Server", base: "Caddy und PHP" },
                 { app: "Browser, Spiele, Chat", base: "Brave, Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
             ]

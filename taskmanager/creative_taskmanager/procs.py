@@ -26,7 +26,6 @@ HIDE_FROM_APPS = {"creative-shell", "creative-taskmanager"}
 # Freundliche Namen für bekannte Hintergrund- und Systemprozesse
 FRIENDLY = {
     "creative-shell": "Creative Shell (Taskleiste)",
-    "creative-assistant": "Sprachassistent",
     "creative-automount": "Laufwerke automatisch verbinden",
     "kwin_wayland": "Fensterverwaltung (KWin)",
     "kwin_wayland_wrapper": "Fensterverwaltung (KWin)",
