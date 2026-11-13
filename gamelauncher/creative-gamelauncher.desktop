@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Game Launcher
+GenericName=Spiele im Vollbild
+Comment=Steam-Spiele im Vollbild mit dem Controller starten und installieren
+Keywords=Spiele;Games;Steam;Big Picture;Controller;Gamepad;Launcher;Konsole;
+Exec=creative-gamelauncher
+Icon=input-gaming
+Terminal=false
+Categories=Game;
+StartupWMClass=creative-gamelauncher

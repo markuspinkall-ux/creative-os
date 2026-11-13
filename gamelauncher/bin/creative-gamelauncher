@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet den Game Launcher aus /usr/lib/creative-gamelauncher.
+export PYTHONPATH="/usr/lib/creative-gamelauncher:/usr/lib/creative-shell${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_gamelauncher "$@"
