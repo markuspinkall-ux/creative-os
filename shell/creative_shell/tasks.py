@@ -193,6 +193,25 @@ class TaskModel(QObject):
             if self._window_key(w) == key and (w.get("output") == screen or not w.get("output")):
                 self._kwin.close(w["id"])
 
+    @Slot(str, float, float, result=bool)
+    def windowAt(self, screen, x, y):
+        """Liegt an dieser Stelle (Koordinaten auf dem Monitor `screen`) ein offenes Fenster?
+        Beim Ziehen vom Schreibtisch: dann wird die Datei an dieses Programm übergeben."""
+        from PySide6.QtGui import QGuiApplication
+        geo = next((sc.geometry() for sc in QGuiApplication.screens() if sc.name() == screen), None)
+        gx, gy = (x + geo.x(), y + geo.y()) if geo is not None else (x, y)
+        for w in self._windows:
+            g = w.get("geo") or [0, 0, 0, 0]
+            if w.get("minimized") or len(g) != 4 or g[2] <= 0:
+                continue
+            if g[0] <= gx < g[0] + g[2] and g[1] <= gy < g[1] + g[3]:
+                return True
+        return False
+
+    @Slot()
+    def refreshWindows(self):
+        self.request_snapshot()
+
     @Slot(str)
     def launchNew(self, desktop_id):
         if desktop_id:

@@ -36,7 +36,32 @@ def _install():
                 if item.property("contentY") is not None and isinstance(ch, (int, float)) and ch > h + 20:
                     item.setProperty("contentY", ch - h)
 
+    def drag_test():
+        """CREATIVE_TEST_DRAG="x1,y1,x2,y2": im größten QML-Fenster mit der Maus ziehen (Prüfung)."""
+        from PySide6.QtCore import QPoint, Qt
+        from PySide6.QtQuick import QQuickWindow
+        from PySide6.QtTest import QTest
+        wins = [w for w in QtGui.QGuiApplication.topLevelWindows() if isinstance(w, QQuickWindow) and w.isVisible()]
+        if not wins:
+            return
+        win = max(wins, key=lambda w: w.width() * w.height())
+        x1, y1, x2, y2 = (int(v) for v in os.environ["CREATIVE_TEST_DRAG"].split(","))
+        QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x1, y1))
+        steps = 12
+        for i in range(1, steps + 1):
+            QTest.mouseMove(win, QPoint(x1 + (x2 - x1) * i // steps, y1 + (y2 - y1) * i // steps), 20)
+        QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x2, y2), 30)
+        print(f"Ziehen getestet: ({x1},{y1}) → ({x2},{y2})", file=sys.stderr)
+
     def shoot():
+        if os.environ.get("CREATIVE_TEST_DRAG") and not state.get("dragged"):
+            state["dragged"] = True
+            try:
+                drag_test()
+            except Exception as error:  # noqa: BLE001
+                print(f"Ziehen nicht möglich: {error}", file=sys.stderr)
+            QTimer.singleShot(1200, shoot)
+            return
         if os.environ.get("CREATIVE_SCREENSHOT_SCROLL") and not state.get("scrolled"):
             state["scrolled"] = True
             try:

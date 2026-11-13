@@ -4,7 +4,7 @@ name: Schreibtisch prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/desktop.py, shell/creative_shell/__main__.py, shell/creative_shell/qml/surfaces/Wallpaper.qml, tools/schreibtisch-test.py, .github/workflows/schreibtisch-pruefung.yml]
+    paths: [shell/creative_shell/desktop.py, shell/creative_shell/tasks.py, tools/screenshots/**, shell/creative_shell/__main__.py, shell/creative_shell/qml/surfaces/Wallpaper.qml, tools/schreibtisch-test.py, .github/workflows/schreibtisch-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -43,6 +43,11 @@ jobs:
           cd shell && CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_DELAY=4000 \
             PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/schreibtisch.png" \
             timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -v "^$" | tail -30 || true
+          # Verschieben: das erste Symbol (Spalte 0, Zeile 1 – unter dem Wetter) nach rechts unten ziehen
+          cd "$GITHUB_WORKSPACE/shell" && CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_DELAY=4000 \
+            CREATIVE_TEST_DRAG="64,176,690,560" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/schreibtisch-verschoben.png" \
+            timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -v "^$" | tail -15 || true
+          echo "--- gespeicherte Plätze:"; python3 -c "import json;print(json.load(open('$H/.config/creative-os/shell.json')).get('desktopIconCells'))"
           ls -la "$GITHUB_WORKSPACE/fotos"
       - name: Ablegen
         if: always()

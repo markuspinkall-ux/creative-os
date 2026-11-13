@@ -14,7 +14,7 @@ Item {
     Keys.onDeletePressed: desktop.trashSelected()
     Keys.onReturnPressed: desktop.openSelected()
     Keys.onEnterPressed: desktop.openSelected()
-    Keys.onEscapePressed: desktop.clearSelection()
+    Keys.onEscapePressed: { if (root.movePath !== "") root.cancelMove(); else desktop.clearSelection() }
     Keys.onPressed: (event) => {
         if (event.matches(StandardKey.Copy)) {
             desktop.copySelected()
@@ -89,6 +89,66 @@ Item {
     function endFileDrag() {
         dragPath = ""
         dragUris = ""
+    }
+
+    // ---- Symbole auf dem Schreibtisch verschieben (ohne System-Ziehen, damit es immer klappt) ----
+    property string movePath: ""          // gerade verschobenes Symbol
+    property var moveCell: null           // Zielplatz [Spalte, Zeile] (Vorschau)
+    property string moveFolder: ""        // Ordner unter dem Mauszeiger
+    property bool moveShelf: false        // über der Ablage
+
+    function cellBlocked(c, r) { return !!icons.blocked[c + ":" + r] }
+    function nearestFree(c, r) {
+        if (!cellBlocked(c, r)) return [c, r]
+        let best = null, bestD = 1e9
+        for (let cc = 0; cc < icons.cols; ++cc)
+            for (let rr = 0; rr < icons.rows; ++rr) {
+                if (cellBlocked(cc, rr)) continue
+                const d = (cc - c) * (cc - c) * 1.2 + (rr - r) * (rr - r)
+                if (d < bestD) { bestD = d; best = [cc, rr] }
+            }
+        return best || [c, r]
+    }
+    function folderAt(px, py) {
+        for (let i = 0; i < icons.count; ++i) {
+            const it = icons.itemAtIndex(i)
+            if (!it || !it.visible || !it.isDir || it.path === movePath) continue
+            const q = it.mapToItem(root, 0, 0)
+            if (px >= q.x + 6 && px < q.x + it.width - 6 && py >= q.y + 6 && py < q.y + it.height - 6)
+                return it.path
+        }
+        return ""
+    }
+    function overShelf(px, py) {
+        return shelfBox.visible && px > shelfBox.x - 12 && px < shelfBox.x + shelfBox.width + 12
+               && py > shelfBox.y - 12 && py < shelfBox.y + shelfBox.height + 12
+    }
+    function updateMove(px, py) {
+        ghost.x = px - ghost.width / 2
+        ghost.y = py - ghost.height / 2
+        moveShelf = overShelf(px, py)
+        moveFolder = moveShelf ? "" : folderAt(px, py)
+        moveCell = (moveShelf || moveFolder !== "") ? null : nearestFree.apply(null, icons.cellAt(px, py))
+    }
+    function finishMove() {
+        const path = movePath
+        if (moveShelf) {
+            const sel = desktop.selectedPaths()
+            ;(sel.includes(path) ? sel : [path]).forEach(p => shelf.addPath(p))
+        } else if (moveFolder !== "") {
+            const sel = desktop.selectedPaths()
+            desktop.dropUrls((sel.includes(path) ? sel : [path]).map(p => "file://" + p), moveFolder, "auto")
+        } else if (moveCell) {
+            desktop.pinCells(root.screenName, icons.slots)    // die anderen bleiben, wo sie sind
+            desktop.placeDragged(path, root.screenName, moveCell[0], moveCell[1])
+        }
+        cancelMove()
+    }
+    function cancelMove() {
+        movePath = ""
+        moveCell = null
+        moveFolder = ""
+        moveShelf = false
     }
 
     // Strg = kopieren, Umschalt = verschieben, sonst gleiches Laufwerk → verschieben
@@ -750,6 +810,7 @@ Item {
         readonly property int count: iconRepeater.count
         function itemAtIndex(i) { return iconRepeater.itemAt(i) }
         property var slots: ({})          // Pfad → [Spalte, Zeile]
+        property var blocked: ({})        // "Spalte:Zeile" unter Widgets
 
         // Alle Widgets auf diesem Monitor – ändert sich eins (Lage, Größe, an/aus), neu anordnen
         readonly property var widgetItems: [feedRss, feedWeather, extraClock, extraTwitch, extraKi, statsBox, shelfBox]
@@ -822,6 +883,9 @@ Item {
                 taken[key(col, row)] = p
             }
             slots = result
+            const widgetCells = {}
+            for (const k in taken) if (taken[k] === "widget") widgetCells[k] = true
+            blocked = widgetCells
         }
 
         Repeater {
@@ -830,6 +894,7 @@ Item {
         delegate: Item {
             id: cell
             readonly property string path: model.path
+            readonly property bool isDir: model.isDir
             readonly property var slot: icons.slots[model.path]
             property url dragImage: ""
             visible: !!slot
@@ -837,6 +902,7 @@ Item {
             y: slot ? slot[1] * icons.cellHeight : 0
             Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             Behavior on y { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            opacity: root.movePath === model.path ? 0.35 : 1
             width: icons.cellWidth
             height: icons.cellHeight
 
@@ -844,10 +910,10 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 3
                 radius: 10
-                color: folderDrop.containsDrag ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4)
+                color: (folderDrop.containsDrag || (root.moveFolder !== "" && root.moveFolder === model.path)) ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4)
                        : model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
                                         : (m.containsMouse ? Theme.tint(0.1) : "transparent")
-                border.color: folderDrop.containsDrag ? Theme.accent
+                border.color: (folderDrop.containsDrag || (root.moveFolder !== "" && root.moveFolder === model.path)) ? Theme.accent
                               : (model.selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.7) : "transparent")
             }
             // Auf einen Ordner ziehen: hinein verschieben (Strg: kopieren)
@@ -898,22 +964,37 @@ Item {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 property point pressPos
                 onPositionChanged: (mouse) => {
-                    if (!(mouse.buttons & Qt.LeftButton) || root.dragPath !== ""
-                            || Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) <= 12)
+                    if (!(mouse.buttons & Qt.LeftButton) || root.dragPath !== "")
                         return
-                    root.pendingRow = -1
-                    root.dragUris = desktop.dragUris(model.path)
-                    root.dragPath = model.path
-                    root.dragIsDir = model.isDir
-                    root.dragTint = model.tint
-                    root.dragExt = model.ext
                     const p = cell.mapToItem(root, mouse.x, mouse.y)
-                    ghost.x = p.x - ghost.width / 2
-                    ghost.y = p.y - ghost.height / 2
-                    ghost.Drag.imageSource = cell.dragImage
-                    ghost.Drag.startDrag()
-                    root.endFileDrag()          // Ziehen ist vorbei (startDrag wartet bis zum Loslassen)
+                    if (root.movePath === "") {
+                        if (Math.abs(mouse.x - pressPos.x) + Math.abs(mouse.y - pressPos.y) <= 8)
+                            return
+                        // Verschieben auf dem Schreibtisch beginnt
+                        root.pendingRow = -1
+                        root.movePath = model.path
+                        root.dragIsDir = model.isDir
+                        root.dragTint = model.tint
+                        root.dragExt = model.ext
+                        tasks.refreshWindows()
+                    }
+                    if (root.movePath !== model.path)
+                        return
+                    // Über einem Fenster oder außerhalb dieses Monitors: an das Programm bzw. den
+                    // anderen Monitor übergeben (System-Ziehen, z. B. in Discord, Brave oder „Dateien“)
+                    if (p.x < 0 || p.y < 0 || p.x > root.width || p.y > root.height
+                            || tasks.windowAt(root.screenName, p.x, p.y)) {
+                        root.cancelMove()
+                        root.dragUris = desktop.dragUris(model.path)
+                        root.dragPath = model.path
+                        ghost.Drag.imageSource = cell.dragImage
+                        ghost.Drag.startDrag()
+                        root.endFileDrag()
+                        return
+                    }
+                    root.updateMove(p.x, p.y)
                 }
+                onCanceled: root.cancelMove()
                 onEntered: cellIcon.prepareDragImage()
                 onPressed: (mouse) => {
                     pressPos = Qt.point(mouse.x, mouse.y)
@@ -932,6 +1013,11 @@ Item {
                     }
                 }
                 onReleased: (mouse) => {
+                    if (mouse.button === Qt.LeftButton && root.movePath === model.path) {
+                        root.finishMove()
+                        root.pendingRow = -1
+                        return
+                    }
                     if (mouse.button === Qt.LeftButton && root.pendingRow === icons.model.sourceRow(index) && root.dragPath === "")
                         desktop.select(root.pendingRow, false)
                     root.pendingRow = -1
@@ -944,12 +1030,26 @@ Item {
         }
     }
 
+    // Zielplatz beim Verschieben
+    Rectangle {
+        visible: root.movePath !== "" && root.moveCell !== null
+        x: icons.x + (root.moveCell ? root.moveCell[0] : 0) * icons.cellWidth + 3
+        y: icons.y + (root.moveCell ? root.moveCell[1] : 0) * icons.cellHeight + 3
+        width: icons.cellWidth - 6
+        height: icons.cellHeight - 6
+        radius: 10
+        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
+        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.8)
+        border.width: 2
+        Behavior on x { NumberAnimation { duration: 90 } }
+        Behavior on y { NumberAnimation { duration: 90 } }
+    }
+
     // ---- Ablage oben mittig (wie das Dock bei macOS) ------------------------------------
     Rectangle {
         id: shelfBox
         visible: root.widgetOnScreen("shelf") && shelf.enabled
-        readonly property bool dropHover: shelfDrop.containsDrag || (root.dragPath !== "" && ghost.y < y + height + 30
-                                          && ghost.x + ghost.width > x && ghost.x < x + width)
+        readonly property bool dropHover: shelfDrop.containsDrag || root.moveShelf
         // frei verschiebbar (am Griff links oder an einer freien Stelle ziehen); Position bleibt gespeichert
         readonly property real maxX: Math.max(8, root.width - width - 8)
         readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
@@ -1212,7 +1312,7 @@ Item {
         Drag.hotSpot.x: 23
         Drag.hotSpot.y: 23
         // Dateien zeigt das Betriebssystem am Mauszeiger – hier nur Einträge aus der Ablage
-        visible: root.dragShelfKey !== ""
+        visible: root.dragShelfKey !== "" || root.movePath !== ""
         z: 20
         width: 52; height: 52
         opacity: 0.85
@@ -1224,12 +1324,12 @@ Item {
             source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? iconFiles.url(root.dragShelfItem.icon) : ""
         }
         FileIcon {
-            visible: root.dragPath !== "" || (root.dragShelfItem !== null && root.dragShelfItem.kind !== "app")
+            visible: root.dragPath !== "" || root.movePath !== "" || (root.dragShelfItem !== null && root.dragShelfItem.kind !== "app")
             anchors.centerIn: parent
             size: 38
-            isDir: root.dragPath !== "" ? root.dragIsDir : (root.dragShelfItem ? root.dragShelfItem.kind === "dir" : false)
-            tint: root.dragPath !== "" ? root.dragTint : (root.dragShelfItem ? root.dragShelfItem.tint : "")
-            ext: root.dragPath !== "" ? root.dragExt : (root.dragShelfItem ? root.dragShelfItem.ext : "")
+            isDir: (root.dragPath !== "" || root.movePath !== "") ? root.dragIsDir : (root.dragShelfItem ? root.dragShelfItem.kind === "dir" : false)
+            tint: (root.dragPath !== "" || root.movePath !== "") ? root.dragTint : (root.dragShelfItem ? root.dragShelfItem.tint : "")
+            ext: (root.dragPath !== "" || root.movePath !== "") ? root.dragExt : (root.dragShelfItem ? root.dragShelfItem.ext : "")
         }
     }
 
