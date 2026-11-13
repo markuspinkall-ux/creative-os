@@ -81,13 +81,14 @@ class ShellBus(QObject):
             "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
             "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
             "ki": self._widgets["ki"].enabled,
+            "viz": self._widgets["viz"].enabled if "viz" in self._widgets else False,
             "screens": self._shell.screenNames, "targets": self._shell.widgetScreens,
         })
 
     @Slot(str, bool, result=str)
     def setWidgetEnabled(self, name, enabled):
         try:
-            if name in ("shelf", "stats", "rss", "weather", "ki"):
+            if name in ("shelf", "stats", "rss", "weather", "ki", "viz"):
                 self._widgets[name].setEnabled(enabled)
             else:
                 self._widgets["extras"].setEnabled(name, enabled)

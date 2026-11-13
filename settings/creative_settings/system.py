@@ -541,6 +541,13 @@ class LookModel(QObject):
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
         self._login_sound = bool(cfg.get("loginSound", True))
+        self._gadgets = {}
+        self._read_gadgets(cfg)
+        # Gadgets können auch per Creative Widgets umgeschaltet werden – Stand mitverfolgen
+        cfg_dir = shell_config.config_dir()
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        self._cfg_watch = QFileSystemWatcher([str(cfg_dir)], self)
+        self._cfg_watch.directoryChanged.connect(lambda *_: QTimer.singleShot(150, self._reload_gadgets))
         from creative_shell import look as _look
         self._design, self._accent = _look.read()
         self._images = []
@@ -602,6 +609,43 @@ class LookModel(QObject):
         shell_config.set_value("desktopStats", self._stats_on)
         self.changed.emit()
 
+    # ---- Schreibtisch-Gadgets (Wetter, RSS): schaltet die laufende Shell per D-Bus ----
+    GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
+
+    def _read_gadgets(self, cfg):
+        new = {name: bool((cfg.get(key) or {}).get("enabled")) for name, key in self.GADGETS.items()}
+        new["viz"] = bool(cfg.get("taskbarVisualizer", True))
+        new["stats"] = bool(cfg.get("desktopStats", True))
+        changed = new != self._gadgets
+        self._gadgets = new
+        return changed
+
+    def _reload_gadgets(self):
+        cfg = shell_config.load()
+        if self._read_gadgets(cfg):
+            self._viz_on = self._gadgets["viz"]
+            self._stats_on = self._gadgets["stats"]
+            self.changed.emit()
+
+    @Slot(str, bool)
+    def setGadget(self, name, on):
+        if name not in self.GADGETS:
+            return
+        on = bool(on)
+        from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
+        from creative_shell.dbus_service import PATH, SERVICE
+        bus = QDBusInterface(SERVICE, PATH, SERVICE, QDBusConnection.sessionBus())
+        bus.setTimeout(1500)
+        reply = bus.call("setWidgetEnabled", name, on) if bus.isValid() else None
+        if reply is None or reply.type() == QDBusMessage.MessageType.ErrorMessage:
+            # Shell läuft gerade nicht: direkt in die Einstellungen schreiben
+            key = self.GADGETS[name]
+            data = dict(shell_config.load().get(key) or {})
+            data["enabled"] = on
+            shell_config.set_value(key, data)
+        self._gadgets[name] = on
+        self.changed.emit()
+
     @Slot(bool)
     def setLoginSound(self, on):
         self._login_sound = bool(on)
@@ -660,5 +704,7 @@ class LookModel(QObject):
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
     desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
     nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
+    weatherGadget = Property(bool, lambda self: self._gadgets.get("weather", False), notify=changed)
+    rssGadget = Property(bool, lambda self: self._gadgets.get("rss", False), notify=changed)
     loginSound = Property(bool, lambda self: self._login_sound, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)

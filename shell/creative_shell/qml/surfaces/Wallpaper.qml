@@ -1199,12 +1199,8 @@ Item {
             { label: "Neuer Ordner", icon: "folder-plus", act: "new" },
             { label: "Schreibtisch in Dateien öffnen", icon: "files", act: "folder" },
             { sep: true },
-            { label: rssWidget.enabled ? "RSS-Gadget ausblenden" : "RSS-Gadget einblenden", icon: "plus", act: "rss" },
-            { label: weatherWidget.enabled ? "Wetter-Gadget ausblenden" : "Wetter-Gadget einblenden", icon: "plus", act: "weather" },
             { label: kiHelper.enabled ? "KI-Helfer ausblenden" : "KI-Helfer einblenden", icon: "sparkle", act: "ki" },
-            { label: desktopStats.enabled ? "Leistungsanzeige ausblenden" : "Leistungsanzeige einblenden", icon: "taskmanager", act: "stats" },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
-            { label: visualizer.enabled ? "Musik-Visualizer ausblenden" : "Musik-Visualizer einblenden", icon: "music", act: "viz" },
             { label: shelf.enabled ? "Ablage ausblenden" : "Ablage einblenden", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "Creative Widgets öffnen", icon: "settings", act: "widgets" },
@@ -1216,12 +1212,8 @@ Item {
             else if (act === "folder") desktop.openFolder()
             else if (act === "settings") session.openSettings()
             else if (act === "widgets") shell.openWidgetManager()
-            else if (act === "rss") rssWidget.toggle()
-            else if (act === "weather") weatherWidget.toggle()
             else if (act === "ki") kiHelper.toggle()
-            else if (act === "stats") desktopStats.setEnabled(!desktopStats.enabled)
             else if (act === "taskmanager") desktopStats.openTaskManager()
-            else if (act === "viz") visualizer.setEnabled(!visualizer.enabled)
             else if (act === "shelf") shelf.setEnabled(!shelf.enabled)
         }
     }

@@ -22,7 +22,29 @@ def _install():
         QtWidgets = None
     state = {"armed": False}
 
+    def scroll_down():
+        """CREATIVE_SCREENSHOT_SCROLL=1: lange QML-Seiten ganz nach unten rollen."""
+        from PySide6.QtQuick import QQuickWindow
+        for window in QtGui.QGuiApplication.topLevelWindows():
+            if not isinstance(window, QQuickWindow):
+                continue
+            stack = [window.contentItem()]
+            while stack:
+                item = stack.pop()
+                stack.extend(item.childItems())
+                ch, h = item.property("contentHeight"), item.height()
+                if item.property("contentY") is not None and isinstance(ch, (int, float)) and ch > h + 20:
+                    item.setProperty("contentY", ch - h)
+
     def shoot():
+        if os.environ.get("CREATIVE_SCREENSHOT_SCROLL") and not state.get("scrolled"):
+            state["scrolled"] = True
+            try:
+                scroll_down()
+            except Exception as error:  # noqa: BLE001
+                print(f"Rollen nicht möglich: {error}", file=sys.stderr)
+            QTimer.singleShot(600, shoot)
+            return
         app = QCoreApplication.instance()
         images = []
         if QtWidgets is not None and isinstance(app, QtWidgets.QApplication):

@@ -5,7 +5,7 @@ import ".."
 SettingsPage {
     PageHeader {
         title: "Darstellung"
-        subtitle: "Design, Akzentfarbe, Hintergrundbild, Musik-Visualizer, Leistungsanzeige"
+        subtitle: "Design, Akzentfarbe, Hintergrundbild, Musik-Visualizer, Leistungsanzeige, Wetter, RSS"
         CButton { text: "Aktualisieren"; onClicked: look.refresh() }
     }
 
@@ -194,6 +194,30 @@ SettingsPage {
                 checked: look.desktopStats
                 label: "Leistungsanzeige anzeigen"
                 onToggled: (v) => look.setDesktopStats(v)
+            }
+        }
+    }
+
+    Card {
+        title: "Schreibtisch-Gadgets"
+        subtitle: "Kleine Anzeigen auf dem Schreibtisch – Ort bzw. Feeds stellst du direkt am Gadget ein"
+        SettingRow {
+            label: "Wetter"
+            hint: "Wetter für deinen Ort (Daten: Open-Meteo)"
+            CSwitch {
+                checked: look.weatherGadget
+                label: "Wetter-Gadget anzeigen"
+                onToggled: (v) => look.setGadget("weather", v)
+            }
+        }
+        SettingRow {
+            label: "RSS-Nachrichten"
+            hint: "Schlagzeilen aus bis zu fünf Feeds"
+            last: true
+            CSwitch {
+                checked: look.rssGadget
+                label: "RSS-Gadget anzeigen"
+                onToggled: (v) => look.setGadget("rss", v)
             }
         }
     }

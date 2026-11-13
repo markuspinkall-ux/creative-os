@@ -4,7 +4,7 @@ name: Systemsteuerung Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [settings/**, shell/creative_shell/qml/**, .github/workflows/qml-vorschau.yml]
+    paths: [settings/**, shell/creative_shell/qml/**, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,6 +33,8 @@ jobs:
           CREATIVE_SCREENSHOT=vorschau/neuerungen.png timeout 40 python3 -m creative_settings --neuerungen 2>&1 | tail -20 || true
           CREATIVE_SCREENSHOT=vorschau/updates.png timeout 40 python3 -m creative_settings --page updates 2>&1 | tail -5 || true
           CREATIVE_SCREENSHOT=vorschau/benutzerkonten.png timeout 40 python3 -m creative_settings --page users 2>&1 | tail -5 || true
+          CREATIVE_SCREENSHOT=vorschau/darstellung-unten.png CREATIVE_SCREENSHOT_SCROLL=1 timeout 40 python3 -m creative_settings --page look 2>&1 | tail -5 || true
+          (cd ../shell && CREATIVE_SCREENSHOT=../settings/vorschau/creative-widgets.png timeout 40 python3 -m creative_shell.widgets_app 2>&1 | tail -5) || true
           ls -la vorschau
         working-directory: settings
       - name: Ablegen

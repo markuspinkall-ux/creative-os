@@ -13,6 +13,9 @@ from PySide6.QtWidgets import (
 )
 
 from .dbus_service import PATH, SERVICE
+
+# Gehört zur Taskleiste, nicht zu einem Platz auf dem Schreibtisch – keine Monitorwahl
+NO_MONITOR = {"viz"}
 from .widget_extras import CLOCK_URL, clock_descriptor, read_small
 
 try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
@@ -55,7 +58,7 @@ class WidgetWindow(QMainWindow):
         for name, label in (
             ("shelf", "Ablage"), ("stats", "Leistungsanzeige"), ("rss", "RSS-Nachrichten"),
             ("weather", "Wetter"), ("clock", "Analoge Uhr"), ("twitch", "Twitch-Favoriten"),
-            ("ki", "KI-Helfer (lokale KI, Open Source)"),
+            ("ki", "KI-Helfer (lokale KI, Open Source)"), ("viz", "Musik-Visualizer (hinter der Taskleiste)"),
         ):
             switch = QCheckBox(label)
             switch.toggled.connect(lambda enabled, key=name: self.set_enabled(key, enabled))
@@ -67,6 +70,7 @@ class WidgetWindow(QMainWindow):
             monitor.activated.connect(lambda index, key=name, combo=monitor:
                                       self.apply("setWidgetMonitor", key, combo.itemData(index)))
             row.addWidget(monitor)
+            monitor.setVisible(name not in NO_MONITOR)
             desktop.addLayout(row)
             self.switches[name] = switch
             self.monitors[name] = monitor
@@ -145,7 +149,8 @@ class WidgetWindow(QMainWindow):
             if self.available:
                 with QSignalBlocker(switch):
                     switch.setChecked(state.get(name, False))
-                self.update_monitors(name, state["screens"], state["targets"].get(name, ""))
+                if name not in NO_MONITOR:
+                    self.update_monitors(name, state["screens"], state["targets"].get(name, ""))
         if self.available:
             channels = "\n".join(state["channels"])
             current = self.channels.toPlainText()
