@@ -26,6 +26,11 @@ ALIASES = {
     "com.obsproject.studio": "com.obsproject.Studio",
     "obs": "com.obsproject.Studio",
     "obs-studio": "com.obsproject.Studio",
+    # OBS setzt im Tray eigene Symbolnamen (Breeze bringt dafür ein eigenes Symbol mit)
+    "obs-tray": "com.obsproject.Studio",
+    "obs-tray-active": "com.obsproject.Studio",
+    "com.obsproject.studio-tray": "com.obsproject.Studio",
+    "creative-engine": "org.creativeos.Engine",
 }
 
 
@@ -121,7 +126,13 @@ class IconFiles(QObject):
         cached = self._urls.get(icon_id)
         if cached:
             return cached
-        name = hashlib.sha1(icon_id.encode("utf-8", "replace")).hexdigest()[:20] + ".png"
+        # Creative-Symbol samt Änderungszeit im Namen: ein neues Symbol (Update) ersetzt das alte sofort
+        override = creative_icon(icon_id) or ""
+        try:
+            stamp = f"{override}:{os.path.getmtime(override)}" if override else ""
+        except OSError:
+            stamp = override
+        name = hashlib.sha1(f"{icon_id}|{stamp}".encode("utf-8", "replace")).hexdigest()[:20] + ".png"
         path = self._dir / name
         if not path.exists():
             tmp = path.with_suffix(".tmp.png")

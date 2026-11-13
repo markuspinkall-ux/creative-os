@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Bildschirm mit Aufnahme-Punkt: Streamen und Aufnehmen -->
+  <rect x="13" y="17" width="38" height="25" rx="4" fill="#dce6ff"/>
+  <circle cx="32" cy="29.5" r="6.5" fill="#232836"/>
+  <circle cx="32" cy="29.5" r="3.6" fill="#8fb3ff"/>
+  <path d="M25 48h14" stroke="#dce6ff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 42v6" stroke="#dce6ff" stroke-width="3"/>
+  <circle cx="45.5" cy="21.5" r="2" fill="#8fb3ff"/>
+</svg>

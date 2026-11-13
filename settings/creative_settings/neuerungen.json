@@ -11,11 +11,15 @@
     ],
     "verbessert": [
       "Creative Broadcast nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s, z. B. 720p60) statt fest 30 – die virtuelle Kamera für OBS, Discord & Co. läuft entsprechend flüssiger. Angezeigt wird, was die Webcam liefert und was die Creative Kamera sendet",
+      "„Creative Software“ heißt jetzt einfach „Software“ und steht direkt im Startmenü statt im Ordner „Creative Apps“",
+      "Creative Engine hat ein neues Symbol im Stil aller Creative-Apps (Graphit- und Porzellan-Kachel)",
       "Creative Widgets listet jetzt alle Widgets, auch den Musik-Visualizer",
       "Rechtsklick auf den Schreibtisch aufgeräumt: Widgets (Ablage, Wetter, RSS, KI-Helfer, Leistungsanzeige, Musik-Visualizer) schaltest du jetzt in Creative Widgets oder in Systemsteuerung › Darstellung ein und aus",
       "Systemsteuerung › Darstellung: neue Karte „Widgets“ mit allen Schreibtisch-Widgets und einem Knopf zu Creative Widgets"
     ],
-    "behoben": []
+    "behoben": [
+      "OBS Studio hat jetzt ein eigenes Symbol im Creative-Stil (Graphit und Porzellan) – im Startmenü, in der Taskleiste, im Tray und in der Titelleiste statt des Original-Logos"
+    ]
   },
   {
     "datum": "2026-11-12",

@@ -1,16 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2a3142"/><stop offset="1" stop-color="#171a22"/>
-    </linearGradient>
-  </defs>
-  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#g)"/>
-  <rect x="8.5" y="8.5" width="111" height="111" rx="25.5" fill="none" stroke="#3a4252"/>
-  <path d="M22 92h26v-12h24v12h34v14H22z" fill="#5fb04a"/>
-  <path d="M22 98h84v8a6 6 0 0 1-6 6H28a6 6 0 0 1-6-6z" fill="#7a5a3a"/>
-  <rect x="78" y="56" width="22" height="7" rx="2" fill="#a8794a"/>
-  <circle cx="84" cy="46" r="4" fill="#ffd24a"/><circle cx="96" cy="46" r="4" fill="#ffd24a"/>
-  <rect x="50" y="48" width="16" height="30" rx="8" fill="#8fb3ff"/>
-  <circle cx="61" cy="57" r="2.4" fill="#12151b"/>
-  <path d="M30 34l3 7.5 7.5 3-7.5 3L30 55l-3-7.5-7.5-3 7.5-3z" fill="#dce6ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Funke: selbst gebaut -->
+  <path d="M32 10.5l1.9 4.6 4.6 1.9-4.6 1.9-1.9 4.6-1.9-4.6-4.6-1.9 4.6-1.9z" fill="#dce6ff"/>
+  <!-- Controller -->
+  <path d="M23 26h18a8.5 8.5 0 0 1 8.2 6.3l2.4 9.2a4.8 4.8 0 0 1-8.2 4.4L39 41.5H25l-4.4 4.4a4.8 4.8 0 0 1-8.2-4.4l2.4-9.2A8.5 8.5 0 0 1 23 26z" fill="#8fb3ff"/>
+  <path d="M21.5 30.5h3v3h3v3h-3v3h-3v-3h-3v-3h3z" fill="#232836"/>
+  <circle cx="40.5" cy="32.5" r="2.2" fill="#232836"/>
+  <circle cx="44.5" cy="37" r="2.2" fill="#232836"/>
 </svg>
