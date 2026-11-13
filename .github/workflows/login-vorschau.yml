@@ -1,0 +1,38 @@
+name: Anmeldebildschirm Vorschau
+# Fotos des SDDM-Themes (normal, Server-Modus, Porzellan) im Branch „login-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [login/creative/**, tools/login-vorschau.py, .github/workflows/login-vorschau.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fotos:
+    runs-on: ubuntu-24.04
+    container: registry.fedoraproject.org/fedora:44
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+      QML_XHR_ALLOW_FILE_READ: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf install -y -q python3 python3-pyside6 git liberation-sans-fonts google-noto-sans-fonts dejavu-sans-mono-fonts >/dev/null
+      - name: Fotos
+        run: |
+          mkdir -p fotos /var/lib/creative-os /var/lib/creative-servermode
+          look() { printf '{"design":"%s","accent":"blau"}' "$1" > /var/lib/creative-os/login-look.json; }
+          now=$(date +%s)
+          srv() { printf '{"active":true,"server":%s,"updated":%s,"since":%s,"host":"creative-os","ips":["192.168.178.42"],"domain":"markus-server.duckdns.org"}' "$1" "$now" "$((now-3*86400-5*3600))" > /var/lib/creative-servermode/state.json; }
+          look graphit; rm -f /var/lib/creative-servermode/state.json
+          python3 tools/login-vorschau.py fotos/normal-graphit.png
+          srv true;  python3 tools/login-vorschau.py fotos/server-graphit.png
+          srv false; python3 tools/login-vorschau.py fotos/server-stoerung.png
+          look porzellan; srv true; python3 tools/login-vorschau.py fotos/server-porzellan.png
+          rm -f /var/lib/creative-servermode/state.json; python3 tools/login-vorschau.py fotos/normal-porzellan.png
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b login-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Anmeldebildschirm ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" login-fotos
