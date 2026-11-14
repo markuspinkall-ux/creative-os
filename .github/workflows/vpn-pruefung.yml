@@ -26,26 +26,21 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: python3 tools/vpn-test.py einheit
-      - name: NetworkManager starten (fasst die Netzwerkkarte des Testrechners nicht an)
-        timeout-minutes: 6
+      - name: Mit echtem NetworkManager (Fedora 44 im Container, eigenes Netz)
+        timeout-minutes: 12
         run: |
-          sudo mkdir -p /etc/NetworkManager/conf.d
-          printf '[main]\ndns=none\nplugins=keyfile\n[keyfile]\nunmanaged-devices=*,except:interface-name:proton0\n' \
-            | sudo tee /etc/NetworkManager/conf.d/99-creative-test.conf
-          sudo apt-get install -y -q network-manager wireguard-tools
-          sudo systemctl restart NetworkManager
-          sleep 3
-          nmcli --version; nmcli general status || true
-          curl -sSfo /dev/null -m 15 https://api.github.com && echo "Internet ok"
-      - name: Mit echtem NetworkManager
-        timeout-minutes: 4
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          SITE=$(python3 -c 'import site; print(site.getusersitepackages())')
-          sudo env QT_QPA_PLATFORM=offscreen PYTHONPATH="$SITE" python3 tools/vpn-test.py nm \
-            || { sudo journalctl -u NetworkManager --no-pager -n 60; sudo coredumpctl list 2>/dev/null | tail -3; exit 1; }
-          curl -sSfo /dev/null -m 15 https://api.github.com && echo "Internet ok"
+          cat > /tmp/nm-test.sh <<'SH'
+          set -e
+          dnf -y -q install NetworkManager python3-dbus python3-pyside6 iproute dbus-daemon >/dev/null
+          mkdir -p /run/dbus /etc/NetworkManager/conf.d
+          dbus-daemon --system --fork
+          printf '[main]\ndns=none\n[keyfile]\nunmanaged-devices=*,except:interface-name:proton0\n' > /etc/NetworkManager/conf.d/99-test.conf
+          NetworkManager --no-daemon >/tmp/nm.log 2>&1 &
+          sleep 4
+          nmcli --version
+          QT_QPA_PLATFORM=offscreen VPN_VOLL=1 python3 tools/vpn-test.py nm || { tail -60 /tmp/nm.log; exit 1; }
+          SH
+          docker run --rm --privileged -v "$PWD:/src" -v /tmp/nm-test.sh:/tmp/nm-test.sh -w /src registry.fedoraproject.org/fedora:44 bash /tmp/nm-test.sh
       - name: Fotografieren
         if: always()
         env:

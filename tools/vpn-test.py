@@ -170,6 +170,22 @@ def nm():
     addr = subprocess.run(["ip", "-brief", "address", "show", "proton0"], capture_output=True, text=True).stdout
     print(addr.strip())
     assert "10.2.0.2/32" in addr, addr
+    # Wechsel auf den vollen Tunnel (läuft im Test in einem eigenen Container-Netz)
+    if os.environ.get("VPN_VOLL"):
+        model.connectTo(nl["uuid"])
+        for _ in range(30):
+            wait(500)
+            model.refresh()
+            wait(300)
+            if model.activeCountry == "Niederlande":
+                break
+        assert model.activeCountry == "Niederlande", (model.message, model.servers)
+        assert sum(s["active"] for s in model.servers) == 1, model.servers
+        addr = subprocess.run(["ip", "address", "show", "proton0"], capture_output=True, text=True).stdout
+        print(addr.strip())
+        assert "10.2.0.2/32" in addr and "2a07:b944::2:2/128" in addr, addr
+        rules = subprocess.run(["ip", "rule"], capture_output=True, text=True).stdout
+        print(rules.strip())
     model.disconnect()
     for _ in range(20):
         wait(500)
