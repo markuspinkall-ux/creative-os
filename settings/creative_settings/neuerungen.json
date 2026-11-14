@@ -5,15 +5,18 @@
     "neu": [
       "Schnellzugriff › „Nicht sperren“: verhindert für die laufende Sitzung, dass der PC nach 10 Minuten ohne Eingabe in den Anmeldebildschirm wechselt – der Bildschirm bleibt an. Nach dem Abmelden oder Neustart ist wieder alles wie gewohnt",
       "Creative Deck: das Elgato Stream Deck ohne Elgato-Software – jede Taste mit Beschriftung, Symbol und Farbe belegen: Programme starten, Befehle, Webseiten, Tastenkürzel, Text einfügen, Musik steuern, Lautstärke, Mikrofon stumm, Töne abspielen, Seiten wie Ordner und OBS Studio (Aufnahme, Stream, Szenen, Replay). Einstecken genügt – die Tasten sind sofort da, auch ohne geöffnetes Programm. Unterstützt Stream Deck MK.2, Original, XL, Mini, Neo und +",
-      "Creative Browser: der eigene Webbrowser von Creative OS – mit H.264, damit Twitch und YouTube flüssig laufen. Tabs (verschieben, stummschalten, wiederherstellen mit Strg+Umschalt+T), Adressleiste mit Vorschlägen aus Verlauf und Lesezeichen, Lesezeichenleiste, Downloads, Seite durchsuchen, Zoom, privates Fenster, Rückfragen für Kamera/Mikrofon/Standort und die Creative-Startseite. Brave bleibt vorerst installiert"
+      "Creative Browser: der eigene Webbrowser von Creative OS – mit H.264, damit Twitch und YouTube flüssig laufen. Tabs (verschieben, stummschalten, wiederherstellen mit Strg+Umschalt+T), Adressleiste mit Vorschlägen aus Verlauf und Lesezeichen, Lesezeichenleiste, Downloads, Seite durchsuchen, Zoom, privates Fenster, Rückfragen für Kamera/Mikrofon/Standort und die Creative-Startseite. Brave bleibt vorerst installiert",
+      "Taskleiste: Beim Drüberfahren über ein Programm erscheint sein Name in einer kleinen Karte (bei mehreren Fenstern mit Anzahl)"
     ],
     "verbessert": [
-      "Creative Deck nutzt den Creative Browser: Die Browser-Taste startet ihn statt Brave (bestehende Brave-Tasten werden umgestellt), und „Webseite öffnen“ öffnet die Seite im Creative Browser"
+      "Creative Deck nutzt den Creative Browser: Die Browser-Taste startet ihn statt Brave (bestehende Brave-Tasten werden umgestellt), und „Webseite öffnen“ öffnet die Seite im Creative Browser",
+      "Startmenü: Von Steam angelegte Spiel-Verknüpfungen erscheinen nicht mehr – Spiele findest du im Game Launcher"
     ],
     "behoben": [
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",
       "Dateien: „Papierkorb leeren“ im Papierkorb tat nichts – jetzt kommt die Rückfrage und der Papierkorb wird geleert, wie über das Symbol in der Taskleiste",
-      "Creative 3D: Das Einrichten von TRELLIS.2 brach kurz vor Schluss ab („einops fehlt“) – der Baustein für die Hintergrund-Entfernung ist jetzt im Container. Einfach erneut einrichten, die schon geladenen Modelle bleiben erhalten"
+      "Creative 3D: Das Einrichten von TRELLIS.2 brach kurz vor Schluss ab („einops fehlt“) – der Baustein für die Hintergrund-Entfernung ist jetzt im Container. Einfach erneut einrichten, die schon geladenen Modelle bleiben erhalten",
+      "Systemsteuerung › Bildschirme: Hochkant gestellte Monitore werden sauber beschriftet (Name und Auflösung untereinander, z. B. „1080 × 1920 · hochkant“)"
     ]
   },
   {

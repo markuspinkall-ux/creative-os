@@ -43,6 +43,11 @@ def is_creative(entry):
     return entry.name.startswith("Creative ") and entry.desktop_id not in NOT_IN_FOLDER
 
 
+def is_steam_game(entry):
+    """Von Steam angelegte Spiel-Verknüpfung – Spiele gibt es im Game Launcher, nicht im Startmenü."""
+    return "steam://rungameid/" in (entry.exec or "")
+
+
 def application_dirs():
     home = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
     dirs = [home] + (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":")
@@ -173,7 +178,7 @@ class AppModel(QAbstractListModel):
                 found[desktop_id] = parse_desktop_file(path, desktop_id, self._langs)
         entries = [e for e in found.values() if e is not None]
         entries.sort(key=lambda e: (_letter(e.name) == "#", _plain(e.name)))
-        self._all = [e for e in entries if not e.hidden]
+        self._all = [e for e in entries if not e.hidden and not is_steam_game(e)]
         self._by_id = {e.desktop_id: e for e in entries}
         self._by_lower = {e.desktop_id.lower(): e for e in entries}
         self._apply_filter()

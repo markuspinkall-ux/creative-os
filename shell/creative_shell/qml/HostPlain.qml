@@ -21,7 +21,8 @@ Window {
     title: placement === "bar" ? "Creative Taskleiste" : "Creative Menü"
     flags: placement === "bar"
         ? (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus)
-        : (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        : (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
+           | (popupKey === "tasktip" ? (Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus) : 0))
 
     Loader {
         id: loader
@@ -32,14 +33,14 @@ Window {
     Component.onCompleted: loader.setSource(contentSource, { screenName: screenName })
 
     onVisibleChanged: {
-        if (visible && placement !== "bar" && popupKey !== "bubble") {
+        if (visible && placement !== "bar" && popupKey !== "bubble" && popupKey !== "tasktip") {
             requestActivate()
             if (loader.item && loader.item.opened)
                 loader.item.opened()
         }
     }
     onActiveChanged: {
-        if (!active && visible && placement !== "bar" && popupKey !== "bubble")
+        if (!active && visible && placement !== "bar" && popupKey !== "bubble" && popupKey !== "tasktip")
             shell.popupLostFocus(screenName, popupKey || placement)
     }
 }
