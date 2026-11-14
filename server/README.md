@@ -23,7 +23,8 @@ Ein/Aus-Menü › **Server-Modus** (erscheint, sobald Mein Server eingeschaltet 
 - Der Anmeldebildschirm zeigt die Server-Maske: Status, Heimnetz-/IP-/Internet-Adresse und seit wann.
   Nach 2 Minuten ohne Eingabe wird abgedunkelt.
 - **Zurück zum normalen Modus** öffnet das Passwortfeld; die Anmeldung beendet den Server-Modus.
-- Der Modus übersteht einen Neustart (Dienst `creative-servermode.service`).
+- Der Modus gilt nur bis zum nächsten Neustart: Danach kommt wieder die normale Anmeldung
+  (`creative-servermode-reset.service` räumt beim Hochfahren auf).
 
 Technik: `creative-servermode` (root, über pkexec ohne Passwort für die aktive Sitzung),
 Status für die Maske in `/var/lib/creative-servermode/state.json`.

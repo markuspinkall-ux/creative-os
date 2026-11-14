@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS – Server-Modus (nur Mein Server bleibt online)
+Description=Creative OS – Server-Modus (nur Mein Server bleibt online, bis zum nächsten Neustart)
 Documentation=file:///usr/share/doc/creative-server/README.md
 After=network-online.target creative-server.service
 Wants=network-online.target creative-server.service
@@ -15,5 +15,4 @@ ExecStart=/usr/bin/systemd-inhibit --mode=block \
 Restart=on-failure
 RestartSec=5
 
-[Install]
-WantedBy=multi-user.target
+# Kein [Install]: Der Modus wird nur für den laufenden Start eingeschaltet.

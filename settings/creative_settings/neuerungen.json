@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-14",
+    "titel": "Server-Modus bis zum Neustart",
+    "neu": [],
+    "verbessert": [],
+    "behoben": [
+      "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske"
+    ]
+  },
+  {
     "datum": "2026-11-13",
     "titel": "Server-Look und schärfere 3D-Figuren",
     "neu": [

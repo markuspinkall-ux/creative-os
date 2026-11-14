@@ -7,9 +7,11 @@ Befehle (über pkexec, ohne Passwort für die angemeldete Person):
   off            Zurück in den normalen Modus (läuft automatisch beim Anmelden).
   run            Nur für creative-servermode.service: hält Bereitschaft und
                  Ruhezustand fern und schreibt alle 30 s den Status für die Maske.
+  boot           Nur für creative-servermode-reset.service: beim Hochfahren
+                 aufräumen, damit wieder die normale Anmeldung kommt.
 
-Der Modus übersteht einen Neustart: Der Dienst ist dann aktiviert und der
-Anmeldebildschirm zeigt wieder die Maske.
+Der Modus gilt nur bis zum nächsten Neustart: Der Dienst wird nur gestartet,
+nicht aktiviert, und beim Hochfahren setzt boot alles zurück.
 """
 
 import json
@@ -138,24 +140,40 @@ def on(session):
         pass
     apply(state)
     save(status(state))
-    run("systemctl", "enable", "--now", SERVICE)
+    # Nur für diesen Start – nach einem Neustart kommt wieder die normale Anmeldung
+    run("systemctl", "disable", SERVICE)
+    run("systemctl", "start", SERVICE)
     # Zuletzt: Sitzung beenden – damit endet auch dieses Programm.
     print(json.dumps({"ok": True}), flush=True)
     run("loginctl", "terminate-session", session)
     sys.exit(0)
 
 
-def off():
-    state = load()
-    run("systemctl", "disable", "--now", SERVICE)
+def restore(state, start_paused=True):
+    """Server-Modus beenden: Dienst aus, Energieprofil und Pausiertes zurück."""
+    # Ältere Versionen haben den Dienst aktiviert – das würde jeden Neustart
+    # wieder in den Server-Modus schicken.
+    run("systemctl", "disable", SERVICE)
+    if is_active(SERVICE):
+        run("systemctl", "stop", SERVICE)
     if not state.get("active"):
-        reply(True, changed=False)
-    for unit in state.get("paused", []):
-        run("systemctl", "start", unit)
+        return False
+    if start_paused:
+        for unit in state.get("paused", []):
+            run("systemctl", "start", unit)
     if state.get("profile") and shutil.which("powerprofilesctl"):
         run("powerprofilesctl", "set", state["profile"])
     save({"active": False, "ended": int(time.time())})
-    reply(True, changed=True)
+    return True
+
+
+def off():
+    reply(True, changed=restore(load()))
+
+
+def boot():
+    # Pausierte Dienste starten nach einem Neustart ohnehin wieder von selbst.
+    reply(True, changed=restore(load(), start_paused=False))
 
 
 def loop():
@@ -179,5 +197,7 @@ if __name__ == "__main__":
         off()
     elif args == ["run"]:
         loop()
+    elif args == ["boot"]:
+        boot()
     else:
         reply(False, error="Unbekannter Befehl.")
