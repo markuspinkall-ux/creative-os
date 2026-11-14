@@ -140,7 +140,9 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
         </body>`;
       const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
       await new Promise((r) => server.listen(0, '127.0.0.1', r));
-      const url = `http://127.0.0.1:${server.address().port}/`;
+      // Echter Hostname (über /etc/hosts): Ghostery wendet Ausblend-Regeln nicht auf IP-Adressen an
+      const host = process.env.CREATIVE_WERBETEST_HOST || '127.0.0.1';
+      const url = `http://${host}:${server.address().port}/`;
       try {
         const pl = win.ses.getPreloadScripts ? win.ses.getPreloadScripts() : win.ses.getPreloads();
         console.log('Preloads der Sitzung:', JSON.stringify(pl));
