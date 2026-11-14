@@ -292,6 +292,30 @@ Item {
 
                 Divider { width: parent.width }
 
+                // ---------- Nicht sperren (nur diese Sitzung) ----------
+                Item {
+                    width: parent.width
+                    height: 24
+                    visible: session.keepAwakeAvailable
+                    SectionTitle { anchors.verticalCenter: parent.verticalCenter; text: "Nicht sperren" }
+                    CSwitch {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        label: "Nicht sperren"
+                        checked: session.keepAwake
+                        onToggled: (value) => session.setKeepAwake(value)
+                    }
+                }
+                BodyText {
+                    width: parent.width
+                    visible: session.keepAwakeAvailable
+                    text: session.keepAwake
+                          ? "Der PC wechselt nicht von selbst in den Anmeldebildschirm und der Bildschirm bleibt an – bis du dich abmeldest oder es wieder ausschaltest."
+                          : "Nach 10 Minuten ohne Eingabe wird gesperrt. Einschalten, damit das in dieser Sitzung nicht passiert (z. B. bei einem Film oder Download)."
+                }
+
+                Divider { width: parent.width }
+
                 // ---------- Drucker ----------
                 SectionTitle { text: "Drucker" }
 
