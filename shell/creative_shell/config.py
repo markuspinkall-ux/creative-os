@@ -34,6 +34,10 @@ DEFAULTS = {
     "desktopShelf": True,
     "shelf": [],
     "hiddenStartApps": [],
+    # Eigene Auswahl der Taskleisten-Programme (Startmenü › Rechtsklick › An Taskleiste anheften).
+    # Solange taskbarAppsSet falsch ist, gilt die Grundausstattung aus "pinned".
+    "taskbarApps": [],
+    "taskbarAppsSet": False,
     # Position der Ablage (Anteil der freien Fläche 0…1; -1 = oben mittig)
     "shelfX": -1.0,
     "shelfY": -1.0,
@@ -49,6 +53,7 @@ DEFAULTS = {
         {
             "icon": "browser",
             "candidates": [
+                "creative-browser.desktop",
                 "brave-browser.desktop",
                 "com.brave.Browser.desktop",
                 "firefox.desktop",

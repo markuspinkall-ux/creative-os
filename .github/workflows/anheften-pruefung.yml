@@ -1,0 +1,21 @@
+name: Taskleiste anheften prüfen
+# Startmenü/Taskleiste › Rechtsklick: anheften, lösen, Reihenfolge, Creative Browser statt Brave.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [shell/creative_shell/apps.py, shell/creative_shell/config.py, shell/creative_shell/tasks.py, tools/anheften-test.py, .github/workflows/anheften-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1
+          pip install -q PySide6
+      - name: Prüfen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 tools/anheften-test.py

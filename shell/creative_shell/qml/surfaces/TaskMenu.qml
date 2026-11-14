@@ -20,6 +20,9 @@ Item {
             list.push({ act: "open", label: "Öffnen", icon: "open" })
         if (root.running && root.item.desktopId)
             list.push({ act: "new", label: "Neues Fenster", icon: "plus" })
+        if (root.item.desktopId)
+            list.push(root.item.pinned ? { act: "unpin", label: "Von der Taskleiste lösen", icon: "pin" }
+                                       : { act: "pin", label: "An die Taskleiste anheften", icon: "pin" })
         if (root.running)
             list.push({ act: "close", label: root.count > 1 ? "Alle " + root.count + " Fenster schließen" : "Fenster schließen",
                         icon: "close", danger: true })
@@ -30,6 +33,8 @@ Item {
         shell.closePopups()
         if (act === "open" || act === "new") tasks.launchNew(root.item.desktopId)
         else if (act === "close") tasks.closeApp(root.screenName, root.item.key)
+        else if (act === "pin") apps.pin(root.item.desktopId)
+        else if (act === "unpin") apps.unpin(root.item.desktopId)
     }
 
     MouseArea { anchors.fill: parent; onClicked: shell.closePopups() }
