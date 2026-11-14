@@ -483,8 +483,10 @@ COPY server/README.md /usr/share/doc/creative-server/README.md
 # Server-Modus (Ein/Aus-Menü): nur „Mein Server“ bleibt online
 COPY server/creative-servermode /usr/libexec/creative-servermode
 COPY server/creative-servermode.service /usr/lib/systemd/system/creative-servermode.service
+COPY server/creative-servermode-reset.service /usr/lib/systemd/system/creative-servermode-reset.service
 COPY server/org.creativeos.servermode.policy /usr/share/polkit-1/actions/org.creativeos.servermode.policy
-RUN chmod 755 /usr/libexec/creative-server-helper /usr/libexec/creative-servermode
+RUN chmod 755 /usr/libexec/creative-server-helper /usr/libexec/creative-servermode \
+ && systemctl enable creative-servermode-reset.service
 
 # ---------------------------------------------------------------------------
 # 8b3b) KI-Helfer (Desktop-Widget): lokales Sprachmodell über llama.cpp mit Vulkan –

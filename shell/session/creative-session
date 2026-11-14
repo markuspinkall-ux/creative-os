@@ -19,8 +19,12 @@ export XDG_DATA_DIRS="/usr/share/creative-os/data:$data"
 export QT_QPA_PLATFORMTHEME=kde
 [ -x /usr/libexec/creative-theme-user ] && /usr/libexec/creative-theme-user
 # Anmelden beendet den Server-Modus: pausierte Dienste und Energieprofil zurück
+# (mehrmals versuchen: direkt nach der Anmeldung ist die Sitzung evtl. noch nicht „aktiv“)
 if grep -qs '"active": true' /var/lib/creative-servermode/state.json; then
-    pkexec /usr/libexec/creative-servermode off >/dev/null 2>&1 &
+    (for i in 1 2 3 4 5 6; do
+         pkexec /usr/libexec/creative-servermode off >/dev/null 2>&1 && break
+         sleep 5
+     done) &
 fi
 
 exec kwin_wayland --xwayland --exit-with-session /usr/libexec/creative-shell-supervisor
