@@ -36,7 +36,7 @@ jobs:
           sudo systemctl restart NetworkManager
           sleep 3
           nmcli --version; nmcli general status || true
-          ping -c1 -W3 github.com
+          curl -sSfo /dev/null -m 15 https://api.github.com && echo "Internet ok"
       - name: Mit echtem NetworkManager
         timeout-minutes: 4
         env:
@@ -44,7 +44,7 @@ jobs:
         run: |
           SITE=$(python3 -c 'import site; print(site.getusersitepackages())')
           sudo env QT_QPA_PLATFORM=offscreen PYTHONPATH="$SITE" python3 tools/vpn-test.py nm
-          ping -c1 -W3 github.com
+          curl -sSfo /dev/null -m 15 https://api.github.com && echo "Internet ok"
       - name: Fotografieren
         if: always()
         env:
