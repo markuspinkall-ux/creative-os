@@ -1,0 +1,31 @@
+name: Probe Electron im Abbild
+on:
+  push:
+    branches: ["claude/probe-electron"]
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Platz schaffen
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+      - name: Electron im echten Abbild starten
+        run: |
+          sudo podman pull -q ghcr.io/markuspinkall-ux/creative-os:amd-testing >/dev/null
+          sudo podman run --rm --security-opt label=disable ghcr.io/markuspinkall-ux/creative-os:amd-testing bash -c '
+            dnf install -y -q xorg-x11-server-Xvfb xorg-x11-xauth strace >/dev/null 2>&1 || true
+            useradd -m t
+            cat > /tmp/t.js <<EOT
+          const {app}=require("electron");app.whenReady().then(()=>{console.log("ELECTRON OK");app.quit()})
+          EOT
+            chmod 644 /tmp/t.js
+            echo "== env"; env | grep -iE "electron|chrome" || true
+            echo "== ldd"; ldd /usr/lib/creative-browser/electron/electron | grep "not found" || echo "alle Bibliotheken da"
+            echo "== ls"; ls -la /usr/lib/creative-browser/electron | head -40
+            echo "== Start (Benutzer t, X11)"
+            su t -c "cd /tmp && xvfb-run -a /usr/lib/creative-browser/electron/electron /tmp/t.js --enable-logging=stderr --v=1 > /tmp/log.txt 2>&1; echo Ende: \$?"
+            wc -l /tmp/log.txt; grep -v "VERBOSE1:dbus" /tmp/log.txt | tail -60
+            echo "== strace (letzte Zeilen)"
+            su t -c "cd /tmp && xvfb-run -a strace -f -e trace=execve,exit_group,openat -o /tmp/st.txt /usr/lib/creative-browser/electron/electron /tmp/t.js; echo Ende: \$?"
+            grep -E "exit_group|ENOENT|EACCES" /tmp/st.txt | grep -v "ENOENT.*\(locale\|\.so\|icons\|fonts\|gconv\)" | tail -40
+          '
