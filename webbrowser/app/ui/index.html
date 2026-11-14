@@ -23,6 +23,7 @@
       <input id="address" type="text" spellcheck="false" autocomplete="off" aria-label="Adresse oder Suche"
              placeholder="Suchen oder Adresse eingeben">
       <button id="zoom-badge" title="Zoom zurücksetzen (Strg+0)"></button>
+      <button id="shield" class="icon small" title="Werbeblocker" aria-label="Werbeblocker"><span id="shield-count"></span></button>
       <button id="star" class="icon small" title="Lesezeichen (Strg+D)" aria-label="Lesezeichen"></button>
     </div>
     <button id="downloads-btn" class="icon" title="Downloads (Strg+J)" aria-label="Downloads"><span id="dl-ring"></span></button>
@@ -51,6 +52,7 @@
   <div id="menu" class="popup" hidden role="menu"></div>
   <div id="downloads" class="popup" hidden></div>
   <div id="ctx" class="popup" hidden role="menu"></div>
+  <div id="shield-panel" class="popup" hidden></div>
   <div id="dialog" class="popup" hidden></div>
 </div>
 <script src="ui.js"></script>

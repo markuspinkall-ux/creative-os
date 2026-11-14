@@ -36,6 +36,7 @@ const P = {
   play: '<path d="M8 5l11 7-11 7z"/>',
   power: '<path d="M12 3v8M6.3 7a8 8 0 1 0 11.4 0"/>',
   bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
 };
 const icon = (name, size = 18, fill = false) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${fill ? 0 : 1.8}" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>`;
@@ -55,7 +56,7 @@ const chrome = $('chrome');
 new ResizeObserver(() => api.cmd('chrome-height', chrome.offsetHeight)).observe(chrome);
 
 // ---- Schicht für Menüs ----
-const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog'];
+const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog', 'shield-panel'];
 function openLayer(id) {
   for (const p of popups) $(p).hidden = p !== id;
   $('layer').hidden = false;
@@ -182,11 +183,49 @@ function renderNav() {
   $('star').innerHTML = icon('star', 17, !!a.bookmarked);
   $('star').classList.toggle('on', !!a.bookmarked);
   $('star').hidden = !a.url;
+  renderShield(a.adblock);
   $('zoom-badge').textContent = `${a.zoom || 100} %`;
   $('zoom-badge').classList.toggle('show', !!a.zoom && a.zoom !== 100);
   const prog = $('progress');
   if (a.loading) { prog.className = 'loading'; } else if (prog.classList.contains('loading')) { prog.className = 'done'; }
 }
+
+// ---- Werbeblocker ----
+function renderShield(ab) {
+  const b = $('shield');
+  b.hidden = !ab || !ab.host;
+  if (!ab) return;
+  const on = ab.enabled && !ab.siteAllowed && ab.available;
+  b.classList.toggle('off', !on);
+  if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', icon('shield', 17));
+  $('shield-count').textContent = on && ab.blocked ? (ab.blocked > 99 ? '99+' : String(ab.blocked)) : '';
+  b.title = !ab.available ? (ab.loading ? 'Werbeblocker lädt die Filterliste …' : 'Werbeblocker nicht verfügbar')
+    : on ? `Werbeblocker: ${ab.blocked} blockiert` : 'Werbeblocker ist hier aus';
+  if (!$('shield-panel').hidden) renderShieldPanel();
+}
+function renderShieldPanel() {
+  const ab = (S.active && S.active.adblock) || {};
+  const on = ab.enabled && !ab.siteAllowed;
+  const box = $('shield-panel');
+  box.innerHTML = `<h3>${icon('shield', 18)} Werbeblocker</h3>
+    ${!ab.available ? `<p>${esc(ab.loading ? 'Die Filterliste wird gerade geladen …' : (ab.error || 'Nicht verfügbar'))}</p>` : `
+    <div class="big">${on ? ab.blocked : '–'}</div>
+    <p>${on ? 'Werbungen und Tracker auf dieser Seite blockiert' : (ab.enabled ? `Auf ${esc(ab.host)} ausgeschaltet` : 'Werbeblocker ist überall aus')}</p>`}
+    <div class="switchrow"><span>Auf <b>${esc(ab.host || 'dieser Seite')}</b> blockieren</span>
+      <button class="switch${!ab.siteAllowed ? ' on' : ''}" id="sw-site" aria-label="Auf dieser Seite blockieren" ${ab.enabled ? '' : 'disabled'}></button></div>
+    <div class="switchrow"><span>Werbeblocker überall</span>
+      <button class="switch${ab.enabled ? ' on' : ''}" id="sw-all" aria-label="Werbeblocker überall"></button></div>`;
+  $('sw-site').onclick = () => api.cmd('adblock-site', !ab.siteAllowed);
+  $('sw-all').onclick = () => api.cmd('adblock', !ab.enabled);
+}
+$('shield').onclick = () => {
+  const box = $('shield-panel');
+  renderShieldPanel();
+  const r = $('shield').getBoundingClientRect();
+  box.style.top = `${r.bottom + 8}px`;
+  box.style.left = `${Math.max(8, Math.min(r.right - 330, innerWidth - 338))}px`;
+  openLayer('shield-panel');
+};
 
 // Adressleiste mit Vorschlägen
 let sugItems = [];
@@ -343,6 +382,7 @@ $('menu-btn').onclick = () => {
     { label: 'Drucken …', icon: 'print', key: 'Strg+P', run: () => api.cmd('print') },
     { label: 'Entwicklerwerkzeuge', icon: 'code', key: 'F12', run: () => api.cmd('devtools') },
     '-',
+    { label: 'Werbeblocker', check: !!S.settings.adblock, run: () => api.cmd('adblock', !S.settings.adblock) },
     { label: 'Lesezeichenleiste anzeigen', check: !!S.settings.bookmarksBar, run: () => api.cmd('toggle-bookmarks-bar') },
     { label: 'Tabs beim Start wiederherstellen', check: !!S.settings.restoreSession, run: () => api.cmd('restore-session', !S.settings.restoreSession) },
     { html: '<div class="label">SUCHMASCHINE</div>' },

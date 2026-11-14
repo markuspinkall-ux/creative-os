@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, store, START_URL, arg, setLook, lookFor }) {
+async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -127,7 +127,46 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor }) {
     setLook(lookFor('graphit', 'blau'));
     await sleep(300);
 
+    // Werbeblocker mit einer Testseite auf einem eigenen kleinen Webserver
     if (process.argv.includes('--creative-online')) {
+      const ok = await within(adblock.ready, 60000, false);
+      check('Werbeblocker geladen', ok === true);
+      const http = require('http');
+      const page = `<!doctype html><title>Werbetest</title><body>
+        <p id="inhalt">Inhalt</p>
+        <ins class="adsbygoogle" style="display:block;width:300px;height:250px;background:red">Werbung</ins>
+        <div id="ad-banner" class="ad-banner" style="width:300px;height:90px;background:red">Werbung</div>
+        <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" onerror="window.__blocked=1" onload="window.__loaded=1"></script>
+        </body>`;
+      const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
+      await new Promise((r) => server.listen(0, '127.0.0.1', r));
+      const url = `http://127.0.0.1:${server.address().port}/`;
+      const t = win.addTab(url);
+      await waitLoad(t.wc, 20000);
+      await sleep(2500);
+      const res = await within(t.wc.executeJavaScript(`({ blocked: window.__blocked || 0, loaded: window.__loaded || 0,
+        ins: document.querySelector('ins.adsbygoogle').offsetHeight, banner: document.getElementById('ad-banner').offsetHeight,
+        inhalt: document.getElementById('inhalt').offsetHeight })`), 5000, {});
+      result.adblock = { ...res, count: adblock.count(t.wc.id) };
+      check('Werbeskript blockiert', res.blocked === 1 && !res.loaded);
+      check('Werbeflächen ausgeblendet', res.ins === 0 && res.banner === 0 && res.inhalt > 0);
+      check('Zähler zählt', adblock.count(t.wc.id) >= 1);
+      await shot(win, dir, '9-werbeblocker');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('shield').click()"), 5000);
+      await sleep(500);
+      await shot(win, dir, '9-werbeblocker-panel');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 5000);
+      win.command('adblock-site', true);                  // auf dieser Seite erlauben
+      await sleep(400);
+      await waitLoad(t.wc, 20000);
+      await sleep(2500);
+      const res2 = await within(t.wc.executeJavaScript('({ blocked: window.__blocked || 0, loaded: window.__loaded || 0 })'), 5000, {});
+      result.adblockErlaubt = res2;
+      check('Seite erlauben lässt Werbung durch', res2.loaded === 1 && !res2.blocked);
+      win.command('adblock-site', false);
+      server.close();
+      win.closeTab(t);
+
       // Echte Seiten – nur zur Info, nicht entscheidend (CI-Netz, Cookie-Banner …)
       result.online = {};
       for (const [name, url, wait] of [

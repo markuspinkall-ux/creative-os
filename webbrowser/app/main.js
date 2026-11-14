@@ -10,6 +10,7 @@ const {
   app, BaseWindow, WebContentsView, ipcMain, session, protocol, net, clipboard, shell, nativeTheme,
 } = require('electron');
 const { Store, ENGINES } = require('./store');
+const { AdBlock } = require('./adblock');
 
 const APP_DIR = __dirname;
 const START_URL = 'creative://start/';
@@ -75,6 +76,7 @@ function watchLook() {
 }
 
 let store;
+let adblock;
 const windows = new Set();
 const downloads = [];
 let nextTabId = 1;
@@ -128,6 +130,7 @@ function prepareSession(ses, isPrivate) {
   if (preparedSessions.has(ses)) return;
   preparedSessions.add(ses);
   ses.setUserAgent(cleanUserAgent(ses.getUserAgent()));
+  adblock.attach(ses);
   try { ses.setSpellCheckerLanguages(['de-DE']); } catch (_) { /* Wörterbuch nicht verfügbar */ }
 
   ses.protocol.handle('creative', (req) => {
@@ -331,6 +334,11 @@ class Win {
     });
     wc.on('page-favicon-updated', (_e, icons) => { tab.favicon = icons[0] || ''; upd(); });
     wc.on('did-start-loading', () => { tab.loading = true; tab.crashed = false; upd(); });
+    wc.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
+      const main = e && e.isMainFrame !== undefined ? e.isMainFrame : isMainFrame;
+      const same = e && e.isSameDocument !== undefined ? e.isSameDocument : isInPlace;
+      if (main && !same) adblock.resetCount(wc.id);   // Zähler gilt pro Seite
+    });
     wc.on('did-stop-loading', () => { tab.loading = false; upd(); });
     wc.on('did-navigate', (_e, url) => {
       tab.url = url; tab.favicon = url.startsWith('creative:') ? '' : tab.favicon;
@@ -450,10 +458,11 @@ class Win {
           loading: a.loading, secure: a.url.startsWith('https://'),
           zoom: wc ? Math.round(100 * 1.2 ** wc.getZoomLevel()) : 100,
           bookmarked: store.isBookmarked(a.url),
+          adblock: adblock.info(wc),
         } : null,
         bookmarks: store.data.bookmarks,
         settings: { engine: store.settings.engine, bookmarksBar: store.settings.bookmarksBar,
-          restoreSession: store.settings.restoreSession },
+          restoreSession: store.settings.restoreSession, adblock: store.settings.adblock !== false },
         engines: Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name })),
         downloads: downloads.filter((d) => this.isPrivate || !d.private).slice(0, 30).map((d) => ({
           id: d.id, name: d.name, received: d.received, total: d.total, state: d.state, paused: d.paused })),
@@ -666,6 +675,8 @@ class Win {
       case 'find-next': if (wc && a.find) wc.findInPage(a.find, { findNext: false, forward: arg1 !== false }); break;
       case 'find-stop': if (wc) { a.find = null; wc.stopFindInPage('clearSelection'); wc.focus(); } break;
       case 'zoom': this.zoom(arg1); break;
+      case 'adblock': adblock.setEnabled(!!arg1); if (wc) wc.reload(); break;
+      case 'adblock-site': if (wc) { adblock.setAllowed(adblock.info(wc).host, !!arg1); wc.reload(); } break;
       case 'new-window': new Win({}); break;
       case 'new-private': new Win({ isPrivate: true }); break;
       case 'devtools': if (wc) wc.toggleDevTools(); break;
@@ -718,10 +729,11 @@ if (!single) {
 
   app.whenReady().then(() => {
     store = new Store(app.getPath('userData'));
+    adblock = new AdBlock(app.getPath('userData'), store, () => broadcast());
     setLook(readLook());
     watchLook();
     app.userAgentFallback = cleanUserAgent(app.userAgentFallback);
-    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor }); return; }
+    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }); return; }
     const urls = process.argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     if (process.argv.includes('--privat')) { new Win({ isPrivate: true, urls }); return; }
     const saved = store.settings.restoreSession ? store.data.session.filter((s) => s.urls && s.urls.length) : [];

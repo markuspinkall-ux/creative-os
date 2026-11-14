@@ -34,6 +34,9 @@ jobs:
           cp -a /tmp/el/node_modules/electron/dist /tmp/pkg
           rm -f /tmp/pkg/resources/default_app.asar
           cp -a webbrowser/app /tmp/pkg/resources/app
+          # Abhängigkeiten (Werbeblocker) wie im Abbild; die Sperrdatei für reproduzierbare Bauten ablegen
+          (cd /tmp/pkg/resources/app && npm install --omit=dev --no-audit --no-fund && npm ls --omit=dev --depth=0)
+          mkdir -p fotos && cp /tmp/pkg/resources/app/package-lock.json fotos/package-lock.json
           mkdir -p /tmp/browser && cp -a browser/startpage /tmp/browser/startpage
           ELECTRON_RUN_AS_NODE=1 /tmp/pkg/electron -e "console.log('Electron', process.versions.electron)"
       - name: H.264-Testvideo bauen
