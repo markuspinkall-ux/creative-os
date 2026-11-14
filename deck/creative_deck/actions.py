@@ -103,7 +103,9 @@ class Runner:
                 url = (a.get("url") or "").strip()
                 if url and "://" not in url:
                     url = "https://" + url
-                return "" if url and _spawn(["xdg-open", url]) else "Keine Adresse"
+                # im Creative Browser öffnen (sonst im eingestellten Standardbrowser)
+                opener = ["creative-browser", url] if shutil.which("creative-browser") else ["xdg-open", url]
+                return "" if url and _spawn(opener) else "Keine Adresse"
             if t == "tasten":
                 return "" if self.keyboard.press(a.get("tasten", "")) else self.keyboard.error
             if t == "text":
