@@ -353,6 +353,7 @@ class Win {
       wc.loadURL(`creative://fehler/?u=${encodeURIComponent(url)}&r=${encodeURIComponent(r)}`).catch(() => {});
     });
     wc.on('render-process-gone', () => { tab.crashed = true; tab.loading = false; upd(); });
+    wc.on('preload-error', (_e, file, err) => console.error('Creative Browser: Preload-Fehler', file, err && err.message));
     wc.on('enter-html-full-screen', () => this.setFullscreen(true));
     wc.on('leave-html-full-screen', () => this.setFullscreen(false));
     wc.on('found-in-page', (_e, r) => { this.send('find-result', { active: r.activeMatchOrdinal, total: r.matches }); });

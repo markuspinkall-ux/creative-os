@@ -141,7 +141,12 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
       const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
       await new Promise((r) => server.listen(0, '127.0.0.1', r));
       const url = `http://127.0.0.1:${server.address().port}/`;
+      try {
+        const pl = win.ses.getPreloadScripts ? win.ses.getPreloadScripts() : win.ses.getPreloads();
+        console.log('Preloads der Sitzung:', JSON.stringify(pl));
+      } catch (e) { console.log('Preloads unbekannt', e.message); }
       const t = win.addTab(url);
+      t.wc.on('console-message', (e, level, message) => console.log('Seite:', (e && e.message) || message));
       await waitLoad(t.wc, 20000);
       await sleep(2500);
       const res = await within(t.wc.executeJavaScript(`({ blocked: window.__blocked || 0, loaded: window.__loaded || 0,
