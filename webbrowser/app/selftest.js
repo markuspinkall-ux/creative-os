@@ -104,6 +104,32 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
     const sug = store.suggest('twi');
     check('Vorschläge aus dem Verlauf', sug.length > 0 && sug[0].url.includes('twitch'));
 
+    // Lautstärke-Verstärker am H.264-Testvideo (hat Ton)
+    const vt = win.tabs.find((t) => t.url.includes('h264'));
+    if (vt) {
+      win.activate(vt);
+      await sleep(400);
+      const hooked = await within(win.setBoost(vt, 3), 5000, 0);
+      await sleep(1200);
+      const still = await within(vt.wc.executeJavaScript('(() => { const v = document.querySelector("video"); return { t: v.currentTime, p: v.paused }; })()'), 3000, {});
+      check('Verstärker hängt sich ans Video', hooked >= 1 && vt.boost === 3);
+      check('Video läuft mit Verstärker weiter', still.t > 0 && !still.p);
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('boost-btn').click()"), 3000);
+      await sleep(500);
+      await shot(win, dir, '10-verstaerker');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 3000);
+
+      // Tab in eigenes Fenster ziehen
+      const before = windows.size;
+      const nw = win.tearOff(vt);
+      await sleep(800);
+      check('Tab wandert in neues Fenster', windows.size === before + 1 && nw && nw.tabs[0] === vt && !win.tabs.includes(vt));
+      const inNew = await within(vt.wc.executeJavaScript('document.querySelector("video") ? document.querySelector("video").currentTime : 0'), 3000, 0);
+      check('Video läuft im neuen Fenster weiter', inNew > 0 && vt.win === nw);
+      nw.win.close();
+      await sleep(500);
+    }
+
     // Beide Designs wie in Creative OS (Graphit ist Standard)
     win.activate(win.tabs[0]);
     win.command('navigate', 'creative://start/');

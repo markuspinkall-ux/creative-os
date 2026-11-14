@@ -75,6 +75,46 @@ function watchLook() {
   });
 }
 
+// Lautstärke-Verstärker: läuft in einer eigenen, für die Seite unsichtbaren Welt
+const BOOST_WORLD = 1001;
+function boostScript(g) {
+  return `(() => {
+    const w = window;
+    if (!w.__creativeBoost) {
+      const ctx = new AudioContext();
+      const gains = [];
+      const done = new WeakSet();
+      // Fremde Videos ohne Freigabe (CORS) würden über den Verstärker stumm – die bleiben unangetastet
+      const allowed = (el) => {
+        const src = el.currentSrc || el.src || '';
+        if (!src || src.startsWith('blob:') || src.startsWith('data:')) return true;
+        try { return new URL(src, location.href).origin === location.origin || !!el.crossOrigin; } catch (e) { return false; }
+      };
+      const hook = (el) => {
+        if (done.has(el) || !allowed(el)) return;
+        try {
+          const source = ctx.createMediaElementSource(el);
+          const gain = ctx.createGain();
+          gain.gain.value = w.__creativeBoost.g;
+          source.connect(gain).connect(ctx.destination);
+          gains.push(gain);
+          done.add(el);
+        } catch (e) { done.add(el); }
+      };
+      const scan = () => document.querySelectorAll('video, audio').forEach(hook);
+      w.__creativeBoost = { g: 1, ctx, gains, scan };
+      new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
+      document.addEventListener('play', (e) => { if (e.target instanceof HTMLMediaElement) { hook(e.target); ctx.resume(); } }, true);
+    }
+    const b = w.__creativeBoost;
+    b.g = ${Number(g)};
+    b.scan();
+    b.gains.forEach((n) => { n.gain.value = b.g; });
+    b.ctx.resume();
+    return b.gains.length;
+  })()`;
+}
+
 let store;
 let adblock;
 const windows = new Set();
@@ -237,9 +277,9 @@ const PERMISSION_NAMES = {
 
 // ---- Fenster ---------------------------------------------------------------------------------
 class Win {
-  constructor({ isPrivate = false, urls = null, active = 0 } = {}) {
+  constructor({ isPrivate = false, urls = null, active = 0, ses = null, adopt = null } = {}) {
     this.isPrivate = isPrivate;
-    this.ses = isPrivate ? session.fromPartition(`creative-privat-${Date.now()}`) : session.defaultSession;
+    this.ses = ses || (isPrivate ? session.fromPartition(`creative-privat-${Date.now()}`) : session.defaultSession);
     prepareSession(this.ses, isPrivate);
     const b = store.settings.bounds || {};
     this.win = new BaseWindow({
@@ -275,8 +315,12 @@ class Win {
       if (!isPrivate) saveSession();
     });
 
-    const list = urls && urls.length ? urls : [START_URL];
-    list.forEach((u, i) => this.addTab(u, { background: i !== Math.min(active, list.length - 1) }));
+    if (adopt) {
+      this.adoptTab(adopt);
+    } else {
+      const list = urls && urls.length ? urls : [START_URL];
+      list.forEach((u, i) => this.addTab(u, { background: i !== Math.min(active, list.length - 1) }));
+    }
     this.layout();
   }
 
@@ -311,7 +355,7 @@ class Win {
       ? new WebContentsView({ webContents })
       : new WebContentsView({ webPreferences: { session: this.ses, sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: true } });
     const tab = { id: nextTabId++, view, wc: view.webContents, title: 'Neuer Tab', url, favicon: '',
-      loading: false, audible: false, muted: false, crashed: false, find: null };
+      loading: false, audible: false, muted: false, crashed: false, find: null, boost: 1, win: this };
     view.setBackgroundColor(look.light ? '#ffffff' : '#12151b');
     const at = index == null ? (this.active ? this.tabs.indexOf(this.active) + 1 : this.tabs.length) : index;
     this.tabs.splice(at, 0, tab);
@@ -324,13 +368,14 @@ class Win {
     return tab;
   }
 
+  // Ereignisse eines Tabs. Alles läuft über tab.win – so kann ein Tab in ein anderes Fenster wandern.
   wire(tab) {
     const wc = tab.wc;
-    const upd = () => this.pushState();
+    const upd = () => tab.win.pushState();
     wc.setUserAgent(cleanUserAgent(wc.getUserAgent()));
     wc.on('page-title-updated', (_e, title) => {
-      tab.title = title; if (!this.isPrivate) store.title(wc.getURL(), title); upd();
-      if (tab === this.active) this.setTitle();
+      tab.title = title; if (!tab.win.isPrivate) store.title(wc.getURL(), title); upd();
+      if (tab === tab.win.active) tab.win.setTitle();
     });
     wc.on('page-favicon-updated', (_e, icons) => { tab.favicon = icons[0] || ''; upd(); });
     wc.on('did-start-loading', () => { tab.loading = true; tab.crashed = false; upd(); });
@@ -339,10 +384,10 @@ class Win {
       const same = e && e.isSameDocument !== undefined ? e.isSameDocument : isInPlace;
       if (main && !same) adblock.resetCount(wc.id);   // Zähler gilt pro Seite
     });
-    wc.on('did-stop-loading', () => { tab.loading = false; upd(); });
+    wc.on('did-stop-loading', () => { tab.loading = false; upd(); tab.win.applyBoost(tab); });
     wc.on('did-navigate', (_e, url) => {
       tab.url = url; tab.favicon = url.startsWith('creative:') ? '' : tab.favicon;
-      if (!this.isPrivate) store.visit(url, wc.getTitle());
+      if (!tab.win.isPrivate) store.visit(url, wc.getTitle());
       upd();
     });
     wc.on('did-navigate-in-page', (_e, url, isMain) => { if (isMain) { tab.url = url; upd(); } });
@@ -354,13 +399,13 @@ class Win {
     });
     wc.on('render-process-gone', () => { tab.crashed = true; tab.loading = false; upd(); });
     wc.on('preload-error', (_e, file, err) => console.error('Creative Browser: Preload-Fehler', file, err && err.message));
-    wc.on('enter-html-full-screen', () => this.setFullscreen(true));
-    wc.on('leave-html-full-screen', () => this.setFullscreen(false));
-    wc.on('found-in-page', (_e, r) => { this.send('find-result', { active: r.activeMatchOrdinal, total: r.matches }); });
-    wc.on('zoom-changed', (_e, dir) => this.zoom(dir === 'in' ? 1 : -1, tab));
-    wc.on('before-input-event', (e, input) => { if (this.shortcut(input, tab)) e.preventDefault(); });
-    wc.on('context-menu', (_e, params) => this.contextMenu(tab, params));
-    wc.on('focus', () => { if (this.overlay) this.send('close-overlays'); });
+    wc.on('enter-html-full-screen', () => tab.win.setFullscreen(true));
+    wc.on('leave-html-full-screen', () => tab.win.setFullscreen(false));
+    wc.on('found-in-page', (_e, r) => { tab.win.send('find-result', { active: r.activeMatchOrdinal, total: r.matches }); });
+    wc.on('zoom-changed', (_e, dir) => tab.win.zoom(dir === 'in' ? 1 : -1, tab));
+    wc.on('before-input-event', (e, input) => { if (tab.win.shortcut(input, tab)) e.preventDefault(); });
+    wc.on('context-menu', (_e, params) => tab.win.contextMenu(tab, params));
+    wc.on('focus', () => { if (tab.win.overlay) tab.win.send('close-overlays'); });
     wc.setWindowOpenHandler((details) => {
       // Anmelde-Fenster (window.open mit Größe) bleiben echte Fenster, damit window.opener funktioniert
       if (details.disposition === 'new-window') {
@@ -371,11 +416,49 @@ class Win {
       return {
         action: 'allow',
         createWindow: (options) => {
-          const t = this.addTab(details.url, { background, webContents: options.webContents });
+          const t = tab.win.addTab(details.url, { background, webContents: options.webContents });
           return t.wc;
         },
       };
     });
+  }
+
+  // Tab aus einem anderen Fenster übernehmen (Tab herausgezogen)
+  adoptTab(tab) {
+    tab.win = this;
+    this.tabs.push(tab);
+    this.win.contentView.addChildView(tab.view, 0);
+    this.activate(tab);
+  }
+
+  // Tab aus der Leiste gezogen: eigenes Fenster. KWin öffnet es auf dem Bildschirm mit dem Mauszeiger.
+  tearOff(tab) {
+    if (!tab || this.tabs.length < 2) return null;
+    const i = this.tabs.indexOf(tab);
+    this.tabs.splice(i, 1);
+    try { this.win.contentView.removeChildView(tab.view); } catch (_) { /* schon entfernt */ }
+    if (this.active === tab) this.activate(this.tabs[Math.min(i, this.tabs.length - 1)]);
+    else this.pushState();
+    const w = new Win({ isPrivate: this.isPrivate, ses: this.ses, adopt: tab });
+    if (!this.isPrivate) saveSession();
+    return w;
+  }
+
+  // Lauter als 100 %: Ton von Video/Audio über einen Verstärker (Web Audio) leiten
+  async setBoost(tab, factor) {
+    if (!tab || tab.wc.isDestroyed()) return 0;
+    tab.boost = Math.max(1, Math.min(6, Number(factor) || 1));
+    this.pushState();
+    return this.applyBoost(tab);
+  }
+
+  async applyBoost(tab) {
+    if (!tab || tab.wc.isDestroyed() || (tab.boost <= 1 && !tab.boosted)) return 0;
+    tab.boosted = true;
+    try {
+      const n = await tab.wc.executeJavaScriptInIsolatedWorld(BOOST_WORLD, [{ code: boostScript(tab.boost) }]);
+      return n || 0;
+    } catch (_) { return 0; }
   }
 
   destroyTab(tab) {
@@ -460,6 +543,7 @@ class Win {
           zoom: wc ? Math.round(100 * 1.2 ** wc.getZoomLevel()) : 100,
           bookmarked: store.isBookmarked(a.url),
           adblock: adblock.info(wc),
+          boost: a.boost || 1, audible: a.audible,
         } : null,
         bookmarks: store.data.bookmarks,
         settings: { engine: store.settings.engine, bookmarksBar: store.settings.bookmarksBar,
@@ -676,6 +760,8 @@ class Win {
       case 'find-next': if (wc && a.find) wc.findInPage(a.find, { findNext: false, forward: arg1 !== false }); break;
       case 'find-stop': if (wc) { a.find = null; wc.stopFindInPage('clearSelection'); wc.focus(); } break;
       case 'zoom': this.zoom(arg1); break;
+      case 'boost': this.setBoost(a, arg1); break;
+      case 'tear-off': this.tearOff(this.tabById(arg1)); break;
       case 'adblock': adblock.setEnabled(!!arg1); if (wc) wc.reload(); break;
       case 'adblock-site': if (wc) { adblock.setAllowed(adblock.info(wc).host, !!arg1); wc.reload(); } break;
       case 'new-window': new Win({}); break;

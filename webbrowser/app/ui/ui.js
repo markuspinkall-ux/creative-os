@@ -56,7 +56,7 @@ const chrome = $('chrome');
 new ResizeObserver(() => api.cmd('chrome-height', chrome.offsetHeight)).observe(chrome);
 
 // ---- Schicht für Menüs ----
-const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog', 'shield-panel'];
+const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog', 'shield-panel', 'boost-panel'];
 function openLayer(id) {
   for (const p of popups) $(p).hidden = p !== id;
   $('layer').hidden = false;
@@ -93,7 +93,14 @@ function tabEl(t) {
     });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(t.id, e.clientX, e.clientY); });
     el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-tab', String(t.id)); el.classList.add('dragging'); });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragend', (e) => {
+      el.classList.remove('dragging');
+      // Außerhalb der Tab-Leiste losgelassen (z. B. auf einem anderen Bildschirm): eigenes Fenster
+      const strip = $('tabstrip').getBoundingClientRect();
+      const offStrip = e.clientY > strip.bottom + 40 || e.clientY < -10 || e.clientX < -10 || e.clientX > innerWidth + 10
+        || (e.clientX === 0 && e.clientY === 0);
+      if (e.dataTransfer.dropEffect === 'none' && offStrip) api.cmd('tear-off', t.id);
+    });
     el.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('text/x-tab')) { e.preventDefault(); el.classList.add('drop-before'); } });
     el.addEventListener('dragleave', () => el.classList.remove('drop-before'));
     el.addEventListener('drop', (e) => {
@@ -151,6 +158,7 @@ function tabMenu(id, x, y) {
     '-',
     { label: 'Neu laden', icon: 'reload', run: () => api.cmd('reload-tab', id) },
     { label: 'Duplizieren', icon: 'window', run: () => api.cmd('duplicate-tab', id) },
+    { label: 'In neues Fenster verschieben', icon: 'open', enabled: S.tabs.length > 1, run: () => api.cmd('tear-off', id) },
     { label: t.muted ? 'Ton wieder an' : 'Tab stummschalten', icon: t.muted ? 'speaker' : 'muted', run: () => api.cmd('mute-tab', id) },
     '-',
     { label: 'Andere Tabs schließen', run: () => api.cmd('close-others', id), enabled: S.tabs.length > 1 },
@@ -184,6 +192,7 @@ function renderNav() {
   $('star').classList.toggle('on', !!a.bookmarked);
   $('star').hidden = !a.url;
   renderShield(a.adblock);
+  renderBoost(a);
   $('zoom-badge').textContent = `${a.zoom || 100} %`;
   $('zoom-badge').classList.toggle('show', !!a.zoom && a.zoom !== 100);
   const prog = $('progress');
@@ -225,6 +234,42 @@ $('shield').onclick = () => {
   box.style.top = `${r.bottom + 8}px`;
   box.style.left = `${Math.max(8, Math.min(r.right - 330, innerWidth - 338))}px`;
   openLayer('shield-panel');
+};
+
+// ---- Lautstärke-Verstärker ----
+$('boost-btn').insertAdjacentHTML('afterbegin', icon('speaker'));
+function renderBoost(a) {
+  const b = $('boost-btn');
+  const boost = a.boost || 1;
+  b.classList.toggle('show', !!a.audible || boost > 1);
+  b.classList.toggle('on', boost > 1);
+  $('boost-badge').textContent = boost > 1 ? `${Math.round(boost * 100)}` : '';
+  if (!$('boost-panel').hidden) renderBoostPanel();
+}
+function renderBoostPanel() {
+  const boost = (S.active && S.active.boost) || 1;
+  const box = $('boost-panel');
+  const pct = Math.round(boost * 100);
+  if (!box.querySelector('input')) {
+    box.innerHTML = `<h3>${icon('speaker', 18)} Lautstärke-Verstärker</h3><div class="big" id="boost-val"></div>
+      <input type="range" id="boost-range" min="100" max="600" step="25" aria-label="Verstärkung">
+      <div class="presets">${[100, 200, 300, 400, 600].map((v) => `<button class="btn" data-v="${v}">${v} %</button>`).join('')}</div>
+      <p>Macht leise Videos lauter – über 100 % hinaus. Gilt für diesen Tab, bis du ihn schließt. Sehr hohe Werte können übersteuern.</p>`;
+    $('boost-range').addEventListener('input', (e) => { $('boost-val').textContent = `${e.target.value} %`; api.cmd('boost', Number(e.target.value) / 100); });
+    box.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('click', () => api.cmd('boost', Number(el.dataset.v) / 100)));
+  }
+  $('boost-val').textContent = `${pct} %`;
+  if (document.activeElement !== $('boost-range')) $('boost-range').value = pct;
+  box.querySelectorAll('[data-v]').forEach((el) => el.classList.toggle('sel', Number(el.dataset.v) === pct));
+}
+$('boost-btn').onclick = () => {
+  const box = $('boost-panel');
+  const r = $('boost-btn').getBoundingClientRect();
+  box.style.top = `${r.bottom + 8}px`;
+  box.style.left = `${Math.max(8, Math.min(r.right - 320, innerWidth - 328))}px`;
+  box.style.right = 'auto';
+  renderBoostPanel();
+  openLayer('boost-panel');
 };
 
 // Adressleiste mit Vorschlägen

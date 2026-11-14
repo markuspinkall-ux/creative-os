@@ -181,3 +181,19 @@ body.private #private-badge { display: block; }
 .switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
 .switch.on { background: var(--accent); }
 .switch.on::after { left: 21px; }
+
+/* ---- Lautstärke-Verstärker ---- */
+#boost-btn { display: none; }
+#boost-btn.show { display: grid; }
+#boost-btn.on { color: var(--accent); }
+#boost-badge { position: absolute; right: -2px; bottom: 0; padding: 0 3px; border-radius: 6px; background: var(--accent);
+  color: var(--accent-text); font-size: 9px; font-weight: 700; line-height: 13px; }
+#boost-badge:empty { display: none; }
+#boost-panel { width: 320px; padding: 16px; right: 92px; }
+#boost-panel h3 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+#boost-panel .big { font-size: 30px; font-weight: 700; color: var(--accent); margin: 8px 0 10px; }
+#boost-panel input[type=range] { width: 100%; accent-color: var(--accent); }
+#boost-panel .presets { display: flex; gap: 6px; margin-top: 12px; }
+#boost-panel .presets .btn { flex: 1; padding: 0; }
+#boost-panel .presets .btn.sel { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+#boost-panel p { color: var(--muted); margin: 12px 0 0; line-height: 1.4; font-size: 12px; }
