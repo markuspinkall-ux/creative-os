@@ -52,6 +52,10 @@ RUN git clone -q https://github.com/microsoft/TRELLIS.2.git /opt/trellis2 \
  && python3 -m pip install --no-build-isolation ./o-voxel \
  && rm -rf .git assets data_toolkit
 
+# Fehlte für die Hintergrund-Entfernung (BiRefNet bringt eigenen Code mit, der einops braucht).
+# Eigene, späte Schicht: Beim nächsten Update lädt man nur diese kleine Schicht neu.
+RUN python3 -m pip install "einops==0.8.1"
+
 COPY trellis/run.py /opt/creative/run.py
 COPY trellis/foto_projektion.py /opt/creative/foto_projektion.py
 COPY trellis2/run2.py /opt/creative/run2.py
@@ -68,6 +72,7 @@ ENV PYTHONPATH=/opt/trellis2 \
 # das beim Import einen Grafiktreiber verlangt – die werden hier nur als vorhanden geprüft.
 RUN python3 -c "import torch, xformers, nvdiffrast.torch, cumesh, trimesh, transformers, importlib.util as u; \
       from transformers import DINOv3ViTModel; \
+      import einops, kornia.filters, timm.layers, torchvision.ops; \
       assert u.find_spec('flex_gemm') and u.find_spec('o_voxel') and u.find_spec('trellis2.pipelines'), 'FlexGEMM/O-Voxel/TRELLIS.2 fehlen'; \
       print('TRELLIS.2-Bausteine ok, torch', torch.__version__)" \
  && python3 /opt/creative/run2.py --selftest
