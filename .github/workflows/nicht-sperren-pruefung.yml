@@ -1,0 +1,22 @@
+name: Nicht sperren prüfen
+# Schnellzugriff › „Nicht sperren“ hält die Sperre bei org.freedesktop.ScreenSaver und gibt sie wieder frei.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [shell/creative_shell/session.py, tools/nicht-sperren-test.py, .github/workflows/nicht-sperren-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 dbus
+          pip install -q PySide6
+      - name: Prüfen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: HOME=$(mktemp -d) timeout 60 dbus-run-session -- python3 tools/nicht-sperren-test.py

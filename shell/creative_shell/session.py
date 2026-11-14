@@ -8,6 +8,11 @@ import subprocess
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
+try:
+    from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
+except ImportError:  # ohne QtDBus kein „Nicht sperren“
+    QDBusConnection = None
+
 from . import avatar as profile
 from .runner import spawn_detached
 
@@ -37,6 +42,8 @@ class SessionModel(QObject):
         self.refreshAvatar()
         self._server = False
         self.refreshServer()
+        self._awake_bus = None
+        self._awake_count = 0
 
     userName = Property(str, lambda self: self._name, notify=changed)
     fullName = Property(str, lambda self: profile.full_name(), notify=changed)
@@ -118,6 +125,38 @@ class SessionModel(QObject):
         session = os.environ.get("XDG_SESSION_ID")
         if session and self._server:
             spawn_detached(["pkexec", SERVERMODE, "on", session])
+
+    # ---- Nicht sperren (nur für diese Sitzung) --------------------------------------
+    # Hält eine Sperre über org.freedesktop.ScreenSaver: keine automatische Bildschirmsperre
+    # (Anmeldebildschirm), kein Abdunkeln, kein Bildschirm aus. Die Sperre hängt an einer
+    # eigenen D-Bus-Verbindung – trennen gibt sie frei, und mit dem Abmelden endet sie ohnehin.
+    keepAwakeChanged = Signal()
+
+    def _set_keep_awake(self, on):
+        if on == (self._awake_bus is not None) or QDBusConnection is None:
+            return
+        if on:
+            self._awake_count += 1
+            name = f"creative-wach-{self._awake_count}"
+            bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, name)
+            iface = QDBusInterface("org.freedesktop.ScreenSaver", "/ScreenSaver",
+                                   "org.freedesktop.ScreenSaver", bus)
+            reply = iface.call("Inhibit", "Creative OS", "Nicht sperren (Schnellzugriff)")
+            if not bus.isConnected() or reply.type() != QDBusMessage.MessageType.ReplyMessage:
+                QDBusConnection.disconnectFromBus(name)
+                return
+            self._awake_bus = name
+        else:
+            QDBusConnection.disconnectFromBus(self._awake_bus)
+            self._awake_bus = None
+        self.keepAwakeChanged.emit()
+
+    keepAwake = Property(bool, lambda self: self._awake_bus is not None, notify=keepAwakeChanged)
+    keepAwakeAvailable = Property(bool, lambda self: QDBusConnection is not None, constant=True)
+
+    @Slot(bool)
+    def setKeepAwake(self, on):
+        self._set_keep_awake(bool(on))
 
     @Slot()
     def lock(self):

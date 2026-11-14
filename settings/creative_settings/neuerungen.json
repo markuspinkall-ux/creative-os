@@ -2,7 +2,9 @@
   {
     "datum": "2026-11-14",
     "titel": "Server-Modus bis zum Neustart",
-    "neu": [],
+    "neu": [
+      "Schnellzugriff › „Nicht sperren“: verhindert für die laufende Sitzung, dass der PC nach 10 Minuten ohne Eingabe in den Anmeldebildschirm wechselt – der Bildschirm bleibt an. Nach dem Abmelden oder Neustart ist wieder alles wie gewohnt"
+    ],
     "verbessert": [],
     "behoben": [
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",
