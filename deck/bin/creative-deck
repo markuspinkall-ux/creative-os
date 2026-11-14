@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet Creative Deck aus /usr/lib/creative-deck (Bibliothek für das Stream Deck in vendor/).
+export PYTHONPATH="/usr/lib/creative-deck:/usr/lib/creative-deck/vendor:/usr/lib/creative-shell${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_deck "$@"

@@ -1,0 +1,5 @@
+# Creative Deck: Elgato Stream Deck ohne root nutzen (die angemeldete Person bekommt Zugriff)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", TAG+="uaccess"
+# Virtuelle Tastatur für Tastenkürzel (uinput) – nur für die angemeldete Person am Bildschirm
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

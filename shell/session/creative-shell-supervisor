@@ -88,6 +88,12 @@ if command -v creative-notifyd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Creative Deck: Stream Decks erkennen und Tasten ausführen – startet nach einem Absturz neu
+if command -v creative-deck >/dev/null 2>&1 && [ ! -e /run/creative-live ]; then
+    ( while true; do creative-deck --hintergrund 2>&1 | systemd-cat -t creative-deck; sleep 5; done ) &
+    children="$children $!"
+fi
+
 # Passwortspeicher (KWallet) ohne Nachfrage: leeres Passwort, wird bei der Anmeldung geöffnet
 if [ -x /usr/libexec/creative-wallet-setup ] && [ ! -e /run/creative-live ]; then
     mkdir -p "$HOME/.cache"
