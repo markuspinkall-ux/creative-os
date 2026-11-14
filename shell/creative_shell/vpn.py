@@ -401,11 +401,15 @@ class VpnModel(QObject):
                 self._set(busy=False, message="Verbindung fehlgeschlagen. Ist das Internet verbunden?")
             self._debounce.start()
 
-        # vorher eine andere Proton-Verbindung trennen (gleiche Schnittstelle)
-        for other in self._servers:
-            if other["active"] and other["uuid"] != uid:
-                self._run.run(["nmcli", "connection", "down", "uuid", other["uuid"]])
-        self._run.run(["nmcli", "connection", "up", "uuid", uid], done, timeout_ms=45000)
+        def up(*_):
+            self._run.run(["nmcli", "connection", "up", "uuid", uid], done, timeout_ms=45000)
+
+        # erst eine andere Proton-Verbindung trennen (gleiche Schnittstelle), danach verbinden
+        others = [o["uuid"] for o in self._servers if o["active"] and o["uuid"] != uid]
+        if others:
+            self._run.run(["nmcli", "connection", "down", "uuid", *others], up)
+        else:
+            up()
 
     @Slot()
     def disconnect(self):
