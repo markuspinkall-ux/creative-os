@@ -147,11 +147,11 @@ def nm():
                  "ipv4.addresses,ipv4.dns,ipv4.dns-search,ipv4.dns-priority,ipv6.addresses",
                  "connection", "show", "uuid", nl["uuid"])
     print(show)
-    lines = show.splitlines()
+    lines = show.replace("\\:", ":").splitlines()
     assert lines[0] == "no" and lines[1] == "user:root" and lines[2] == "proton0", lines
     assert lines[3] == "10.2.0.2/32" and lines[4] == "10.2.0.1" and lines[5] == "~." and lines[6] == "-50", lines
     assert "2a07:b944::2:2/128" in lines[7], lines
-    peers = nmcli("-s", "-g", "wireguard.peers", "connection", "show", "uuid", nl["uuid"], check=False)
+    peers = nmcli("-s", "-g", "wireguard.peers", "connection", "show", "uuid", nl["uuid"], check=False).replace("\\:", ":")
     print("Peers:", peers.strip() or "(ältere nmcli zeigt keine Peers)")
     if peers.strip():
         assert PUB in peers and "185.107.56.1" in peers, peers
