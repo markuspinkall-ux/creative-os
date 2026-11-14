@@ -27,7 +27,7 @@ jobs:
           npm install --no-audit --no-fund --foreground-scripts "electron@${ELECTRON_VERSION}"
           [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
           ls node_modules/electron/dist | head
-          /tmp/el/node_modules/electron/dist/electron --version
+          /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
           node -e "for (const f of ['main.js','store.js','selftest.js','preload-ui.js','ui/ui.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
       - name: H.264-Testvideo bauen
         run: |

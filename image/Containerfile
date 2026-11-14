@@ -337,7 +337,7 @@ COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browse
 COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg
 RUN chmod 755 /usr/bin/creative-browser \
  && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/app/icon.png \
- && (/usr/lib/creative-browser/electron/electron --version || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT")
+ && (/usr/lib/creative-browser/electron/electron --no-sandbox --version || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT")
 
 # Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
 RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
