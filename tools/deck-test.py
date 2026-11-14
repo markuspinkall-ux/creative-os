@@ -137,6 +137,16 @@ try:
 except obs.ObsError:
     ok.append("OBS nicht erreichbar wird gemeldet")
 
+# ---- Gestartete Programme erben nicht „offscreen“ vom Dienst ----------------------------------------
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+probe = home / "env.txt"
+actions._spawn(["sh", "-c", f'echo "qpa=${{QT_QPA_PLATFORM:-}}" > {probe}'])
+for _ in range(40):
+    if probe.exists() and probe.read_text().strip():
+        break
+    time.sleep(0.05)
+check(probe.read_text().strip() == "qpa=", "Programme starten sichtbar (kein offscreen)")
+
 # ---- Dienst mit nachgebautem Stream Deck ------------------------------------------------------
 from creative_deck import daemon as dmod  # noqa: E402
 

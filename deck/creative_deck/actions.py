@@ -1,5 +1,6 @@
 """Was eine Taste tut. Seitenwechsel und Helligkeit erledigt der Dienst selbst (deck_actions)."""
 
+import os
 import shutil
 import subprocess
 
@@ -71,10 +72,20 @@ def describe(action, pages=()):
     return "Keine Aktion"
 
 
+def _clean_env():
+    """Umgebung für gestartete Programme: nichts vom unsichtbaren Dienst weitergeben."""
+    env = dict(os.environ)
+    if env.get("QT_QPA_PLATFORM") == "offscreen":
+        env.pop("QT_QPA_PLATFORM")
+    for key in ("PYTHONPATH", "QT_QUICK_BACKEND"):
+        env.pop(key, None)
+    return env
+
+
 def _spawn(argv):
     try:
         subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, start_new_session=True)
+                         stderr=subprocess.DEVNULL, start_new_session=True, env=_clean_env())
         return True
     except OSError:
         return False
