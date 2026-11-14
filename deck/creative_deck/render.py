@@ -37,12 +37,20 @@ def glyph_names():
 
 
 def _theme_pixmap(name, edge):
+    """App-Symbol wie im Startmenü (Creative-Symbole zuerst) – None, wenn es keins gibt
+    (statt eines weißen Platzhalters)."""
     try:
         from creative_shell import icons
-        return icons.render_icon(name, edge)
+        override = icons.creative_icon(name)
+        if override:
+            return QIcon(override).pixmap(edge, edge)
     except Exception:  # noqa: BLE001 – ohne Creative Shell: normales Icon-Theme
+        pass
+    if name.startswith("/") and os.path.exists(name):
+        icon = QIcon(name)
+    else:
         icon = QIcon.fromTheme(name)
-        return icon.pixmap(edge, edge) if not icon.isNull() else None
+    return icon.pixmap(edge, edge) if not icon.isNull() else None
 
 
 def symbol_image(symbol, edge):
