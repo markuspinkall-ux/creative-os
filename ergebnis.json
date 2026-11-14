@@ -1,0 +1,57 @@
+{
+  "ok": true,
+  "checks": {
+    "zwei Tabs": true,
+    "Video-Tab aktiv": true,
+    "H.264 per MSE (Twitch/YouTube)": true,
+    "AAC per MSE": true,
+    "H.264 abspielbar": true,
+    "Testvideo läuft": true,
+    "Bilder werden flüssig dargestellt": true,
+    "Leiste hat Höhe": true,
+    "Menü öffnet sich": true,
+    "Menü schließt sich": true,
+    "Neuer Tab": true,
+    "Tab schließen": true,
+    "Geschlossenen Tab wiederherstellen": true,
+    "Lautsprecher nur bei Ton": true,
+    "Vorschläge aus dem Verlauf": true
+  },
+  "video": {
+    "mseH264": true,
+    "mseH264Base": true,
+    "mseAac": true,
+    "mseVp9": true,
+    "mseAv1": true,
+    "canPlayH264": "probably",
+    "time": 4.962773,
+    "width": 1280,
+    "height": 720,
+    "error": 0,
+    "frames": 154,
+    "dropped": 0,
+    "paused": false
+  },
+  "layout": {
+    "chromeH": 114,
+    "overlay": false
+  },
+  "online": {
+    "youtube": {
+      "time": 0,
+      "width": 0,
+      "height": 0,
+      "paused": true,
+      "frames": 0,
+      "dropped": 0
+    },
+    "twitch": {
+      "time": 18.323267,
+      "width": 1280,
+      "height": 720,
+      "paused": false,
+      "frames": 1045,
+      "dropped": 1
+    }
+  }
+}
