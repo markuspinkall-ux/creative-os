@@ -15,7 +15,7 @@ env:
 jobs:
   pruefen:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Werkzeuge und Electron holen
@@ -39,7 +39,7 @@ jobs:
         run: |
           set +e
           xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
-            /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox \
+            timeout 300 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox \
               --creative-selftest=$PWD/fotos --creative-video=file:///tmp/video/h264.html --creative-online &
             pid=$!
             sleep 6

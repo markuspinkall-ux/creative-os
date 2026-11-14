@@ -6,6 +6,8 @@ const path = require('path');
 const { app } = require('electron');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Nichts darf die Prüfung aufhalten: jede Abfrage hat eine Frist
+const within = (promise, ms, fallback) => Promise.race([promise, sleep(ms).then(() => fallback)]);
 
 function waitLoad(wc, timeout = 20000) {
   return new Promise((resolve) => {
@@ -16,11 +18,11 @@ function waitLoad(wc, timeout = 20000) {
 }
 
 async function shot(win, dir, name) {
-  const ui = await win.ui.webContents.capturePage();
-  fs.writeFileSync(path.join(dir, `${name}-ui.png`), ui.toPNG());
+  const ui = await within(win.ui.webContents.capturePage(), 8000, null);
+  if (ui) fs.writeFileSync(path.join(dir, `${name}-ui.png`), ui.toPNG());
   if (win.active) {
-    const page = await win.active.wc.capturePage();
-    fs.writeFileSync(path.join(dir, `${name}-seite.png`), page.toPNG());
+    const page = await within(win.active.wc.capturePage(), 8000, null);
+    if (page) fs.writeFileSync(path.join(dir, `${name}-seite.png`), page.toPNG());
   }
   return { chromeH: win.chromeH, overlay: win.overlay };
 }
@@ -47,6 +49,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
 
 async function run({ Win, store, START_URL, arg }) {
   const dir = arg('creative-selftest');
+  setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
   const result = { ok: false, checks: {} };
   const check = (name, cond) => { result.checks[name] = !!cond; };
@@ -59,7 +62,7 @@ async function run({ Win, store, START_URL, arg }) {
     check('zwei Tabs', win.tabs.length === 2);
     check('Video-Tab aktiv', win.active === win.tabs[1]);
     await waitLoad(win.active.wc);
-    const v = await win.active.wc.executeJavaScript(VIDEO_JS);
+    const v = await within(win.active.wc.executeJavaScript(VIDEO_JS), 15000, {});
     result.video = v;
     check('H.264 per MSE (Twitch/YouTube)', v.mseH264 && v.mseH264Base);
     check('AAC per MSE', v.mseAac);
@@ -75,11 +78,11 @@ async function run({ Win, store, START_URL, arg }) {
     check('Leiste hat Höhe', win.chromeH > 60 && win.chromeH < 160);
 
     // Menü öffnen (Schicht wird fensterhoch)
-    await win.ui.webContents.executeJavaScript("document.getElementById('menu-btn').click()");
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('menu-btn').click()"), 5000);
     await sleep(500);
     check('Menü öffnet sich', win.overlay === true);
     await shot(win, dir, '3-menue');
-    await win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))");
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 5000);
     await sleep(300);
     check('Menü schließt sich', win.overlay === false);
 
@@ -93,7 +96,7 @@ async function run({ Win, store, START_URL, arg }) {
     win.reopen();
     await sleep(1500);
     check('Geschlossenen Tab wiederherstellen', win.tabs.length === 3 && win.tabs.some((t) => t.url.includes('h264')));
-    const audioIcons = await win.ui.webContents.executeJavaScript("[...document.querySelectorAll('.tab .audio')].filter((b) => b.offsetWidth > 0).length");
+    const audioIcons = await within(win.ui.webContents.executeJavaScript("[...document.querySelectorAll('.tab .audio')].filter((b) => b.offsetWidth > 0).length"), 5000, 99);
     check('Lautsprecher nur bei Ton', audioIcons <= 1);
 
     // Adressleiste: Suche vs. Adresse
@@ -116,11 +119,11 @@ async function run({ Win, store, START_URL, arg }) {
         await waitLoad(t.wc, 30000);
         await sleep(wait);
         try {
-          result.online[name] = await t.wc.executeJavaScript(`(() => { const vs = [...document.querySelectorAll('video')];
+          result.online[name] = await within(t.wc.executeJavaScript(`(() => { const vs = [...document.querySelectorAll('video')];
             const v = vs.find((x) => x.currentTime > 0) || vs[0];
             return v ? { time: v.currentTime, width: v.videoWidth, height: v.videoHeight, paused: v.paused,
               frames: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().totalVideoFrames : 0),
-              dropped: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().droppedVideoFrames : 0) } : { video: false }; })()`);
+              dropped: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().droppedVideoFrames : 0) } : { video: false }; })()`), 10000, { timeout: true });
         } catch (e) { result.online[name] = { error: e.message }; }
         await shot(win, dir, `4-${name}`);
       }
