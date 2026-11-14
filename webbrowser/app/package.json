@@ -1,0 +1,10 @@
+{
+  "name": "creative-browser",
+  "productName": "Creative Browser",
+  "desktopName": "creative-browser.desktop",
+  "version": "1.0.0",
+  "description": "Webbrowser von Creative OS (Electron, Chromium mit H.264)",
+  "main": "main.js",
+  "license": "MIT",
+  "private": true
+}

@@ -44,7 +44,7 @@ def default_config():
     """Erste Einrichtung: sinnvolle Beispiel-Tasten, die man sofort ausprobieren kann."""
     start = {
         "0": _key("Dateien", "app:creative-files.desktop", {"typ": "app", "app": "creative-files.desktop"}),
-        "1": _key("Brave", "app:brave-browser.desktop", {"typ": "app", "app": "brave-browser.desktop"}),
+        "1": _key("Browser", "app:creative-browser.desktop", {"typ": "app", "app": "creative-browser.desktop"}),
         "2": _key("Terminal", "glyph:terminal", {"typ": "app", "app": "org.kde.konsole.desktop"}),
         "3": _key("Bildschirm-foto", "glyph:screenshot", {"typ": "tasten", "tasten": "print"}),
         "4": _key("OBS", "glyph:broadcast", {"typ": "seite", "seite": 1}, "#2b3550"),
@@ -102,9 +102,23 @@ def _clean(cfg):
     return out
 
 
+def _to_creative_browser(cfg):
+    """Tasten, die Brave starten, auf den Creative Browser umstellen (einmalig beim Laden)."""
+    for seite in cfg["seiten"]:
+        for key in seite["tasten"].values():
+            a = key.get("aktion") or {}
+            if a.get("typ") == "app" and a.get("app") == "brave-browser.desktop":
+                a["app"] = "creative-browser.desktop"
+                if key.get("symbol") == "app:brave-browser.desktop":
+                    key["symbol"] = "app:creative-browser.desktop"
+                if key.get("text") in ("Brave", "Brave Browser"):
+                    key["text"] = "Browser"
+    return cfg
+
+
 def load():
     try:
-        return _clean(json.loads(config_path().read_text(encoding="utf-8")))
+        return _to_creative_browser(_clean(json.loads(config_path().read_text(encoding="utf-8"))))
     except (OSError, ValueError):
         return default_config()
 

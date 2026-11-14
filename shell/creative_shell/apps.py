@@ -36,7 +36,7 @@ NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT =
 # Eigene Apps („Creative …“) liegen im Startmenü gesammelt im Ordner „Creative Apps“.
 FOLDER_ID = "creative-apps-ordner"
 FOLDER_NAME = "Creative Apps"
-NOT_IN_FOLDER = {"creative-installer.desktop"}
+NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop"}   # Browser gehört direkt ins Startmenü
 
 
 def is_creative(entry):

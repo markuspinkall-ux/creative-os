@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Weltkugel mit Creative-Bogen -->
+  <circle cx="32" cy="32" r="15" fill="none" stroke="#dce6ff" stroke-width="2.6"/>
+  <path d="M17 32h30M32 17c5.5 4.5 5.5 25.5 0 30M32 17c-5.5 4.5-5.5 25.5 0 30" fill="none" stroke="#dce6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M44 14a22 22 0 0 1 8 10" fill="none" stroke="#8fb3ff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="52.5" cy="27.5" r="2.6" fill="#8fb3ff"/>
+</svg>

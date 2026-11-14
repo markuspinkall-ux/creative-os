@@ -50,6 +50,13 @@ check(cfg["seiten"][0]["name"] == "Start" and "4" in cfg["seiten"][0]["tasten"],
 cfg["helligkeit"] = 250
 config.save(cfg)
 check(config.load()["helligkeit"] == 100, "Helligkeit wird begrenzt")
+old = config.default_config()
+old["seiten"][0]["tasten"]["1"] = {"text": "Brave", "symbol": "app:brave-browser.desktop", "farbe": "",
+                                   "aktion": {"typ": "app", "app": "brave-browser.desktop"}}
+config.save(old)
+k1 = config.load()["seiten"][0]["tasten"]["1"]
+check(k1["aktion"]["app"] == "creative-browser.desktop" and k1["text"] == "Browser"
+      and k1["symbol"] == "app:creative-browser.desktop", "Brave-Taste wird zum Creative Browser")
 config.config_path().write_text("kaputt", encoding="utf-8")
 check(config.load()["seiten"], "kaputte Datei → Grundeinstellung")
 

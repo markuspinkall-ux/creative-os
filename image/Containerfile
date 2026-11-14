@@ -317,6 +317,28 @@ COPY gamelauncher/creative-gamelauncher.desktop /usr/share/applications/creative
 COPY gamelauncher/creative-gamelauncher.svg /usr/share/icons/hicolor/scalable/apps/creative-gamelauncher.svg
 RUN chmod 755 /usr/bin/creative-gamelauncher
 
+# Creative Browser: eigener Webbrowser auf Electron (Chromium mit H.264/AAC für Twitch und YouTube).
+# Electron-Version hier anheben, um Chromium-Sicherheitsupdates zu übernehmen.
+ARG ELECTRON_VERSION=45.3.1
+RUN dnf install -y --skip-unavailable unzip librsvg2-tools nss gtk3 alsa-lib libxkbcommon mesa-libgbm libdrm cups-libs at-spi2-atk \
+ && dnf clean all \
+ && cd /tmp \
+ && curl -fsSLO "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/electron-v${ELECTRON_VERSION}-linux-x64.zip" \
+ && curl -fsSL "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/SHASUMS256.txt" -o electron-sums.txt \
+ && grep " \*electron-v${ELECTRON_VERSION}-linux-x64.zip$" electron-sums.txt | sed 's/ \*/  /' | sha256sum -c - \
+ && mkdir -p /usr/lib/creative-browser/electron \
+ && unzip -q "electron-v${ELECTRON_VERSION}-linux-x64.zip" -d /usr/lib/creative-browser/electron \
+ && rm -f "electron-v${ELECTRON_VERSION}-linux-x64.zip" electron-sums.txt \
+ && rm -f /usr/lib/creative-browser/electron/resources/default_app.asar \
+ && chmod 4755 /usr/lib/creative-browser/electron/chrome-sandbox
+COPY webbrowser/app /usr/lib/creative-browser/app
+COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
+COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
+COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg
+RUN chmod 755 /usr/bin/creative-browser \
+ && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/app/icon.png \
+ && (/usr/lib/creative-browser/electron/electron --no-sandbox --version || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT")
+
 # Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
 RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
  && (python3 -c "import StreamDeck" 2>/dev/null \

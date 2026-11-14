@@ -1,0 +1,80 @@
+name: Creative Browser prüfen
+# Electron mit H.264: Testvideo (H.264/AAC) muss flüssig laufen, Oberfläche wird bedient und fotografiert.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [webbrowser/**, browser/startpage/**, .github/workflows/browser-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: browser-pruefung
+  cancel-in-progress: false
+env:
+  ELECTRON_VERSION: "45.3.1"
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge und Electron holen
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q -o Dpkg::Use-Pty=0 xvfb x11-utils ffmpeg fonts-liberation python3-pil libgtk-3-0 libnss3 libasound2t64 libgbm1
+          mkdir -p /tmp/el && cd /tmp/el && npm init -y >/dev/null
+          npm install --no-audit --no-fund --foreground-scripts "electron@${ELECTRON_VERSION}"
+          [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
+          ls node_modules/electron/dist | head
+          /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
+          node -e "for (const f of ['main.js','store.js','selftest.js','preload-ui.js','ui/ui.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+      - name: H.264-Testvideo bauen
+        run: |
+          mkdir -p /tmp/video
+          ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=30 -f lavfi -i sine=frequency=440 -t 20 \
+            -c:v libx264 -profile:v high -pix_fmt yuv420p -c:a aac -movflags +faststart /tmp/video/h264.mp4
+          printf '<!doctype html><title>H.264-Test</title><body style="margin:0;background:#000"><video src="h264.mp4" autoplay muted loop playsinline style="width:100%%"></video>' > /tmp/video/h264.html
+      - name: Browser prüfen
+        run: |
+          set +e
+          xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
+            timeout 300 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox \
+              --creative-selftest=$PWD/fotos --creative-video=file:///tmp/video/h264.html --creative-online &
+            pid=$!
+            sleep 6
+            for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null | grep -v "not found"; done | sort -u
+            wait $pid
+          '
+          echo "exit=$?" | tee /tmp/exit
+          grep -q "exit=0" /tmp/exit
+      - name: Fotos zusammensetzen
+        if: always()
+        run: |
+          [ -d fotos ] || exit 0
+          python3 - <<'PY'
+          import glob, json, os
+          from PIL import Image
+          r = json.load(open("fotos/ergebnis.json")) if os.path.exists("fotos/ergebnis.json") else {}
+          h = (r.get("layout") or {}).get("chromeH", 84)
+          for ui in sorted(glob.glob("fotos/*-ui.png")):
+              name = ui[:-7]
+              page = name + "-seite.png"
+              u = Image.open(ui).convert("RGBA")
+              if os.path.exists(page):
+                  p = Image.open(page).convert("RGBA")
+                  canvas = Image.new("RGBA", (max(u.width, p.width), max(u.height, h + p.height)), (18, 21, 27, 255))
+                  canvas.paste(p, (0, h))
+                  canvas.alpha_composite(u, (0, 0))
+              else:
+                  canvas = u
+              canvas.convert("RGB").save(name + ".png")
+              print("Foto:", name + ".png")
+          PY
+      - name: Ablegen
+        if: always()
+        run: |
+          [ -d fotos ] || exit 0
+          cd fotos && git init -q -b browser-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" browser-fotos

@@ -1,0 +1,21 @@
+[Desktop Entry]
+Type=Application
+Name=Creative Browser
+GenericName=Webbrowser
+Comment=Im Internet surfen – mit Tabs, Lesezeichen und flüssigen Videos (YouTube, Twitch)
+Keywords=Internet;WWW;Browser;Web;Chromium;YouTube;Twitch;
+Exec=creative-browser %U
+Icon=creative-webbrowser
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupWMClass=creative-browser
+Actions=new-window;private-window;
+
+[Desktop Action new-window]
+Name=Neues Fenster
+Exec=creative-browser --neues-fenster
+
+[Desktop Action private-window]
+Name=Neues privates Fenster
+Exec=creative-browser --privat
