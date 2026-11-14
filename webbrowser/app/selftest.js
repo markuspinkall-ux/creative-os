@@ -134,8 +134,8 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
       const http = require('http');
       const page = `<!doctype html><title>Werbetest</title><body>
         <p id="inhalt">Inhalt</p>
-        <ins class="adsbygoogle" style="display:block;width:300px;height:250px;background:red">Werbung</ins>
-        <div id="ad-banner" class="ad-banner" style="width:300px;height:90px;background:red">Werbung</div>
+        <ins class="adsbygoogle" data-ad-client="ca-pub-1234" data-ad-slot="5678" style="display:block;width:300px;height:250px;background:red">Werbung</ins>
+        <div id="ad-banner" data-ad-cls="banner" style="width:300px;height:90px;background:red">Werbung</div>
         <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" onerror="window.__blocked=1" onload="window.__loaded=1"></script>
         </body>`;
       const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
@@ -143,27 +143,13 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
       // Echter Hostname (über /etc/hosts): Ghostery wendet Ausblend-Regeln nicht auf IP-Adressen an
       const host = process.env.CREATIVE_WERBETEST_HOST || '127.0.0.1';
       const url = `http://${host}:${server.address().port}/`;
-      try {
-        const pl = win.ses.getPreloadScripts ? win.ses.getPreloadScripts() : win.ses.getPreloads();
-        console.log('Preloads der Sitzung:', JSON.stringify(pl));
-      } catch (e) { console.log('Preloads unbekannt', e.message); }
       const t = win.addTab(url);
-      t.wc.on('console-message', (e, level, message) => console.log('Seite:', (e && e.message) || message));
       await waitLoad(t.wc, 20000);
       await sleep(2500);
       const res = await within(t.wc.executeJavaScript(`({ blocked: window.__blocked || 0, loaded: window.__loaded || 0,
         ins: document.querySelector('ins.adsbygoogle').offsetHeight, banner: document.getElementById('ad-banner').offsetHeight,
         inhalt: document.getElementById('inhalt').offsetHeight })`), 5000, {});
       result.adblock = { ...res, count: adblock.count(t.wc.id) };
-      try {
-        const host2 = new URL(url).hostname;
-        const cf = adblock.blocker.getCosmeticsFilters({ url, hostname: host2, domain: host2.split('.').slice(-2).join('.'),
-          classes: ['adsbygoogle', 'ad-banner'], ids: ['ad-banner'], hrefs: [], getBaseRules: true, getInjectionRules: true,
-          getExtendedRules: true, getRulesFromDOM: true, getRulesFromHostname: true });
-        console.log('Ausblend-Regeln:', JSON.stringify({ styles: (cf.styles || '').slice(0, 400), scripts: (cf.scripts || []).length }));
-        const { ipcMain } = require('electron');
-        console.log('IPC-Kanäle:', JSON.stringify(ipcMain.eventNames()), 'Handler:', JSON.stringify(Object.keys(ipcMain._invokeHandlers || {})));
-      } catch (e) { console.log('Ausblend-Regeln: Fehler', e.message); }
       check('Werbeskript blockiert', res.blocked === 1 && !res.loaded);
       check('Werbeflächen ausgeblendet', res.ins === 0 && res.banner === 0 && res.inhalt > 0);
       check('Zähler zählt', adblock.count(t.wc.id) >= 1);
