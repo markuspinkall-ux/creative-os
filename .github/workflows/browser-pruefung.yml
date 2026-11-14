@@ -22,8 +22,11 @@ jobs:
         timeout-minutes: 10
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q xvfb x11-utils ffmpeg fonts-liberation python3-pil libgtk-3-0 libnss3 libasound2t64 libgbm1
-          mkdir -p /tmp/el && cd /tmp/el && npm init -y >/dev/null && npm install --no-audit --no-fund "electron@${ELECTRON_VERSION}" >/dev/null
+          sudo apt-get install -y -q -o Dpkg::Use-Pty=0 xvfb x11-utils ffmpeg fonts-liberation python3-pil libgtk-3-0 libnss3 libasound2t64 libgbm1
+          mkdir -p /tmp/el && cd /tmp/el && npm init -y >/dev/null
+          npm install --no-audit --no-fund --foreground-scripts "electron@${ELECTRON_VERSION}"
+          [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
+          ls node_modules/electron/dist | head
           /tmp/el/node_modules/electron/dist/electron --version
           node -e "for (const f of ['main.js','store.js','selftest.js','preload-ui.js','ui/ui.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
       - name: H.264-Testvideo bauen

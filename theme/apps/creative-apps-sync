@@ -49,6 +49,7 @@ VISIBLE = {
     "creative-gamelauncher.desktop": (None, None),
     "creative-3dansicht.desktop": (None, None),
     "creative-deck.desktop": (None, None),
+    "creative-browser.desktop": (None, None),
     "discord.desktop": ("Discord", "creative-chat"),
     "creative-software.desktop": (None, None),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
