@@ -150,8 +150,10 @@ def server_label(filename, text=""):
     candidates = [Path(filename).stem.upper()]
     candidates += [line.lstrip("# ").upper() for line in text.splitlines() if line.lstrip().startswith("#")]
     for candidate in candidates:
-        for match in SERVER.finditer(candidate.replace("WG-", "")):
-            code = match.group(1)
+        candidate = candidate.replace("WG-", "")
+        # jede Stelle prüfen (überlappend): in „CREATIVE-OS-NL-FREE-3“ ist „OS“ kein Land, „NL“ schon
+        for match in (SERVER.match(candidate, i) for i in range(len(candidate))):
+            code = match and match.group(1)
             if code in COUNTRIES:
                 return code, COUNTRIES[code], f"{code}{match.group(2)}#{int(match.group(3))}"
     return "", "", Path(filename).stem[:40]
