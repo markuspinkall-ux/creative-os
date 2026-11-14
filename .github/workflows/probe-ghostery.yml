@@ -10,6 +10,6 @@ jobs:
           mkdir g && cd g && npm init -y >/dev/null && npm install --no-audit --no-fund @ghostery/adblocker-electron >/dev/null
           cd node_modules/@ghostery
           ls adblocker-electron/dist adblocker-electron-preload/dist
-          echo "=== electron: ipc/preload"; grep -n -E "ipc|Preload|preload|insertCSS|executeJavaScript|sandbox" adblocker-electron/dist/index.cjs | head -60
+          echo "=== electron: ipc/preload"; ls -R adblocker-electron/dist/commonjs | head; grep -rn -E "inject-cosmetic|ipcMain|handle[(]|insertCSS|executeJavaScript|registerPreloadScript|setPreloads|webFrameMain|frame[.]" adblocker-electron/dist/commonjs/ | grep -v "[.]map:" | head -60
           echo "=== preload"; head -c 3000 adblocker-electron-preload/dist/index.cjs; echo; grep -n -E "require\(|ipcRenderer|contextBridge|DOMContentLoaded|sandbox" adblocker-electron-preload/dist/index.cjs | head -30
           echo "=== README Electron sandbox"; grep -n -i -E "sandbox|contextIsolation|preload" adblocker-electron/README.md | head -20
