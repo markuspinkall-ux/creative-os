@@ -4,7 +4,7 @@ name: Game Launcher prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [gamelauncher/**, tools/gamelauncher-test.py, .github/workflows/gamelauncher-pruefung.yml]
+    paths: [gamelauncher/**, tools/gamelauncher-test.py, tools/gamelauncher-steam-test.py, .github/workflows/gamelauncher-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -17,6 +17,8 @@ jobs:
       - run: dnf install -y -q python3 python3-pyside6 python3-pillow python3-evdev git liberation-sans-fonts google-noto-sans-fonts >/dev/null
       - name: Bibliothek und Fotos
         run: python3 tools/gamelauncher-test.py fotos
+      - name: Steam unsichtbar starten
+        run: dnf install -y -q procps-ng >/dev/null; QT_QPA_PLATFORM=offscreen python3 tools/gamelauncher-steam-test.py
       - name: Ablegen
         if: always()
         run: |

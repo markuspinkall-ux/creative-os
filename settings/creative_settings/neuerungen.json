@@ -11,7 +11,8 @@
     ],
     "verbessert": [
       "Creative Deck nutzt den Creative Browser: Die Browser-Taste startet ihn statt Brave (bestehende Brave-Tasten werden umgestellt), und „Webseite öffnen“ öffnet die Seite im Creative Browser",
-      "Startmenü: Von Steam angelegte Spiel-Verknüpfungen erscheinen nicht mehr – Spiele findest du im Game Launcher"
+      "Startmenü: Von Steam angelegte Spiel-Verknüpfungen erscheinen nicht mehr – Spiele findest du im Game Launcher",
+      "Game Launcher: Installieren und Spielen öffnet nicht mehr das große Steam-Fenster – Steam startet unsichtbar im Hintergrund, beim Installieren erscheint nur Steams kleine Rückfrage zum Speicherort, den Fortschritt zeigt der Game Launcher"
     ],
     "behoben": [
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",

@@ -73,6 +73,24 @@ def steam_command():
     return None
 
 
+def _pid_alive(pidfile):
+    try:
+        pid = int(Path(pidfile).read_text().strip())
+        cmd = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except (OSError, ValueError):
+        return False
+    return b"steam" in cmd.lower()
+
+
+def steam_running():
+    """Läuft Steam schon (auch unsichtbar im Hintergrund)?"""
+    home = Path.home()
+    for pidfile in (home / ".steam/steam.pid", home / ".var/app/com.valvesoftware.Steam/.steam/steam.pid"):
+        if _pid_alive(pidfile):
+            return True
+    return False
+
+
 class Launcher(QObject):
     changed = Signal()
     gamesChanged = Signal()
@@ -96,6 +114,13 @@ class Launcher(QObject):
         self._poll.setInterval(4000)
         self._poll.timeout.connect(self._refresh_progress)
         self._poll.start()
+        # Steam leise im Hintergrund starten und erst dann den Auftrag schicken
+        self._pending = []                 # wartende steam://-Aufträge
+        self._wait_since = 0.0
+        self._ready_at = 0.0
+        self._steam_wait = QTimer(self)
+        self._steam_wait.setInterval(1000)
+        self._steam_wait.timeout.connect(self._check_steam_started)
         self.refresh()
 
     # ---- Bibliothek ------------------------------------------------------------------------
@@ -196,23 +221,59 @@ class Launcher(QObject):
             self.changed.emit()
 
     # ---- Aktionen ---------------------------------------------------------------------------
-    def _steam(self, url, message):
+    def _steam(self, url, message, quiet=False):
+        """Auftrag an Steam schicken. quiet: Steam vorher unsichtbar starten (nur Tray-Symbol),
+        damit sich nicht das große Steam-Fenster öffnet – z. B. beim Installieren und Spielen."""
         cmd = steam_command()
         if cmd is None:
             self.toast.emit("Steam ist nicht installiert.")
             return False
+        if quiet and not steam_running():
+            self._pending.append(url)
+            if not self._steam_wait.isActive():
+                QProcess.startDetached(cmd[0], cmd[1:] + ["-silent"])
+                self._wait_since = time.monotonic()
+                self._ready_at = 0.0
+                self._steam_wait.start()
+                self.changed.emit()
+            if message:
+                self.toast.emit("Steam startet im Hintergrund … " + message)
+            return True
         QProcess.startDetached(cmd[0], cmd[1:] + [url])
         if message:
             self.toast.emit(message)
         return True
 
+    def _check_steam_started(self):
+        """Warten, bis Steam läuft und bereit ist – dann die wartenden Aufträge schicken."""
+        now = time.monotonic()
+        if not self._ready_at and steam_running():
+            self._ready_at = now + 8          # Steam braucht nach dem Start noch einen Moment
+        if self._ready_at and now >= self._ready_at:
+            self._steam_wait.stop()
+            self.changed.emit()
+            cmd = steam_command()
+            for url in self._pending:
+                QProcess.startDetached(cmd[0], cmd[1:] + [url])
+            self._pending = []
+            return
+        if now - self._wait_since > 180:      # z. B. Steam-Update beim ersten Start dauert zu lange
+            self._steam_wait.stop()
+            self.changed.emit()
+            cmd = steam_command()
+            for url in self._pending:          # trotzdem schicken – notfalls öffnet sich Steam normal
+                QProcess.startDetached(cmd[0], cmd[1:] + [url])
+            self._pending = []
+
     @Slot(int, str)
     def play(self, appid, name):
-        self._steam(f"steam://rungameid/{appid}", f"„{name}“ startet …")
+        self._steam(f"steam://rungameid/{appid}", f"„{name}“ startet …", quiet=True)
 
     @Slot(int, str)
     def install(self, appid, name):
-        self._steam(f"steam://install/{appid}", f"Steam fragt jetzt, wohin „{name}“ installiert werden soll.")
+        self._steam(f"steam://install/{appid}",
+                    f"Gleich fragt Steam in einem kleinen Fenster, wohin „{name}“ installiert werden soll. "
+                    "Den Fortschritt siehst du hier im Game Launcher.", quiet=True)
 
     @Slot(int)
     def details(self, appid):
@@ -231,5 +292,6 @@ class Launcher(QObject):
     steamFound = Property(bool, lambda self: self._root is not None, notify=changed)
     steamInstalled = Property(bool, lambda self: steam_command() is not None, constant=True)
     loading = Property(bool, lambda self: self._loading, notify=changed)
+    steamStarting = Property(bool, lambda self: self._steam_wait.isActive(), notify=changed)
     pads = Property(int, lambda self: self._pads, notify=changed)
     padSupport = Property(bool, lambda self: self._padreader.available, constant=True)
