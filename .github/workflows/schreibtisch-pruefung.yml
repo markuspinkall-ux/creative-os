@@ -30,7 +30,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
-          RENAME_AT: "64,176"
+          RENAME_AT: "688,592"
         run: |
           mkdir -p fotos
           H=$(mktemp -d); mkdir -p "$H/Schreibtisch" "$H/.config/creative-os"; ln -s Schreibtisch "$H/Desktop"
