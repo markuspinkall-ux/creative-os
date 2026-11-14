@@ -29,6 +29,13 @@ jobs:
           ls node_modules/electron/dist | head
           /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
           node -e "for (const f of ['main.js','store.js','selftest.js','preload-ui.js','ui/ui.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+      - name: Wie im Abbild verpacken (App als resources/app, ohne default_app.asar)
+        run: |
+          cp -a /tmp/el/node_modules/electron/dist /tmp/pkg
+          rm -f /tmp/pkg/resources/default_app.asar
+          cp -a webbrowser/app /tmp/pkg/resources/app
+          mkdir -p /tmp/browser && cp -a browser/startpage /tmp/browser/startpage
+          ELECTRON_RUN_AS_NODE=1 /tmp/pkg/electron -e "console.log('Electron', process.versions.electron)"
       - name: H.264-Testvideo bauen
         run: |
           mkdir -p /tmp/video
@@ -39,7 +46,7 @@ jobs:
         run: |
           set +e
           xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
-            timeout 300 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox \
+            timeout 300 /tmp/pkg/electron --no-sandbox \
               --creative-selftest=$PWD/fotos --creative-video=file:///tmp/video/h264.html --creative-online &
             pid=$!
             sleep 6
@@ -52,14 +59,14 @@ jobs:
         run: |
           H=$(mktemp -d)
           xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
-            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 40 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox &
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 40 /tmp/pkg/electron --no-sandbox --class=creative-browser &
             pid=$!
             sleep 10
             if kill -0 $pid 2>/dev/null; then echo "läuft nach 10 s"; else echo "FEHLER: beendet sich sofort"; exit 1; fi
             n=$(for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null; done | grep -c creative-browser)
             echo "Fenster: $n"
             # zweiter Start: übergibt an das erste Fenster und beendet sich
-            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 20 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox https://example.org
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 20 /tmp/pkg/electron --no-sandbox https://example.org
             kill $pid
             [ "$n" -ge 1 ] || { echo "FEHLER: kein Fenster"; exit 1; }
           '

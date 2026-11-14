@@ -52,7 +52,8 @@ function cleanUserAgent(ua) {
 }
 
 function startpageDir() {
-  for (const d of [path.join(APP_DIR, '..', '..', 'browser', 'startpage'), '/usr/share/creative-os/startpage']) {
+  for (const d of [path.join(APP_DIR, '..', '..', 'browser', 'startpage'), path.join(APP_DIR, '..', '..', '..', 'browser', 'startpage'),
+    '/usr/share/creative-os/startpage']) {
     if (fs.existsSync(path.join(d, 'index.html'))) return d;
   }
   return null;

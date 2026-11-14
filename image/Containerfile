@@ -331,13 +331,16 @@ RUN dnf install -y --skip-unavailable unzip librsvg2-tools nss gtk3 alsa-lib lib
  && rm -f "electron-v${ELECTRON_VERSION}-linux-x64.zip" electron-sums.txt \
  && rm -f /usr/lib/creative-browser/electron/resources/default_app.asar \
  && chmod 4755 /usr/lib/creative-browser/electron/chrome-sandbox
-COPY webbrowser/app /usr/lib/creative-browser/app
+# Die App liegt als resources/app in Electron – so startet Electron sie von selbst
+# (ohne default_app.asar kann Electron keinen Ordner als Argument laden).
+COPY webbrowser/app /usr/lib/creative-browser/electron/resources/app
 COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
 COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
 COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg
 RUN chmod 755 /usr/bin/creative-browser \
- && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/app/icon.png \
- && (/usr/lib/creative-browser/electron/electron --no-sandbox --version || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT")
+ && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/electron/resources/app/icon.png \
+ && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Creative Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
+    || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT"
 
 # Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
 RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
