@@ -53,7 +53,39 @@ def _install():
         QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x2, y2), 30)
         print(f"Ziehen getestet: ({x1},{y1}) → ({x2},{y2})", file=sys.stderr)
 
+    def rename_test():
+        """CREATIVE_TEST_RENAME="x,y,Name[,fertig]": Symbol anklicken, F2, Namen tippen (und Eingabe)."""
+        from PySide6.QtCore import QPoint, Qt
+        from PySide6.QtQuick import QQuickWindow
+        from PySide6.QtTest import QTest
+        wins = [w for w in QtGui.QGuiApplication.topLevelWindows() if isinstance(w, QQuickWindow) and w.isVisible()]
+        win = max(wins, key=lambda w: w.width() * w.height())
+        parts = os.environ["CREATIVE_TEST_RENAME"].split(",")
+        x, y, name = int(parts[0]), int(parts[1]), parts[2]
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x, y))
+        QTest.qWait(300)
+        QTest.keyClick(win, Qt.Key.Key_F2)
+        QTest.qWait(300)
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
+        for ch in name:                      # QTest.keyClicks gibt es nur für Widgets
+            key = Qt.Key.Key_Space if ch == " " else Qt.Key(ord(ch.upper()))
+            for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+                QtGui.QGuiApplication.sendEvent(win, QKeyEvent(kind, key, Qt.KeyboardModifier.NoModifier, ch))
+        if len(parts) > 3:
+            QTest.qWait(200)
+            QTest.keyClick(win, Qt.Key.Key_Return)
+        print(f"Umbenennen getestet: {name}", file=sys.stderr)
+
     def shoot():
+        if os.environ.get("CREATIVE_TEST_RENAME") and not state.get("renamed"):
+            state["renamed"] = True
+            try:
+                rename_test()
+            except Exception as error:  # noqa: BLE001
+                print(f"Umbenennen nicht möglich: {error}", file=sys.stderr)
+            QTimer.singleShot(1200, shoot)
+            return
         if os.environ.get("CREATIVE_TEST_DRAG") and not state.get("dragged"):
             state["dragged"] = True
             try:

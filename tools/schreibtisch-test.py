@@ -47,4 +47,13 @@ assert m2.cells["HDMI-1"][c] == [1, 4] and m2.cells["HDMI-1"][a] == [1, 5], m2.c
 # Festhalten: vorhandene Plätze bleiben, neue kommen dazu
 m2.pinCells("HDMI-1", {a: [9, 9], c: [7, 7], "/gibt/es/nicht": [0, 0]})
 assert m2.cells["HDMI-1"][a] == [1, 5] and m2.cells["HDMI-1"][c] == [1, 4], m2.cells
-print("Schreibtisch-Plätze: alles in Ordnung")
+# Umbenennen: Platz bleibt, doppelte und ungültige Namen werden abgelehnt
+assert m2.rename(c, "neu.txt") == "", "Umbenennen ging nicht"
+neu = f"{d}/neu.txt"
+assert os.path.exists(neu) and not os.path.exists(c)
+assert m2.cells["HDMI-1"].get(neu) == [1, 4] and c not in m2.cells["HDMI-1"], m2.cells
+assert config.load()["desktopIconCells"]["HDMI-1"][neu] == [1, 4]
+assert "schon" in m2.rename(neu, "a.txt"), "doppelter Name nicht abgelehnt"
+assert m2.rename(neu, "a/b") and m2.rename(neu, "  ") and m2.rename(neu, ".."), "ungültige Namen nicht abgelehnt"
+assert m2.rename(neu, "neu.txt") == "", "gleicher Name ist kein Fehler"
+print("Schreibtisch-Plätze und Umbenennen: alles in Ordnung")

@@ -132,6 +132,7 @@ class DesktopModel(QAbstractListModel):
     selectionChanged = Signal()
     cellsChanged = Signal()
     clipboardChanged = Signal()
+    renameRequested = Signal(str)   # neuer Ordner: Namen gleich bearbeiten
     pasteFinished = Signal(bool)
     dropFinished = Signal(int)
 
@@ -458,6 +459,42 @@ class DesktopModel(QAbstractListModel):
         for n, r in enumerate(self._rows):
             if r["path"] == str(target):
                 self.select(n, False)
+        self.renameRequested.emit(str(target))
+
+    @Slot(str, str, result=str)
+    def rename(self, path, name):
+        """Datei oder Ordner auf dem Schreibtisch umbenennen. Gibt "" zurück oder eine Fehlermeldung.
+        Platz und Monitor des Symbols bleiben erhalten."""
+        name = name.strip()
+        src = Path(path)
+        if name == src.name:
+            return ""
+        if not name or name in (".", "..") or "/" in name or "\0" in name:
+            return "Dieser Name geht nicht."
+        if len(name.encode()) > 255:
+            return "Der Name ist zu lang."
+        target = src.with_name(name)
+        if target.exists():
+            return f"„{name}“ gibt es auf dem Schreibtisch schon."
+        try:
+            src.rename(target)
+        except OSError as exc:
+            return f"Umbenennen ging nicht ({exc.strerror or exc})."
+        new = str(target)
+        for cells in self._cells.values():
+            if path in cells:
+                cells[new] = cells.pop(path)
+        if path in self.screen_assignments:
+            assignments = dict(self.screen_assignments)
+            assignments[new] = assignments.pop(path)
+            if config.set_value("desktopIconScreens", assignments):
+                self.screen_assignments = assignments
+        self._save_cells()
+        self.refresh()
+        for n, r in enumerate(self._rows):
+            if r["path"] == new:
+                self.select(n, False)
+        return ""
 
     @Slot()
     def openFolder(self):
