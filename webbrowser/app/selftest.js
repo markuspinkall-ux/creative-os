@@ -155,6 +155,15 @@ async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
         ins: document.querySelector('ins.adsbygoogle').offsetHeight, banner: document.getElementById('ad-banner').offsetHeight,
         inhalt: document.getElementById('inhalt').offsetHeight })`), 5000, {});
       result.adblock = { ...res, count: adblock.count(t.wc.id) };
+      try {
+        const host2 = new URL(url).hostname;
+        const cf = adblock.blocker.getCosmeticsFilters({ url, hostname: host2, domain: host2.split('.').slice(-2).join('.'),
+          classes: ['adsbygoogle', 'ad-banner'], ids: ['ad-banner'], hrefs: [], getBaseRules: true, getInjectionRules: true,
+          getExtendedRules: true, getRulesFromDOM: true, getRulesFromHostname: true });
+        console.log('Ausblend-Regeln:', JSON.stringify({ styles: (cf.styles || '').slice(0, 400), scripts: (cf.scripts || []).length }));
+        const { ipcMain } = require('electron');
+        console.log('IPC-Kanäle:', JSON.stringify(ipcMain.eventNames()), 'Handler:', JSON.stringify(Object.keys(ipcMain._invokeHandlers || {})));
+      } catch (e) { console.log('Ausblend-Regeln: Fehler', e.message); }
       check('Werbeskript blockiert', res.blocked === 1 && !res.loaded);
       check('Werbeflächen ausgeblendet', res.ins === 0 && res.banner === 0 && res.inhalt > 0);
       check('Zähler zählt', adblock.count(t.wc.id) >= 1);
