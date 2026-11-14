@@ -1,11 +1,22 @@
 #!/bin/sh
 # Öffnet eine Webseite als eigenes Fenster (ohne Adressleiste und Tabs),
-# z. B. Claude oder ChatGPT. Anmeldungen bleiben im Brave-Profil
-# gespeichert, man ist also beim nächsten Öffnen noch angemeldet.
+# z. B. Claude oder WhatsApp – im Creative Browser. Jede Web-App hat ihre
+# eigene Anmeldung (bleibt gespeichert) und ihr eigenes Taskleisten-Symbol.
+#   creative-webapp URL [name]    name: z. B. whatsapp → Fensterklasse creative-whatsapp
 url="$1"
+name="$2"
 [ -n "$url" ] || exit 1
+if [ -z "$name" ]; then
+    case "$url" in
+        *web.whatsapp.com*) name=whatsapp ;;
+        *claude.ai*) name=claude ;;
+        *) name=$(printf '%s' "$url" | sed -E 's#^[a-z]+://(www\.)?##; s#[/:?].*##; s#[^a-zA-Z0-9]+#-#g') ;;
+    esac
+fi
 
-if command -v brave-browser >/dev/null 2>&1; then
+if command -v creative-browser >/dev/null 2>&1; then
+    exec creative-browser --class="creative-$name" --app="$url" --app-name="$name"
+elif command -v brave-browser >/dev/null 2>&1; then
     exec brave-browser --app="$url"
 elif flatpak info com.brave.Browser >/dev/null 2>&1; then
     exec flatpak run com.brave.Browser --app="$url"

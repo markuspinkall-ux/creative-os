@@ -16,7 +16,8 @@
       "Creative Deck nutzt den Creative Browser: Die Browser-Taste startet ihn statt Brave (bestehende Brave-Tasten werden umgestellt), und „Webseite öffnen“ öffnet die Seite im Creative Browser",
       "Startmenü: Von Steam angelegte Spiel-Verknüpfungen erscheinen nicht mehr – Spiele findest du im Game Launcher",
       "Game Launcher: Installieren und Spielen öffnet nicht mehr das große Steam-Fenster – Steam startet unsichtbar im Hintergrund, beim Installieren erscheint nur Steams kleine Rückfrage zum Speicherort, den Fortschritt zeigt der Game Launcher",
-      "Creative Browser passt sich jetzt genau an Graphit und Porzellan an – dieselben Farben wie Taskleiste und Systemsteuerung, inklusive Akzentfarbe. Wechselt man das Design in der Systemsteuerung, zieht der Browser sofort mit (auch Startseite und Webseiten mit hellem/dunklem Modus)"
+      "Creative Browser passt sich jetzt genau an Graphit und Porzellan an – dieselben Farben wie Taskleiste und Systemsteuerung, inklusive Akzentfarbe. Wechselt man das Design in der Systemsteuerung, zieht der Browser sofort mit (auch Startseite und Webseiten mit hellem/dunklem Modus)",
+      "Claude und WhatsApp laufen jetzt im Creative Browser – als eigenes Fenster ohne Adressleiste, mit eigener Anmeldung und eigenem Symbol in der Taskleiste. Links daraus öffnen sich im Creative Browser. Einmal neu anmelden ist nötig"
     ],
     "behoben": [
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",

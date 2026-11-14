@@ -3,7 +3,7 @@ name: Creative Browser prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [webbrowser/**, browser/startpage/**, .github/workflows/browser-pruefung.yml]
+    paths: [webbrowser/**, browser/startpage/**, shell/webapps/**, .github/workflows/browser-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -74,6 +74,15 @@ jobs:
             HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 20 /tmp/pkg/electron --no-sandbox https://example.org
             kill $pid
             [ "$n" -ge 1 ] || { echo "FEHLER: kein Fenster"; exit 1; }
+            # Web-App (wie WhatsApp): eigenes Fenster, eigene Fensterklasse, eigene Anmeldedaten
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 40 /tmp/pkg/electron --no-sandbox --class=creative-whatsapp --app=https://example.org/ --app-name=whatsapp &
+            pid=$!
+            sleep 10
+            kill -0 $pid 2>/dev/null || { echo "FEHLER: Web-App beendet sich sofort"; exit 1; }
+            m=$(for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null; done | grep -c creative-whatsapp)
+            echo "Web-App-Fenster: $m"; ls '"$H"'/.config/creative-browser/apps/
+            kill $pid
+            [ "$m" -ge 1 ] && [ -d '"$H"'/.config/creative-browser/apps/whatsapp ] || { echo "FEHLER: Web-App"; exit 1; }
           '
       - name: Fotos zusammensetzen
         if: always()

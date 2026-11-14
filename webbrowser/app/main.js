@@ -18,7 +18,15 @@ const arg = (name) => (process.argv.find((a) => a.startsWith(`--${name}=`)) || '
 const SELFTEST = arg('creative-selftest');
 
 // ---- Chromium-Schalter (vor „ready“) ----------------------------------------------------------
-app.setPath('userData', path.join(app.getPath('appData'), 'creative-browser'));
+// Web-App-Modus (z. B. WhatsApp, Claude): eigenes Fenster ohne Tabs und Adressleiste, eigene
+// Anmeldedaten und eigenes Taskleisten-Symbol (--class=creative-whatsapp …).
+const APP_URL = arg('app');
+const APP_NAME = (arg('app-name') || '').replace(/[^a-z0-9-]/gi, '') || (APP_URL ? (() => {
+  try { return new URL(APP_URL).hostname.replace(/^www\./, '').replace(/[^a-z0-9]+/gi, '-'); } catch (_) { return 'webapp'; }
+})() : '');
+app.setPath('userData', APP_URL
+  ? path.join(app.getPath('appData'), 'creative-browser', 'apps', APP_NAME)
+  : path.join(app.getPath('appData'), 'creative-browser'));
 // Den Ordner sofort anlegen: Die Sperre gegen einen zweiten Start liegt darin – fehlt er beim
 // allerersten Start, schlägt sie fehl und der Browser würde sich still beenden.
 try { fs.mkdirSync(app.getPath('userData'), { recursive: true }); } catch (_) { /* meldet die Sperre unten */ }
@@ -277,8 +285,9 @@ const PERMISSION_NAMES = {
 
 // ---- Fenster ---------------------------------------------------------------------------------
 class Win {
-  constructor({ isPrivate = false, urls = null, active = 0, ses = null, adopt = null } = {}) {
+  constructor({ isPrivate = false, urls = null, active = 0, ses = null, adopt = null, appMode = false } = {}) {
     this.isPrivate = isPrivate;
+    this.appMode = appMode;
     this.ses = ses || (isPrivate ? session.fromPartition(`creative-privat-${Date.now()}`) : session.defaultSession);
     prepareSession(this.ses, isPrivate);
     const b = store.settings.bounds || {};
@@ -295,11 +304,11 @@ class Win {
     });
     this.ui.setBackgroundColor('#00000000');
     this.win.contentView.addChildView(this.ui);
-    this.ui.webContents.loadFile(path.join(APP_DIR, 'ui', 'index.html'), { query: { privat: isPrivate ? '1' : '0' } });
+    this.ui.webContents.loadFile(path.join(APP_DIR, 'ui', 'index.html'), { query: { privat: isPrivate ? '1' : '0', app: appMode ? '1' : '0' } });
     this.ui.webContents.on('before-input-event', (e, input) => { if (this.shortcut(input, null)) e.preventDefault(); });
     this.tabs = [];
     this.active = null;
-    this.chromeH = 84;
+    this.chromeH = appMode ? 0 : 84;
     this.overlay = false;
     this.fullscreen = false;
     this.prompts = new Map();
@@ -307,12 +316,12 @@ class Win {
     windows.add(this);
 
     this.win.on('resize', () => this.layout());
-    this.win.on('close', () => { if (!isPrivate) this.remember(); });
+    this.win.on('close', () => { if (!isPrivate && !appMode) this.remember(); });
     this.win.on('closed', () => {
       for (const t of this.tabs) this.destroyTab(t);
       this.ui.webContents.close?.();
       windows.delete(this);
-      if (!isPrivate) saveSession();
+      if (!isPrivate && !appMode) saveSession();
     });
 
     if (adopt) {
@@ -412,6 +421,10 @@ class Win {
         return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 520, height: 680 } };
       }
       if (details.disposition === 'other' || details.disposition === 'save-to-disk') return { action: 'deny' };
+      if (tab.win.appMode) {          // Web-App: Links öffnen im normalen Creative Browser
+        openInBrowser(details.url);
+        return { action: 'deny' };
+      }
       const background = details.disposition === 'background-tab';
       return {
         action: 'allow',
@@ -479,6 +492,7 @@ class Win {
 
   setTitle() {
     const t = this.active ? (this.active.title || 'Neuer Tab') : '';
+    if (this.appMode) { this.win.setTitle(t); return; }
     this.win.setTitle(`${t} – ${this.isPrivate ? 'Privates Fenster' : 'Creative Browser'}`);
   }
 
@@ -661,6 +675,22 @@ class Win {
   // ---- Tastenkürzel (in Seite und Oberfläche) ----
   shortcut(input, tab) {
     if (input.type !== 'keyDown') return false;
+    if (this.appMode) {
+      const k1 = input.key.length === 1 ? input.key.toLowerCase() : input.key;
+      const c1 = input.control || input.meta;
+      const a1 = this.active;
+      const run1 = (fn) => { fn(); return true; };
+      if (c1 && (k1 === '+' || k1 === '=')) return run1(() => this.zoom(1));
+      if (c1 && k1 === '-') return run1(() => this.zoom(-1));
+      if (c1 && k1 === '0') return run1(() => this.zoom(0));
+      if (c1 && k1 === 'f') return run1(() => this.send('find-open'));
+      if ((c1 && k1 === 'r') || k1 === 'F5') return run1(() => a1 && a1.wc.reload());
+      if (input.alt && k1 === 'ArrowLeft') return run1(() => a1 && a1.wc.navigationHistory.goBack());
+      if (input.alt && k1 === 'ArrowRight') return run1(() => a1 && a1.wc.navigationHistory.goForward());
+      if (k1 === 'F12') return run1(() => a1 && a1.wc.toggleDevTools());
+      if (k1 === 'F11') return run1(() => this.setFullscreen(!this.fullscreen));
+      return false;
+    }
     const k = input.key.length === 1 ? input.key.toLowerCase() : input.key;
     const c = input.control || input.meta;
     const run = (fn) => { fn(); return true; };
@@ -783,6 +813,15 @@ class Win {
   }
 }
 
+function openInBrowser(url) {
+  // eigener Prozess: der normale Creative Browser (übernimmt die Adresse, falls er schon läuft)
+  const { spawn } = require('child_process');
+  try {
+    const exe = fs.existsSync('/usr/bin/creative-browser') ? '/usr/bin/creative-browser' : process.execPath;
+    spawn(exe, [url], { detached: true, stdio: 'ignore', env: { ...process.env } }).unref();
+  } catch (_) { shell.openExternal(url); }
+}
+
 function saveSession() {
   if (!store) return;
   store.data.session = [...windows].filter((w) => !w.isPrivate && w.tabs.length).map((w) => ({
@@ -806,6 +845,7 @@ if (!single) {
   app.quit();
 } else {
   app.on('second-instance', (_e, argv) => {
+    if (APP_URL) { const w = [...windows][0]; if (w) { if (w.win.isMinimized()) w.win.restore(); w.win.focus(); } return; }
     const urls = argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     const w = [...windows].find((x) => !x.isPrivate);
     if (argv.includes('--privat')) new Win({ isPrivate: true, urls });
@@ -821,6 +861,7 @@ if (!single) {
     watchLook();
     app.userAgentFallback = cleanUserAgent(app.userAgentFallback);
     if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }); return; }
+    if (APP_URL) { new Win({ urls: [APP_URL], appMode: true }); return; }
     const urls = process.argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     if (process.argv.includes('--privat')) { new Win({ isPrivate: true, urls }); return; }
     const saved = store.settings.restoreSession ? store.data.session.filter((s) => s.urls && s.urls.length) : [];
@@ -831,7 +872,7 @@ if (!single) {
     }
   });
 
-  app.on('before-quit', () => { saveSession(); store && store.save(true); });
+  app.on('before-quit', () => { if (!APP_URL) saveSession(); if (store) store.save(true); });
   app.on('window-all-closed', () => { if (store) store.save(true); app.quit(); });
   app.on('web-contents-created', (_e, wc) => {
     // Anmelde-Popups (eigene Fenster): saubere Kennung, Links daraus als Tab

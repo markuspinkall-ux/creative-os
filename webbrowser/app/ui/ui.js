@@ -48,6 +48,8 @@ $('menu-btn').innerHTML = icon('menu', 18, true);
 
 const isPrivate = new URLSearchParams(location.search).get('privat') === '1';
 document.body.classList.toggle('private', isPrivate);
+// Web-App (WhatsApp, Claude …): keine Tabs, keine Adressleiste – nur Rückfragen, Suche und Menüs
+document.body.classList.toggle('appmode', new URLSearchParams(location.search).get('app') === '1');
 
 let S = { tabs: [], active: null, bookmarks: [], downloads: [], settings: {}, engines: [] };
 

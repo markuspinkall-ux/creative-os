@@ -1,4 +1,8 @@
 #!/bin/sh
 # Creative Browser: Electron (Chromium mit H.264); die App liegt in electron/resources/app
 export CHROME_DESKTOP=creative-browser.desktop
-exec /usr/lib/creative-browser/electron/electron --class=creative-browser "$@"
+# Web-Apps bringen ihre eigene Fensterklasse mit (--class=creative-whatsapp …)
+case " $* " in
+    *" --class="*) exec /usr/lib/creative-browser/electron/electron "$@" ;;
+    *) exec /usr/lib/creative-browser/electron/electron --class=creative-browser "$@" ;;
+esac

@@ -197,3 +197,7 @@ body.private #private-badge { display: block; }
 #boost-panel .presets .btn { flex: 1; padding: 0; }
 #boost-panel .presets .btn.sel { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 #boost-panel p { color: var(--muted); margin: 12px 0 0; line-height: 1.4; font-size: 12px; }
+
+/* ---- Web-App-Modus ---- */
+body.appmode #tabstrip, body.appmode #navbar, body.appmode #bookmarks { display: none !important; }
+body.appmode #chrome { border-bottom: 0; }
