@@ -18,7 +18,8 @@
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",
       "Dateien: „Papierkorb leeren“ im Papierkorb tat nichts – jetzt kommt die Rückfrage und der Papierkorb wird geleert, wie über das Symbol in der Taskleiste",
       "Creative 3D: Das Einrichten von TRELLIS.2 brach kurz vor Schluss ab („einops fehlt“) – der Baustein für die Hintergrund-Entfernung ist jetzt im Container. Einfach erneut einrichten, die schon geladenen Modelle bleiben erhalten",
-      "Systemsteuerung › Bildschirme: Hochkant gestellte Monitore werden sauber beschriftet (Name und Auflösung untereinander, z. B. „1080 × 1920 · hochkant“)"
+      "Systemsteuerung › Bildschirme: Hochkant gestellte Monitore werden sauber beschriftet (Name und Auflösung untereinander, z. B. „1080 × 1920 · hochkant“)",
+      "Creative Deck: Programme wie Creative Player, Terminal oder Dateien öffneten sich über eine Taste unsichtbar – sie erscheinen jetzt normal"
     ]
   },
   {

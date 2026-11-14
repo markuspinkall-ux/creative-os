@@ -20,10 +20,11 @@ HERE = Path(__file__).resolve().parent
 
 
 def run_daemon():
-    # Der Dienst zeichnet nur Tastenbilder – ohne Fenster
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    # Der Dienst zeichnet nur Tastenbilder – ohne Fenster. Nur für diesen Prozess, NICHT über die
+    # Umgebung: sonst erbten gestartete Programme (Player, Terminal …) „offscreen“ und blieben unsichtbar.
+    os.environ.pop("QT_QPA_PLATFORM", None)
     from PySide6.QtGui import QGuiApplication, QIcon
-    app = QGuiApplication(sys.argv)
+    app = QGuiApplication(sys.argv[:1] + ["-platform", "offscreen"] + sys.argv[1:])
     app.setApplicationName("creative-deck-dienst")
     try:
         from creative_shell import icons
