@@ -5,7 +5,8 @@
     "neu": [],
     "verbessert": [],
     "behoben": [
-      "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske"
+      "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",
+      "Dateien: „Papierkorb leeren“ im Papierkorb tat nichts – jetzt kommt die Rückfrage und der Papierkorb wird geleert, wie über das Symbol in der Taskleiste"
     ]
   },
   {
