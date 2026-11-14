@@ -1,16 +1,13 @@
 #!/bin/bash
+# Gibt es QtWebEngine 6 mit H.264 (RPM Fusion „freeworld“)?
 set +e
-dnf install -y -q rsync python3 >/dev/null 2>&1
-S=/tmp/bk; mkdir -p $S/home/Dokumente $S/home/.cache $S/home/.local/share/Steam $S/drive
-echo hi > $S/home/Dokumente/a.txt; echo c > $S/home/.cache/x; echo g > $S/home/.local/share/Steam/game
-run() { HOME=$S/home USER=test python3 - <<PY
-import sys; sys.path.insert(0,'settings')
-from creative_settings import backup as b
-b.find_target=lambda cfg: "$S/drive"; b._is_fat=lambda m: False
-print(b.run(lambda p,t: print("Fortschritt", p, t)))
-PY
-}
-run; echo bye > $S/home/Dokumente/a.txt; rm -f $S/home/Dokumente/gone.txt; run
-find $S/drive -type f | sort; cat "$S/drive/Creative-OS-Sicherung/"*/Dokumente/a.txt
-find "$S/drive/Creative-OS-Sicherung/Ältere Versionen" -type f
+V=$(rpm -E %fedora)
+dnf install -y -q "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$V.noarch.rpm" \
+    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$V.noarch.rpm" >/dev/null 2>&1
+echo "== Fedora $V: Pakete mit qtwebengine =="
+dnf list --available '*qtwebengine*' 2>/dev/null | grep -v debug
+echo "== freeworld-Suche =="
+dnf search freeworld 2>/dev/null | grep -i -E "webengine|qt6" || echo "kein qt6-webengine-freeworld"
+echo "== Fedora-Paket: Codec-Hinweise =="
+dnf info qt6-qtwebengine 2>/dev/null | grep -E "Version|Release|Repo"
 exit 0
