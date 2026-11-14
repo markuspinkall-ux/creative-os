@@ -19,4 +19,4 @@ jobs:
       - name: Prüfen
         env:
           QT_QPA_PLATFORM: offscreen
-        run: HOME=$(mktemp -d) timeout 60 dbus-run-session -- python3 tools/nicht-sperren-test.py
+        run: PYTHONUSERBASE="$HOME/.local" HOME=$(mktemp -d) timeout 60 dbus-run-session -- python3 tools/nicht-sperren-test.py
