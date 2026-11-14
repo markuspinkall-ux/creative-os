@@ -10,7 +10,7 @@ from pathlib import Path
 FAKE = r'''
 import sys
 from PySide6.QtCore import QCoreApplication, QObject, Slot, ClassInfo
-from PySide6.QtDBus import QDBusConnection, QDBusServiceWatcher, QDBusContext
+from PySide6.QtDBus import QDBusConnection, QDBusServiceWatcher, QDBusMessage
 
 app = QCoreApplication(sys.argv)
 bus = QDBusConnection.sessionBus()
@@ -21,12 +21,11 @@ watcher.setWatchMode(QDBusServiceWatcher.WatchModeFlag.WatchForUnregistration)
 watcher.serviceUnregistered.connect(lambda n: holders.pop(n, None))
 
 @ClassInfo({"D-Bus Interface": "org.freedesktop.ScreenSaver"})
-class Saver(QObject, QDBusContext):
-    def __init__(self):
-        QObject.__init__(self); QDBusContext.__init__(self)
-    @Slot(str, str, result=int)
-    def Inhibit(self, app_name, reason):
-        who = self.message().service()
+class Saver(QObject):
+    @Slot(str, str, QDBusMessage, result=int)
+    def Inhibit(self, app_name, reason, msg):
+        who = msg.service()
+        print("Inhibit von", who, flush=True, file=sys.stderr)
         holders[who] = reason
         watcher.addWatchedService(who)
         return 1
