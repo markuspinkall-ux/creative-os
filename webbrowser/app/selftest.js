@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, store, START_URL, arg, setLook, lookFor, adblock }) {
+async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
