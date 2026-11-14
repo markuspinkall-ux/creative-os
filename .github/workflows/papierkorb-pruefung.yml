@@ -1,0 +1,35 @@
+name: Papierkorb prüfen
+# Dateien › Papierkorb: „Papierkorb leeren“ anklicken, bestätigen – danach muss er leer sein.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [files/**, tools/papierkorb-test.py, .github/workflows/papierkorb-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: papierkorb-pruefung
+  cancel-in-progress: false
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation
+          pip install -q PySide6
+      - name: Papierkorb leeren testen
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: python3 tools/papierkorb-test.py fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          [ -d fotos ] || exit 0
+          cd fotos && git init -q -b papierkorb-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" papierkorb-fotos
