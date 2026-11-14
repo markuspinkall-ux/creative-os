@@ -317,6 +317,21 @@ COPY gamelauncher/creative-gamelauncher.desktop /usr/share/applications/creative
 COPY gamelauncher/creative-gamelauncher.svg /usr/share/icons/hicolor/scalable/apps/creative-gamelauncher.svg
 RUN chmod 755 /usr/bin/creative-gamelauncher
 
+# Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
+RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
+ && (python3 -c "import StreamDeck" 2>/dev/null \
+     || python3 -m pip install --no-cache-dir --no-deps --target /usr/lib/creative-deck/vendor "streamdeck==0.9.8") \
+ && PYTHONPATH=/usr/lib/creative-deck/vendor python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Creative Deck: Stream-Deck-Bibliothek ok')" \
+ || echo "CREATIVE DECK: STREAM-DECK-BIBLIOTHEK FEHLT"
+COPY deck/creative_deck /usr/lib/creative-deck/creative_deck
+COPY deck/creative-deck.svg /usr/lib/creative-deck/creative-deck.svg
+COPY deck/bin/creative-deck /usr/bin/creative-deck
+COPY deck/creative-deck.desktop /usr/share/applications/creative-deck.desktop
+COPY deck/creative-deck.svg /usr/share/icons/hicolor/scalable/apps/creative-deck.svg
+COPY deck/60-creative-deck.rules /usr/lib/udev/rules.d/60-creative-deck.rules
+RUN chmod 755 /usr/bin/creative-deck \
+ && printf 'uinput\n' > /usr/lib/modules-load.d/creative-deck.conf
+
 # ---------------------------------------------------------------------------
 # 8a4) Creative Pictures (Bildbetrachter) und Creative Shots (Bildschirmfotos)
 # ---------------------------------------------------------------------------
@@ -717,6 +732,8 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp timeout 60 /usr/bin/creative-
     || echo "TASKMANAGER-SELBSTTEST FEHLGESCHLAGEN"
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/gl-home timeout 60 /usr/bin/creative-gamelauncher --selftest \
     || echo "GAMELAUNCHER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/gl-home
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/deck-home timeout 60 /usr/bin/creative-deck --selftest \
+    || echo "CREATIVE-DECK-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/deck-home
 # Creative Shots und Creative Pictures kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-shots --selftest \
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
