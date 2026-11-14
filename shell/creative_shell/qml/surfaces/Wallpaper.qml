@@ -637,7 +637,7 @@ Item {
         visible: root.widgetOnScreen("notes") && widgetExtras.notesEnabled
         posX: widgetExtras.notesX
         posY: widgetExtras.notesY
-        defaultX: Math.max(8, root.width - 760)
+        defaultX: Math.max(8, root.width - 990)
         defaultY: 24
         width: 300
         height: 280
@@ -918,7 +918,7 @@ Item {
         property var blocked: ({})        // "Spalte:Zeile" unter Widgets
 
         // Alle Widgets auf diesem Monitor – ändert sich eins (Lage, Größe, an/aus), neu anordnen
-        readonly property var widgetItems: [feedRss, feedWeather, extraClock, extraTwitch, extraKi, statsBox, shelfBox]
+        readonly property var widgetItems: [feedRss, feedWeather, extraClock, extraNotes, extraTwitch, extraKi, statsBox, shelfBox]
         readonly property string widgetSig: widgetItems.map(w => w && w.visible
             ? [Math.round(w.x), Math.round(w.y), Math.round(w.width), Math.round(w.height)].join(",") : "-").join(";")
         onWidgetSigChanged: relayoutTimer.restart()

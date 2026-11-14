@@ -37,7 +37,7 @@ jobs:
           for n in Urlaub.jpg Rechnung.pdf Lied.mp3; do echo x > "$H/Schreibtisch/$n"; done
           cat > "$H/.config/creative-os/shell.json" <<'JSON'
           {"desktopStats": false,
-           "desktopExtras": {"notesInstalled": true, "notesEnabled": true, "notesPos": [0.0, 0.0]}}
+           "desktopExtras": {"notesInstalled": true, "notesEnabled": true, "notesPos": [0.45, 0.25]}}
           JSON
           printf '%s' '{"version": 1, "text": "Einkaufen:\n– Milch\n– Brot\n\nKathrin anrufen 🙂"}' > "$H/.config/creative-os/notizen.json"
           run() {
@@ -47,7 +47,7 @@ jobs:
           }
           run CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/notizen.png"
           # ans Ende klicken und weitertippen – nach 0,7 s speichert das Widget von selbst
-          run CREATIVE_TEST_TYPE="200,250,\nTest 2026 ok" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/notizen-getippt.png"
+          run CREATIVE_TEST_TYPE="376,355,\nTest 2026 ok" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/notizen-getippt.png"
           echo "--- notizen.json:"; cat "$H/.config/creative-os/notizen.json"; echo
           python3 - "$H/.config/creative-os/notizen.json" <<'PY'
           import json, sys
@@ -60,9 +60,16 @@ jobs:
           printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
           run CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/notizen-porzellan.png"
           rm "$H/.config/creative-os/look.conf"
-          # Creative Widgets (spricht über D-Bus mit der Shell – ohne Shell sind die Schalter aus)
-          (cd shell && HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
-            CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/creative-widgets.png" timeout 40 python3 -m creative_shell.widgets_app 2>&1 | tail -5) || true
+          # Creative Widgets neben laufender Shell (gleiche D-Bus-Sitzung), damit die Schalter echt sind
+          cat > /tmp/zusammen.sh <<'SH'
+          cd "$GITHUB_WORKSPACE/shell"
+          CREATIVE_TEST_BACKGROUND=1 timeout 50 python3 -m creative_shell --dev >/tmp/shell.log 2>&1 &
+          sleep 8
+          PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/creative-widgets.png" \
+            timeout 30 python3 -m creative_shell.widgets_app 2>&1 | tail -5
+          kill %1 2>/dev/null; true
+          SH
+          PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" timeout 70 dbus-run-session -- sh /tmp/zusammen.sh || true
           ls -la fotos
       - name: Ablegen
         if: always()
