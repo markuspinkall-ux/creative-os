@@ -4,7 +4,8 @@
     "titel": "Server-Modus bis zum Neustart",
     "neu": [
       "Schnellzugriff › „Nicht sperren“: verhindert für die laufende Sitzung, dass der PC nach 10 Minuten ohne Eingabe in den Anmeldebildschirm wechselt – der Bildschirm bleibt an. Nach dem Abmelden oder Neustart ist wieder alles wie gewohnt",
-      "Creative Deck: das Elgato Stream Deck ohne Elgato-Software – jede Taste mit Beschriftung, Symbol und Farbe belegen: Programme starten, Befehle, Webseiten, Tastenkürzel, Text einfügen, Musik steuern, Lautstärke, Mikrofon stumm, Töne abspielen, Seiten wie Ordner und OBS Studio (Aufnahme, Stream, Szenen, Replay). Einstecken genügt – die Tasten sind sofort da, auch ohne geöffnetes Programm. Unterstützt Stream Deck MK.2, Original, XL, Mini, Neo und +"
+      "Creative Deck: das Elgato Stream Deck ohne Elgato-Software – jede Taste mit Beschriftung, Symbol und Farbe belegen: Programme starten, Befehle, Webseiten, Tastenkürzel, Text einfügen, Musik steuern, Lautstärke, Mikrofon stumm, Töne abspielen, Seiten wie Ordner und OBS Studio (Aufnahme, Stream, Szenen, Replay). Einstecken genügt – die Tasten sind sofort da, auch ohne geöffnetes Programm. Unterstützt Stream Deck MK.2, Original, XL, Mini, Neo und +",
+      "Schreibtisch: Dateien und Ordner umbenennen – Rechtsklick › Umbenennen oder F2, der Name lässt sich direkt unter dem Symbol bearbeiten. Ein neuer Ordner startet gleich mit dem Namensfeld; der Platz des Symbols bleibt erhalten"
     ],
     "verbessert": [],
     "behoben": [

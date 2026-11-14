@@ -16,13 +16,35 @@ Item {
     Keys.onEnterPressed: desktop.openSelected()
     Keys.onEscapePressed: { if (root.movePath !== "") root.cancelMove(); else desktop.clearSelection() }
     Keys.onPressed: (event) => {
-        if (event.matches(StandardKey.Copy)) {
+        if (event.key === Qt.Key_F2) {
+            root.startRename()
+            event.accepted = true
+        } else if (event.matches(StandardKey.Copy)) {
             desktop.copySelected()
             event.accepted = true
         } else if (event.matches(StandardKey.Paste)) {
             desktop.paste()
             event.accepted = true
         }
+    }
+
+    // ---- Umbenennen (F2, Rechtsklick › Umbenennen, neuer Ordner) ----
+    property string renamePath: ""
+    property string renameError: ""
+    function startRename() {
+        const sel = desktop.selectedPaths()
+        if (sel.length === 1) { root.renameError = ""; root.renamePath = sel[0] }
+    }
+    function commitRename(path, text) {
+        if (root.renamePath !== path) return
+        const err = desktop.rename(path, text)
+        if (err) root.renameError = err
+        else { root.renamePath = ""; root.renameError = ""; root.takeKeyboard() }
+    }
+    function cancelRename() { root.renamePath = ""; root.renameError = ""; root.takeKeyboard() }
+    Connections {
+        target: desktop
+        function onRenameRequested(path) { root.renameError = ""; root.renamePath = path }
     }
 
     // Tastatur holen (Entf, Strg+C …): Fenster aktivieren + Fokus aufs Schreibtisch-Element
@@ -945,6 +967,7 @@ Item {
             Text {
                 y: 64
                 x: 6
+                visible: root.renamePath !== model.path
                 width: parent.width - 12
                 horizontalAlignment: Text.AlignHCenter
                 text: model.name
@@ -1023,6 +1046,65 @@ Item {
                     root.pendingRow = -1
                 }
                 onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) desktop.open(icons.model.sourceRow(index)) }
+            }
+            // Namen bearbeiten – direkt unter dem Symbol
+            TextField {
+                id: renameField
+                readonly property bool editing: root.renamePath === model.path
+                visible: editing
+                y: 60
+                x: -8
+                width: parent.width + 16
+                height: 28
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                horizontalAlignment: TextInput.AlignHCenter
+                selectByMouse: true
+                padding: 4
+                background: Rectangle {
+                    radius: 7
+                    color: Theme.raised
+                    border.width: 2
+                    border.color: root.renameError ? "#e5707e" : Theme.accent
+                }
+                onEditingChanged: {
+                    if (!editing) return
+                    text = model.name
+                    root.takeKeyboard()
+                    forceActiveFocus()
+                    // Wie bei Windows: Name ohne Dateiendung markieren
+                    const dot = model.isDir ? -1 : text.lastIndexOf(".")
+                    select(0, dot > 0 ? dot : text.length)
+                }
+                onTextEdited: root.renameError = ""
+                Keys.onReturnPressed: root.commitRename(model.path, text)
+                Keys.onEnterPressed: root.commitRename(model.path, text)
+                Keys.onEscapePressed: root.cancelRename()
+                onActiveFocusChanged: if (!activeFocus && editing) root.commitRename(model.path, text)
+                Accessible.name: "Neuer Name"
+            }
+            Rectangle {
+                visible: renameField.editing && root.renameError !== ""
+                y: 92
+                x: -20
+                width: parent.width + 40
+                height: errText.implicitHeight + 12
+                radius: 8
+                color: "#3a1f26"
+                border.color: "#e5707e"
+                z: 5
+                Text {
+                    id: errText
+                    anchors.centerIn: parent
+                    width: parent.width - 12
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    text: root.renameError
+                    color: "#ffd9de"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                }
             }
             Accessible.role: Accessible.ListItem
             Accessible.name: model.name
@@ -1396,9 +1478,10 @@ Item {
             { label: "In Dateien zeigen", icon: "files", act: "files" },
             { label: "Zur Ablage hinzufügen", icon: "plus", act: "shelf" },
             { sep: true },
-            { label: "Kopieren", icon: "files", act: "copy" },
+            { label: "Kopieren", icon: "files", act: "copy" }
+        ].concat(desktop.selectedCount === 1 ? [{ label: "Umbenennen  ·  F2", icon: "rename", act: "rename" }] : []).concat([
             { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
-        ].concat(shell.screenNames.filter(name => name !== root.screenName).map(name => ({
+        ]).concat(shell.screenNames.filter(name => name !== root.screenName).map(name => ({
             label: "Auf " + name + " verschieben", icon: "settings", act: "screen:" + name
         }))).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
         onTriggered: (act) => {
@@ -1408,6 +1491,7 @@ Item {
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()
             else if (act === "copy") desktop.copySelected()
+            else if (act === "rename") root.startRename()
             else if (act === "paste") desktop.paste()
         }
     }
