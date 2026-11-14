@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, store, START_URL, arg }) {
+async function run({ Win, store, START_URL, arg, setLook, lookFor }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -104,8 +104,27 @@ async function run({ Win, store, START_URL, arg }) {
     const sug = store.suggest('twi');
     check('Vorschläge aus dem Verlauf', sug.length > 0 && sug[0].url.includes('twitch'));
 
-    // Seite durchsuchen
-    win.activate(win.tabs.find((t) => t.url.includes('h264')) || win.tabs[1]);
+    // Beide Designs wie in Creative OS (Graphit ist Standard)
+    win.activate(win.tabs[0]);
+    win.command('navigate', 'creative://start/');
+    await sleep(1200);
+    const design = () => within(win.ui.webContents.executeJavaScript('document.body.dataset.design'), 3000, '');
+    check('Graphit als Standard', (await design()) === 'graphit');
+    await shot(win, dir, '5-graphit');
+    setLook(lookFor('porzellan', 'blau'));
+    await sleep(900);
+    check('Porzellan wird übernommen', (await design()) === 'porzellan');
+    await shot(win, dir, '6-porzellan');
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('menu-btn').click()"), 5000);
+    await sleep(500);
+    await shot(win, dir, '7-porzellan-menue');
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 5000);
+    setLook(lookFor('graphit', 'orange'));
+    await sleep(900);
+    const acc = await within(win.ui.webContents.executeJavaScript("getComputedStyle(document.body).getPropertyValue('--accent').trim()"), 3000, '');
+    check('Akzentfarbe wird übernommen', acc === '#ffb07a');
+    await shot(win, dir, '8-graphit-orange');
+    setLook(lookFor('graphit', 'blau'));
     await sleep(300);
 
     if (process.argv.includes('--creative-online')) {

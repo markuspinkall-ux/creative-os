@@ -39,6 +39,41 @@ protocol.registerSchemesAsPrivileged([
 process.on('uncaughtException', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
 process.on('unhandledRejection', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
 
+// ---- Design von Creative OS: Graphit (dunkel) / Porzellan (hell) + Akzentfarbe -------------------
+// Gleiche Quelle wie Taskleiste und Systemsteuerung: ~/.config/creative-os/look.conf
+const ACCENTS = { blau: ['#8fb3ff', '#3d6fe0'], gruen: ['#6fdcc0', '#1f9e7f'], orange: ['#ffb07a', '#d9773a'], lila: ['#c3a6ff', '#7c4ddb'] };
+const lookFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'creative-os', 'look.conf');
+function readLook() {
+  let design = 'graphit';
+  let accent = 'blau';
+  try {
+    const text = fs.readFileSync(lookFile(), 'utf8');
+    const d = /^\s*design\s*=\s*(\w+)/m.exec(text);
+    const a = /^\s*accent\s*=\s*(\w+)/m.exec(text);
+    if (d && (d[1] === 'graphit' || d[1] === 'porzellan')) design = d[1];
+    if (a && ACCENTS[a[1]]) accent = a[1];
+  } catch (_) { /* noch nie geändert: Graphit/blau */ }
+  return lookFor(design, accent);
+}
+function lookFor(design, accent) {
+  const light = design === 'porzellan';
+  const pick = (name) => ACCENTS[name][light ? 1 : 0];
+  return { design, accent, light, accentColor: pick(accent), privateColor: pick(accent === 'lila' ? 'orange' : 'lila'),
+    ground: light ? '#e9eef6' : '#12151b', surface: light ? '#ffffff' : '#1c2029' };
+}
+let look = null;
+function setLook(next) {
+  look = next;
+  nativeTheme.themeSource = look.light ? 'light' : 'dark';   // Seiten (prefers-color-scheme), Startseite, Bedienelemente
+  for (const w of windows) w.applyLook();
+}
+function watchLook() {
+  fs.watchFile(lookFile(), { interval: 1500 }, () => {
+    const next = readLook();
+    if (next.design !== look.design || next.accent !== look.accent) setLook(next);
+  });
+}
+
 let store;
 const windows = new Set();
 const downloads = [];
@@ -207,7 +242,7 @@ class Win {
     this.win = new BaseWindow({
       width: b.width || 1360, height: b.height || 880, minWidth: 560, minHeight: 400,
       title: isPrivate ? 'Privates Fenster – Creative Browser' : 'Creative Browser',
-      backgroundColor: nativeTheme.shouldUseDarkColors ? '#12151b' : '#e9eef6',
+      backgroundColor: look.ground,
       icon: fs.existsSync(path.join(APP_DIR, 'icon.png')) ? path.join(APP_DIR, 'icon.png') : undefined,
       show: true,
     });
@@ -248,6 +283,12 @@ class Win {
     store.save();
   }
 
+  applyLook() {
+    this.win.setBackgroundColor(look.ground);
+    for (const t of this.tabs) t.view.setBackgroundColor(look.light ? '#ffffff' : '#12151b');
+    this.pushState();
+  }
+
   send(channel, payload) {
     if (!this.ui.webContents.isDestroyed()) this.ui.webContents.send(channel, payload);
   }
@@ -268,7 +309,7 @@ class Win {
       : new WebContentsView({ webPreferences: { session: this.ses, sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: true } });
     const tab = { id: nextTabId++, view, wc: view.webContents, title: 'Neuer Tab', url, favicon: '',
       loading: false, audible: false, muted: false, crashed: false, find: null };
-    view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#12151b' : '#ffffff');
+    view.setBackgroundColor(look.light ? '#ffffff' : '#12151b');
     const at = index == null ? (this.active ? this.tabs.indexOf(this.active) + 1 : this.tabs.length) : index;
     this.tabs.splice(at, 0, tab);
     this.win.contentView.addChildView(view, 0);   // unter der Oberfläche
@@ -396,6 +437,7 @@ class Win {
       const a = this.active;
       const wc = a && !a.wc.isDestroyed() ? a.wc : null;
       this.send('state', {
+        look,
         private: this.isPrivate,
         fullscreen: this.fullscreen,
         tabs: this.tabs.map((t) => ({ id: t.id, title: t.title || displayUrl(t.url) || 'Neuer Tab',
@@ -676,8 +718,10 @@ if (!single) {
 
   app.whenReady().then(() => {
     store = new Store(app.getPath('userData'));
+    setLook(readLook());
+    watchLook();
     app.userAgentFallback = cleanUserAgent(app.userAgentFallback);
-    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg }); return; }
+    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor }); return; }
     const urls = process.argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     if (process.argv.includes('--privat')) { new Win({ isPrivate: true, urls }); return; }
     const saved = store.settings.restoreSession ? store.data.session.filter((s) => s.urls && s.urls.length) : [];

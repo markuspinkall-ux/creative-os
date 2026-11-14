@@ -464,9 +464,17 @@ $('perm-allow').onclick = () => answer(true);
 $('perm-deny').onclick = () => answer(false);
 
 // ---- Zustand ----
+function applyLook(look, isPriv) {
+  if (!look) return;
+  document.body.dataset.design = look.design;
+  const root = document.body.style;
+  root.setProperty('--accent', isPriv ? look.privateColor : look.accentColor);
+}
+
 api.on('state', (s) => {
   S = s;
   document.body.classList.toggle('private', s.private);
+  applyLook(s.look, s.private);
   renderTabs();
   renderNav();
   renderBookmarks();
