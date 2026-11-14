@@ -5,6 +5,7 @@ import os
 import pwd
 import shutil
 import subprocess
+import sys
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
@@ -143,6 +144,8 @@ class SessionModel(QObject):
                                    "org.freedesktop.ScreenSaver", bus)
             reply = iface.call("Inhibit", "Creative OS", "Nicht sperren (Schnellzugriff)")
             if not bus.isConnected() or reply.type() != QDBusMessage.MessageType.ReplyMessage:
+                print("Nicht sperren: ScreenSaver.Inhibit ging nicht:",
+                      reply.errorName(), reply.errorMessage(), file=sys.stderr)
                 QDBusConnection.disconnectFromBus(name)
                 return
             self._awake_bus = name
