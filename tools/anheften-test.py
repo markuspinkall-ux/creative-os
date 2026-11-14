@@ -15,7 +15,7 @@ apps_dir = home / "share/applications"
 apps_dir.mkdir(parents=True)
 for did, name in (("creative-files", "Dateien"), ("brave-browser", "Brave"), ("creative-browser", "Creative Browser"),
                   ("org.kde.konsole", "Konsole"), ("creative-player", "Creative Player"),
-                  ("creative-claude", "Claude")):
+                  ("creative-claude", "Claude"), ("creative-youtube", "YouTube"), ("creative-twitch", "Twitch")):
     (apps_dir / f"{did}.desktop").write_text(
         f"[Desktop Entry]\nType=Application\nName={name}\nExec=true\nIcon={did}\n")
 
@@ -36,6 +36,8 @@ m.reload()
 start = ids(m)
 print("Grundausstattung:", start)
 assert "creative-browser.desktop" in start and "brave-browser.desktop" not in start, "Creative Browser ersetzt Brave nicht"
+for gone in ("creative-youtube.desktop", "creative-twitch.desktop"):
+    assert gone not in start, f"{gone} ist noch in der Taskleiste"
 assert start.index("creative-browser.desktop") == 1, start
 claude = next(p for p in m.pinned if p["desktopId"] == "creative-claude.desktop")
 assert claude["icon"] == "claude" and claude["match"], "Web-App verliert Symbol/Fensternamen"

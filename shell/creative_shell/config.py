@@ -69,13 +69,13 @@ DEFAULTS = {
                 "foot.desktop",
             ],
         },
-        # KI-Assistenten als eigene Fenster (Web-Apps über Brave).
+        # KI-Assistenten und WhatsApp als eigene Fenster (Web-Apps im Creative Browser).
         # "match": so heißen ihre Fenster bei KWin – damit der Punkt unter
         # dem Symbol erscheint, wenn das Fenster offen ist.
         {
             "icon": "claude",
             "candidates": ["creative-claude.desktop"],
-            "match": ["brave-claude.ai", "creative-claude"],
+            "match": ["creative-claude", "brave-claude.ai"],
         },
         {
             "icon": "chatgpt",
@@ -84,19 +84,9 @@ DEFAULTS = {
             "match": ["chatgpt", "com.openai", "openai", "codex", "creative-chatgpt"],
         },
         {
-            "icon": "youtube",
-            "candidates": ["creative-youtube.desktop"],
-            "match": ["brave-www.youtube.com", "brave-youtube.com", "creative-youtube"],
-        },
-        {
-            "icon": "twitch",
-            "candidates": ["creative-twitch.desktop"],
-            "match": ["brave-www.twitch.tv", "brave-twitch.tv", "creative-twitch"],
-        },
-        {
             "icon": "whatsapp",
             "candidates": ["creative-whatsapp.desktop"],
-            "match": ["brave-web.whatsapp.com", "creative-whatsapp"],
+            "match": ["creative-whatsapp", "brave-web.whatsapp.com"],
         },
     ],
 }
