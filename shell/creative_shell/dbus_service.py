@@ -80,6 +80,7 @@ class ShellBus(QObject):
             **{name: self._widgets[name].enabled for name in ("shelf", "stats", "rss", "weather")},
             "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
             "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
+            "notes": extras.notesEnabled, "notesInstalled": extras.notesInstalled,
             "ki": self._widgets["ki"].enabled,
             "viz": self._widgets["viz"].enabled if "viz" in self._widgets else False,
             "screens": self._shell.screenNames, "targets": self._shell.widgetScreens,
@@ -106,6 +107,17 @@ class ShellBus(QObject):
             return "Widget-Paket ist zu groß."
         try:
             self._widgets["extras"].installClock(payload)
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
+    @Slot(bool, result=str)
+    def installNotesWidget(self, install):
+        try:
+            if install:
+                self._widgets["extras"].installNotes()
+            else:
+                self._widgets["extras"].removeNotes()
         except ValueError as exc:
             return str(exc)
         return ""

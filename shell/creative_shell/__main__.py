@@ -27,6 +27,7 @@ from .desktop import DesktopModel
 from .tasks import TaskModel
 from .icons import IconFiles
 from .network import NetworkModel
+from .vpn import VpnModel
 from .bluetooth import BluetoothModel
 from .printers import PrinterModel
 from .session import SessionModel
@@ -525,6 +526,7 @@ def main():
         "apps": apps,
         "tasks": tasks,
         "network": NetworkModel(),
+        "vpn": VpnModel(),
         "bluetooth": BluetoothModel(),
         "brightness": BrightnessModel(),
         "audioOutput": VolumeModel(),

@@ -630,6 +630,89 @@ Item {
         }
     }
 
+    // Notizen: direkt auf dem Schreibtisch tippen, wird von selbst gespeichert
+    ExtraWidget {
+        id: extraNotes
+        key: "notes"
+        visible: root.widgetOnScreen("notes") && widgetExtras.notesEnabled
+        posX: widgetExtras.notesX
+        posY: widgetExtras.notesY
+        defaultX: Math.max(8, root.width - 760)
+        defaultY: 24
+        width: 300
+        height: 280
+        body: ColumnLayout {
+            id: notesBody
+            spacing: 6
+            property string error: ""
+            function store() {
+                saveTimer.stop()
+                notesBody.error = widgetExtras.saveNotes(notesArea.text)
+            }
+            Component.onDestruction: if (saveTimer.running) store()
+            Timer { id: saveTimer; interval: 700; onTriggered: notesBody.store() }
+            Connections {
+                target: widgetExtras
+                // anderswo geändert (zweiter Monitor, Neustart): nur übernehmen, wenn hier niemand tippt
+                function onChanged() {
+                    if (!notesArea.activeFocus && !saveTimer.running && notesArea.text !== widgetExtras.notesText)
+                        notesArea.text = widgetExtras.notesText
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Text { Layout.fillWidth: true; text: "Notizen"; color: Theme.text; font.bold: true }
+                Text {
+                    text: notesBody.error ? notesBody.error
+                        : saveTimer.running ? "Speichert …" : "Gespeichert"
+                    color: notesBody.error ? Theme.flame : Theme.textMuted
+                    font.pixelSize: 11
+                    elide: Text.ElideLeft
+                    Layout.maximumWidth: 170
+                }
+            }
+            ScrollView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                TextArea {
+                    id: notesArea
+                    objectName: "notesArea"
+                    text: widgetExtras.notesText
+                    placeholderText: "Hier tippen – alles wird automatisch gespeichert."
+                    placeholderTextColor: Theme.textMuted
+                    color: Theme.text
+                    selectionColor: Theme.accent
+                    selectByMouse: true
+                    persistentSelection: true
+                    wrapMode: TextEdit.Wrap
+                    font.pixelSize: 14
+                    Accessible.name: "Notizen"
+                    background: Rectangle {
+                        color: Theme.ground
+                        radius: 12
+                        border.color: notesArea.activeFocus ? Theme.accent : Theme.hairline
+                    }
+                    onPressed: {
+                        // Der Hintergrund bekommt die Tastatur nur auf Wunsch
+                        if (root.Window.window && !root.Window.window.active) root.Window.window.requestActivate()
+                        notesArea.forceActiveFocus()
+                    }
+                    onTextChanged: {
+                        if (text.length > widgetExtras.notesMax) {
+                            remove(widgetExtras.notesMax, text.length)
+                            return
+                        }
+                        if (text !== widgetExtras.notesText) saveTimer.restart()
+                    }
+                    onActiveFocusChanged: if (!activeFocus && saveTimer.running) notesBody.store()
+                    Keys.onEscapePressed: { notesBody.store(); root.takeKeyboard() }
+                }
+            }
+        }
+    }
+
     // KI-Helfer: lokales Open-Source-Sprachmodell – Fragen stellt man im eigenen Fenster
     KiChat { id: kiChat; ki: kiHelper }
 

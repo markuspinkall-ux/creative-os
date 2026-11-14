@@ -698,7 +698,7 @@ class LookModel(QObject):
 
     # ---- Widgets (wie in Creative Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
     GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
-    WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "twitch", "ki", "viz")
+    WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "notes", "twitch", "ki", "viz")
 
     def _bus(self):
         from PySide6.QtDBus import QDBusConnection, QDBusInterface
@@ -712,6 +712,7 @@ class LookModel(QObject):
         new["viz"] = bool(cfg.get("taskbarVisualizer", True))
         new["stats"] = bool(cfg.get("desktopStats", True))
         new["clockInstalled"] = False
+        new["notesInstalled"] = False
         new["shell"] = False
         try:
             from PySide6.QtDBus import QDBusMessage
@@ -721,6 +722,7 @@ class LookModel(QObject):
                 state = json.loads(reply.arguments()[0])
                 new.update({k: bool(state.get(k, False)) for k in self.WIDGETS})
                 new["clockInstalled"] = bool(state.get("clockInstalled"))
+                new["notesInstalled"] = bool(state.get("notesInstalled"))
                 new["shell"] = True
         except (ValueError, TypeError, ImportError):
             pass

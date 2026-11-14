@@ -17,6 +17,7 @@ ApplicationWindow {
 
     readonly property var pages: [
         { key: "network", name: "Netzwerk", icon: "wifi", file: "NetworkPage.qml", words: "wlan internet lan kabel verbindung passwort" },
+        { key: "vpn", name: "VPN", icon: "shield", file: "VpnPage.qml", words: "proton vpn wireguard privat anonym verschlüsselt tunnel land server" },
         { key: "displays", name: "Bildschirme", icon: "pc", file: "DisplaysPage.qml", words: "monitor auflösung skalierung hz anordnen hauptbildschirm" },
         { key: "sound", name: "Ton", icon: "speaker", file: "SoundPage.qml", words: "lautstärke lautsprecher kopfhörer mikrofon audio sound" },
         { key: "drives", name: "Laufwerke", icon: "drive", file: "DrivesPage.qml", words: "festplatte ssd m2 nvme formatieren einrichten partition laufwerk zustand smart" },

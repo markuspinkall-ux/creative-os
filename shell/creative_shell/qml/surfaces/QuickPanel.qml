@@ -260,6 +260,39 @@ Item {
 
                 Divider { width: parent.width }
 
+                // ---------- Proton VPN ----------
+                Item {
+                    width: parent.width
+                    height: 24
+                    visible: vpn.available
+                    SectionTitle { anchors.verticalCenter: parent.verticalCenter; text: "Proton VPN" }
+                    CSwitch {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        label: "Proton VPN"
+                        visible: vpn.servers.length > 0
+                        enabled: !vpn.busy
+                        checked: vpn.connected
+                        onToggled: (value) => vpn.setEnabled(value)
+                    }
+                }
+                BodyText {
+                    width: parent.width
+                    visible: vpn.available
+                    text: vpn.message ? vpn.message
+                        : vpn.busy ? "Einen Moment …"
+                        : vpn.connected ? "Geschützt über " + vpn.activeCountry + ". Deine Verbindung läuft verschlüsselt über Proton."
+                        : vpn.servers.length > 0 ? "Aus – beim Einschalten: " + vpn.lastCountry
+                        : "Noch kein Server eingerichtet."
+                }
+                CButton {
+                    visible: vpn.available
+                    text: vpn.servers.length > 0 ? "Server wählen …" : "VPN einrichten …"
+                    onClicked: { shell.closePopups(); vpn.openSettings() }
+                }
+
+                Divider { width: parent.width }
+
                 // ---------- Helligkeit ----------
                 SectionTitle { text: "Helligkeit" }
 

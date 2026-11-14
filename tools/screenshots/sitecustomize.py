@@ -77,7 +77,34 @@ def _install():
             QTest.keyClick(win, Qt.Key.Key_Return)
         print(f"Umbenennen getestet: {name}", file=sys.stderr)
 
+    def type_test():
+        """CREATIVE_TEST_TYPE="x,y,Text": an x,y klicken und Text tippen (\n = Eingabe)."""
+        from PySide6.QtCore import QEvent, QPoint, Qt
+        from PySide6.QtGui import QKeyEvent
+        from PySide6.QtQuick import QQuickWindow
+        from PySide6.QtTest import QTest
+        wins = [w for w in QtGui.QGuiApplication.topLevelWindows() if isinstance(w, QQuickWindow) and w.isVisible()]
+        win = max(wins, key=lambda w: w.width() * w.height())
+        x, y, text = os.environ["CREATIVE_TEST_TYPE"].split(",", 2)
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(int(x), int(y)))
+        QTest.qWait(300)
+        for ch in text.replace("\\n", "\n"):
+            key = (Qt.Key.Key_Return if ch == "\n" else Qt.Key.Key_Space if ch == " "
+                   else Qt.Key(ord(ch.upper())) if ch.isascii() and ch.isalnum() else Qt.Key.Key_unknown)
+            for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+                QtGui.QGuiApplication.sendEvent(win, QKeyEvent(kind, key, Qt.KeyboardModifier.NoModifier,
+                                                               "" if ch == "\n" and kind == QEvent.Type.KeyRelease else ch))
+        print(f"Tippen getestet: {text!r}", file=sys.stderr)
+
     def shoot():
+        if os.environ.get("CREATIVE_TEST_TYPE") and not state.get("typed"):
+            state["typed"] = True
+            try:
+                type_test()
+            except Exception as error:  # noqa: BLE001
+                print(f"Tippen nicht möglich: {error}", file=sys.stderr)
+            QTimer.singleShot(1500, shoot)
+            return
         if os.environ.get("CREATIVE_TEST_RENAME") and not state.get("renamed"):
             state["renamed"] = True
             try:

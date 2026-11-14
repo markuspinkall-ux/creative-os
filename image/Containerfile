@@ -222,11 +222,9 @@ COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansi
 COPY viewer3d/creative-3dansicht.svg /usr/share/icons/hicolor/scalable/apps/creative-3dansicht.svg
 RUN ln -s /usr/lib/creative-3dansicht/creative-3dansicht /usr/bin/creative-3dansicht \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3dansicht --selftest
-COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-youtube.desktop shell/webapps/creative-twitch.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
+COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
-COPY shell/creative_shell/qml/Creative/icons/youtube.svg /usr/share/icons/hicolor/scalable/apps/creative-youtube.svg
-COPY shell/creative_shell/qml/Creative/icons/twitch.svg /usr/share/icons/hicolor/scalable/apps/creative-twitch.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 
 # Creative OS ist die einzige Sitzung im Anmeldebildschirm

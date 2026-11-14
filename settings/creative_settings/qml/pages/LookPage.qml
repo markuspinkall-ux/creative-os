@@ -208,13 +208,15 @@ SettingsPage {
                 { k: "rss", t: "RSS-Nachrichten", h: "Schlagzeilen aus bis zu fünf Feeds" },
                 { k: "ki", t: "KI-Helfer", h: "Lokale KI zum Fragen und Formulieren (Open Source)" },
                 { k: "twitch", t: "Twitch-Favoriten", h: "Wer von deinen Kanälen gerade live ist" },
-                { k: "clock", t: "Analoge Uhr", h: look.widgets.clockInstalled ? "Uhr mit Sekundenzeiger" : "Erst in Creative Widgets herunterladen" }
+                { k: "clock", t: "Analoge Uhr", h: look.widgets.clockInstalled ? "Uhr mit Sekundenzeiger" : "Erst in Creative Widgets herunterladen" },
+                { k: "notes", t: "Notizen", h: look.widgets.notesInstalled ? "Notizzettel, wird automatisch gespeichert" : "Erst in Creative Widgets installieren" }
             ]
             delegate: SettingRow {
                 required property var modelData
                 label: modelData.t
                 hint: modelData.h
                 enabled: look.widgets.shell && (modelData.k !== "clock" || look.widgets.clockInstalled)
+                         && (modelData.k !== "notes" || look.widgets.notesInstalled)
                 opacity: enabled ? 1 : 0.45
                 CSwitch {
                     checked: !!look.widgets[modelData.k]

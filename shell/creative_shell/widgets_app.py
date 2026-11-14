@@ -33,7 +33,7 @@ class WidgetWindow(QMainWindow):
     def __init__(self, check=False):
         super().__init__()
         self.setWindowTitle("Creative Widgets")
-        self.resize(640, 660)
+        self.resize(640, 760)
         self.bus = QDBusInterface(SERVICE, PATH, SERVICE, QDBusConnection.sessionBus())
         self.bus.setTimeout(1200)
         self.loading = False
@@ -57,7 +57,8 @@ class WidgetWindow(QMainWindow):
         desktop = self.section(layout, "Auf dem Desktop")
         for name, label in (
             ("shelf", "Ablage"), ("stats", "Leistungsanzeige"), ("rss", "RSS-Nachrichten"),
-            ("weather", "Wetter"), ("clock", "Analoge Uhr"), ("twitch", "Twitch-Favoriten"),
+            ("weather", "Wetter"), ("clock", "Analoge Uhr"), ("notes", "Notizen"),
+            ("twitch", "Twitch-Favoriten"),
             ("ki", "KI-Helfer (lokale KI, Open Source)"), ("viz", "Musik-Visualizer (hinter der Taskleiste)"),
         ):
             switch = QCheckBox(label)
@@ -99,6 +100,16 @@ class WidgetWindow(QMainWindow):
         self.download_button.clicked.connect(self.download_clock)
         row.addWidget(self.download_button)
         catalog.addLayout(row)
+        row = QHBoxLayout()
+        detail = QVBoxLayout()
+        detail.addWidget(QLabel("Notizen"))
+        detail.addWidget(QLabel("Notizzettel zum Reintippen – wird automatisch gespeichert"))
+        row.addLayout(detail, 1)
+        self.notes_button = QPushButton("Installieren")
+        self.notes_button.clicked.connect(self.toggle_notes)
+        row.addWidget(self.notes_button)
+        catalog.addLayout(row)
+        self.notes_installed = False
         self.message = QLabel()
         self.message.setWordWrap(True)
         layout.addWidget(self.message)
@@ -141,8 +152,10 @@ class WidgetWindow(QMainWindow):
                 self.message.clear()
             self.available = True
         self.installed = state.get("clockInstalled", False)
+        self.notes_installed = state.get("notesInstalled", False)
         for name, switch in self.switches.items():
-            enabled = self.available and (name != "clock" or self.installed)
+            enabled = self.available and (name != "clock" or self.installed) and (
+                name != "notes" or self.notes_installed)
             switch.setEnabled(enabled)
             monitor = self.monitors[name]
             monitor.setEnabled(enabled)
@@ -193,8 +206,18 @@ class WidgetWindow(QMainWindow):
         return not error
 
     def update_download_button(self):
+        self.notes_button.setEnabled(self.available)
+        self.notes_button.setText("Entfernen" if self.notes_installed else "Installieren")
         self.download_button.setEnabled(self.available and not self.loading and not self.installed)
         self.download_button.setText("Installiert" if self.installed else "Lädt …" if self.loading else "Herunterladen")
+
+    def toggle_notes(self):
+        install = not self.notes_installed
+        if self.apply("installNotesWidget", install):
+            self.message.setText(
+                "Die Notizen wurden installiert und auf dem Desktop aktiviert. Einfach hineinklicken und tippen."
+                if install else
+                "Das Notizen-Widget wurde entfernt. Der Text bleibt gespeichert und ist beim erneuten Installieren wieder da.")
 
     def download_clock(self):
         self.loading = True

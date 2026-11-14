@@ -1,6 +1,7 @@
 """Downloadable widget data and the desktop Twitch/clock models."""
 
 import json
+import os
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +15,7 @@ from .mainthread import post
 
 CLOCK_URL = ("https://raw.githubusercontent.com/markuspinkall-ux/creative-os/"
              "main/widgets/catalog/analog-clock.json")
+NOTES_MAX = 20_000
 CHANNEL = re.compile(r"[a-z0-9_]{1,25}")
 DURATION = re.compile(r"\d+\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)(?:\b|$)", re.I)
 
@@ -34,6 +36,32 @@ def clock_descriptor(raw):
     }:
         raise ValueError("Dieses Widget-Paket wird von Creative OS nicht unterstützt.")
     return data
+
+
+def notes_path():
+    return config.config_dir() / "notizen.json"
+
+
+def read_notes():
+    try:
+        data = json.loads(notes_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    text = data.get("text") if isinstance(data, dict) else None
+    return text[:NOTES_MAX] if isinstance(text, str) else ""
+
+
+def write_notes(text):
+    """Notizen sicher speichern: erst in eine Hilfsdatei, dann umbenennen."""
+    path = notes_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as handle:
+        json.dump({"version": 1, "text": text}, handle, ensure_ascii=False, indent=2)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
 
 
 def channels_from(text):
@@ -72,6 +100,7 @@ class WidgetExtras(QObject):
         self._settings = config.load()["desktopExtras"]
         self._rows = []
         self._busy = False
+        self._notes = read_notes()
         self._ready.connect(self._apply)
         self._timer = QTimer(self)
         self._timer.setInterval(120_000)
@@ -92,10 +121,34 @@ class WidgetExtras(QObject):
         if not self._save(clock=clock_descriptor(raw), clockEnabled=True):
             raise ValueError("Das Widget konnte nicht gespeichert werden.")
 
+    def installNotes(self):
+        if not self._save(notesInstalled=True, notesEnabled=True):
+            raise ValueError("Das Widget konnte nicht gespeichert werden.")
+
+    def removeNotes(self):
+        # Der Text bleibt in notizen.json – beim erneuten Installieren ist er wieder da.
+        if not self._save(notesInstalled=False, notesEnabled=False):
+            raise ValueError("Das Widget konnte nicht entfernt werden.")
+
+    @Slot(str, result=str)
+    def saveNotes(self, text):
+        text = text[:NOTES_MAX]
+        if text == self._notes:
+            return ""
+        try:
+            write_notes(text)
+        except OSError:
+            return "Die Notizen konnten nicht gespeichert werden."
+        self._notes = text
+        self.changed.emit()
+        return ""
+
     def setEnabled(self, name, enabled):
         if name == "clock" and not self.clockInstalled:
             raise ValueError("Lade zuerst die analoge Uhr herunter.")
-        if name not in ("clock", "twitch"):
+        if name == "notes" and not self.notesInstalled:
+            raise ValueError("Installiere zuerst das Notizen-Widget.")
+        if name not in ("clock", "twitch", "notes"):
             raise ValueError("Unbekanntes Widget.")
         if not self._save(**{name + "Enabled": enabled}):
             raise ValueError("Die Einstellung konnte nicht gespeichert werden.")
@@ -116,7 +169,7 @@ class WidgetExtras(QObject):
 
     @Slot(str, float, float)
     def setPosition(self, name, x, y):
-        if name in ("clock", "twitch"):
+        if name in ("clock", "twitch", "notes"):
             self._save(**{name + "Pos": [max(0, min(1, x)), max(0, min(1, y))]})
 
     def _position(self, name, axis):
@@ -162,3 +215,9 @@ class WidgetExtras(QObject):
     clockY = Property(float, lambda self: self._position("clock", 1), notify=changed)
     twitchX = Property(float, lambda self: self._position("twitch", 0), notify=changed)
     twitchY = Property(float, lambda self: self._position("twitch", 1), notify=changed)
+    notesInstalled = Property(bool, lambda self: bool(self._settings.get("notesInstalled", False)), notify=changed)
+    notesEnabled = Property(bool, lambda self: self.notesInstalled and bool(self._settings.get("notesEnabled", False)), notify=changed)
+    notesText = Property(str, lambda self: self._notes, notify=changed)
+    notesMax = Property(int, lambda self: NOTES_MAX, constant=True)
+    notesX = Property(float, lambda self: self._position("notes", 0), notify=changed)
+    notesY = Property(float, lambda self: self._position("notes", 1), notify=changed)
