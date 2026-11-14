@@ -43,7 +43,8 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           SITE=$(python3 -c 'import site; print(site.getusersitepackages())')
-          sudo env QT_QPA_PLATFORM=offscreen PYTHONPATH="$SITE" python3 tools/vpn-test.py nm
+          sudo env QT_QPA_PLATFORM=offscreen PYTHONPATH="$SITE" python3 tools/vpn-test.py nm \
+            || { sudo journalctl -u NetworkManager --no-pager -n 60; sudo coredumpctl list 2>/dev/null | tail -3; exit 1; }
           curl -sSfo /dev/null -m 15 https://api.github.com && echo "Internet ok"
       - name: Fotografieren
         if: always()
@@ -64,14 +65,14 @@ jobs:
           FAKE
           sed -i 's/^          //' /tmp/fake/nmcli && chmod +x /tmp/fake/nmcli
           H=$(mktemp -d)
-          (cd settings && PATH=/tmp/fake:$PATH HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
             CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
           printf '#!/bin/sh\n[ "$1" = monitor ] && sleep 600\nexit 0\n' > /tmp/fake/nmcli
           H=$(mktemp -d)
-          (cd settings && PATH=/tmp/fake:$PATH HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
             CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite-leer.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
           mkdir -p "$H/.config/creative-os"; printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
-          (cd settings && PATH=/tmp/fake:$PATH HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
             CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite-porzellan.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
           for s in vpn-an vpn-aus vpn-leer; do
             timeout 30 python3 tools/schnellzugriff-vorschau.py fotos/schnellzugriff-$s.png aus $s 2>&1 | tail -5 || true
