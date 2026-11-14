@@ -86,13 +86,15 @@ async function run({ Win, store, START_URL, arg }) {
     // Tabs: neu, schließen, wieder öffnen
     win.command('new-tab');
     await sleep(300);
-    check('Neuer Tab', win.tabs.length === 3 && win.active === win.tabs[2]);
-    win.closeTab(win.tabs[1]);
+    check('Neuer Tab', win.tabs.length === 3 && win.active.url.startsWith(START_URL) && win.active !== win.tabs[0]);
+    win.closeTab(win.tabs.find((t) => t.url.includes('h264')));
     await sleep(200);
     check('Tab schließen', win.tabs.length === 2);
     win.reopen();
     await sleep(1500);
-    check('Geschlossenen Tab wiederherstellen', win.tabs.length === 3);
+    check('Geschlossenen Tab wiederherstellen', win.tabs.length === 3 && win.tabs.some((t) => t.url.includes('h264')));
+    const audioIcons = await win.ui.webContents.executeJavaScript("[...document.querySelectorAll('.tab .audio')].filter((b) => b.offsetWidth > 0).length");
+    check('Lautsprecher nur bei Ton', audioIcons <= 1);
 
     // Adressleiste: Suche vs. Adresse
     store.visit('https://www.twitch.tv/creativeos', 'Creative OS – Twitch');
@@ -107,7 +109,7 @@ async function run({ Win, store, START_URL, arg }) {
       // Echte Seiten – nur zur Info, nicht entscheidend (CI-Netz, Cookie-Banner …)
       result.online = {};
       for (const [name, url, wait] of [
-        ['youtube', 'https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ?autoplay=1&mute=1', 12000],
+        ['youtube', 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 15000],
         ['twitch', 'https://www.twitch.tv/', 20000],
       ]) {
         const t = win.addTab(url);

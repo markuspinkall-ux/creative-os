@@ -43,8 +43,7 @@ jobs:
               --creative-selftest=$PWD/fotos --creative-video=file:///tmp/video/h264.html --creative-online &
             pid=$!
             sleep 6
-            win=$(xprop -root _NET_ACTIVE_WINDOW | sed "s/.*# //")
-            for w in $(xprop -root _NET_CLIENT_LIST | sed "s/.*# //; s/,//g"); do xprop -id $w WM_CLASS _NET_WM_NAME; done
+            for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null | grep -v "not found"; done | sort -u
             wait $pid
           '
           echo "exit=$?" | tee /tmp/exit

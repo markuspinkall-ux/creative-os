@@ -19,6 +19,7 @@ body.private { --accent: #b9a0ff; --tab-hover: rgba(185, 160, 255, 0.14); --grou
 @media (prefers-color-scheme: light) { body.private { --accent: #7a55e0; --ground: #e4dff0; } }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
 body {
   color: var(--text); font: 13px Arial, "Liberation Sans", Helvetica, sans-serif;

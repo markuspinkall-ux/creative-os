@@ -28,6 +28,7 @@ if (!nvidia && !SELFTEST) {
   app.commandLine.appendSwitch('enable-features',
     'VaapiVideoDecoder,VaapiVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL');
 }
+if (SELFTEST) app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 protocol.registerSchemesAsPrivileged([
   { scheme: 'creative', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
