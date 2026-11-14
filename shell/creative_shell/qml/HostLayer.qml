@@ -21,6 +21,8 @@ Window {
     height: surfaceHeight
     visible: false
     color: "transparent"
+    // Der Name über einem Taskleisten-Symbol darf keine Klicks abfangen
+    flags: popupKey === "tasktip" ? (Qt.Window | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus) : Qt.Window
     title: placement === "bar" ? "Creative Taskleiste" : (placement === "background" ? "Creative Hintergrund" : "Creative Menü")
 
     readonly property bool isBar: placement === "bar"
@@ -52,14 +54,14 @@ Window {
     Component.onCompleted: loader.setSource(contentSource, { screenName: screenName })
 
     onVisibleChanged: {
-        if (visible && placement !== "bar" && placement !== "background" && popupKey !== "bubble") {
+        if (visible && placement !== "bar" && placement !== "background" && popupKey !== "bubble" && popupKey !== "tasktip") {
             requestActivate()
             if (loader.item && loader.item.opened)
                 loader.item.opened()
         }
     }
     onActiveChanged: {
-        if (!active && visible && placement !== "bar" && placement !== "background" && popupKey !== "bubble")
+        if (!active && visible && placement !== "bar" && placement !== "background" && popupKey !== "bubble" && popupKey !== "tasktip")
             shell.popupLostFocus(screenName, popupKey || placement)
     }
 }

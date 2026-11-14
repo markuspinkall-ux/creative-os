@@ -49,7 +49,7 @@ START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu")
-SURFACES = POPUPS
+SURFACES = POPUPS + ("tasktip",)   # „tasktip“: Name über dem Taskleisten-Symbol (nimmt keine Eingaben)
 DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "ki")
 
 
@@ -104,6 +104,7 @@ def layer_shell_available(engine):
 
 class ShellController(QObject):
     openChanged = Signal()
+    taskTipChanged = Signal()
     screensChanged = Signal()
     widgetScreensChanged = Signal()
 
@@ -117,6 +118,16 @@ class ShellController(QObject):
         self._panel_focus = ""                      # "calendar": Schnellzugriff zeigt den Kalender
         self._tray_menu_key = ""
         self._task_menu = {}
+        self._task_tip = {}
+        self._tip_shown_on = ""
+        self._tip_timer = QTimer(self)
+        self._tip_timer.setSingleShot(True)
+        self._tip_timer.setInterval(450)
+        self._tip_timer.timeout.connect(self._show_task_tip)
+        self._tip_hide_timer = QTimer(self)        # kurz warten: von Symbol zu Symbol bleibt der Name stehen
+        self._tip_hide_timer.setSingleShot(True)
+        self._tip_hide_timer.setInterval(150)
+        self._tip_hide_timer.timeout.connect(lambda: self._hide_task_tip())
         self._last_screen = ""
         self._primary_name = ""      # Hauptbildschirm laut KWin
         self._primary_proc = None
@@ -306,6 +317,9 @@ class ShellController(QObject):
             elif key == "appmenu":
                 entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
                                           self._popup_height(screen, 460), True, key)
+            elif key == "tasktip":    # ganze Breite, durchlässig für die Maus
+                entry[key] = self._create(screen, "left", "TaskTip.qml", screen.geometry().width(),
+                                          64, False, key)
             elif key == "taskmenu":   # ganze Breite: die Karte sitzt über dem angeklickten Symbol
                 entry[key] = self._create(screen, "left", "TaskMenu.qml", screen.geometry().width(),
                                           190 + POPUP_GAP, True, key)
@@ -387,12 +401,55 @@ class ShellController(QObject):
         self._task_menu = dict(item, x=float(x))
         self._toggle(name, "taskmenu")
 
+    # ---- Name beim Drüberfahren ---------------------------------------------------
+    @Slot(str, str, float, int)
+    def showTaskTip(self, name, text, x, count):
+        """Maus über einem Programm in der Taskleiste: kurz warten, dann den Namen zeigen.
+        Zwischen zwei Symbolen wandert der Name sofort mit."""
+        if not text or any(self._open.values()):
+            return
+        self._tip_hide_timer.stop()
+        self._task_tip = {"screen": name, "text": text, "x": float(x), "count": int(count)}
+        self.taskTipChanged.emit()
+        if self._tip_shown_on == name:
+            return
+        self._tip_timer.start()
+
+    def _show_task_tip(self):
+        name = self._task_tip.get("screen", "")
+        if not name or any(self._open.values()):
+            return
+        win = self._ensure(name, "tasktip")
+        if win is None:
+            return
+        self._hide_task_tip()
+        _win_show(win)
+        self._tip_shown_on = name
+
+    @Slot(str)
+    def hideTaskTip(self, name):
+        """Maus hat das Symbol verlassen."""
+        self._tip_timer.stop()
+        self._tip_hide_timer.start()
+
+    def _hide_task_tip(self):
+        self._tip_timer.stop()
+        self._tip_hide_timer.stop()
+        for screen, entry in self._surfaces.items():
+            win = entry.get("tasktip")
+            if win is not None and _win_visible(win):
+                _win_hide(win)
+        self._tip_shown_on = ""
+
+    taskTip = Property("QVariantMap", lambda self: dict(self._task_tip), notify=taskTipChanged)
+
     @Slot(str)
     def noteScreen(self, name):
         self._last_screen = name
 
     @Slot()
     def closePopups(self):
+        self._hide_task_tip()
         for entry in self._surfaces.values():
             for key in POPUPS:
                 if entry[key] is not None and _win_visible(entry[key]):

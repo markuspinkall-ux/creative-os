@@ -4,7 +4,7 @@ name: Systemsteuerung Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [settings/**, shell/creative_shell/qml/**, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
+    paths: [settings/**, shell/creative_shell/qml/**, tools/tasktip-vorschau.py, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -35,6 +35,20 @@ jobs:
           CREATIVE_SCREENSHOT=vorschau/benutzerkonten.png timeout 40 python3 -m creative_settings --page users 2>&1 | tail -5 || true
           CREATIVE_SCREENSHOT=vorschau/darstellung-unten.png CREATIVE_SCREENSHOT_SCROLL=1 timeout 40 python3 -m creative_settings --page look 2>&1 | tail -5 || true
           (cd ../shell && CREATIVE_SCREENSHOT=../settings/vorschau/creative-widgets.png timeout 40 python3 -m creative_shell.widgets_app 2>&1 | tail -5) || true
+          # Bildschirme: nachgebautes kscreen-doctor mit einem hochkant gestellten Monitor
+          mkdir -p /tmp/fake && cat > /tmp/fake/kscreen-doctor <<'FAKE'
+          #!/bin/sh
+          cat <<'JSON'
+          {"outputs":[
+           {"name":"DP-1","connected":true,"enabled":true,"priority":1,"pos":{"x":0,"y":0},"rotation":1,"scale":1,"currentModeId":"1","modes":[{"id":"1","size":{"width":2560,"height":1440},"refreshRate":144}]},
+           {"name":"DP-2","connected":true,"enabled":true,"priority":2,"pos":{"x":2560,"y":0},"rotation":1,"scale":1,"currentModeId":"1","modes":[{"id":"1","size":{"width":2560,"height":1440},"refreshRate":60}]},
+           {"name":"HDMI-A-1","connected":true,"enabled":true,"priority":3,"pos":{"x":5120,"y":0},"rotation":2,"scale":1,"currentModeId":"1","modes":[{"id":"1","size":{"width":1920,"height":1080},"refreshRate":60}]}
+          ]}
+          JSON
+          FAKE
+          sed -i 's/^          //' /tmp/fake/kscreen-doctor && chmod +x /tmp/fake/kscreen-doctor
+          PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/bildschirme.png timeout 40 python3 -m creative_settings --page displays 2>&1 | tail -5 || true
+          (cd .. && timeout 30 python3 tools/tasktip-vorschau.py settings/vorschau/taskleiste-name.png 2>&1 | tail -5) || true
           ls -la vorschau
         working-directory: settings
       - name: Ablegen

@@ -86,24 +86,43 @@ SettingsPage {
                 border.width: sel ? 2 : 1
                 z: dragArea.drag.active ? 10 : 1
 
+                // Nummer, Name und Auflösung untereinander – passt auch bei hochkant gestellten Bildschirmen
                 Column {
                     anchors.centerIn: parent
-                    spacing: 2
+                    width: mon.width - 14
+                    spacing: 3
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
                         text: modelData.number
                         color: mon.sel ? Theme.accent : Theme.text
                         font.family: Theme.fontFamily
-                        font.pixelSize: 28
+                        font.pixelSize: Math.max(16, Math.min(28, mon.width / 4))
                         font.bold: true
                     }
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: modelData.name + " · " + (modelData.primary ? "Hauptbildschirm" : (modelData.enabled ? modelData.resolution : "Aus"))
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        text: modelData.name
                         color: Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: 11
-                        font.bold: modelData.primary
+                        font.bold: true
+                    }
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        text: !modelData.enabled ? "Aus"
+                            : (modelData.primary ? "Hauptbildschirm" + (mon.width < 150 ? "\n" : " · ") : "")
+                              + (modelData.shown || modelData.resolution) + (modelData.portrait ? " · hochkant" : "")
+                        color: Theme.textMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 11
+                        lineHeight: 1.15
                     }
                 }
 

@@ -309,6 +309,10 @@ class DisplayModel(QObject):
                 "index": i, "number": o["number"], "name": o["name"], "enabled": o["enabled"],
                 "primary": o["primary"], "x": o["x"], "y": o["y"], "w": w, "h": h,
                 "resolution": f"{mode['w']} × {mode['h']}" if mode else "",
+                # So wie der Bildschirm steht (hochkant: 1080 × 1920)
+                "shown": (f"{min(mode['w'], mode['h'])} × {max(mode['w'], mode['h'])}" if h > w
+                          else f"{max(mode['w'], mode['h'])} × {min(mode['w'], mode['h'])}") if mode else "",
+                "portrait": h > w,
             })
         return result
 

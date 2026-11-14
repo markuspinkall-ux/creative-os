@@ -16,6 +16,7 @@ Item {
     signal clicked()
     signal middleClicked()
     signal rightClicked()
+    readonly property bool hovered: mouse.containsMouse
 
     implicitWidth: 44
     implicitHeight: 44

@@ -107,6 +107,14 @@ Item {
                         tasks.activate(root.screenName, modelData.key, modelData.desktopId)
                     }
                     onMiddleClicked: tasks.launchNew(modelData.desktopId)
+                    // Programmname beim Drüberfahren (eigene, durchlässige Fläche über der Leiste)
+                    onHoveredChanged: {
+                        if (hovered)
+                            shell.showTaskTip(root.screenName, modelData.name || modelData.title || "",
+                                              mapToItem(null, width / 2, 0).x, modelData.count || 0)
+                        else
+                            shell.hideTaskTip(root.screenName)
+                    }
                     onRightClicked: shell.toggleTaskMenu(root.screenName, {
                         key: modelData.key, desktopId: modelData.desktopId, name: modelData.name,
                         running: modelData.running, count: modelData.count
