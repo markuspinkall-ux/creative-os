@@ -1,0 +1,4 @@
+#!/bin/sh
+# Creative Browser: Electron (Chromium mit H.264) aus /usr/lib/creative-browser
+export CHROME_DESKTOP=creative-browser.desktop
+exec /usr/lib/creative-browser/electron/electron /usr/lib/creative-browser/app --class=creative-browser "$@"

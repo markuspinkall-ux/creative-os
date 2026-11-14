@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: http: data: creative:; style-src 'self' 'unsafe-inline'">
+<title>Creative Browser</title>
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<div id="chrome">
+  <div id="tabstrip" role="tablist" aria-label="Tabs">
+    <div id="tabs"></div>
+    <button id="newtab" class="icon" title="Neuer Tab (Strg+T)" aria-label="Neuer Tab"></button>
+    <div id="private-badge">Privat</div>
+  </div>
+  <div id="navbar">
+    <button id="back" class="icon" title="Zurück (Alt+←)" aria-label="Zurück"></button>
+    <button id="forward" class="icon" title="Vorwärts (Alt+→)" aria-label="Vorwärts"></button>
+    <button id="reload" class="icon" title="Neu laden (F5)" aria-label="Neu laden"></button>
+    <button id="home" class="icon" title="Startseite" aria-label="Startseite"></button>
+    <div id="omnibox">
+      <span id="lock" aria-hidden="true"></span>
+      <input id="address" type="text" spellcheck="false" autocomplete="off" aria-label="Adresse oder Suche"
+             placeholder="Suchen oder Adresse eingeben">
+      <button id="zoom-badge" title="Zoom zurücksetzen (Strg+0)"></button>
+      <button id="star" class="icon small" title="Lesezeichen (Strg+D)" aria-label="Lesezeichen"></button>
+    </div>
+    <button id="downloads-btn" class="icon" title="Downloads (Strg+J)" aria-label="Downloads"><span id="dl-ring"></span></button>
+    <button id="menu-btn" class="icon" title="Menü" aria-label="Menü"></button>
+    <div id="progress"></div>
+  </div>
+  <div id="permission" hidden>
+    <span id="perm-text"></span>
+    <label><input type="checkbox" id="perm-remember" checked> Merken</label>
+    <button id="perm-deny" class="btn">Blockieren</button>
+    <button id="perm-allow" class="btn primary">Erlauben</button>
+  </div>
+  <div id="findbar" hidden>
+    <input id="find-input" type="text" spellcheck="false" placeholder="Auf der Seite suchen" aria-label="Auf der Seite suchen">
+    <span id="find-count"></span>
+    <button id="find-prev" class="icon small" title="Vorheriger Treffer" aria-label="Vorheriger Treffer"></button>
+    <button id="find-next" class="icon small" title="Nächster Treffer" aria-label="Nächster Treffer"></button>
+    <button id="find-close" class="icon small" title="Schließen (Esc)" aria-label="Suche schließen"></button>
+  </div>
+  <div id="bookmarks" role="toolbar" aria-label="Lesezeichen"></div>
+</div>
+
+<div id="layer" hidden>
+  <div id="backdrop"></div>
+  <div id="suggest" class="popup" hidden role="listbox"></div>
+  <div id="menu" class="popup" hidden role="menu"></div>
+  <div id="downloads" class="popup" hidden></div>
+  <div id="ctx" class="popup" hidden role="menu"></div>
+  <div id="dialog" class="popup" hidden></div>
+</div>
+<script src="ui.js"></script>
+</body>
+</html>
