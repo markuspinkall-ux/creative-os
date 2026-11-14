@@ -42,9 +42,7 @@ ApplicationWindow {
         }
     }
     function emptyTrash() {
-        confirmDialog.ask("Papierkorb leeren?",
-                          "Alle Dateien im Papierkorb werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
-                          "Endgültig löschen", () => fm.emptyTrash())
+        confirmDialog.open()
     }
 
     Connections {
@@ -423,6 +421,15 @@ ApplicationWindow {
     }
 
     NameDialog { id: nameDialog }
-    ConfirmDialog { id: confirmDialog }
+    // Rückfrage aus dem Creative-Modul (gleichnamige eigene Datei gab es früher – sie wurde
+    // vom Modul überdeckt, deshalb tat „Papierkorb leeren“ nichts)
+    ConfirmDialog {
+        id: confirmDialog
+        title: "Papierkorb leeren?"
+        text: "Alle Dateien im Papierkorb werden endgültig gelöscht. Das kann nicht rückgängig gemacht werden."
+        confirmText: "Endgültig löschen"
+        danger: true
+        onConfirmed: fm.emptyTrash()
+    }
     PropertiesDialog { id: propsDialog }
 }
