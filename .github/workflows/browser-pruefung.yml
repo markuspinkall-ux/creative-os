@@ -48,6 +48,21 @@ jobs:
           '
           echo "exit=$?" | tee /tmp/exit
           grep -q "exit=0" /tmp/exit
+      - name: Normaler erster Start (frischer Benutzer, mit Einzel-Instanz-Sperre)
+        run: |
+          H=$(mktemp -d)
+          xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 40 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox &
+            pid=$!
+            sleep 10
+            if kill -0 $pid 2>/dev/null; then echo "läuft nach 10 s"; else echo "FEHLER: beendet sich sofort"; exit 1; fi
+            n=$(for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null; done | grep -c creative-browser)
+            echo "Fenster: $n"
+            # zweiter Start: übergibt an das erste Fenster und beendet sich
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 20 /tmp/el/node_modules/electron/dist/electron webbrowser/app --no-sandbox https://example.org
+            kill $pid
+            [ "$n" -ge 1 ] || { echo "FEHLER: kein Fenster"; exit 1; }
+          '
       - name: Fotos zusammensetzen
         if: always()
         run: |
