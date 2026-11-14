@@ -20,12 +20,12 @@ view.engine().addImportPath(str(ROOT / "shell/creative_shell/qml"))
 keep = []
 
 
-def ctx(name, **values):
-    m = QQmlPropertyMap(view)
+def ctx(ctxname, **values):
+    m = QQmlPropertyMap()
     for k, v in values.items():
         m.insert(k, v)
     keep.append(m)
-    view.rootContext().setContextProperty(name, m)
+    view.rootContext().setContextProperty(ctxname, m)
 
 
 ctx("audioOutput", available=True, muted=False, value=40)
