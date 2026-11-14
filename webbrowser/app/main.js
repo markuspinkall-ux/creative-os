@@ -18,6 +18,9 @@ const SELFTEST = arg('creative-selftest');
 
 // ---- Chromium-Schalter (vor „ready“) ----------------------------------------------------------
 app.setPath('userData', path.join(app.getPath('appData'), 'creative-browser'));
+// Den Ordner sofort anlegen: Die Sperre gegen einen zweiten Start liegt darin – fehlt er beim
+// allerersten Start, schlägt sie fehl und der Browser würde sich still beenden.
+try { fs.mkdirSync(app.getPath('userData'), { recursive: true }); } catch (_) { /* meldet die Sperre unten */ }
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 app.commandLine.appendSwitch('enable-wayland-ime');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -32,6 +35,9 @@ if (SELFTEST) app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-r
 protocol.registerSchemesAsPrivileged([
   { scheme: 'creative', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
+
+process.on('uncaughtException', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
+process.on('unhandledRejection', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
 
 let store;
 const windows = new Set();
@@ -655,6 +661,7 @@ ipcMain.handle('suggest', (_e, text) => store.suggest(text));
 // ---- Start ----------------------------------------------------------------------------------------
 const single = SELFTEST ? true : app.requestSingleInstanceLock();
 if (!single) {
+  console.log('Creative Browser läuft schon – der Auftrag geht an das offene Fenster.');
   app.quit();
 } else {
   app.on('second-instance', (_e, argv) => {
