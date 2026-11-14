@@ -44,7 +44,12 @@ jobs:
 
       - name: Container bauen (kompiliert die CUDA-Erweiterungen, ohne Grafikkarte)
         run: |
+          # Schichten vom letzten Container übernehmen: Ändert sich nur wenig, lädt Creative 3D
+          # beim erneuten Einrichten auch nur die geänderten Schichten.
+          docker pull "${{ steps.names.outputs.image }}:latest" || true
           docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from "${{ steps.names.outputs.image }}:latest" \
             --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
             --label org.opencontainers.image.description="TRELLIS.2 (Microsoft, MIT) für Creative 3D" \
             --label org.opencontainers.image.licenses=MIT \

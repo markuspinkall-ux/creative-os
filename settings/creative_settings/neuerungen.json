@@ -5,7 +5,8 @@
     "neu": [],
     "verbessert": [],
     "behoben": [
-      "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske"
+      "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",
+      "Creative 3D: Das Einrichten von TRELLIS.2 brach kurz vor Schluss ab („einops fehlt“) – der Baustein für die Hintergrund-Entfernung ist jetzt im Container. Einfach erneut einrichten, die schon geladenen Modelle bleiben erhalten"
     ]
   },
   {
