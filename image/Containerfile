@@ -318,7 +318,7 @@ COPY gamelauncher/creative-gamelauncher.svg /usr/share/icons/hicolor/scalable/ap
 RUN chmod 755 /usr/bin/creative-gamelauncher
 
 # Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
-RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow wl-clipboard pipewire-utils && dnf clean all \
+RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
  && (python3 -c "import StreamDeck" 2>/dev/null \
      || python3 -m pip install --no-cache-dir --no-deps --target /usr/lib/creative-deck/vendor "streamdeck==0.9.8") \
  && PYTHONPATH=/usr/lib/creative-deck/vendor python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Creative Deck: Stream-Deck-Bibliothek ok')" \
