@@ -66,7 +66,12 @@ def _install():
         QTest.qWait(300)
         QTest.keyClick(win, Qt.Key.Key_F2)
         QTest.qWait(300)
-        QTest.keyClicks(win, name)
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
+        for ch in name:                      # QTest.keyClicks gibt es nur für Widgets
+            key = Qt.Key.Key_Space if ch == " " else Qt.Key(ord(ch.upper()))
+            for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+                QtGui.QGuiApplication.sendEvent(win, QKeyEvent(kind, key, Qt.KeyboardModifier.NoModifier, ch))
         if len(parts) > 3:
             QTest.qWait(200)
             QTest.keyClick(win, Qt.Key.Key_Return)
