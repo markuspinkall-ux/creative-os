@@ -134,6 +134,7 @@ def build(project_folder, project_data, target):
         shutil.copy2(script, target / script.name)
     game = json.loads(json.dumps(project_data))
     game.pop("characters", None)          # Editor-Daten (Skelett, Regler) braucht das Spiel nicht
+    game["controls"] = proj.controls_for(project_data)   # fertige Belegung: Tastatur, Maus, Controller
     (target / "game.json").write_text(json.dumps(game, ensure_ascii=False), encoding="utf-8")
     used = proj.assets_used(project_data)
     if used:
