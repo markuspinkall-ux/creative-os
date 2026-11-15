@@ -390,6 +390,8 @@ function createWindow({ hidden }) {
   });
   win.on('closed', () => { win = null; });
   win.once('ready-to-show', () => { if (!hidden) showWindow(); });
+  // Lädt WhatsApp Web langsam (schwaches Netz), das Fenster trotzdem nach kurzer Zeit zeigen
+  if (!hidden) setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible()) showWindow(); }, 3000);
   wc.setUserAgent(userAgent());
   wc.loadURL(WA_URL, { userAgent: userAgent() });
   return win;

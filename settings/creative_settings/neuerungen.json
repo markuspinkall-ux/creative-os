@@ -19,7 +19,9 @@
       "Discord hat jetzt auch im Startmenü sein neues Symbol"
     ],
     "behoben": [
-      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
+      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",
+      "Taskleiste: WhatsApp und Claude haben jetzt einen eigenen Eintrag und werden nicht mehr mit den Browserfenstern unter einem Symbol gestapelt",
+      "WhatsApp: Bei langsamem Internet erscheint das Fenster trotzdem sofort (statt erst nach dem Laden)"
     ]
   },
   {
