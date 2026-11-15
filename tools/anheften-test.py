@@ -83,4 +83,14 @@ item = next(i for i in t.taskbarItems("") if i["key"] == "creative-claude")
 assert item["badge"] == 0, item
 assert all(i["badge"] == 0 for i in t.taskbarItems("")), "Zähler bei anderen Apps"
 print("Zähler an der Taskleiste: in Ordnung")
+
+# Startmenü: ausblenden und in der Systemsteuerung wieder einblenden
+m2.hideFromStartMenu("creative-player.desktop")
+assert [r["desktopId"] for r in m2.hidden_apps()] == ["creative-player.desktop"], m2.hidden_apps()
+assert m2.hidden_apps()[0]["name"] == "Creative Player"
+shown = m2._shown + [x for e in m2._shown for x in (e.members or [])]
+assert all(e.desktop_id != "creative-player.desktop" for e in shown), "noch im Startmenü"
+m2.showInStartMenu("creative-player.desktop")
+assert m2.hidden_apps() == [], m2.hidden_apps()
+print("Ausgeblendete Apps wieder anzeigen: in Ordnung")
 print("Taskleiste anheften/lösen: alles in Ordnung")

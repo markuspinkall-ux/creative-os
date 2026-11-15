@@ -54,8 +54,6 @@ DEFAULTS = {
             "icon": "browser",
             "candidates": [
                 "creative-browser.desktop",
-                "brave-browser.desktop",
-                "com.brave.Browser.desktop",
                 "firefox.desktop",
                 "org.mozilla.firefox.desktop",
             ],

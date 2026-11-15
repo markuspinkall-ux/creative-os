@@ -99,7 +99,7 @@ install -Dm755 apps/creative-look-apply /usr/libexec/creative-look-apply
 
 # Creative-Symbole für die mitgelieferten Apps
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
-for pair in settings:settings browser:browser games:games chat:chat store:store terminal:terminal \
+for pair in settings:settings browser:browser games:games chat:chat discord:discord whatsapp:whatsapp store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
             taskmanager:taskmanager files:files player:media-app drive:drive notes:notes shots:shots pictures:pictures archive:archive broadcast:broadcast iso:disc capture:capture; do
     name="${pair%%:*}"; file="${pair#*:}"

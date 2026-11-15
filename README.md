@@ -12,7 +12,7 @@ Spiele laufen ab Werk (Steam + Proton fest eingebaut).
 | Systemsteuerung (Netzwerk, Bildschirme, Ton, Drucker, Mein Server, Darstellung, Updates, System) | `settings/` |
 | Mein Server (Webseite im Heimnetz) | `server/` |
 | Creative Mail (Gmail im Graphit-Stil) | [`mail/`](mail/) |
-| Brave-Startseite und -Einstellungen | `browser/` |
+| Startseite des Creative Browsers | `browser/` |
 | Willkommens-Assistent | `welcome/` |
 | Aussehen aller Apps (Farben, Fensterrahmen, Symbole, aufgeräumtes Startmenü) | `theme/` |
 | System-Abbild und Installations-ISO | `image/`, `.github/workflows/build.yml` |

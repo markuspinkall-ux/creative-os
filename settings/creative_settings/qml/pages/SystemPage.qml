@@ -223,7 +223,7 @@ SettingsPage {
                 { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
                 { app: "YouTube Music im Creative Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
                 { app: "Mein Server", base: "Caddy und PHP" },
-                { app: "Browser, Spiele, Chat", base: "Brave, Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
+                { app: "Browser, Spiele, Chat", base: "Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
             ]
             delegate: SettingRow {
                 required property var modelData

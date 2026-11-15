@@ -696,6 +696,42 @@ class LookModel(QObject):
         shell_config.set_value("desktopStats", self._stats_on)
         self.changed.emit()
 
+    # ---- Startmenü: ausgeblendete Apps wieder anzeigen (über die laufende Shell) ----
+    hiddenAppsChanged = Signal()
+
+    def _get_hidden_apps(self):
+        return getattr(self, "_hidden_apps", [])
+
+    hiddenApps = Property("QVariantList", _get_hidden_apps, notify=hiddenAppsChanged)
+
+    @Slot()
+    def refreshHiddenApps(self):
+        rows = []
+        try:
+            from PySide6.QtDBus import QDBusMessage
+            bus = self._bus()
+            reply = bus.call("hiddenStartApps") if bus.isValid() else None
+            if reply is not None and reply.type() != QDBusMessage.MessageType.ErrorMessage and reply.arguments():
+                rows = json.loads(reply.arguments()[0])
+            else:
+                # Shell läuft nicht: Namen aus den Einstellungen (ohne Prüfung, ob es die App noch gibt)
+                rows = [{"desktopId": d, "name": d.removesuffix(".desktop"), "icon": ""}
+                        for d in shell_config.load().get("hiddenStartApps", []) if isinstance(d, str)]
+        except (ValueError, TypeError, ImportError):
+            rows = []
+        self._hidden_apps = rows
+        self.hiddenAppsChanged.emit()
+
+    @Slot(str)
+    def showInStartMenu(self, desktop_id):
+        from PySide6.QtDBus import QDBusMessage
+        bus = self._bus()
+        reply = bus.call("showInStartMenu", desktop_id) if bus.isValid() else None
+        if reply is None or reply.type() == QDBusMessage.MessageType.ErrorMessage:
+            hidden = [h for h in shell_config.load().get("hiddenStartApps", []) if h != desktop_id]
+            shell_config.set_value("hiddenStartApps", hidden)
+        self.refreshHiddenApps()
+
     # ---- Widgets (wie in Creative Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
     GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
     WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "notes", "twitch", "ki", "viz")

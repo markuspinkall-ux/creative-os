@@ -8,7 +8,7 @@ Creative OS ist ein **Fedora-Atomic**-System:
 - **Updates nur als Ganzes:** Ein Update klappt komplett oder gar nicht.
   Es wird im Hintergrund geladen und beim nächsten Neustart aktiv.
 - **Immer ein Rückweg:** Im Bootmenü steht der vorherige Stand bereit.
-- **Fest eingebaut** und nicht entfernbar: Steam (mit Proton), Brave,
+- **Fest eingebaut** und nicht entfernbar: Steam (mit Proton), Creative Browser,
   alle Codecs, GameMode, die Creative Shell – und bei der NVIDIA-Variante
   der NVIDIA-Treiber.
 
@@ -31,4 +31,4 @@ Platz. Ergebnis: `output/bootiso/install.iso`.
 - **Secure Boot mit NVIDIA:** Der Treiber muss signiert werden, sonst bei
   aktivem Secure Boot im BIOS Secure Boot ausschalten.
 - **Steam Play für alle Spiele** ab Werk voreinstellen.
-- Der NVIDIA-Teil und der Brave-Einbau sind noch nicht getestet.
+- Der NVIDIA-Teil ist noch nicht getestet.

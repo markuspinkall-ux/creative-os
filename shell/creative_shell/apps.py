@@ -281,6 +281,23 @@ class AppModel(QAbstractListModel):
                 config.set_value("hiddenStartApps", [*hidden, desktop_id])
                 self._apply_filter()
 
+    def hidden_apps(self):
+        """Ausgeblendete Apps (nur solche, die es noch gibt) – für Systemsteuerung › Darstellung."""
+        rows = []
+        for desktop_id in config.load()["hiddenStartApps"]:
+            entry = self._by_id.get(desktop_id) if isinstance(desktop_id, str) else None
+            if entry:
+                rows.append({"desktopId": desktop_id, "name": entry.name, "icon": entry.icon})
+        rows.sort(key=lambda r: _plain(r["name"]))
+        return rows
+
+    @Slot(str)
+    def showInStartMenu(self, desktop_id):
+        hidden = config.load()["hiddenStartApps"]
+        if desktop_id in hidden:
+            config.set_value("hiddenStartApps", [h for h in hidden if h != desktop_id])
+            self._apply_filter()
+
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._shown)
 
