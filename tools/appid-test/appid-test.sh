@@ -20,7 +20,7 @@ mkdir -p -m 700 "$XDG_RUNTIME_DIR"; mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME/
 cp -r tools/appid-test/fensterliste "$XDG_DATA_HOME/kwin/scripts/"
 printf '[Plugins]\nfensterlisteEnabled=true\n' > "$XDG_CONFIG_HOME/kwinrc"
 dbus-run-session -- sh -c '
-  /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-6 >/tmp/kwin.log 2>&1 &
+  QT_LOGGING_RULES="kwin_scripting.debug=true;js.debug=true;qml.debug=true" /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-6 >/tmp/kwin.log 2>&1 &
   sleep 5
   export WAYLAND_DISPLAY=wayland-6
   E="/tmp/pkg/electron --no-sandbox --ozone-platform=wayland --disable-gpu"
@@ -32,6 +32,7 @@ dbus-run-session -- sh -c '
   sleep 10
 ' || true
 echo "--- KWin sieht:"; grep "FENSTER" /tmp/kwin.log | sort -u || true
+grep -q FENSTER /tmp/kwin.log || { echo "--- kwin.log"; tail -30 /tmp/kwin.log; echo "--- browser"; tail -15 /tmp/b.log; }
 grep -q "FENSTER app=creative-browser" /tmp/kwin.log || { echo "FEHLER: Browserfenster fehlt"; tail -20 /tmp/b.log; exit 1; }
 grep -q "FENSTER app=creative-whatsapp" /tmp/kwin.log || { echo "FEHLER: WhatsApp hat keine eigene Kennung"; tail -20 /tmp/w.log; exit 1; }
 grep -q "FENSTER app=creative-claude" /tmp/kwin.log || { echo "FEHLER: Web-App Claude hat keine eigene Kennung"; tail -20 /tmp/c.log; exit 1; }
