@@ -537,6 +537,7 @@ func make_level(s: Dictionary) -> Node:
 	lvl.finished.connect(_level_done)
 	lvl.game_over.connect(show_game_over)
 	lvl.to_menu.connect(goto_menu)
+	lvl.restart.connect(func(): call_deferred("show_step", step))
 	return lvl
 
 

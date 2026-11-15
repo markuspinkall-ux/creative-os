@@ -43,7 +43,7 @@ def new_object(brush, x, z, count):
         return {"kind": "enemy", "type": sub, "x": x, "y": 0, "z": z, "dir": 180}
     if kind == "planet":
         a, b, atmo = PLANET_PRESETS[count % len(PLANET_PRESETS)]
-        return {"kind": "planet", "name": f"Planet {count + 1}", "x": x, "y": 0, "z": z, "radius": 140, "color": a,
+        return {"kind": "planet", "name": f"Planet {count + 1}", "x": x, "y": 0, "z": z, "radius": 1000, "color": a,
                 "color2": b, "atmosphere": atmo, "ground": a, "landable": True, "ring": False, "bands": 0.0}
     if kind == "base":
         return {"kind": "base", "name": f"Station {count + 1}", "x": x, "y": 0, "z": z, "dir": 0, "repair": 25}
@@ -94,7 +94,15 @@ class SectorView(QWidget):
         self.history.clear()
         self.future.clear()
         self.offset = QPointF(0, 0)
+        self.fit()
         self.update()
+
+    def fit(self):
+        """Zoom so wählen, dass die ganze Karte ins Bild passt (große Planeten, große Karten)."""
+        if not self.level:
+            return
+        size = float(self.level.get("size", 1000))
+        self.scale = max(0.008, min(4.0, min(self.width(), self.height()) * 0.9 / (2 * size)))
 
     # Umrechnung
     def to_screen(self, x, z):
@@ -223,7 +231,7 @@ class SectorView(QWidget):
     def wheelEvent(self, event):
         before = self.to_world(event.position())
         factor = 1.18 if event.angleDelta().y() > 0 else 1 / 1.18
-        self.scale = max(0.04, min(4.0, self.scale * factor))
+        self.scale = max(0.008, min(4.0, self.scale * factor))
         after = self.to_world(event.position())
         self.offset += QPointF(before[0] - after[0], before[1] - after[1])
         self.update()
@@ -257,7 +265,7 @@ class SectorView(QWidget):
         if not self.level:
             return
         # Raster alle 100 m, Achsen
-        step = 100 if self.scale > 0.15 else 500
+        step = 100 if self.scale > 0.15 else (500 if self.scale > 0.04 else 2000)
         x0, z0 = self.to_world(QPointF(0, 0))
         x1, z1 = self.to_world(QPointF(self.width(), self.height()))
         p.setPen(QPen(QColor(255, 255, 255, 18), 1))
@@ -577,7 +585,7 @@ class SpaceEditor(QWidget):
                 names = [e.get("name", "") for e in lvl["entities"] if e["kind"] == kind
                          and (kind != "planet" or e.get("landable", True))]
                 form.addRow("Ziel-Ort", self.combo(lvl, "goalTarget", [("", "egal welcher")] + [(n, n) for n in names], ""))
-            form.addRow("Kartengröße", self.number(lvl, "size", 300, 5000, 100, 1000, " m"))
+            form.addRow("Kartengröße", self.number(lvl, "size", 300, 30000, 100, 6000, " m"))
             from .audio_widgets import level_music
             form.addRow("Musik", level_music(self.host, lvl, self.changed.emit))
             self.pv.addLayout(form)
@@ -655,7 +663,7 @@ class SpaceEditor(QWidget):
             model.clicked.connect(lambda: self.host.choose_model_for(sel, model, "Eingebautes Schiff"))
             form.addRow("3D-Modell (GLB)", model)
         elif k == "planet":
-            form.addRow("Radius", self.number(sel, "radius", 20, 2000, 10, 140, " m"))
+            form.addRow("Radius", self.number(sel, "radius", 20, 20000, 10, 1000, " m"))
             form.addRow("Farbe 1", self.color_button(sel, "color", "#c8673a"))
             form.addRow("Farbe 2", self.color_button(sel, "color2", "#7a3a22"))
             form.addRow("Boden (gelandet)", self.color_button(sel, "ground", sel.get("color", "#c8673a")))

@@ -105,7 +105,7 @@ def sample_level(name="Level 1"):
 
 def space_level(name="Sektor 1", sample=True):
     """Weltraum-Level: Koordinaten in Metern, Karte von -1000 bis 1000 (x/z), y = Höhe."""
-    lvl = {"name": name, "kind": "weltraum", "size": 1000, "sky": "#04060c", "nebula": "#3a2d6b", "skyImage": "",
+    lvl = {"name": name, "kind": "weltraum", "size": 6000, "sky": "#04060c", "nebula": "#3a2d6b", "skyImage": "",
            "stars": 1.0, "sunColor": "#fff3e0", "goal": "gegner", "goalTarget": "",
            "horizon": {"on": True, "side": "unten", "color": "#2f5fb3", "color2": "#3f8f4f",
                        "atmosphere": "#7fc4ff", "distance": 900, "bands": 0.0},
@@ -119,9 +119,9 @@ def space_level(name="Sektor 1", sample=True):
             {"kind": "enemy", "type": "geschuetz", "x": 0, "y": 30, "z": -260},
             {"kind": "enemy", "type": "kreuzer", "x": 180, "y": 20, "z": -420, "dir": 200},
             {"kind": "base", "name": "Station Aurora", "x": -260, "y": 0, "z": 160, "dir": 0, "repair": 25},
-            {"kind": "planet", "name": "Venus", "x": 420, "y": -40, "z": -640, "radius": 160, "color": "#e0b070",
+            {"kind": "planet", "name": "Venus", "x": 1200, "y": -300, "z": -2600, "radius": 1400, "color": "#e0b070",
              "color2": "#b0703a", "atmosphere": "#ffd9a0", "ground": "#c8925a", "landable": True, "bands": 0.6},
-            {"kind": "planet", "name": "Kryos", "x": -560, "y": 80, "z": -760, "radius": 110, "color": "#bfe6ff",
+            {"kind": "planet", "name": "Kryos", "x": -3400, "y": 700, "z": -4200, "radius": 900, "color": "#bfe6ff",
              "color2": "#6f9ec4", "atmosphere": "#bfe6ff", "ground": "#d8ecf7", "landable": True, "ring": True},
             {"kind": "asteroids", "x": -200, "y": 0, "z": -380, "count": 28, "spread": 120, "size": 9},
         ]
@@ -179,13 +179,22 @@ def new_project(name, genre="jumpnrun", sample=True):
         "ship": new_ship(),
         "player": {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3, "attacks": [new_attack(0)]},
         "settings": {"width": 1280, "height": 720, "fullscreen": False, "ui": dict(UI_DEFAULT),
-                     "music": dict(MUSIC_DEFAULT)},
+                     "music": dict(MUSIC_DEFAULT), "pause": pause_default()},
     }
 
 
 ATTACK_KEYS = ["J", "K", "L", "U", "I", "O"]
 # Hintergrundmusik: Menü (auch Vorspann/Texte) und Level; ein Level kann eigene Musik haben ("aus" = Stille)
 MUSIC_DEFAULT = {"menu": "", "level": "", "volume": 0.7, "sfx": 0.8}
+
+
+def pause_default():
+    """Pausenmenü – gleiche Standardwerte wie runtime/pausemenu.gd."""
+    return {"title": "Pause", "position": "mitte", "panel": "#161a22", "accent": "#8fb3ff",
+            "text": "#e8ecf4", "shade": 0.55, "size": 24, "image": "", "width": 360,
+            "buttons": {"weiter": True, "neustart": True, "steuerung": True, "menu": True},
+            "labels": {"weiter": "Weiter", "neustart": "Level neu starten", "steuerung": "Steuerung",
+                       "menu": "Hauptmenü"}}
 AUDIO_FILTER = "Musik und Klänge (*.ogg *.mp3 *.wav)"
 # Klänge des Weltraum-Shooters, die man durch eigene Dateien ersetzen kann (eingebaut = berechnet)
 SPACE_SOUNDS = [("triebwerk", "Triebwerk (Fliegen, läuft dauernd)"), ("boost", "Boost"), ("bremse", "Bremsen"),
