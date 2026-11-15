@@ -29,6 +29,12 @@ const MEDIA_FAST = [
   /^https:\/\/[^/]+\.(akamaized|fastly|cloudfront)\.net\/.*\.(m4s|ts|mp4|webm)(\?|$)/,
 ];
 const isMediaFast = (url) => MEDIA_FAST.some((r) => r.test(url));
+// Videoportale: Dort bringt der Blocker mehr Ärger (Ladehänger, Werbeblocker-Sperren) als Nutzen.
+// Von Haus aus ausgeschaltet – Netzfilter, Ausblenden und Seiten-Skripte; im Schild wieder einschaltbar.
+const VIDEO_PORTALS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'twitch.tv'];
+const hostIn = (host, list) => !!host && list.some((h) => host === h || host.endsWith(`.${h}`));
+const isVideoPortal = (host) => hostIn(host, VIDEO_PORTALS);
+const hostOfUrl = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return ''; } };
 // Zähler und Anzeige höchstens alle 400 ms neu zeichnen (statt bei jeder geblockten Anfrage)
 const COUNT_DELAY = 400;
 
@@ -51,6 +57,8 @@ class AdBlock {
 
   allowedHosts() { return this.store.settings.adblockAllow || []; }
 
+  forcedHosts() { return this.store.settings.adblockForce || []; }   // Videoportale, auf denen trotzdem geblockt wird
+
   hostOf(id) {
     try {
       const wc = webContents.fromId(id);
@@ -64,12 +72,13 @@ class AdBlock {
   }
 
   isAllowed(id) {
-    // nur nachsehen, wenn es überhaupt Ausnahmen gibt
-    return id !== undefined && this.allowedHosts().length > 0 && this.isAllowedHost(this.hostOf(id));
+    return id !== undefined && this.isAllowedHost(this.hostOf(id));
   }
 
   isAllowedHost(host) {
-    return !!host && this.allowedHosts().some((h) => host === h || host.endsWith(`.${h}`));
+    if (!host) return false;
+    if (isVideoPortal(host)) return !hostIn(host, this.forcedHosts());
+    return hostIn(host, this.allowedHosts());
   }
 
   async init() {
@@ -120,6 +129,16 @@ class AdBlock {
         originalHeaders.call(this.blocker, details, callback);
       };
     }
+    // Ausblenden und Seiten-Skripte (u. a. gegen Videowerbung) auf erlaubten Seiten und Videoportalen weglassen –
+    // geprüft wird der Rahmen selbst (eingebettete YouTube-Videos) und die Seite drumherum.
+    const originalCosmetics = this.blocker.onInjectCosmeticFilters;
+    if (originalCosmetics) {
+      this.blocker.onInjectCosmeticFilters = async (event, url, msg) => {
+        const page = event && event.sender ? hostOfUrl(event.sender.getURL()) : '';
+        if (this.isAllowedHost(hostOfUrl(url)) || this.isAllowedHost(page)) return;
+        return originalCosmetics.call(this.blocker, event, url, msg);
+      };
+    }
     for (const ses of this.sessions) this.apply(ses);
     this.onChange();
     return true;
@@ -148,6 +167,16 @@ class AdBlock {
 
   setAllowed(host, allowed) {
     if (!host) return;
+    if (isVideoPortal(host)) {
+      // Videoportal: „blockieren“ heißt hier, es in die Zwangsliste aufzunehmen
+      const base = VIDEO_PORTALS.find((h) => host === h || host.endsWith(`.${h}`));
+      const force = this.forcedHosts().filter((h) => h !== base);
+      if (!allowed) force.push(base);
+      this.store.settings.adblockForce = force;
+      this.store.save();
+      this.onChange();
+      return;
+    }
     const list = this.allowedHosts().filter((h) => h !== host);
     if (allowed) list.push(host);
     this.store.settings.adblockAllow = list;
@@ -168,9 +197,10 @@ class AdBlock {
       enabled: this.enabled,
       host,
       siteAllowed: this.isAllowedHost(host),
+      videoPortal: isVideoPortal(host),
       blocked: wc ? this.count(wc.id) : 0,
     };
   }
 }
 
-module.exports = { AdBlock, isMediaFast };
+module.exports = { AdBlock, isMediaFast, isVideoPortal };

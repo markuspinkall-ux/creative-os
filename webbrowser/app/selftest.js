@@ -202,6 +202,22 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       result.adblockErlaubt = res2;
       check('Seite erlauben lässt Werbung durch', res2.loaded === 1 && !res2.blocked);
       win.command('adblock-site', false);
+      // Videoportale (YouTube, Twitch): Blocker von Haus aus aus, im Schild wieder einschaltbar
+      const { isVideoPortal } = require('./adblock');
+      check('Videoportale erkannt', isVideoPortal('youtube.com') && isVideoPortal('m.youtube.com') && isVideoPortal('youtu.be')
+        && isVideoPortal('twitch.tv') && isVideoPortal('player.twitch.tv') && !isVideoPortal('example.org') && !isVideoPortal('notyoutube.com'));
+      check('Blocker auf YouTube und Twitch aus', adblock.isAllowedHost('www.youtube.com'.replace(/^www\./, '')) && adblock.isAllowedHost('twitch.tv'));
+      check('Allgemeine Seiten weiter geblockt', !adblock.isAllowedHost('example.org') && !adblock.isAllowedHost(host));
+      adblock.setAllowed('youtube.com', false);         // im Schild auf YouTube wieder einschalten
+      check('Auf YouTube wieder einschaltbar', !adblock.isAllowedHost('youtube.com') && adblock.isAllowedHost('twitch.tv'));
+      adblock.setAllowed('youtube.com', true);
+      check('und wieder aus', adblock.isAllowedHost('youtube.com'));
+      // Ausblenden/Seiten-Skripte werden auf Videoportalen nicht eingespielt
+      let injected = 0;
+      const fakeEvent = (u) => ({ sender: { getURL: () => u, insertCSS: () => { injected += 1; }, executeJavaScript: () => { injected += 1; } }, frameId: 1, processId: 1 });
+      await adblock.blocker.onInjectCosmeticFilters(fakeEvent('https://www.youtube.com/watch?v=x'), 'https://www.youtube.com/watch?v=x');
+      await adblock.blocker.onInjectCosmeticFilters(fakeEvent('https://example.org/'), 'https://www.youtube-nocookie.com/embed/x');
+      check('Keine Seiten-Skripte auf YouTube (auch eingebettet)', injected === 0);
       server.close();
       win.closeTab(t);
 
