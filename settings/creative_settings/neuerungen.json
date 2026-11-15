@@ -34,7 +34,8 @@
       "Systemsteuerung › Darstellung › Startmenü: Die Liste der ausgeblendeten Apps zeigt erst nur den ersten Eintrag und klappt beim Drüberfahren auf – dann bleibt sie offen",
       "Browser: YouTube und andere Videos starten schneller – der Werbeblocker lässt die Videodaten selbst (hunderte Anfragen pro Video) ohne Prüfung durch und zeichnet seinen Zähler nur noch gesammelt neu statt bei jeder geblockten Anfrage",
       "Bluetooth-Controller (Xbox, PlayStation) bleiben stabiler verbunden: Der Bluetooth-Adapter wird nicht mehr schlafen gelegt, Controller verbinden sich nach kurzen Aussetzern schnell von selbst wieder, und Bluetooth-LE-Controller wie der Xbox-Series-Controller bekommen kurze, feste Funkabstände",
-      "Widget-Katalog: Die analoge Uhr lässt sich wie die Notizen wieder entfernen („Entfernen“ statt „Installiert“) und jederzeit neu herunterladen – die Position bleibt erhalten"
+      "Widget-Katalog: Die analoge Uhr lässt sich wie die Notizen wieder entfernen („Entfernen“ statt „Installiert“) und jederzeit neu herunterladen – die Position bleibt erhalten",
+      "Browser: Der Werbeblocker ist auf Videoportalen (YouTube, Twitch) von Haus aus aus – dort sorgte er für Ladehänger, ohne die Videowerbung zuverlässig zu stoppen. Gegen allgemeine Werbung und Tracker auf allen anderen Seiten blockt er weiter; im Schild lässt er sich pro Portal wieder einschalten"
     ],
     "behoben": [
       "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",

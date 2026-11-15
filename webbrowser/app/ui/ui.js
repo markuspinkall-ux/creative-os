@@ -231,7 +231,8 @@ function renderShieldPanel() {
   box.innerHTML = `<h3>${icon('shield', 18)} Werbeblocker</h3>
     ${!ab.available ? `<p>${esc(ab.loading ? 'Die Filterliste wird gerade geladen …' : (ab.error || 'Nicht verfügbar'))}</p>` : `
     <div class="big">${on ? ab.blocked : '–'}</div>
-    <p>${on ? 'Werbungen und Tracker auf dieser Seite blockiert' : (ab.enabled ? `Auf ${esc(ab.host)} ausgeschaltet` : 'Werbeblocker ist überall aus')}</p>`}
+    <p>${on ? 'Werbungen und Tracker auf dieser Seite blockiert' : (ab.enabled ? `Auf ${esc(ab.host)} ausgeschaltet` : 'Werbeblocker ist überall aus')}</p>
+    ${ab.videoPortal && ab.enabled ? `<p class="hint">Auf Videoportalen wie YouTube und Twitch ist der Werbeblocker von Haus aus aus – Videos laden so schneller und zuverlässiger.</p>` : ''}`}
     <div class="switchrow"><span>Auf <b>${esc(ab.host || 'dieser Seite')}</b> blockieren</span>
       <button class="switch${!ab.siteAllowed ? ' on' : ''}" id="sw-site" aria-label="Auf dieser Seite blockieren" ${ab.enabled ? '' : 'disabled'}></button></div>
     <div class="switchrow"><span>Werbeblocker überall</span>

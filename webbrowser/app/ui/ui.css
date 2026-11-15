@@ -175,6 +175,7 @@ body.private #private-badge { display: block; }
 #shield-panel h3 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 #shield-panel .big { font-size: 30px; font-weight: 700; color: var(--accent); margin: 10px 0 2px; }
 #shield-panel p { margin: 0 0 12px; color: var(--muted); line-height: 1.4; }
+#shield-panel p.hint { font-size: 12px; margin-top: -4px; }
 .switchrow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 4px; border-top: 1px solid var(--line); }
 .switchrow span { flex: 1; }
 .switch { width: 40px; height: 22px; border-radius: 11px; border: 0; background: var(--track, rgba(127,127,127,.35)); position: relative; padding: 0; flex: none; }
