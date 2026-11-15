@@ -1,0 +1,14 @@
+[Unit]
+Description=Creative OS – Lautsprecher-Korrekturen für bekannte Laptops
+DefaultDependencies=no
+# vor dem Laden der Treiber durch udev, damit die Einstellung schon beim ersten Start wirkt
+Before=systemd-udev-trigger.service systemd-modules-load.service
+After=local-fs.target
+ConditionPathExists=/sys/class/dmi/id/sys_vendor
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/creative-ton-fix --boot
+
+[Install]
+WantedBy=sysinit.target

@@ -420,6 +420,10 @@ RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
 RUN dnf install -y bluez bluedevil && systemctl enable bluetooth.service && dnf clean all
 # Bluetooth für Controller stabil: Adapter nie schlafen legen, schnell wieder verbinden,
 # kurze Abstände für Bluetooth-LE-Controller (Xbox). Siehe image/bluetooth/.
+# Lautsprecher-Korrekturen für Laptops, die der Kernel noch nicht kennt (z. B. Galaxy Book2 Pro 955XED)
+COPY image/geraete/creative-ton-fix /usr/bin/creative-ton-fix
+COPY image/geraete/creative-ton-fix.service /usr/lib/systemd/system/creative-ton-fix.service
+RUN chmod 755 /usr/bin/creative-ton-fix && systemctl enable creative-ton-fix.service
 COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-bluetooth.conf
 COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
 COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py

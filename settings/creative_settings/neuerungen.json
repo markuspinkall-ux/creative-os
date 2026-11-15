@@ -41,7 +41,8 @@
       "Taskleiste: WhatsApp und Claude haben jetzt einen eigenen Eintrag und werden nicht mehr mit den Browserfenstern unter einem Symbol gestapelt",
       "WhatsApp: Bei langsamem Internet erscheint das Fenster trotzdem sofort (statt erst nach dem Laden)",
       "Notiz-Widget lässt sich jetzt auf einen anderen Monitor schieben – über die Widgets-App und per Rechtsklick (die Shell hatte die Monitorwahl für die Notizen bisher abgelehnt)",
-      "Taskleiste: Angeheftete Apps lassen sich per Rechtsklick wieder lösen – das Menü bot bisher immer nur „An die Taskleiste anheften“ an, weil es nicht wusste, dass die App schon angeheftet ist"
+      "Taskleiste: Angeheftete Apps lassen sich per Rechtsklick wieder lösen – das Menü bot bisher immer nur „An die Taskleiste anheften“ an, weil es nicht wusste, dass die App schon angeheftet ist",
+      "Samsung Galaxy Book2 Pro (955XED, Alder Lake): Die eingebauten Lautsprecher bleiben nicht mehr stumm – Creative OS erkennt das Gerät und schaltet die Lautsprecher-Verstärker ein, die der Linux-Kernel bei diesem Modell noch nicht kennt (wirkt nach dem Update-Neustart; „creative-ton-fix“ zeigt den Stand)"
     ]
   },
   {

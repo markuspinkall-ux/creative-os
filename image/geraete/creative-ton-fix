@@ -1,0 +1,123 @@
+#!/usr/bin/python3
+"""Creative OS: Lautsprecher-Korrekturen für Laptops, die der Kernel noch nicht kennt.
+
+Läuft beim Start vor dem Laden der Soundtreiber (creative-ton-fix.service) und schreibt nur auf
+passenden Geräten /etc/modprobe.d/creative-ton-fix.conf – andere PCs bleiben unberührt.
+
+    creative-ton-fix                 Status anzeigen
+    sudo creative-ton-fix auto       automatisch (Standard)
+    sudo creative-ton-fix 2|4        Verstärker-Variante erzwingen (2 oder 4 Lautsprecher-Verstärker)
+    sudo creative-ton-fix aus        Korrektur abschalten
+Änderungen wirken nach einem Neustart.
+"""
+import os
+import sys
+from pathlib import Path
+
+SYS = Path(os.environ.get("CREATIVE_SYSFS", "/sys"))
+ETC = Path(os.environ.get("CREATIVE_ETC", "/etc"))
+CONF = ETC / "modprobe.d" / "creative-ton-fix.conf"
+CHOICE = ETC / "creative-os" / "ton-fix"
+MODELS = {"2": "alc298-samsung-amp-v2-2-amps", "4": "alc298-samsung-amp-v2-4-amps"}
+
+# Samsung Galaxy Book (Realtek ALC298 mit Lautsprecher-Verstärkern), noch ohne Eintrag im Kernel.
+# Schlüssel: PCI-Subsystem des Audio-Controllers (= Codec-SSID) oder DMI-Produktname.
+KNOWN = {
+    ("144d", "c1c5"): "2",          # Galaxy Book2 Pro 15" (955XED), Alder Lake – wie NP950XED
+}
+KNOWN_PRODUCTS = {"955XED": "2"}
+
+
+def read(p):
+    try:
+        return p.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return ""
+
+
+def audio_subsystems():
+    """Subsystem-IDs aller Audio-Controller (PCI-Klasse 0x0403xx / 0x0401xx)."""
+    found = []
+    for dev in sorted((SYS / "bus" / "pci" / "devices").glob("*")):
+        cls = read(dev / "class")
+        if cls.startswith("0x0403") or cls.startswith("0x0401"):
+            found.append((read(dev / "subsystem_vendor").replace("0x", "").lower(),
+                          read(dev / "subsystem_device").replace("0x", "").lower()))
+    return found
+
+
+def detect():
+    """Passende Verstärker-Variante für dieses Gerät oder None."""
+    vendor = read(SYS / "class" / "dmi" / "id" / "sys_vendor").upper()
+    product = read(SYS / "class" / "dmi" / "id" / "product_name")
+    if "SAMSUNG" not in vendor:
+        return None, product
+    for sub in audio_subsystems():
+        if sub in KNOWN:
+            return KNOWN[sub], product
+    for name, amps in KNOWN_PRODUCTS.items():
+        if name in product:
+            return amps, product
+    return None, product
+
+
+def wanted():
+    choice = read(CHOICE) or "auto"
+    if choice == "aus":
+        return None, "abgeschaltet"
+    if choice in MODELS:
+        return choice, "von Hand gewählt"
+    amps, product = detect()
+    return amps, (f"erkannt: {product}" if amps else "nicht nötig")
+
+
+def config_text(amps):
+    model = MODELS[amps]
+    return ("# Creative OS: Lautsprecher-Korrektur (creative-ton-fix) – nicht von Hand ändern\n"
+            f"# Für ältere und neuere Kernel (Modulname geändert); unbekannte Einträge werden ignoriert\n"
+            f"options snd-sof-intel-hda-common hda_model={model}\n"
+            f"options snd-sof-intel-hda-generic hda_model={model}\n"
+            f"options snd-hda-intel model={model}\n")
+
+
+def apply():
+    amps, why = wanted()
+    old = read(CONF)
+    if amps is None:
+        if CONF.exists():
+            CONF.unlink()
+            return True, why
+        return False, why
+    text = config_text(amps)
+    if old == text.strip():
+        return False, why
+    CONF.parent.mkdir(parents=True, exist_ok=True)
+    CONF.write_text(text, encoding="utf-8")
+    return True, why
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    if cmd == "--boot":
+        changed, why = apply()
+        print(f"creative-ton-fix: {'geändert' if changed else 'unverändert'} ({why})")
+        return 0
+    if cmd in ("auto", "aus", "2", "4"):
+        if os.geteuid() != 0 and "CREATIVE_ETC" not in os.environ:
+            print("Bitte mit sudo ausführen.")
+            return 1
+        CHOICE.parent.mkdir(parents=True, exist_ok=True)
+        CHOICE.write_text(cmd + "\n", encoding="utf-8")
+        changed, why = apply()
+        print(f"Lautsprecher-Korrektur: {cmd} ({why}). " + ("Bitte neu starten." if changed else "Nichts geändert."))
+        return 0
+    amps, why = wanted()
+    product = detect()[1]
+    print(f"Gerät: {product or 'unbekannt'}")
+    print(f"Korrektur: {('Samsung-Verstärker, ' + amps + ' Stück') if amps else 'keine'} ({why})")
+    print(f"Datei: {CONF if CONF.exists() else 'keine'}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
