@@ -22,10 +22,10 @@ for gap in 0 6; do
       DISPLAY=:42 /tmp/kwin_wayland --x11-display :42 --width 1600 --height 1000 \
           --no-lockscreen --no-global-shortcuts --socket wayland-5 >/tmp/kwin-$GAP.log 2>&1 &
       sleep 5
-      export WAYLAND_DISPLAY=wayland-5 QT_QPA_PLATFORM=wayland
+      export WAYLAND_DISPLAY=wayland-5 QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software
       timeout 40 python3 tools/abstand-vorschau/zeigen.py szene & sleep 3
       timeout 40 python3 tools/abstand-vorschau/zeigen.py fenster & sleep 6
-      xwd -display :42 -root -silent | convert xwd:- /src/fotos/abstand-gap$GAP.png || true
+      xwd -display :42 -root -silent | magick xwd:- /src/fotos/abstand-gap$GAP.png || true
       tail -8 /tmp/kwin-$GAP.log
       kill $(jobs -p) 2>/dev/null; true
     ' || true
