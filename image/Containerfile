@@ -418,6 +418,12 @@ COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broad
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
 # Bluetooth: BlueZ-Steuerung im Tray, KDE-Agent für sichere PIN-Kopplung.
 RUN dnf install -y bluez bluedevil && systemctl enable bluetooth.service && dnf clean all
+# Bluetooth für Controller stabil: Adapter nie schlafen legen, schnell wieder verbinden,
+# kurze Abstände für Bluetooth-LE-Controller (Xbox). Siehe image/bluetooth/.
+COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-bluetooth.conf
+COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
+COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py
+RUN python3 /tmp/bluez-anpassen.py /etc/bluetooth/main.conf && rm -f /tmp/bluez-anpassen.py
 # Benachrichtigungen (org.freedesktop.Notifications) im Creative-Look
 RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
 COPY notify/creative_notify /usr/lib/creative-notify/creative_notify

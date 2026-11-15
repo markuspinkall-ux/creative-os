@@ -24,7 +24,8 @@
       "Startmenü: Angeheftete Apps lösen sich nur noch über die Taskleiste (Rechtsklick dort) – im Startmenü steht „In der Taskleiste angeheftet“",
       "Brave ist nicht mehr im System – Webseiten, Links und PDFs öffnet der Creative Browser. Eigene Standard-Apps, die noch auf Brave zeigten, werden umgestellt",
       "Discord hat jetzt auch im Startmenü sein neues Symbol",
-      "Systemsteuerung › Darstellung › Startmenü: Die Liste der ausgeblendeten Apps zeigt erst nur den ersten Eintrag und klappt beim Drüberfahren auf – dann bleibt sie offen"
+      "Systemsteuerung › Darstellung › Startmenü: Die Liste der ausgeblendeten Apps zeigt erst nur den ersten Eintrag und klappt beim Drüberfahren auf – dann bleibt sie offen",
+      "Bluetooth-Controller (Xbox, PlayStation) bleiben stabiler verbunden: Der Bluetooth-Adapter wird nicht mehr schlafen gelegt, Controller verbinden sich nach kurzen Aussetzern schnell von selbst wieder, und Bluetooth-LE-Controller wie der Xbox-Series-Controller bekommen kurze, feste Funkabstände"
     ],
     "behoben": [
       "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",
