@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-15",
+    "titel": "Fenster mit Abstand",
+    "neu": [],
+    "verbessert": [
+      "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos"
+    ],
+    "behoben": []
+  },
+  {
     "datum": "2026-11-14",
     "titel": "Server-Modus bis zum Neustart",
     "neu": [
