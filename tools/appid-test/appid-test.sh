@@ -20,7 +20,7 @@ mkdir -p -m 700 "$XDG_RUNTIME_DIR"; mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME/
 cp -r tools/appid-test/fensterliste "$XDG_DATA_HOME/kwin/scripts/"
 printf '[Plugins]\nfensterlisteEnabled=true\n' > "$XDG_CONFIG_HOME/kwinrc"
 dbus-run-session -- sh -c '
-  QT_LOGGING_RULES="kwin_scripting.debug=true;js.debug=true;qml.debug=true" /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-6 >/tmp/kwin.log 2>&1 &
+  QT_FORCE_STDERR_LOGGING=1 QT_LOGGING_RULES="kwin_scripting.debug=true;js.debug=true;qml.debug=true" /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-6 >/tmp/kwin.log 2>&1 &
   sleep 5
   export WAYLAND_DISPLAY=wayland-6
   E="/tmp/pkg/electron --no-sandbox --ozone-platform=wayland --disable-gpu"
