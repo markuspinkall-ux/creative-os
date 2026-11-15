@@ -4,7 +4,7 @@
 # und ob der Fedora-Kernel den Parameter hda_model im SOF-Modul wirklich hat.
 set -eu
 cd "$(dirname "$0")/.."
-dnf install -y -q --setopt=install_weak_deps=False python3 kmod kernel-modules-core kernel-modules >/dev/null
+dnf install -y -q --setopt=install_weak_deps=False python3 kmod kernel-modules-core kernel-modules xz zstd >/dev/null
 
 fake() {   # fake <ordner> <hersteller> <produkt> <subsystem-device>
     r="$1"; mkdir -p "$r/sys/class/dmi/id" "$r/sys/bus/pci/devices/0000:00:1f.3" "$r/etc"
@@ -46,7 +46,13 @@ for m in snd-sof-intel-hda-common snd-sof-intel-hda-generic; do
     if modinfo -k "$kv" -p "$m" 2>/dev/null | grep -q "^hda_model:"; then echo "hda_model in $m: ja"; found=1; fi
 done
 [ -n "$found" ] || { echo "FEHLER: Parameter hda_model in keinem SOF-Modul"; exit 1; }
-modinfo -k "$kv" snd-hda-codec-alc269 2>/dev/null | head -1 || true
-strings "$(modinfo -k "$kv" -n snd-hda-codec-alc269 2>/dev/null || modinfo -k "$kv" -n snd-hda-codec-realtek)" 2>/dev/null \
-    | grep -E "^alc298-samsung-amp-v2-(2|4)-amps$" | sort -u || true
+# Den Modellnamen muss der Realtek-Treiber dieses Kernels kennen
+ko=$(modinfo -k "$kv" -n snd-hda-codec-alc269 2>/dev/null || modinfo -k "$kv" -n snd-hda-codec-realtek)
+echo "Realtek-Treiber: $ko"
+case "$ko" in *.xz) xz -dc "$ko" ;; *.zst) zstd -dc "$ko" ;; *.gz) gzip -dc "$ko" ;; *) cat "$ko" ;; esac > /tmp/realtek.ko
+for m in alc298-samsung-amp-v2-2-amps alc298-samsung-amp-v2-4-amps; do
+    grep -aq "$m" /tmp/realtek.ko || { echo "FEHLER: Modell $m fehlt im Kernel"; exit 1; }
+    echo "Modell bekannt: $m"
+done
+grep -aq "Galaxy Book2 Pro (NP950XED)" /tmp/realtek.ko && echo "NP950XED (gleiche Verstärker) im Kernel: ja"
 echo "Lautsprecher-Korrektur: ok"
