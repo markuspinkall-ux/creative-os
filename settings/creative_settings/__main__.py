@@ -1,4 +1,4 @@
-"""Startpunkt: `creative-settings [--page netzwerk|bildschirme|ton|drucker|darstellung|updates|system]`."""
+"""Startpunkt: `creative-settings [--page netzwerk|vpn|bildschirme|ton|drucker|darstellung|updates|system]`."""
 
 import argparse
 import signal
@@ -18,6 +18,7 @@ from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
 from creative_shell.network import NetworkModel  # noqa: E402
+from creative_shell.vpn import VpnModel  # noqa: E402
 from creative_shell.session import SessionModel  # noqa: E402
 
 from .displays import DisplayModel  # noqa: E402
@@ -31,6 +32,7 @@ from .system import LookModel, PrinterListModel, SystemModel  # noqa: E402
 
 PAGES = {
     "network": "network", "netzwerk": "network", "wlan": "network",
+    "vpn": "vpn", "proton": "vpn", "protonvpn": "vpn",
     "displays": "displays", "bildschirme": "displays", "display": "displays",
     "sound": "sound", "ton": "sound",
     "printers": "printers", "drucker": "printers",
@@ -67,6 +69,7 @@ def main():
 
     models = {
         "network": NetworkModel(),
+        "vpn": VpnModel(),
         "session": SessionModel(),
         "displays": DisplayModel(),
         "sound": SoundModel(),

@@ -11,7 +11,9 @@
       "Creative Browser: Werbeblocker eingebaut (uBlock-Origin- und EasyList-Filter) – blockiert Werbung und Tracker, blendet Werbeflächen aus und hilft gegen Videowerbung. Das Schild in der Adressleiste zeigt, wie viel blockiert wurde, und schaltet ihn pro Seite oder überall aus",
       "Creative Browser: Lautstärke-Verstärker bis 600 % für Videos und Musik (YouTube, Twitch, Vimeo …) – Lautsprecher-Knopf neben der Adressleiste, sobald ein Tab Ton abspielt",
       "Creative Browser: Tab aus der Leiste ziehen öffnet ihn als eigenes Fenster – auf dem Bildschirm, auf dem du ihn loslässt (auch per Rechtsklick › „In neues Fenster verschieben“)",
-      "Taskleiste: Programme selbst anheften und lösen – im Startmenü per Rechtsklick › „An die Taskleiste anheften“ bzw. „Von der Taskleiste lösen“, ebenso per Rechtsklick auf ein Programm in der Taskleiste (auch auf ein gerade geöffnetes)"
+      "Taskleiste: Programme selbst anheften und lösen – im Startmenü per Rechtsklick › „An die Taskleiste anheften“ bzw. „Von der Taskleiste lösen“, ebenso per Rechtsklick auf ein Programm in der Taskleiste (auch auf ein gerade geöffnetes)",
+      "Proton VPN: Systemsteuerung › VPN – WireGuard-Konfiguration von Proton (auch mit dem kostenlosen Konto) hinzufügen und mit einem Klick verbinden. Mehrere Länder möglich, Ein/Aus auch im Schnellzugriff. Die Verbindung gehört nur deinem Benutzerkonto, startet nie von selbst und schickt auch die DNS-Anfragen durch den Tunnel – ganz ohne Proton-App",
+      "Notizen-Widget: in Creative Widgets › Widget-Katalog installieren, dann direkt auf dem Schreibtisch hineinklicken und tippen. Alles wird automatisch gespeichert und ist nach dem Neustart wieder da – auch nach dem Entfernen und erneuten Installieren"
     ],
     "verbessert": [
       "Creative Deck nutzt den Creative Browser: Die Browser-Taste startet ihn statt Brave (bestehende Brave-Tasten werden umgestellt), und „Webseite öffnen“ öffnet die Seite im Creative Browser",
@@ -20,7 +22,8 @@
       "Creative Browser passt sich jetzt genau an Graphit und Porzellan an – dieselben Farben wie Taskleiste und Systemsteuerung, inklusive Akzentfarbe. Wechselt man das Design in der Systemsteuerung, zieht der Browser sofort mit (auch Startseite und Webseiten mit hellem/dunklem Modus)",
       "Claude und WhatsApp laufen jetzt im Creative Browser – als eigenes Fenster ohne Adressleiste, mit eigener Anmeldung und eigenem Symbol in der Taskleiste. Links daraus öffnen sich im Creative Browser. Einmal neu anmelden ist nötig",
       "Taskleiste: Der Creative Browser ersetzt Brave als Browser-Symbol",
-      "Taskleiste: YouTube und Twitch sind nicht mehr fest angeheftet (im Startmenü bleiben sie; wer mag, heftet sie per Rechtsklick wieder an)"
+      "Taskleiste: YouTube und Twitch sind nicht mehr fest angeheftet (im Startmenü bleiben sie; wer mag, heftet sie per Rechtsklick wieder an)",
+      "Startmenü: YouTube und Twitch sind keine eigenen Einträge mehr – beide laufen jetzt einfach im Creative Browser"
     ],
     "behoben": [
       "Server-Modus gilt nur bis zum Neustart: Nach dem Beenden – und nach jedem Neustart des PCs – kommt wieder die normale Anmeldung statt der Server-Maske",

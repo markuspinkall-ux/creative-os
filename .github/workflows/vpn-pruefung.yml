@@ -1,0 +1,81 @@
+name: VPN prüfen
+# Proton VPN: .conf lesen (ohne NetworkManager), dann echt mit NetworkManager anlegen,
+# verbinden und löschen, zuletzt Systemsteuerung und Schnellzugriff fotografieren.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [shell/creative_shell/vpn.py, shell/creative_shell/qml/surfaces/QuickPanel.qml, settings/creative_settings/qml/pages/VpnPage.qml, tools/vpn-test.py, tools/schnellzugriff-vorschau.py, .github/workflows/vpn-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: vpn-pruefung
+  cancel-in-progress: false
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt und D-Bus installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation python3-dbus
+          pip install -q PySide6
+      - name: Ohne NetworkManager
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 tools/vpn-test.py einheit
+      - name: Mit echtem NetworkManager (Fedora 44 im Container, eigenes Netz)
+        timeout-minutes: 12
+        run: |
+          cat > /tmp/nm-test.sh <<'SH'
+          set -e
+          dnf -y -q install NetworkManager python3-dbus python3-pyside6 iproute dbus-daemon >/dev/null
+          mkdir -p /run/dbus /etc/NetworkManager/conf.d
+          dbus-daemon --system --fork
+          printf '[main]\ndns=none\n[keyfile]\nunmanaged-devices=*,except:interface-name:proton0\n' > /etc/NetworkManager/conf.d/99-test.conf
+          NetworkManager --no-daemon >/tmp/nm.log 2>&1 &
+          sleep 4
+          nmcli --version
+          QT_QPA_PLATFORM=offscreen VPN_VOLL=1 python3 tools/vpn-test.py nm || { tail -60 /tmp/nm.log; exit 1; }
+          SH
+          docker run --rm --privileged -v "$PWD:/src" -v /tmp/nm-test.sh:/tmp/nm-test.sh -w /src registry.fedoraproject.org/fedora:44 bash /tmp/nm-test.sh
+      - name: Fotografieren
+        if: always()
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          CREATIVE_SCREENSHOT_DELAY: "2500"
+        run: |
+          mkdir -p fotos /tmp/fake
+          cat > /tmp/fake/nmcli <<'FAKE'
+          #!/bin/sh
+          case "$*" in
+            *"connection show"*) printf '%s\n' 'Zuhause:a1:802-11-wireless:yes' \
+              'Proton VPN · Niederlande (NL-FREE#12):u1:wireguard:yes' \
+              'Proton VPN · Japan (JP-FREE#7):u2:wireguard:no' 'Proton VPN · USA (US-FREE#34):u3:wireguard:no' ;;
+            monitor) sleep 600 ;;
+          esac
+          FAKE
+          sed -i 's/^          //' /tmp/fake/nmcli && chmod +x /tmp/fake/nmcli
+          H=$(mktemp -d)
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+            CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
+          printf '#!/bin/sh\n[ "$1" = monitor ] && sleep 600\nexit 0\n' > /tmp/fake/nmcli
+          H=$(mktemp -d)
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+            CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite-leer.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
+          mkdir -p "$H/.config/creative-os"; printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
+          (cd settings && PATH=/tmp/fake:$PATH PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+            CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/vpn-seite-porzellan.png" timeout 40 python3 -m creative_settings --page vpn 2>&1 | tail -8) || true
+          for s in vpn-an vpn-aus vpn-leer; do
+            timeout 30 python3 tools/schnellzugriff-vorschau.py fotos/schnellzugriff-$s.png aus $s 2>&1 | tail -5 || true
+          done
+          ls -la fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          cd fotos && git init -q -b vpn-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" vpn-fotos

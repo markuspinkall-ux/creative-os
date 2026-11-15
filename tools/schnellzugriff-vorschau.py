@@ -1,5 +1,5 @@
 """Vorschau des Schnellzugriffs (QuickPanel) mit Beispieldaten.
-   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus]"""
+   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus] [vpn-an|vpn-aus|vpn-leer]"""
 import sys
 from pathlib import Path
 
@@ -12,6 +12,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 ROOT = Path(__file__).resolve().parent.parent
 out = sys.argv[1]
 awake = len(sys.argv) > 2 and sys.argv[2] == "an"
+vpn_state = sys.argv[3] if len(sys.argv) > 3 else "vpn-aus"
 
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)
@@ -36,11 +37,17 @@ ctx("brightness", displays=[{"name": "Hauptbildschirm", "key": "1", "value": 70}
 ctx("printers", attention=False, available=False, name="", statusText="Kein Drucker eingerichtet")
 ctx("session", keepAwake=awake, keepAwakeAvailable=True)
 ctx("shell", panelFocus="")
+servers = [] if vpn_state == "vpn-leer" else [
+    {"uuid": "u1", "name": "Proton VPN · Niederlande (NL-FREE#12)", "country": "Niederlande",
+     "server": "NL-FREE#12", "active": vpn_state == "vpn-an"}]
+ctx("vpn", available=True, busy=False, message="", servers=servers, connected=vpn_state == "vpn-an",
+    activeCountry="Niederlande" if vpn_state == "vpn-an" else "", lastCountry="Niederlande" if servers else "",
+    lastUuid="u1")
 view.setResizeMode(QQuickView.SizeRootObjectToView)
 view.setSource(QUrl.fromLocalFile(str(ROOT / "shell/creative_shell/qml/surfaces/QuickPanel.qml")))
 for e in view.errors():
     print(e.toString())
-view.resize(420, 1250)
+view.resize(420, 1420)
 view.show()
 
 
