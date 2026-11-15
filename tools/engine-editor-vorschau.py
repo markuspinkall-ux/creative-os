@@ -118,6 +118,8 @@ steps = [
     ("weltraum-auswahl", space_pick, None),
     ("weltraum-einstellungen", lambda: w.show_section("settings"), None),
     ("weltraum-steuerung", lambda: None, lambda: w.settings.panels["controls"]),
+    ("weltraum-grafiken", lambda: None, lambda: w.settings.panels["ui"]),
+    ("weltraum-schiff", lambda: None, lambda: w.settings.panels["player"]),
     ("charakter", lambda: (w.open_project(str(folder)), character()), lambda: dialogs[0]),
 ]
 

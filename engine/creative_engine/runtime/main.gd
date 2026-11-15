@@ -5,6 +5,7 @@ extends Node
 const Assets = preload("res://assets.gd")
 const LevelScript = preload("res://level.gd")
 const SpaceScript = preload("res://space.gd")
+const Sound = preload("res://sound.gd")
 const BubbleScript = preload("res://bubble.gd")
 
 var game: Dictionary = {}
@@ -155,6 +156,52 @@ func clear() -> void:
 		current = null
 
 
+# ---- Hintergrundmusik -------------------------------------------------------------------------
+# settings.music: {menu, level, volume, sfx}; ein Level kann eigene Musik haben (level.music,
+# „aus“ = Stille). Gleiche Musik läuft beim Wechsel einfach weiter, neue wird übergeblendet.
+var music_player: AudioStreamPlayer
+var music_rel := ""
+var music_tween: Tween
+
+
+func music_for(s: Dictionary) -> String:
+	var m: Dictionary = game.get("settings", {}).get("music", {})
+	if String(s.get("type", "")) == "level":
+		var lvl: Dictionary = game.get("levels", {}).get(String(s.get("id", "")), {})
+		var own := String(lvl.get("music", ""))
+		if own == "aus":
+			return ""
+		return own if own != "" else String(m.get("level", m.get("menu", "")))
+	return String(m.get("menu", ""))
+
+
+func play_music(rel: String) -> void:
+	if rel == music_rel:
+		return
+	music_rel = rel
+	var vol := clampf(float(game.get("settings", {}).get("music", {}).get("volume", 0.7)), 0.0, 1.0)
+	if music_player == null:
+		music_player = AudioStreamPlayer.new()
+		music_player.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(music_player)
+	if music_tween:
+		music_tween.kill()
+	var stream: AudioStream = Sound.load_file(rel, true) if rel != "" else null
+	music_tween = create_tween()
+	if music_player.playing:
+		music_tween.tween_property(music_player, "volume_db", -40.0, 0.6)
+	music_tween.tween_callback(func():
+		music_player.stop()
+		if stream and vol > 0.0:
+			music_player.stream = stream
+			music_player.volume_db = -40.0
+			music_player.play()
+			if args.has("autotest"):
+				print("AUTOTEST: Musik ", rel))
+	if stream and vol > 0.0:
+		music_tween.tween_property(music_player, "volume_db", linear_to_db(vol), 0.8)
+
+
 func show_step(i: int) -> void:
 	clear()
 	if i < 0 or i >= flow.size():
@@ -162,6 +209,7 @@ func show_step(i: int) -> void:
 		return
 	step = i
 	var s: Dictionary = flow[i]
+	play_music(music_for(s))
 	match String(s.get("type", "")):
 		"splash":
 			current = make_splash(s)

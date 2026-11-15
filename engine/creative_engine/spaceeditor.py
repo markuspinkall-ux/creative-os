@@ -529,6 +529,32 @@ class SpaceEditor(QWidget):
         c.toggled.connect(lambda v: self.set_value(target, key, v))
         return c
 
+    def image_row(self, target, key, empty, title="Bild wählen"):
+        """Eigenes Bild (PNG/JPG/WebP) wählen oder auf Standard zurück."""
+        row = QHBoxLayout()
+        b = QPushButton(target.get(key, "").split("/")[-1] or empty)
+        b.setIcon(icons.icon("image", C["text"]))
+
+        def pick():
+            rel = self.host.import_file(title, "Bilder (*.png *.jpg *.jpeg *.webp)")
+            if rel:
+                self.set_value(target, key, rel, False)
+                b.setText(rel.split("/")[-1])
+        b.clicked.connect(pick)
+        row.addWidget(b, 1)
+        x = QToolButton()
+        x.setIcon(icons.icon("close", C["muted"]))
+        x.setToolTip("Standard verwenden")
+        x.clicked.connect(lambda: (self.set_value(target, key, "", False), b.setText(empty)))
+        row.addWidget(x)
+        return row
+
+    def model_row(self, target, empty):
+        b = QPushButton(target.get("model", "").split("/")[-1] or empty)
+        b.setIcon(icons.icon("model", C["accent"]))
+        b.clicked.connect(lambda: self.host.choose_model_for(target, b, empty))
+        return b
+
     def heading(self, text):
         t = QLabel(text)
         t.setStyleSheet("font-size:18px;font-weight:700")
@@ -552,6 +578,8 @@ class SpaceEditor(QWidget):
                          and (kind != "planet" or e.get("landable", True))]
                 form.addRow("Ziel-Ort", self.combo(lvl, "goalTarget", [("", "egal welcher")] + [(n, n) for n in names], ""))
             form.addRow("Kartengröße", self.number(lvl, "size", 300, 5000, 100, 1000, " m"))
+            from .audio_widgets import level_music
+            form.addRow("Musik", level_music(self.host, lvl, self.changed.emit))
             self.pv.addLayout(form)
             self.pv.addWidget(QLabel("HIMMEL", objectName="section"))
             form = QFormLayout()
@@ -592,6 +620,7 @@ class SpaceEditor(QWidget):
                 form.addRow("Atmosphäre", self.color_button(hz, "atmosphere", "#7fc4ff"))
                 form.addRow("Abstand", self.number(hz, "distance", 100, 5000, 50, 900, " m", 0, False))
                 form.addRow("Streifen (Gasriese)", self.number(hz, "bands", 0, 1, 0.1, 0.0, "", 1, False))
+                form.addRow("Eigene Oberfläche", self.image_row(hz, "texture", "Gezeichnet", "Planetenbild wählen"))
                 self.pv.addLayout(form)
             counts = {}
             for e in lvl["entities"]:
@@ -623,7 +652,7 @@ class SpaceEditor(QWidget):
             form.addRow("Farbe", self.color_button(sel, "color", ENEMY_COLOR.get(sel.get("type"), "#d9534f")))
             model = QPushButton(sel.get("model", "").split("/")[-1] or "Eingebautes Schiff")
             model.setIcon(icons.icon("model", C["accent"]))
-            model.clicked.connect(lambda: self.host.choose_model_for(sel, model))
+            model.clicked.connect(lambda: self.host.choose_model_for(sel, model, "Eingebautes Schiff"))
             form.addRow("3D-Modell (GLB)", model)
         elif k == "planet":
             form.addRow("Radius", self.number(sel, "radius", 20, 2000, 10, 140, " m"))
@@ -640,20 +669,31 @@ class SpaceEditor(QWidget):
             form.addRow("", self.check(sel, "ring", "Ring wie Saturn", False))
             form.addRow("Streifen (Gasriese)", self.number(sel, "bands", 0, 1, 0.1, 0.0, "", 1, False))
             form.addRow("Oberflächen-Detail", self.number(sel, "detail", 0.5, 12, 0.5, 3.0, "", 1, False))
+            form.addRow("Eigene Oberfläche", self.image_row(sel, "texture", "Gezeichnet", "Planetenbild (2:1) wählen"))
+            form.addRow("Eigenes 3D-Modell", self.model_row(sel, "Kugel"))
+            form.addRow("Boden nach Landung", self.image_row(sel, "groundTexture", "Gezeichnet", "Bodenbild (kachelbar) wählen"))
         elif k == "base":
             form.addRow("Reparatur pro Sekunde", self.number(sel, "repair", 1, 200, 5, 25, " Punkte"))
             model = QPushButton(sel.get("model", "").split("/")[-1] or "Eingebaute Station")
             model.setIcon(icons.icon("model", C["accent"]))
-            model.clicked.connect(lambda: self.host.choose_model_for(sel, model))
+            model.clicked.connect(lambda: self.host.choose_model_for(sel, model, "Eingebaute Station"))
             form.addRow("3D-Modell (GLB)", model)
         elif k == "asteroids":
             form.addRow("Anzahl", self.number(sel, "count", 1, 400, 5, 30))
             form.addRow("Ausdehnung", self.number(sel, "spread", 20, 2000, 10, 140, " m"))
             form.addRow("Größte Brocken", self.number(sel, "size", 2, 80, 1, 9, " m"))
             form.addRow("Farbe", self.color_button(sel, "color", "#6e6259"))
+            form.addRow("Eigenes 3D-Modell", self.model_row(sel, "Felsbrocken"))
         elif k == "asteroid":
             form.addRow("Größe", self.number(sel, "size", 2, 400, 2, 18, " m"))
             form.addRow("Farbe", self.color_button(sel, "color", "#6e6259"))
+            form.addRow("Eigenes 3D-Modell", self.model_row(sel, "Felsbrocken"))
+        if k in ("enemy", "base"):
+            form.addRow("Größe", self.number(sel, "scale", 0.1, 20, 0.1, 1.0, " ×", 2, False))
+        if k == "enemy":
+            prop = sel.setdefault("proportion", {"x": 1.0, "y": 1.0, "z": 1.0})
+            for key, label in (("x", "Breite"), ("y", "Höhe"), ("z", "Länge")):
+                form.addRow(f"Proportion {label}", self.number(prop, key, 0.2, 5, 0.05, 1.0, " ×", 2, False))
         form.addRow("x", self.number(sel, "x", -20000, 20000, 10, 0, " m"))
         form.addRow("z", self.number(sel, "z", -20000, 20000, 10, 0, " m"))
         form.addRow("Höhe (y)", self.number(sel, "y", -5000, 5000, 10, 0, " m"))

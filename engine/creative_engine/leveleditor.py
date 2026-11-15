@@ -748,6 +748,8 @@ class LevelEditor(QWidget):
                                                     lambda c: (self.set_value(self.level, "sky", c), self.view.viewport().update())))
             form.addRow("Boden hinten", self.color_button(self.level.get("ground", "#6f9e5c"),
                                                           lambda c: self.set_value(self.level, "ground", c)))
+            from .audio_widgets import level_music
+            form.addRow("Musik", level_music(self.host, self.level, self.changed.emit))
             self.pv.addLayout(form)
             tip = QLabel("<b>So geht's</b><br>Links einen Block oder ein Objekt wählen und ins Raster klicken. "
                          "Rechtsklick löscht. Mausrad blättert, Strg+Mausrad zoomt, mittlere Maustaste verschiebt.<br><br>"

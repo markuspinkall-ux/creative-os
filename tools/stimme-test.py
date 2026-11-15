@@ -125,7 +125,7 @@ for tempo in (0.8, 1.4):
     s.speakText("Das ist ein Satz, um das Tempo der Stimme zu prüfen.")
     assert warten(lambda: wavs() and not s.speaking, 30)
     dauern[tempo] = laut(wavs()[0])[0]
-assert dauern[1.4] < dauern[0.8] * 0.8, dauern
+assert dauern[1.4] < dauern[0.8] * 0.9, dauern   # Pausen und Ränder bleiben gleich lang
 print("Tempo:", dauern)
 
 # Aus: nichts vorlesen
