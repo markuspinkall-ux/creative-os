@@ -309,7 +309,7 @@ ipcMain.handle('settings:logout', async () => {
   await win.webContents.session.clearStorageData();
   await win.webContents.session.clearCache();
   setUnread(0);
-  win.loadURL(WA_URL);
+  win.loadURL(WA_URL, { userAgent: userAgent() });
   return true;
 });
 ipcMain.on('wa:focus', showWindow);
@@ -385,7 +385,8 @@ function createWindow({ hidden }) {
   });
   win.on('closed', () => { win = null; });
   win.once('ready-to-show', () => { if (!hidden) showWindow(); });
-  wc.loadURL(WA_URL);
+  wc.setUserAgent(userAgent());
+  wc.loadURL(WA_URL, { userAgent: userAgent() });
   return win;
 }
 
@@ -400,6 +401,7 @@ if (!single) {
     else if (!argv.includes('--hidden')) showWindow();
   });
   app.whenReady().then(() => {
+    app.userAgentFallback = userAgent();   // ohne „Electron“: sonst meldet WhatsApp „Browser nicht unterstützt“
     nativeTheme.themeSource = look.light ? 'light' : 'dark';
     fs.watchFile(lookFile(), { interval: 2000 }, () => {
       look = readLook();
