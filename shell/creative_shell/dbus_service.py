@@ -125,6 +125,14 @@ class ShellBus(QObject):
             return str(exc)
         return ""
 
+    @Slot(result=str)
+    def removeClockWidget(self):
+        try:
+            self._widgets["extras"].removeClock()
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
     @Slot(bool, result=str)
     def installNotesWidget(self, install):
         try:
