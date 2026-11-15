@@ -150,6 +150,9 @@ class AppModel(QAbstractListModel):
         self._filter = ""
         self._folder = ""
         self._pinned = []
+        cfg = config.load()
+        # None = Grundausstattung; sonst die eigene Liste (Desktop-IDs in Reihenfolge)
+        self._user_pins = list(cfg.get("taskbarApps", [])) if cfg.get("taskbarAppsSet") else None
         locale = QLocale().name()  # z. B. de_DE
         self._langs = [locale, locale.split("_")[0]]
 
@@ -184,15 +187,30 @@ class AppModel(QAbstractListModel):
         self._apply_filter()
         self._update_pinned()
 
+    def _pin_meta(self, desktop_id):
+        """Symbol und Fensternamen aus der Grundausstattung (z. B. für Web-Apps wie Claude)."""
+        for item in self._pinned_config:
+            if desktop_id in item.get("candidates", []):
+                return item
+        return {}
+
     def _update_pinned(self):
         pinned = []
-        for item in self._pinned_config:
-            for candidate in item.get("candidates", []):
-                entry = self._by_id.get(candidate)
+        if self._user_pins is not None:
+            for desktop_id in self._user_pins:
+                entry = self._by_id.get(desktop_id)
                 if entry:
+                    item = self._pin_meta(desktop_id)
                     pinned.append({"desktopId": entry.desktop_id, "name": entry.name, "icon": item.get("icon", ""),
                                    "match": [m.lower() for m in item.get("match", [])]})
-                    break
+        else:
+            for item in self._pinned_config:
+                for candidate in item.get("candidates", []):
+                    entry = self._by_id.get(candidate)
+                    if entry:
+                        pinned.append({"desktopId": entry.desktop_id, "name": entry.name, "icon": item.get("icon", ""),
+                                       "match": [m.lower() for m in item.get("match", [])]})
+                        break
         if pinned != self._pinned:
             self._pinned = pinned
             self.pinnedChanged.emit()
@@ -223,6 +241,38 @@ class AppModel(QAbstractListModel):
         self.endResetModel()
 
     # ---- Model --------------------------------------------------------------
+    # ---- Taskleiste: anheften / lösen --------------------------------------------
+    def _set_user_pins(self, ids):
+        self._user_pins = list(ids)
+        config.set_value("taskbarApps", self._user_pins)
+        config.set_value("taskbarAppsSet", True)
+        self._update_pinned()
+
+    @Slot(str, result=bool)
+    def isPinned(self, desktop_id):
+        return any(p["desktopId"] == desktop_id for p in self._pinned)
+
+    @Slot(str)
+    def pin(self, desktop_id):
+        ids = [p["desktopId"] for p in self._pinned]
+        if desktop_id in self._by_id and desktop_id not in ids:
+            self._set_user_pins(ids + [desktop_id])
+
+    @Slot(str)
+    def unpin(self, desktop_id):
+        ids = [p["desktopId"] for p in self._pinned]
+        if desktop_id in ids:
+            self._set_user_pins([i for i in ids if i != desktop_id])
+
+    @Slot(str, int)
+    def movePin(self, desktop_id, index):
+        ids = [p["desktopId"] for p in self._pinned]
+        if desktop_id not in ids:
+            return
+        ids.remove(desktop_id)
+        ids.insert(max(0, min(index, len(ids))), desktop_id)
+        self._set_user_pins(ids)
+
     @Slot(str)
     def hideFromStartMenu(self, desktop_id):
         if desktop_id in self._by_id:

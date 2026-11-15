@@ -296,6 +296,7 @@ Item {
                             if (row.isFolder)
                                 return
                             appMenu.desktopId = row.desktopId
+                            appMenu.pinned = apps.isPinned(row.desktopId)
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
                             appMenu.y = Math.min(p.y, menu.height - appMenu.height - 8)
@@ -480,10 +481,11 @@ Item {
         Rectangle {
             id: appMenu
             property string desktopId: ""
+            property bool pinned: false
             visible: false
             z: 3
-            width: 230
-            height: 84
+            width: 250
+            height: 124
             radius: 12
             color: Theme.raised
             border.color: Theme.hairline
@@ -509,8 +511,42 @@ Item {
                     onClicked: { shelf.addApp(appMenu.desktopId); appMenu.visible = false }
                 }
             }
+            // An die Taskleiste anheften / davon lösen
             Rectangle {
                 x: 4; y: 44
+                width: parent.width - 8; height: 36
+                radius: 9
+                color: pinMouse.containsMouse ? Theme.tint(0.08) : "transparent"
+                SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "pin"; size: 15 }
+                Text {
+                    x: 36
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: appMenu.pinned ? "Von der Taskleiste lösen" : "An die Taskleiste anheften"
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                MouseArea {
+                    id: pinMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (appMenu.pinned) apps.unpin(appMenu.desktopId)
+                        else apps.pin(appMenu.desktopId)
+                        appMenu.visible = false
+                    }
+                }
+                Accessible.role: Accessible.MenuItem
+                Accessible.name: appMenu.pinned ? "Von der Taskleiste lösen" : "An die Taskleiste anheften"
+                Accessible.onPressAction: {
+                    if (appMenu.pinned) apps.unpin(appMenu.desktopId)
+                    else apps.pin(appMenu.desktopId)
+                    appMenu.visible = false
+                }
+            }
+            Rectangle {
+                x: 4; y: 84
                 width: parent.width - 8; height: 36
                 radius: 9
                 color: hideMouse.containsMouse ? Theme.hover : "transparent"

@@ -120,7 +120,8 @@ class TaskModel(QObject):
             info = self._apps.lookup(pin["desktopId"])
             theme = info["icon"] if info and info["icon"] and tile_available(info["icon"]) else ""
             items.append({"key": key, "desktopId": pin["desktopId"], "name": pin["name"],
-                          "icon": "" if theme else pin.get("icon", ""), "themeIcon": theme, "windows": []})
+                          "icon": "" if theme else pin.get("icon", ""), "themeIcon": theme, "windows": [],
+                          "pinned": True})
         for w in on_screen:
             key = self._window_key(w)
             if not key:
