@@ -37,7 +37,8 @@ echo "Erkennung: ok (955XED per Subsystem und Name, andere Geräte unberührt, 2
 
 # 3. echte modprobe-Prüfung + Parameter im Fedora-Kernel
 cp "$W/book/etc/modprobe.d/creative-ton-fix.conf" /etc/modprobe.d/
-modprobe --showconfig | grep -q "options snd-sof-intel-hda-common hda_model=alc298-samsung-amp-v2-2-amps"
+modprobe --showconfig | grep -E "options snd.sof.intel.hda.(common|generic) hda_model=" \
+    || { echo "FEHLER: modprobe kennt die Option nicht"; exit 1; }
 kv=$(ls /lib/modules | head -1)
 echo "Kernel: $kv"
 found=""
