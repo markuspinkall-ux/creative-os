@@ -1,0 +1,25 @@
+name: Fensterabstand Vorschau
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [tools/abstand-vorschau/**, .github/workflows/abstand-vorschau.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  foto:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Echtes KWin fotografieren
+        timeout-minutes: 15
+        run: docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/abstand-vorschau/vorschau.sh
+      - name: Ablegen
+        if: always()
+        run: |
+          [ -d fotos ] || exit 0
+          sudo chown -R "$(id -u)" fotos
+          cd fotos && git init -q -b abstand-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" abstand-fotos
