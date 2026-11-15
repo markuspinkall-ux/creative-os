@@ -121,7 +121,8 @@ class Zerleger:
             if bereiche and not bereiche[-1][2]:
                 schnitt = bereiche[-1][0]           # offener Codeblock: davor anhalten
             ende = 0
-            for m in re.finditer(r"[.!?…:](?=\s)|\n", text[:schnitt]):
+            # dieselben Grenzen wie saetze(): Satzende + Leerraum oder Zeilenende (nicht „Erstens: …“)
+            for m in re.finditer(r"[.!?…](?=\s)|\n", text[:schnitt]):
                 ende = m.end()
             # nicht mitten in einem (geschlossenen) Codeblock schneiden
             for a, b, zu in bereiche:
