@@ -24,12 +24,16 @@ dbus-run-session -- sh -c '
   sleep 5
   export WAYLAND_DISPLAY=wayland-6
   E="/tmp/pkg/electron --no-sandbox --ozone-platform=wayland --disable-gpu"
-  CHROME_DESKTOP=creative-browser.desktop timeout 25 $E --class=creative-browser about:blank >/tmp/b.log 2>&1 &
-  sleep 8
-  CHROME_DESKTOP=creative-whatsapp.desktop timeout 25 $E --class=creative-whatsapp --whatsapp >/tmp/w.log 2>&1 &
-  sleep 8
-  timeout 20 $E --class=creative-claude --app=https://example.org/ --app-name=claude >/tmp/c.log 2>&1 &
-  sleep 10
+  CHROME_DESKTOP=creative-whatsapp.desktop timeout 60 $E --class=creative-whatsapp --whatsapp >/tmp/w.log 2>&1 &
+  sleep 4
+  CHROME_DESKTOP=creative-browser.desktop timeout 50 $E --class=creative-browser about:blank >/tmp/b.log 2>&1 &
+  sleep 4
+  timeout 40 $E --class=creative-claude --app=https://example.org/ --app-name=claude >/tmp/c.log 2>&1 &
+  for i in $(seq 1 40); do
+    grep -q "FENSTER app=creative-whatsapp\|FENSTER app=creative-browser class=creative-whatsapp" /tmp/kwin.log && break
+    sleep 1
+  done
+  sleep 3
 ' || true
 echo "--- KWin sieht:"; grep "FENSTER" /tmp/kwin.log | sort -u || true
 grep -q FENSTER /tmp/kwin.log || { echo "--- kwin.log"; tail -30 /tmp/kwin.log; echo "--- browser"; tail -15 /tmp/b.log; }
