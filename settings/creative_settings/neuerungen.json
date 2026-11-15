@@ -19,7 +19,8 @@
       "Discord hat jetzt auch im Startmenü sein neues Symbol"
     ],
     "behoben": [
-      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
+      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",
+      "Notiz-Widget lässt sich jetzt auf einen anderen Monitor schieben – über die Widgets-App und per Rechtsklick (die Shell hatte die Monitorwahl für die Notizen bisher abgelehnt)"
     ]
   },
   {
