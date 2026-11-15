@@ -46,3 +46,20 @@ assert m2.notesText == "x" * we.NOTES_MAX
 path.write_text("kaputt", encoding="utf-8")
 assert we.read_notes() == "", "kaputte Datei bringt das Widget zum Absturz"
 print("Notizen-Widget: alles in Ordnung")
+
+# Analoge Uhr: herunterladen, einschalten, wieder entfernen (wie die Notizen)
+m2.installClock('{"id": "analog-clock", "version": 1, "face": "graphit"}')
+assert m2.clockInstalled and m2.clockEnabled
+m2.setPosition("clock", 0.7, 0.2)
+m2.removeClock()
+assert not m2.clockInstalled and not m2.clockEnabled
+m3 = we.WidgetExtras()                       # nach Neustart weiterhin entfernt
+assert not m3.clockInstalled and not m3.clockEnabled
+try:
+    m3.setEnabled("clock", True)
+    raise AssertionError("entfernte Uhr ließ sich einschalten")
+except ValueError:
+    pass
+m3.installClock('{"id": "analog-clock", "version": 1, "face": "graphit"}')
+assert m3.clockInstalled and m3.clockX == 0.7, "Position soll beim Wiederholen erhalten bleiben"
+print("Analoge Uhr: entfernen in Ordnung")
