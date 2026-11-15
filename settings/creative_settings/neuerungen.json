@@ -16,7 +16,8 @@
       "Startmenü: „Aus Startmenü entfernen“ fragt jetzt nach, bevor die App verschwindet",
       "Startmenü: Angeheftete Apps lösen sich nur noch über die Taskleiste (Rechtsklick dort) – im Startmenü steht „In der Taskleiste angeheftet“",
       "Brave ist nicht mehr im System – Webseiten, Links und PDFs öffnet der Creative Browser. Eigene Standard-Apps, die noch auf Brave zeigten, werden umgestellt",
-      "Discord hat jetzt auch im Startmenü sein neues Symbol"
+      "Discord hat jetzt auch im Startmenü sein neues Symbol",
+      "Systemsteuerung › Darstellung › Startmenü: Die Liste der ausgeblendeten Apps zeigt erst nur den ersten Eintrag und klappt beim Drüberfahren auf – dann bleibt sie offen"
     ],
     "behoben": [
       "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
