@@ -109,8 +109,16 @@ view.show()
 ok = []
 
 
+def items(root=None):
+    """Alle sichtbaren Kinder (auch ListView-Delegates, die keinen QObject-Elternteil haben)."""
+    root = root or view.rootObject()
+    for child in root.childItems():
+        yield child
+        yield from items(child)
+
+
 def find(name):
-    return view.rootObject().findChild(QQuickItem, name)
+    return next((it for it in items() if it.objectName() == name), None)
 
 
 def click_item(item):
@@ -119,7 +127,7 @@ def click_item(item):
 
 
 def row_point(text):
-    for it in view.rootObject().findChildren(QQuickItem):
+    for it in items():
         if it.property("text") == text and it.isVisible():
             p = it.mapToScene(QPointF(it.width() / 2, it.height() / 2))
             return QPoint(int(p.x()), int(p.y()))
