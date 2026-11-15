@@ -35,6 +35,12 @@ app.setPath('userData', APP_URL
 // Den Ordner sofort anlegen: Die Sperre gegen einen zweiten Start liegt darin – fehlt er beim
 // allerersten Start, schlägt sie fehl und der Browser würde sich still beenden.
 try { fs.mkdirSync(app.getPath('userData'), { recursive: true }); } catch (_) { /* meldet die Sperre unten */ }
+// Web-Apps (Claude …) bekommen eine eigene App-Kennung (Wayland app_id = creative-<name>),
+// damit sie in der Taskleiste nicht mit den Browserfenstern gestapelt werden.
+if (APP_URL && typeof app.setDesktopName === 'function') {
+  app.setDesktopName(`creative-${APP_NAME}.desktop`);
+  process.env.CHROME_DESKTOP = `creative-${APP_NAME}.desktop`;
+}
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 app.commandLine.appendSwitch('enable-wayland-ime');
 app.commandLine.appendSwitch('enable-gpu-rasterization');

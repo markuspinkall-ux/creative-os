@@ -1,0 +1,6 @@
+{
+    "KPlugin": { "Id": "fensterliste", "Name": "Fensterliste (Test)", "License": "GPL-3.0-or-later", "Version": "0.1", "EnabledByDefault": false },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}

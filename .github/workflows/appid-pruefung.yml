@@ -1,0 +1,17 @@
+name: App-Kennungen prüfen
+# Browser, Creative WhatsApp und Web-Apps müssen unter Wayland eigene app_ids haben –
+# sonst stapelt die Taskleiste sie unter einem Symbol. Echter KWin (Fedora 44, virtueller Bildschirm).
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [webbrowser/app/main.js, webbrowser/app/whatsapp/**, webbrowser/app/package.json, webbrowser/bin/**, tools/appid-test/**, .github/workflows/appid-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: KWin mit Browser, WhatsApp und Web-App
+        timeout-minutes: 20
+        run: docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/appid-test/appid-test.sh

@@ -19,6 +19,10 @@ const SELFTEST = (process.argv.find((a) => a.startsWith('--creative-selftest='))
 const HIDDEN = process.argv.includes('--hidden');
 
 app.setName('WhatsApp');
+// Eigene App-Kennung (Wayland app_id) – sonst hält die Taskleiste WhatsApp für ein Browserfenster
+// und stapelt beide unter einem Symbol. Electron nimmt sonst „desktopName“ aus package.json.
+if (typeof app.setDesktopName === 'function') app.setDesktopName(`${DESKTOP_ID}.desktop`);
+process.env.CHROME_DESKTOP = `${DESKTOP_ID}.desktop`;
 // Gleicher Ordner wie die frühere WhatsApp-Verknüpfung – die Anmeldung (QR-Code) bleibt erhalten.
 app.setPath('userData', process.env.CREATIVE_WHATSAPP_DATA
   || path.join(app.getPath('appData'), 'creative-browser', 'apps', 'whatsapp'));
