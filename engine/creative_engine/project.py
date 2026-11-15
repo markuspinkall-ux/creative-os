@@ -168,7 +168,7 @@ def new_project(name, genre="jumpnrun", sample=True):
                  {"kind": "button", "text": "Beenden", "action": "quit", "x": 0.5, "y": 0.69, "w": 0.24, "h": 0.09,
                   "size": 30, "color": "#2a303d", "textColor": "#dce6ff", "radius": 16},
              ]},
-            {"type": "level", "id": level_id, "name": "Level 1"},
+            {"type": "level", "id": level_id, "name": "Sektor 1" if genre == "weltraum" else "Level 1"},
         ],
         "levels": {level_id: (space_level("Sektor 1", sample) if genre == "weltraum"
                               else sample_level("Level 1") if sample else empty_level("Level 1"))},
