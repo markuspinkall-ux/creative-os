@@ -700,6 +700,84 @@ Item {
         }
     }
 
+    // Akku (nur bei Laptops): großer Ring mit Prozent, Laden/Entladen und Restzeit
+    ExtraWidget {
+        id: extraAkku
+        key: "akku"
+        visible: root.widgetOnScreen("akku") && widgetExtras.akkuEnabled && akku.present
+        posX: widgetExtras.akkuX
+        posY: widgetExtras.akkuY
+        defaultX: Math.max(8, root.width - 790)
+        defaultY: 24
+        width: 250
+        height: 120
+        body: RowLayout {
+            spacing: 14
+            Accessible.role: Accessible.StaticText
+            Accessible.name: "Akku " + akku.percent + " Prozent, " + akku.statusText
+            readonly property color levelColor: akku.low ? Theme.flame
+                                                : (akku.charging || akku.full ? "#6fdcc0" : Theme.accent)
+            Canvas {
+                id: akkuRing
+                Layout.preferredWidth: 92
+                Layout.preferredHeight: 92
+                property real level: akku.percent / 100
+                property color fill: parent.levelColor
+                onLevelChanged: requestPaint()
+                onFillChanged: requestPaint()
+                onPaint: {
+                    const ctx = getContext("2d")
+                    const r = Math.min(width, height) / 2 - 6
+                    ctx.reset()
+                    ctx.translate(width / 2, height / 2)
+                    ctx.lineCap = "round"
+                    ctx.lineWidth = 8
+                    ctx.beginPath()
+                    ctx.arc(0, 0, r, 0, Math.PI * 2)
+                    ctx.strokeStyle = Theme.track.toString()
+                    ctx.stroke()
+                    if (level > 0) {
+                        ctx.beginPath()
+                        ctx.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * level)
+                        ctx.strokeStyle = fill.toString()
+                        ctx.stroke()
+                    }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    text: akku.percent + "%"
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 22
+                    font.bold: true
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                RowLayout {
+                    spacing: 6
+                    BatteryGlyph { level: akku.percent; charging: akku.charging; low: akku.low; Layout.preferredWidth: 26; Layout.preferredHeight: 13 }
+                    Text {
+                        text: "Akku"
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 15
+                        font.bold: true
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: akku.statusText
+                    color: akku.low ? Theme.flame : Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+            }
+        }
+    }
+
     // Notizen: direkt auf dem Schreibtisch tippen, wird von selbst gespeichert
     ExtraWidget {
         id: extraNotes

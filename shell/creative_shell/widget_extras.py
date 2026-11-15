@@ -130,6 +130,14 @@ class WidgetExtras(QObject):
         if not self._save(notesInstalled=True, notesEnabled=True):
             raise ValueError("Das Widget konnte nicht gespeichert werden.")
 
+    def installAkku(self):
+        if not self._save(akkuInstalled=True, akkuEnabled=True):
+            raise ValueError("Das Widget konnte nicht gespeichert werden.")
+
+    def removeAkku(self):
+        if not self._save(akkuInstalled=False, akkuEnabled=False):
+            raise ValueError("Das Widget konnte nicht entfernt werden.")
+
     def removeNotes(self):
         # Der Text bleibt in notizen.json – beim erneuten Installieren ist er wieder da.
         if not self._save(notesInstalled=False, notesEnabled=False):
@@ -153,7 +161,9 @@ class WidgetExtras(QObject):
             raise ValueError("Lade zuerst die analoge Uhr herunter.")
         if name == "notes" and not self.notesInstalled:
             raise ValueError("Installiere zuerst das Notizen-Widget.")
-        if name not in ("clock", "twitch", "notes"):
+        if name == "akku" and not self.akkuInstalled:
+            raise ValueError("Installiere zuerst das Akku-Widget.")
+        if name not in ("clock", "twitch", "notes", "akku"):
             raise ValueError("Unbekanntes Widget.")
         if not self._save(**{name + "Enabled": enabled}):
             raise ValueError("Die Einstellung konnte nicht gespeichert werden.")
@@ -174,7 +184,7 @@ class WidgetExtras(QObject):
 
     @Slot(str, float, float)
     def setPosition(self, name, x, y):
-        if name in ("clock", "twitch", "notes"):
+        if name in ("clock", "twitch", "notes", "akku"):
             self._save(**{name + "Pos": [max(0, min(1, x)), max(0, min(1, y))]})
 
     def _position(self, name, axis):
@@ -213,6 +223,12 @@ class WidgetExtras(QObject):
         "id": "analog-clock", "version": 1, "face": "graphit"
     }, notify=changed)
     clockEnabled = Property(bool, lambda self: self.clockInstalled and self._settings.get("clockEnabled", False), notify=changed)
+    # Akku-Widget aus dem Katalog: Schreibtisch-Widget + Anzeige in der Taskleiste (nur mit Akku sichtbar)
+    akkuInstalled = Property(bool, lambda self: bool(self._settings.get("akkuInstalled", False)), notify=changed)
+    akkuEnabled = Property(bool, lambda self: bool(self._settings.get("akkuInstalled", False))
+                           and bool(self._settings.get("akkuEnabled", False)), notify=changed)
+    akkuX = Property(float, lambda self: self._position("akku", 0), notify=changed)
+    akkuY = Property(float, lambda self: self._position("akku", 1), notify=changed)
     twitchEnabled = Property(bool, lambda self: bool(self._settings.get("twitchEnabled", False)), notify=changed)
     twitchRows = Property("QVariantList", lambda self: self._rows, notify=changed)
     busy = Property(bool, lambda self: self._busy, notify=changed)

@@ -95,6 +95,7 @@ class ShellBus(QObject):
             "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
             "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
             "notes": extras.notesEnabled, "notesInstalled": extras.notesInstalled,
+            "akku": extras.akkuEnabled, "akkuInstalled": extras.akkuInstalled,
             "ki": self._widgets["ki"].enabled,
             "viz": self._widgets["viz"].enabled if "viz" in self._widgets else False,
             "screens": self._shell.screenNames, "targets": self._shell.widgetScreens,
@@ -129,6 +130,17 @@ class ShellBus(QObject):
     def removeClockWidget(self):
         try:
             self._widgets["extras"].removeClock()
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
+    @Slot(bool, result=str)
+    def installAkkuWidget(self, install):
+        try:
+            if install:
+                self._widgets["extras"].installAkku()
+            else:
+                self._widgets["extras"].removeAkku()
         except ValueError as exc:
             return str(exc)
         return ""

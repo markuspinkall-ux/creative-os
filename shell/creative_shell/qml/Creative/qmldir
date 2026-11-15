@@ -14,3 +14,4 @@ Avatar 1.0 Avatar.qml
 ImagePicker 1.0 ImagePicker.qml
 FilePicker 1.0 FilePicker.qml
 ConfirmDialog 1.0 ConfirmDialog.qml
+BatteryGlyph 1.0 BatteryGlyph.qml
