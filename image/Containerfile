@@ -222,7 +222,7 @@ COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansi
 COPY viewer3d/creative-3dansicht.svg /usr/share/icons/hicolor/scalable/apps/creative-3dansicht.svg
 RUN ln -s /usr/lib/creative-3dansicht/creative-3dansicht /usr/bin/creative-3dansicht \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3dansicht --selftest
-COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop shell/webapps/creative-whatsapp.desktop /usr/share/applications/
+COPY shell/webapps/creative-claude.desktop shell/webapps/creative-chatgpt.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
@@ -338,10 +338,16 @@ RUN cd /usr/lib/creative-browser/electron/resources/app \
  && test -f node_modules/@ghostery/adblocker-electron-preload/dist/index.cjs \
  && rm -rf /root/.npm
 COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
+COPY webbrowser/bin/creative-whatsapp /usr/bin/creative-whatsapp
 COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
+COPY webbrowser/creative-whatsapp.desktop /usr/share/applications/creative-whatsapp.desktop
 COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg
-RUN chmod 755 /usr/bin/creative-browser \
+COPY theme/icons/tile-icons.py /tmp/tile-icons.py
+RUN chmod 755 /usr/bin/creative-browser /usr/bin/creative-whatsapp \
  && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/electron/resources/app/icon.png \
+ && python3 /tmp/tile-icons.py --file /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg /tmp/whatsapp-kachel.svg \
+ && rsvg-convert -w 256 -h 256 /tmp/whatsapp-kachel.svg -o /usr/lib/creative-browser/electron/resources/app/whatsapp/icon.png \
+ && rm -f /tmp/tile-icons.py /tmp/whatsapp-kachel.svg \
  && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Creative Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
     || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT"
 

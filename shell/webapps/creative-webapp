@@ -14,6 +14,11 @@ if [ -z "$name" ]; then
     esac
 fi
 
+# WhatsApp hat eine eigene App (Benachrichtigungen, Zähler, Nicht stören …)
+case "$url" in
+    *web.whatsapp.com*) command -v creative-whatsapp >/dev/null 2>&1 && exec creative-whatsapp ;;
+esac
+
 if command -v creative-browser >/dev/null 2>&1; then
     exec creative-browser --class="creative-$name" --app="$url" --app-name="$name"
 elif command -v brave-browser >/dev/null 2>&1; then

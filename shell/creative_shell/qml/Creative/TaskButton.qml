@@ -12,6 +12,7 @@ Item {
     property bool running: false
     property bool active: false
     property int count: 0
+    property int badge: 0       // ungelesene Nachrichten (z. B. WhatsApp)
 
     signal clicked()
     signal middleClicked()
@@ -45,6 +46,29 @@ Item {
         source: root.icon.length === 0 ? iconFiles.url(root.themeIcon) : ""
         asynchronous: true
         smooth: true
+    }
+
+    // Ungelesen: kleine Zahl oben rechts
+    Rectangle {
+        visible: root.badge > 0
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 1
+        anchors.topMargin: 2
+        height: 17
+        width: Math.max(17, badgeText.implicitWidth + 9)
+        radius: 9
+        color: Theme.accent
+        border.color: Theme.ground
+        border.width: 2
+        Text {
+            id: badgeText
+            anchors.centerIn: parent
+            text: root.badge > 99 ? "99+" : root.badge
+            color: Theme.ground
+            font.pixelSize: 10
+            font.bold: true
+        }
     }
 
     // Laufend / aktiv
@@ -91,5 +115,6 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: label + (running ? (active ? ", aktiv" : ", geöffnet") : "")
+                     + (badge > 0 ? ", " + badge + " ungelesen" : "")
     Accessible.onPressAction: root.clicked()
 }

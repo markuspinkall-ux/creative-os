@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>WhatsApp – Einstellungen</title>
+<style>
+:root, body[data-design="graphit"] {
+  --ground: #12151b; --surface: #1c2029; --raised: #232836;
+  --text: #dce6ff; --muted: rgba(220, 230, 255, 0.62); --line: rgba(255, 255, 255, 0.08);
+  --hover: rgba(255, 255, 255, 0.07); --accent: #8fb3ff; --accent-text: #12151b; --danger: #ff8a8e;
+  color-scheme: dark;
+}
+body[data-design="porzellan"] {
+  --ground: #e9eef6; --surface: #ffffff; --raised: #eef1f6;
+  --text: #1c2433; --muted: rgba(28, 36, 51, 0.62); --line: rgba(18, 27, 45, 0.072);
+  --hover: rgba(18, 27, 45, 0.063); --accent-text: #ffffff; --danger: #d23c45;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; background: var(--ground); }
+body { color: var(--text); font: 13px Arial, "Liberation Sans", Helvetica, sans-serif; padding: 24px 22px 28px; user-select: none; }
+h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+h1 svg { width: 28px; height: 28px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.card { background: var(--surface); border-radius: 16px; padding: 12px 16px; margin-bottom: 14px; }
+.card h2 { font-size: 14px; margin: 4px 0 6px; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-top: 1px solid var(--line); }
+.card h2 + .row, .card .hint + .row { border-top: 0; }
+.row .label { flex: 1; min-width: 0; }
+.row .label b { display: block; font-weight: 600; }
+.row .label small { display: block; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.switch { width: 40px; height: 22px; border-radius: 11px; border: 0; background: rgba(127,127,127,.35); position: relative; padding: 0; flex: none; cursor: pointer; }
+.switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+.switch.on { background: var(--accent); }
+.switch.on::after { left: 21px; }
+.switch:disabled { opacity: .45; cursor: default; }
+input[type=time] { background: var(--raised); color: var(--text); border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px; font: inherit; }
+input[type=time]:disabled { opacity: .45; }
+.times { display: flex; align-items: center; gap: 8px; }
+.btn { border: 0; border-radius: 10px; padding: 9px 14px; background: var(--raised); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.btn:hover { background: var(--hover); }
+.btn.danger { color: var(--danger); }
+.state { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 9px; background: var(--accent); color: var(--accent-text); font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.foot { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 4px 4px 0; }
+</style>
+</head>
+<body>
+<h1><svg viewBox="0 0 24 24"><path d="M3.5 20.5l1.3-4.6A8.6 8.6 0 1 1 8.1 19.3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path transform="translate(12.15 11.75) scale(0.43) translate(-12 -12)" fill="var(--accent)" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>WhatsApp</h1>
+<p class="sub">Einstellungen der Creative-App. Chats, Kontakte und Datenschutz stellst du in WhatsApp selbst ein.</p>
+
+<div class="card">
+  <h2>Benachrichtigungen</h2>
+  <div class="row"><div class="label"><b>Benachrichtigungen</b><small>Bei neuen Nachrichten oben rechts – ein Klick öffnet den Chat</small></div><button class="switch" data-key="notify" aria-label="Benachrichtigungen"></button></div>
+  <div class="row"><div class="label"><b>Name und Text zeigen</b><small>Aus: nur „Neue Nachricht“ – gut, wenn andere auf den Bildschirm schauen</small></div><button class="switch" data-key="preview" data-needs="notify" aria-label="Vorschau"></button></div>
+  <div class="row"><div class="label"><b>Ton</b></div><button class="switch" data-key="sound" data-needs="notify" aria-label="Ton"></button></div>
+</div>
+
+<div class="card">
+  <h2>Nicht stören <span class="state" id="quiet" hidden>gerade an</span></h2>
+  <div class="row"><div class="label"><b>Jetzt nicht stören</b><small>Keine Benachrichtigungen, bis du es wieder ausschaltest. Der Zähler an der Taskleiste zählt weiter.</small></div><button class="switch" data-key="dnd" aria-label="Jetzt nicht stören"></button></div>
+  <div class="row"><div class="label"><b>Zu festen Zeiten</b><small>Jeden Tag, auch über Mitternacht</small></div><button class="switch" data-key="dndTimes" aria-label="Zu festen Zeiten"></button></div>
+  <div class="row"><div class="label"><b>Von – bis</b></div><div class="times"><input type="time" id="dndFrom" aria-label="von"><span>bis</span><input type="time" id="dndTo" aria-label="bis"></div></div>
+</div>
+
+<div class="card">
+  <h2>Programm</h2>
+  <div class="row"><div class="label"><b>Im Hintergrund weiterlaufen</b><small>Schließen versteckt nur das Fenster (Symbol im Tray), Nachrichten kommen weiter an</small></div><button class="switch" data-key="background" aria-label="Im Hintergrund weiterlaufen"></button></div>
+  <div class="row"><div class="label"><b>Mit dem PC starten</b><small>Startet unsichtbar nach der Anmeldung</small></div><button class="switch" data-key="autostart" aria-label="Mit dem PC starten"></button></div>
+  <div class="row"><div class="label"><b>Rechtschreibprüfung (Deutsch)</b><small>Rote Wellenlinie, Vorschläge mit Rechtsklick</small></div><button class="switch" data-key="spell" aria-label="Rechtschreibprüfung"></button></div>
+  <div class="row"><div class="label"><b>Abmelden</b><small>Löscht die Anmeldung auf diesem PC. Danach erscheint wieder der QR-Code.</small></div><button class="btn danger" id="logout">Abmelden …</button></div>
+</div>
+
+<p class="foot">Creative WhatsApp nutzt das offizielle WhatsApp Web – Nachrichten bleiben Ende-zu-Ende-verschlüsselt. Jedes Benutzerkonto auf diesem PC hat seine eigene Anmeldung.<br>Tastenkürzel: Strg+, Einstellungen · Strg+R neu laden · Strg+Plus/Minus Zoom · Strg+Q beenden</p>
+<script src="settings.js"></script>
+</body>
+</html>
