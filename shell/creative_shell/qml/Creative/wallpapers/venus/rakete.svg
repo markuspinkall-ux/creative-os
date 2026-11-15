@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
+  <!-- Creative OS 2 „Vivid Venus“ – Ebene für den bewegten Hintergrund (graphit) -->
+  <defs><linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161a24"/><stop offset="1" stop-color="#0d1015"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe0b0" stop-opacity="0.5"/>
+      <stop offset="0.25" stop-color="#ffb07a" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#ffb07a" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffb07a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haze" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#ffcf8a" stop-opacity="0.2"/>
+      <stop offset="0.75" stop-color="#ffcf8a" stop-opacity="0.070"/>
+      <stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="venus" cx="0.25" cy="0.22" r="0.95">
+      <stop offset="0" stop-color="#fff1cf"/><stop offset="0.35" stop-color="#f4d9a0"/>
+      <stop offset="0.7" stop-color="#e2b46e"/><stop offset="1" stop-color="#b9844a"/>
+    </radialGradient>
+    <radialGradient id="night" cx="0.85" cy="0.85" r="0.8">
+      <stop offset="0" stop-color="rgb(13,16,21)" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="rgb(13,16,21)" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="rgb(13,16,21)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trail" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb07a" stop-opacity="0"/><stop offset="1" stop-color="#ffb07a" stop-opacity="0.75"/>
+    </linearGradient>
+    <clipPath id="disc"><circle cx="3300" cy="2900" r="1750"/></clipPath></defs>
+  <path d="M700 700 C 1050 760, 1350 860, 1620 1010" fill="none" stroke="url(#trail)" stroke-width="6" stroke-linecap="round"/>
+  <g transform="translate(1648.0 1027.0) rotate(118) scale(3.4) translate(-12 -12)"><path d="M7.5 12.5L5 15.5v3l2.8-1.6z" fill="#8fb3ff"/><path d="M16.5 12.5L19 15.5v3l-2.8-1.6z" fill="#8fb3ff"/><path d="M12 2c3 2.5 4.6 6 4.6 10v4.6H7.4V12C7.4 8 9 4.5 12 2z" fill="#dce6ff"/><circle cx="12" cy="9.2" r="1.9" fill="#12151b"/><path d="M10 17.6h4l-2 4.40z" fill="#ffb07a"/></g>
+</svg>

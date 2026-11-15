@@ -77,10 +77,8 @@ def outputs():
         .replace("CustomCursorColor=143,179,255", "CustomCursorColor=61,111,224") \
         .replace("CustomCursorTextColor=18,21,27", "CustomCursorTextColor=255,255,255")
     files[ROOT / "theme/konsole/CreativePorzellan.profile"] = prof
-    wall = (CREATIVE / "wallpapers/graphit.svg").read_text()
-    files[CREATIVE / "wallpapers-light/porzellan.svg"] = wall_light(wall)
-    login_bg = (ROOT / "login/creative/background.svg").read_text()
-    files[ROOT / "login/creative/background-light.svg"] = wall_light(login_bg)
+    # Hintergrundbilder (Schreibtisch, Anmeldung) baut seit „Vivid Venus“ tools/venus-wallpaper.py
+    # für beide Designs selbst – hier nicht mehr überschreiben.
     return files
 
 

@@ -6,6 +6,7 @@ dem geklickt wurde. Werden Monitore an- oder abgesteckt, passt sich alles an.
 """
 
 import argparse
+import json
 import os
 import signal
 import sys
@@ -558,12 +559,32 @@ def main():
             path = str(look.default_wallpaper(QML_DIR))
         return QUrl.fromLocalFile(path)
 
-    ctx.setContextProperty("wallpaperUrl", wallpaper_url())
+    def wallpaper_anim():
+        """Bewegter Hintergrund (nur beim mitgelieferten „Vivid Venus“-Bild und wenn eingeschaltet):
+        Ebenen-Ordner + Daten (Sterne, Rakete) aus wallpapers*/venus/ebenen.json – sonst {}."""
+        cfg = config.load()
+        path = os.path.expanduser(cfg.get("wallpaper") or "")
+        if (path and os.path.exists(path)) or not cfg.get("wallpaperAnimated", True):
+            return {}
+        from creative_shell import look
+        folder = look.wallpaper_dir(QML_DIR) / "venus"
+        try:
+            data = json.loads((folder / "ebenen.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        data["folder"] = QUrl.fromLocalFile(str(folder)).toString() + "/"
+        return data
+
+    def wallpaper_refresh(_p=None):
+        ctx.setContextProperty("wallpaperUrl", wallpaper_url())
+        ctx.setContextProperty("wallpaperAnim", wallpaper_anim())
+
+    wallpaper_refresh()
     # Neues Hintergrundbild aus der Systemsteuerung sofort übernehmen
     cfg_dir = config.config_dir()
     cfg_dir.mkdir(parents=True, exist_ok=True)
     watcher = QFileSystemWatcher([str(cfg_dir)])
-    watcher.directoryChanged.connect(lambda _p: ctx.setContextProperty("wallpaperUrl", wallpaper_url()))
+    watcher.directoryChanged.connect(wallpaper_refresh)
     # Design gewechselt (Einstellungen → Darstellung)? Dann die Oberfläche neu laden:
     # Code 75 = der Supervisor startet sofort neu, ohne es als Absturz zu zählen.
     from creative_shell import look as _look

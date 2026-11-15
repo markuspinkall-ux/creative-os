@@ -166,6 +166,18 @@ class TaskModel(QObject):
         """Doppelklick auf den Schreibtisch: alle Fenster weg – nochmal: wieder da (wie Win+D)."""
         self._kwin.run_script("workspace.showingDesktop = !workspace.showingDesktop;")
 
+    @Slot(str, result=float)
+    def largestWindowArea(self, screen):
+        """Größte sichtbare Fensterfläche auf diesem Monitor – der bewegte Hintergrund pausiert,
+        wenn er (fast) ganz verdeckt ist."""
+        best = 0.0
+        for w in self._windows:
+            if w.get("minimized") or (w.get("output") and w.get("output") != screen):
+                continue
+            geo = w.get("geo") or [0, 0, 0, 0]
+            best = max(best, float(geo[2]) * float(geo[3]))
+        return best
+
     @Slot(str, result="QVariantList")
     def taskbarItems(self, screen):
         return self._items(screen)
