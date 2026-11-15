@@ -14,10 +14,28 @@ from pathlib import Path
 VERSION = 1
 GENRES = {
     "jumpnrun": ("Jump'n'Run (2,5D)", "Seitlich scrollend, 3D-Grafik, feste Seitenkamera – wie Rayman oder Trine.", True),
+    "weltraum": ("Weltraum-Shooter (3D)", "Raumschiff aus der Verfolgerkamera: Gegner abschießen, auf Planeten "
+                 "landen, an Raumbasen reparieren – wie Star Fox oder Freelancer.", True),
     "adventure": ("Action-Adventure", "Offene 3D-Welt: Landschaft formen, Wände ziehen, Häuser bauen.", False),
     "rennen-strecke": ("Rennspiel – Strecke", "Rundkurs mit Checkpoints und Rundenzähler.", False),
     "rennen-welt": ("Rennspiel – offene Welt", "Frei fahren, Missionen und Rennen in der Stadt.", False),
 }
+SPACE_ENTITIES = [
+    ("start", "Schiffsstart", "Hier startet das eigene Raumschiff (einmal pro Level)."),
+    ("enemy", "Gegner", "Feindliches Schiff oder Geschütz – schießt zurück."),
+    ("planet", "Planet", "Zum Hinfliegen und Landen (L)."),
+    ("base", "Raumbasis", "Langsam hineinfliegen: repariert Hülle und Schild, füllt Raketen auf."),
+    ("asteroids", "Asteroiden", "Feld aus Felsbrocken – Zusammenstöße kosten Hülle."),
+]
+SPACE_SINGLE = {"start"}
+ENEMY_TYPES = [("jaeger", "Jäger", "schnell und wendig, Laser"), ("kreuzer", "Kreuzer", "groß und zäh, Plasma"),
+               ("geschuetz", "Geschütz", "steht still, dreht sich mit")]
+WEAPON_TYPES = [("laser", "Laser"), ("plasma", "Plasma"), ("rakete", "Raketen (zielsuchend)"),
+                ("streu", "Streuschuss")]
+GOALS = [("gegner", "Alle Gegner zerstören"), ("landen", "Auf einem Planeten landen"),
+         ("basis", "Eine Raumbasis erreichen"), ("frei", "Freier Flug (kein Ziel)")]
+HORIZON_SIDES = [("unten", "unten"), ("oben", "oben"), ("links", "links"), ("rechts", "rechts"),
+                 ("vorne", "vorne"), ("hinten", "hinten")]
 TILES = [
     ("gras", "Gras", "#5fb04a"), ("erde", "Erde", "#7a5a3a"), ("stein", "Stein", "#8a93a3"),
     ("ziegel", "Ziegel", "#b0603f"), ("holz", "Holz", "#a8794a"), ("eis", "Eis", "#bfe6ff"),
@@ -85,6 +103,53 @@ def sample_level(name="Level 1"):
     return lvl
 
 
+def space_level(name="Sektor 1", sample=True):
+    """Weltraum-Level: Koordinaten in Metern, Karte von -1000 bis 1000 (x/z), y = Höhe."""
+    lvl = {"name": name, "kind": "weltraum", "size": 1000, "sky": "#04060c", "nebula": "#3a2d6b", "skyImage": "",
+           "stars": 1.0, "sunColor": "#fff3e0", "goal": "gegner", "goalTarget": "",
+           "horizon": {"on": True, "side": "unten", "color": "#2f5fb3", "color2": "#3f8f4f",
+                       "atmosphere": "#7fc4ff", "distance": 900, "bands": 0.0},
+           "entities": [{"kind": "start", "x": 0, "y": 0, "z": 300, "dir": 0}], "tiles": {}, "decor": []}
+    if not sample:
+        lvl["goal"] = "frei"
+    if sample:
+        lvl["entities"] += [
+            {"kind": "enemy", "type": "jaeger", "x": -60, "y": 10, "z": -40, "dir": 180},
+            {"kind": "enemy", "type": "jaeger", "x": 70, "y": -5, "z": -80, "dir": 180},
+            {"kind": "enemy", "type": "geschuetz", "x": 0, "y": 30, "z": -260},
+            {"kind": "enemy", "type": "kreuzer", "x": 180, "y": 20, "z": -420, "dir": 200},
+            {"kind": "base", "name": "Station Aurora", "x": -260, "y": 0, "z": 160, "dir": 0, "repair": 25},
+            {"kind": "planet", "name": "Venus", "x": 420, "y": -40, "z": -640, "radius": 160, "color": "#e0b070",
+             "color2": "#b0703a", "atmosphere": "#ffd9a0", "ground": "#c8925a", "landable": True, "bands": 0.6},
+            {"kind": "planet", "name": "Kryos", "x": -560, "y": 80, "z": -760, "radius": 110, "color": "#bfe6ff",
+             "color2": "#6f9ec4", "atmosphere": "#bfe6ff", "ground": "#d8ecf7", "landable": True, "ring": True},
+            {"kind": "asteroids", "x": -200, "y": 0, "z": -380, "count": 28, "spread": 120, "size": 9},
+        ]
+    return lvl
+
+
+def new_ship():
+    return {"model": "", "size": 2.2, "color": "#8fb3ff", "speed": 60.0, "boost": 1.8, "turn": 1.6, "hull": 100,
+            "shield": 60, "lives": 3, "mouse": 1.0, "invertY": False,
+            "weapons": [new_weapon(t) for t in ("laser", "plasma", "rakete", "streu")]}
+
+
+WEAPON_DEFAULTS = {
+    "laser": {"name": "Laser", "damage": 1, "cooldown": 0.14, "speed": 420, "color": "#ff5d6c"},
+    "plasma": {"name": "Plasma", "damage": 4, "cooldown": 0.6, "speed": 230, "color": "#7fe0ff"},
+    "rakete": {"name": "Raketen", "damage": 6, "cooldown": 1.1, "speed": 170, "color": "#ffb347", "ammo": 12},
+    "streu": {"name": "Streuschuss", "damage": 1, "cooldown": 0.5, "speed": 360, "color": "#c49bff"},
+}
+
+
+def new_weapon(kind="laser"):
+    return {"type": kind, **copy.deepcopy(WEAPON_DEFAULTS.get(kind, WEAPON_DEFAULTS["laser"]))}
+
+
+def is_space(project):
+    return project.get("genre") == "weltraum"
+
+
 def new_project(name, genre="jumpnrun", sample=True):
     level_id = new_id("l")
     return {
@@ -103,9 +168,11 @@ def new_project(name, genre="jumpnrun", sample=True):
                  {"kind": "button", "text": "Beenden", "action": "quit", "x": 0.5, "y": 0.69, "w": 0.24, "h": 0.09,
                   "size": 30, "color": "#2a303d", "textColor": "#dce6ff", "radius": 16},
              ]},
-            {"type": "level", "id": level_id, "name": "Level 1"},
+            {"type": "level", "id": level_id, "name": "Sektor 1" if genre == "weltraum" else "Level 1"},
         ],
-        "levels": {level_id: sample_level("Level 1") if sample else empty_level("Level 1")},
+        "levels": {level_id: (space_level("Sektor 1", sample) if genre == "weltraum"
+                              else sample_level("Level 1") if sample else empty_level("Level 1"))},
+        "ship": new_ship(),
         "player": {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3, "attacks": [new_attack(0)]},
         "settings": {"width": 1280, "height": 720, "fullscreen": False, "ui": dict(UI_DEFAULT)},
     }
@@ -127,8 +194,12 @@ def add_step(project, kind, after=None):
     count = sum(1 for s in project["flow"] if s["type"] == kind) + 1
     if kind == "level":
         sid = new_id("l")
-        name = f"Level {count}"
-        project["levels"][sid] = empty_level(name)
+        if is_space(project):
+            name = f"Sektor {count}"
+            project["levels"][sid] = space_level(name, sample=False)
+        else:
+            name = f"Level {count}"
+            project["levels"][sid] = empty_level(name)
         step = {"type": "level", "id": sid, "name": name}
     elif kind == "splash":
         step = {"type": "splash", "id": new_id("s"), "name": "Splash", "bg": "#000000", "logo": "", "logoSize": 0.35,
@@ -185,6 +256,18 @@ def validate(project):
             problems.append(f"{s['name']}: Leveldaten fehlen.")
             continue
         kinds = [e["kind"] for e in lvl["entities"]]
+        if lvl.get("kind") == "weltraum":
+            if "start" not in kinds:
+                problems.append(f"{s['name']}: Schiffsstart fehlt.")
+            goal = lvl.get("goal", "gegner")
+            if goal == "gegner" and "enemy" not in kinds:
+                problems.append(f"{s['name']}: Ziel „Alle Gegner zerstören“, aber es gibt keine Gegner.")
+            if goal == "landen" and not any(e["kind"] == "planet" and e.get("landable", True)
+                                            for e in lvl["entities"]):
+                problems.append(f"{s['name']}: Ziel „Landen“, aber kein Planet zum Landen.")
+            if goal == "basis" and "base" not in kinds:
+                problems.append(f"{s['name']}: Ziel „Raumbasis“, aber keine Basis.")
+            continue
         if "start" not in kinds:
             problems.append(f"{s['name']}: Spielerstart fehlt.")
         if "goal" not in kinds:
@@ -210,6 +293,11 @@ def assets_used(project):
                 used.add(e["model"])
     if project["player"].get("model"):
         used.add(project["player"]["model"])
+    if project.get("ship", {}).get("model"):
+        used.add(project["ship"]["model"])
+    for lvl in project["levels"].values():
+        if lvl.get("skyImage"):
+            used.add(lvl["skyImage"])
     ui = project.get("settings", {}).get("ui", {})
     for key in UI_IMAGES:
         if ui.get(key):
@@ -255,6 +343,10 @@ def load(folder):
     data.setdefault("player", {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3})
     data.setdefault("settings", {"width": 1280, "height": 720, "fullscreen": False})
     data["player"].setdefault("attacks", [])
+    if data.get("genre") == "weltraum":
+        ship = data.setdefault("ship", new_ship())
+        for key, value in new_ship().items():
+            ship.setdefault(key, value)
     ui = data["settings"].setdefault("ui", {})
     for key, value in UI_DEFAULT.items():
         ui.setdefault(key, value)
@@ -279,3 +371,121 @@ def upgrade_npc(e):
     e.setdefault("once", True)
     return e
 
+
+
+# ---- Steuerung --------------------------------------------------------------------------------
+# Je Aktion: Tasten (bis 2), Maustasten (bis 2), Controller (bis 2). Namen wie in Godot
+# (OS.find_keycode_from_string); Controller und Maus mit eigenen Namen, die die Laufzeit übersetzt.
+MAX_BINDINGS = 2
+PAD_INPUTS = [
+    ("A", "A / Kreuz"), ("B", "B / Kreis"), ("X", "X / Quadrat"), ("Y", "Y / Dreieck"),
+    ("LB", "LB / L1"), ("RB", "RB / R1"), ("LT", "LT / L2 (Trigger)"), ("RT", "RT / R2 (Trigger)"),
+    ("Start", "Start / Options"), ("Back", "Back / Share"), ("LS", "Linker Stick drücken"),
+    ("RS", "Rechter Stick drücken"), ("Hoch", "Steuerkreuz hoch"), ("Runter", "Steuerkreuz runter"),
+    ("Links", "Steuerkreuz links"), ("Rechts", "Steuerkreuz rechts"),
+    ("LS-Links", "Linker Stick links"), ("LS-Rechts", "Linker Stick rechts"), ("LS-Hoch", "Linker Stick hoch"),
+    ("LS-Runter", "Linker Stick runter"), ("RS-Links", "Rechter Stick links"), ("RS-Rechts", "Rechter Stick rechts"),
+    ("RS-Hoch", "Rechter Stick hoch"), ("RS-Runter", "Rechter Stick runter"),
+]
+MOUSE_INPUTS = [("Links", "Linke Maustaste"), ("Rechts", "Rechte Maustaste"), ("Mitte", "Mittlere Maustaste"),
+                ("RadHoch", "Mausrad hoch"), ("RadRunter", "Mausrad runter"), ("Seite1", "Seitentaste 1"),
+                ("Seite2", "Seitentaste 2")]
+# (Aktion, Anzeige, Tasten, Maus, Controller)
+CONTROLS = {
+    "jumpnrun": [
+        ("links", "Nach links", ["A", "Left"], [], ["Links", "LS-Links"]),
+        ("rechts", "Nach rechts", ["D", "Right"], [], ["Rechts", "LS-Rechts"]),
+        ("springen", "Springen", ["Space", "W"], [], ["A"]),
+        ("pause", "Pause", ["Escape", "P"], [], ["Start"]),
+        ("weiter", "Weiter (Dialoge, Menüs)", ["Enter", "Space"], ["Links"], ["A"]),
+    ],
+    "weltraum": [
+        ("schub", "Schneller", ["W"], [], ["RT"]),
+        ("bremse", "Bremsen", ["S"], [], ["LT"]),
+        ("boost", "Boost", ["Shift"], [], ["LB", "LS"]),
+        ("gieren_links", "Nach links lenken", ["A", "Left"], [], ["LS-Links"]),
+        ("gieren_rechts", "Nach rechts lenken", ["D", "Right"], [], ["LS-Rechts"]),
+        ("nicken_hoch", "Nase hoch", ["Down"], [], ["LS-Runter"]),
+        ("nicken_runter", "Nase runter", ["Up"], [], ["LS-Hoch"]),
+        ("rollen_links", "Rollen links", ["Q"], [], ["RS-Links"]),
+        ("rollen_rechts", "Rollen rechts", ["E"], [], ["RS-Rechts"]),
+        ("looping", "Looping", ["R"], [], ["Hoch", "RS"]),
+        ("fassrolle_links", "Fassrolle links (Schüsse prallen ab)", ["X"], [], ["Links"]),
+        ("fassrolle_rechts", "Fassrolle rechts (Schüsse prallen ab)", ["C"], [], ["Rechts"]),
+        ("feuer", "Feuern", ["Space", "Ctrl"], ["Links"], ["RB"]),
+        ("waffe_weiter", "Nächste Waffe", ["Tab"], ["Rechts", "RadRunter"], ["X"]),
+        ("waffe_zurueck", "Vorige Waffe", [], ["RadHoch"], ["B"]),
+        ("landen", "Landen / Starten", ["L"], [], ["Y"]),
+        ("pause", "Pause", ["Escape", "P"], [], ["Start"]),
+        ("weiter", "Weiter (Menüs)", ["Enter"], [], ["A"]),
+    ],
+}
+ATTACK_PADS = ["X", "Y", "B", "RB", "LB"]
+# Qt-Tastennamen → Godot-Namen (wo sie sich unterscheiden)
+QT_TO_GODOT_KEYS = {"Esc": "Escape", "Return": "Enter", "Control": "Ctrl", "Meta": "Meta", "PgUp": "PageUp",
+                    "PgDown": "PageDown", "Ins": "Insert", "Del": "Delete", "Backspace": "BackSpace"}
+KEY_LABELS = {"Space": "Leertaste", "Left": "←", "Right": "→", "Up": "↑", "Down": "↓", "Escape": "Esc",
+              "Enter": "Enter", "Shift": "Umschalt", "Ctrl": "Strg", "Alt": "Alt", "Tab": "Tab",
+              "BackSpace": "Rücktaste", "Delete": "Entf", "Insert": "Einfg", "PageUp": "Bild ↑",
+              "PageDown": "Bild ↓", "Home": "Pos1", "End": "Ende"}
+
+
+def control_actions(project):
+    """Aktionen des Genres samt Angriffen (Jump'n'Run): Liste (Aktion, Anzeige, Standard-Belegung)."""
+    genre = "weltraum" if is_space(project) else "jumpnrun"
+    rows = [(a, label, {"keys": list(k), "mouse": list(m), "pad": list(p)})
+            for a, label, k, m, p in CONTROLS[genre]]
+    if genre == "jumpnrun":
+        for i, att in enumerate(project.get("player", {}).get("attacks", [])):
+            rows.append((f"angriff{i + 1}", f"Angriff {i + 1}: {att.get('name') or 'Angriff'}",
+                         {"keys": [att.get("key", ATTACK_KEYS[i % 6])], "mouse": [],
+                          "pad": [ATTACK_PADS[i]] if i < len(ATTACK_PADS) else []}))
+    return rows
+
+
+def controls_for(project):
+    """Fertige Belegung für das Spiel: eigene Änderungen über den Standardwerten."""
+    own = project.get("controls", {})
+    result = {}
+    for action, _label, default in control_actions(project):
+        b = dict(default)
+        for kind in ("keys", "mouse", "pad"):
+            if kind in own.get(action, {}):
+                b[kind] = list(own[action][kind])[:MAX_BINDINGS]
+        result[action] = b
+    return result
+
+
+def set_binding(project, action, kind, values):
+    project.setdefault("controls", {}).setdefault(action, {})[kind] = list(values)[:MAX_BINDINGS]
+
+
+def reset_controls(project):
+    project.pop("controls", None)
+
+
+def control_conflicts(project):
+    """Gleiche Taste/Knopf für zwei Aktionen (außer bekannten Paaren wie Springen/Weiter)."""
+    allowed = {frozenset(("springen", "weiter")), frozenset(("feuer", "weiter")), frozenset(("pause", "weiter"))}
+    labels = {a: label for a, label, _d in control_actions(project)}
+    seen = {}
+    problems = []
+    for action, b in controls_for(project).items():
+        for kind in ("keys", "mouse", "pad"):
+            for v in b[kind]:
+                other = seen.get((kind, v))
+                if other and frozenset((other, action)) not in allowed:
+                    problems.append(f"„{binding_label(kind, v)}“ ist doppelt belegt: {labels[other]} und {labels[action]}")
+                seen.setdefault((kind, v), action)
+    return problems
+
+
+def binding_label(kind, value):
+    if kind == "keys":
+        return KEY_LABELS.get(value, value)
+    names = dict(MOUSE_INPUTS if kind == "mouse" else PAD_INPUTS)
+    return names.get(value, value)
+
+
+def qt_key_to_godot(name):
+    return QT_TO_GODOT_KEYS.get(name, name)

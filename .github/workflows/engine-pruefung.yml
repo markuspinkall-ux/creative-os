@@ -4,6 +4,7 @@ on:
   push:
     branches: ["claude/**"]
     paths: [engine/**, creative3d/creative3d_rig*.py, tools/engine-test.py, tools/engine-editor-vorschau.py,
+            tools/weltraum-test.py,
             .github/workflows/engine-pruefung.yml]
   workflow_dispatch:
 permissions:
@@ -42,6 +43,10 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: python3 tools/engine-test.py "$HOME/.local/share/creative-engine/godot/Godot_v4.3-stable_linux.x86_64" fotos
+      - name: Weltraum-Shooter testen
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: python3 tools/weltraum-test.py "$HOME/.local/share/creative-engine/godot/Godot_v4.3-stable_linux.x86_64" fotos
       - name: Fotos ablegen
         if: always()
         run: |

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QKeySequence, QPainter, QPixmap
+from PySide6.QtGui import QAction, QColor, QKeySequence, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout,
     QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from . import icons, project as proj, runner
 from .leveleditor import LevelEditor
+from .spaceeditor import SpaceEditor
 from .screens import ScreenEditor
 from .style import C, apply_palette, stylesheet
 
@@ -59,7 +60,8 @@ def genre_art(key, w=300, h=150):
     from PySide6.QtGui import QLinearGradient, QPolygonF
     sky = QLinearGradient(0, 0, 0, h)
     colors = {"jumpnrun": ("#7fb8ff", "#cfe6ff"), "adventure": ("#7ec8a6", "#e3f2d9"),
-              "rennen-strecke": ("#ffb07a", "#ffe2c9"), "rennen-welt": ("#c3a6ff", "#ebe0ff")}[key]
+              "rennen-strecke": ("#ffb07a", "#ffe2c9"), "rennen-welt": ("#c3a6ff", "#ebe0ff"),
+              "weltraum": ("#0b1022", "#2a2150")}[key]
     sky.setColorAt(0, QColor(colors[0]))
     sky.setColorAt(1, QColor(colors[1]))
     path_rect = QRectF(0, 0, w, h)
@@ -92,6 +94,25 @@ def genre_art(key, w=300, h=150):
         p.drawRect(QRectF(285, 60, 3, 52))
         p.setBrush(QColor("#1f9e7f"))
         p.drawRect(QRectF(288, 60, 18, 12))
+    elif key == "weltraum":
+        p.setBrush(QColor(255, 255, 255, 190))
+        for i in range(46):
+            p.drawEllipse(QPointF((i * 67) % w, (i * 37) % h), 1.1 + (i % 3) * 0.4, 1.1 + (i % 3) * 0.4)
+        p.setBrush(QColor("#2f5fb3"))
+        p.drawEllipse(QPointF(w / 2, h + 330), 400, 400)
+        p.setBrush(QColor("#e0b070"))
+        p.drawEllipse(QPointF(250, 42), 26, 26)
+        p.setBrush(QColor("#c9ced8"))
+        p.drawPolygon(QPolygonF([QPointF(150, 70), QPointF(166, 104), QPointF(196, 112), QPointF(150, 104),
+                                 QPointF(104, 112), QPointF(134, 104)]))
+        p.setBrush(QColor("#7fe0ff"))
+        p.drawEllipse(QPointF(143, 107), 4, 4)
+        p.drawEllipse(QPointF(157, 107), 4, 4)
+        p.setBrush(QColor("#d9534f"))
+        p.drawPolygon(QPolygonF([QPointF(70, 40), QPointF(80, 58), QPointF(60, 58)]))
+        p.setPen(QPen(QColor("#ff5d6c"), 2))
+        p.drawLine(QPointF(140, 76), QPointF(84, 52))
+        p.setPen(Qt.PenStyle.NoPen)
     elif key == "adventure":
         p.setBrush(QColor("#8fbf8a"))
         p.drawPolygon(QPolygonF([QPointF(0, 120), QPointF(80, 50), QPointF(170, 120)]))
@@ -302,14 +323,19 @@ class GameSettings(QWidget):
         grid = QGridLayout()
         grid.setSpacing(18)
         self.boxes = {}
-        for i, key in enumerate(("player", "attacks", "ui", "window")):
+        self.panels = {}
+        for i, key in enumerate(("player", "attacks", "ui", "window", "controls")):
             box = QWidget(objectName="panel")
             box.setMinimumWidth(420)
             lay = QVBoxLayout(box)
             lay.setContentsMargins(20, 18, 20, 18)
             lay.setSpacing(8)
             self.boxes[key] = lay
-            grid.addWidget(box, i // 2, i % 2, Qt.AlignmentFlag.AlignTop)
+            self.panels[key] = box
+            if key == "controls":
+                grid.addWidget(box, 2, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
+            else:
+                grid.addWidget(box, i // 2, i % 2, Qt.AlignmentFlag.AlignTop)
         grid.setColumnStretch(2, 1)
         v.addLayout(grid)
         v.addStretch(1)
@@ -336,6 +362,14 @@ class GameSettings(QWidget):
     def load(self, data):
         for lay in self.boxes.values():
             self.clear(lay)
+        from .controls import ControlsBox
+        controls = ControlsBox(data)
+        controls.changed.connect(self.win.touched)
+        self.boxes["controls"].addWidget(controls)
+        self.panels["ui"].setVisible(not proj.is_space(data))
+        if proj.is_space(data):
+            self.load_space(data)
+            return
         pl, st = data["player"], data["settings"]
         ui = st.setdefault("ui", dict(proj.UI_DEFAULT))
 
@@ -364,8 +398,8 @@ class GameSettings(QWidget):
         # Angriffe
         lay = self.boxes["attacks"]
         lay.addWidget(QLabel("ANGRIFFE", objectName="section"))
-        hint = QLabel("Jeder Angriff hat eine eigene Taste und spielt die Bewegung „Angriff 1, 2, …“ aus dem "
-                      "Charakter-Editor. Gamepad: X, Y, B, RB.")
+        hint = QLabel("Jeder Angriff spielt die Bewegung „Angriff 1, 2, …“ aus dem Charakter-Editor. "
+                      "Tasten und Controller-Knöpfe legst du unten bei „Steuerung“ fest.")
         hint.setWordWrap(True)
         hint.setObjectName("sub")
         lay.addWidget(hint)
@@ -378,18 +412,13 @@ class GameSettings(QWidget):
             name = QLineEdit(a.get("name", ""))
             name.setPlaceholderText(f"Angriff {i + 1}")
             name.textEdited.connect(lambda t, a=a: self.set(a, "name", t))
-            key = QComboBox()
-            for k in proj.ATTACK_KEYS + ["E", "Q", "F", "R", "X", "C", "V", "Shift", "Ctrl", "Alt"]:
-                key.addItem(f"Taste {k}", k)
-            key.setCurrentIndex(max(0, key.findData(a.get("key", "J"))))
-            key.currentIndexChanged.connect(lambda _i, a=a, key=key: self.set(a, "key", key.currentData()))
+            name.editingFinished.connect(lambda: self.load(data))     # Name auch in der Steuerung zeigen
             remove = QToolButton()
             remove.setIcon(icons.icon("trash", C["danger"]))
             remove.setToolTip("Angriff entfernen")
             remove.clicked.connect(lambda _=False, i=i: (attacks.pop(i), self.win.touched(), self.load(data)))
             cv.addWidget(QLabel(f"{i + 1}"), 0, 0)
-            cv.addWidget(name, 0, 1, 1, 3)
-            cv.addWidget(key, 0, 4)
+            cv.addWidget(name, 0, 1, 1, 4)
             cv.addWidget(remove, 0, 5)
             values = QHBoxLayout()
             for label, k, lo, hi, step, default, dec, suffix in (
@@ -444,29 +473,151 @@ class GameSettings(QWidget):
         tip.setObjectName("sub")
         lay.addWidget(tip)
 
-        # Fenster
+        self.window_box(st)
+
+    def window_box(self, st):
         lay = self.boxes["window"]
-        lay.addWidget(QLabel("FENSTER", objectName="section"))
-        form = QFormLayout()
-        res = QComboBox()
-        for w, h in ((1280, 720), (1600, 900), (1920, 1080), (2560, 1440)):
-            res.addItem(f"{w} × {h}", (w, h))
-        idx = res.findData((st.get("width", 1280), st.get("height", 720)))
-        res.setCurrentIndex(max(0, idx))
-        res.currentIndexChanged.connect(lambda _i: (self.set(st, "width", res.currentData()[0]),
-                                                    self.set(st, "height", res.currentData()[1])))
-        form.addRow("Auflösung", res)
-        full = QCheckBox("Im Vollbild starten")
-        full.setChecked(bool(st.get("fullscreen")))
-        full.toggled.connect(lambda val: self.set(st, "fullscreen", val))
-        form.addRow("", full)
-        lay.addLayout(form)
-        keys = ", ".join(f"{a.get('key', '?')} {a.get('name', '')}".strip() for a in attacks) or "keine"
-        info = QLabel(f"<b>Steuerung im Spiel</b><br>← → oder A D: laufen<br>Leertaste, W oder ↑: springen<br>"
-                      f"Angriffe: {keys}<br>Esc: Pause · Gamepad wird automatisch erkannt.")
+        if lay.count() == 0:
+            lay.addWidget(QLabel("FENSTER", objectName="section"))
+            form = QFormLayout()
+            res = QComboBox()
+            for w, h in ((1280, 720), (1600, 900), (1920, 1080), (2560, 1440)):
+                res.addItem(f"{w} × {h}", (w, h))
+            res.setCurrentIndex(max(0, res.findData((st.get("width", 1280), st.get("height", 720)))))
+            res.currentIndexChanged.connect(lambda _i: (self.set(st, "width", res.currentData()[0]),
+                                                        self.set(st, "height", res.currentData()[1])))
+            form.addRow("Auflösung", res)
+            full = QCheckBox("Im Vollbild starten")
+            full.setChecked(bool(st.get("fullscreen")))
+            full.toggled.connect(lambda val: self.set(st, "fullscreen", val))
+            form.addRow("", full)
+            lay.addLayout(form)
+        info = QLabel("Tastatur, Maus und Controller: siehe „Steuerung“ unten. Controller werden im Spiel "
+                      "automatisch erkannt.")
         info.setWordWrap(True)
         info.setObjectName("sub")
         lay.addWidget(info)
+
+    # ---- Weltraum-Shooter: Raumschiff und Waffen ------------------------------------------
+    def load_space(self, data):
+        ship = data.setdefault("ship", proj.new_ship())
+        lay = self.boxes["player"]
+        lay.addWidget(QLabel("RAUMSCHIFF", objectName="section"))
+        form = QFormLayout()
+        self.ship_btn = QPushButton(Path(ship.get("model", "")).name or "Eingebautes Schiff")
+        self.ship_btn.setIcon(icons.icon("model", C["accent"]))
+        self.ship_btn.clicked.connect(lambda: self.win.choose_model_for(ship, self.ship_btn))
+        form.addRow("3D-Modell (GLB)", self.ship_btn)
+        form.addRow("Größe", self.spin(ship, "size", 0.5, 40, 0.5, 2.2, 1, " m"))
+        form.addRow("Modell drehen", self.spin(ship, "modelTurn", -180, 180, 90, 0, 0, "°"))
+        form.addRow("Akzentfarbe", self.color(ship, "color", "#8fb3ff", data))
+        form.addRow("Tempo", self.spin(ship, "speed", 10, 400, 5, 60, 0, " m/s"))
+        form.addRow("Boost (× Tempo)", self.spin(ship, "boost", 1.1, 5, 0.1, 1.8, 1, " ×"))
+        form.addRow("Boost-Dauer", self.spin(ship, "boostTime", 1, 30, 0.5, 4, 1, " s"))
+        form.addRow("Wendigkeit", self.spin(ship, "turn", 0.3, 5, 0.1, 1.6, 1))
+        form.addRow("Hülle", self.spin(ship, "hull", 10, 1000, 10, 100, 0))
+        form.addRow("Schild", self.spin(ship, "shield", 0, 1000, 10, 60, 0))
+        lives = QSpinBox()
+        lives.setRange(1, 99)
+        lives.setValue(int(ship.get("lives", 3)))
+        lives.valueChanged.connect(lambda val: self.set(ship, "lives", val))
+        form.addRow("Leben", lives)
+        form.addRow("Kamera-Abstand", self.spin(ship, "cameraDistance", 4, 60, 1, 12, 0, " m"))
+        form.addRow("Maus-Empfindlichkeit", self.spin(ship, "mouse", 0.1, 5, 0.1, 1.0, 1))
+        steer = QCheckBox("Maus lenkt das Schiff")
+        steer.setChecked(bool(ship.get("mouseSteer", True)))
+        steer.toggled.connect(lambda v: self.set(ship, "mouseSteer", v))
+        form.addRow("", steer)
+        inv = QCheckBox("Hoch/Runter umkehren (wie im Flugzeug)")
+        inv.setChecked(bool(ship.get("invertY", False)))
+        inv.toggled.connect(lambda v: self.set(ship, "invertY", v))
+        form.addRow("", inv)
+        lay.addLayout(form)
+
+        lay = self.boxes["attacks"]
+        lay.addWidget(QLabel("WAFFEN", objectName="section"))
+        hint = QLabel("Im Spiel mit 1–6 direkt wählen oder durchschalten (Tab, Mausrad, Rechtsklick). "
+                      "Raketen suchen sich ihr Ziel selbst, Streuschuss feuert fünf Schüsse im Fächer.")
+        hint.setWordWrap(True)
+        hint.setObjectName("sub")
+        lay.addWidget(hint)
+        weapons = ship.setdefault("weapons", [])
+        for i, w in enumerate(weapons):
+            card = QWidget(objectName="panel")
+            cv = QGridLayout(card)
+            cv.setContentsMargins(10, 8, 10, 8)
+            cv.setHorizontalSpacing(8)
+            name = QLineEdit(w.get("name", ""))
+            name.textEdited.connect(lambda t, w=w: self.set(w, "name", t))
+            kind = QComboBox()
+            for k, label in proj.WEAPON_TYPES:
+                kind.addItem(label, k)
+            kind.setCurrentIndex(max(0, kind.findData(w.get("type", "laser"))))
+
+            def retype(_i, w=w, kind=kind):
+                fresh = proj.new_weapon(kind.currentData())
+                fresh["name"] = w.get("name") or fresh["name"]
+                w.clear()
+                w.update(fresh)
+                self.win.touched()
+                self.load(data)
+            kind.currentIndexChanged.connect(retype)
+            remove = QToolButton()
+            remove.setIcon(icons.icon("trash", C["danger"]))
+            remove.setToolTip("Waffe entfernen")
+            remove.setEnabled(len(weapons) > 1)
+            remove.clicked.connect(lambda _=False, i=i: (weapons.pop(i), self.win.touched(), self.load(data)))
+            cv.addWidget(QLabel(f"{i + 1}"), 0, 0)
+            cv.addWidget(name, 0, 1, 1, 2)
+            cv.addWidget(kind, 0, 3)
+            cv.addWidget(self.color(w, "color", "#ff5d6c", data), 0, 4)
+            cv.addWidget(remove, 0, 5)
+            values = QHBoxLayout()
+            for label, k, lo, hi, step, default, dec, suffix in (
+                    ("Schaden", "damage", 1, 100, 1, 1, 0, ""), ("Pause", "cooldown", 0.05, 5, 0.05, 0.3, 2, " s"),
+                    ("Tempo", "speed", 50, 2000, 10, 400, 0, "")):
+                small = QLabel(label)
+                small.setObjectName("sub")
+                values.addWidget(small)
+                values.addWidget(self.spin(w, k, lo, hi, step, default, dec, suffix), 1)
+            cv.addLayout(values, 1, 1, 1, 5)
+            ammo_row = QHBoxLayout()
+            limited = QCheckBox("Munition begrenzt")
+            limited.setChecked("ammo" in w)
+            limited.toggled.connect(lambda v, w=w: ((w.__setitem__("ammo", 12) if v else w.pop("ammo", None)),
+                                                    self.win.touched(), self.load(data)))
+            ammo_row.addWidget(limited)
+            if "ammo" in w:
+                ammo = QSpinBox()
+                ammo.setRange(1, 999)
+                ammo.setValue(int(w["ammo"]))
+                ammo.valueChanged.connect(lambda val, w=w: self.set(w, "ammo", val))
+                ammo_row.addWidget(ammo)
+                note = QLabel("an Raumbasen auffüllen")
+                note.setObjectName("sub")
+                ammo_row.addWidget(note)
+            ammo_row.addStretch(1)
+            cv.addLayout(ammo_row, 2, 1, 1, 5)
+            lay.addWidget(card)
+        if len(weapons) < 6:
+            add = QPushButton("+ Waffe hinzufügen")
+            add.clicked.connect(lambda: (weapons.append(proj.new_weapon("laser")), self.win.touched(), self.load(data)))
+            lay.addWidget(add)
+        self.window_box(data["settings"])
+
+    def color(self, target, key, default, data):
+        value = target.get(key, default)
+        b = QPushButton(value)
+        b.setStyleSheet(f"QPushButton{{background:{value};color:{'#12151b' if QColor(value).lightness() > 128 else '#ffffff'};}}")
+
+        def pick():
+            from PySide6.QtWidgets import QColorDialog
+            c = QColorDialog.getColor(QColor(target.get(key, default)), self, "Farbe wählen")
+            if c.isValid():
+                self.set(target, key, c.name())
+                self.load(data)
+        b.clicked.connect(pick)
+        return b
 
     def graphic(self, target, key):
         row = QWidget()
@@ -589,14 +740,17 @@ class Window(QMainWindow):
         self.welcome = Welcome(self)
         self.screens = ScreenEditor(self)
         self.levels = LevelEditor(self)
+        self.space = SpaceEditor(self)
         self.settings = GameSettings(self)
-        for w in (self.welcome, self.screens, self.levels, self.settings):
+        for w in (self.welcome, self.screens, self.levels, self.space, self.settings):
             self.stack.addWidget(w)
         self.screens.changed.connect(self.touched)
         self.screens.changed.connect(lambda: self.project and self.refresh_timeline())
         self.levels.changed.connect(self.touched)
         self.levels.importModel.connect(self.import_decor)
         self.levels.view.status.connect(self.status_msg)
+        self.space.changed.connect(self.touched)
+        self.space.view.status.connect(self.status_msg)
         v.addWidget(self.stack, 1)
 
         bar = QWidget(objectName="statusBar")
@@ -613,10 +767,12 @@ class Window(QMainWindow):
         save.triggered.connect(self.save)
         undo = QAction(self)
         undo.setShortcut(QKeySequence.StandardKey.Undo)
-        undo.triggered.connect(lambda: self.stack.currentWidget() is self.levels and self.levels.view.undo())
+        undo.triggered.connect(lambda: self.stack.currentWidget() in (self.levels, self.space)
+                               and self.stack.currentWidget().view.undo())
         redo = QAction(self)
         redo.setShortcut(QKeySequence.StandardKey.Redo)
-        redo.triggered.connect(lambda: self.stack.currentWidget() is self.levels and self.levels.view.redo())
+        redo.triggered.connect(lambda: self.stack.currentWidget() in (self.levels, self.space)
+                               and self.stack.currentWidget().view.redo())
         play = QAction(self)
         play.setShortcut(QKeySequence("F5"))
         play.triggered.connect(lambda: self.project and self.play())
@@ -734,8 +890,10 @@ class Window(QMainWindow):
         self.nav["flow"].setChecked(True)
         self.nav["settings"].setChecked(False)
         if step["type"] == "level":
-            self.levels.set_level(self.project["levels"][step["id"]])
-            self.stack.setCurrentWidget(self.levels)
+            level = self.project["levels"][step["id"]]
+            editor = self.space if level.get("kind") == "weltraum" else self.levels
+            editor.set_level(level)
+            self.stack.setCurrentWidget(editor)
         else:
             self.screens.set_step(step)
             self.stack.setCurrentWidget(self.screens)
@@ -868,7 +1026,7 @@ class Window(QMainWindow):
         start = None
         if index is not None:
             start = self.project["flow"][index]["id"]
-        elif self.stack.currentWidget() is self.levels:
+        elif self.stack.currentWidget() in (self.levels, self.space):
             start = self.current
         self.player.play(self.folder, self.project, start)
         self.play_btn.setText("Neu starten")

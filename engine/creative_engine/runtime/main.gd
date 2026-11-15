@@ -4,6 +4,7 @@ extends Node
 
 const Assets = preload("res://assets.gd")
 const LevelScript = preload("res://level.gd")
+const SpaceScript = preload("res://space.gd")
 const BubbleScript = preload("res://bubble.gd")
 
 var game: Dictionary = {}
@@ -32,6 +33,7 @@ func _ready() -> void:
 	game = parsed
 	flow = game.get("flow", [])
 	setup_attack_input()
+	apply_controls(game.get("controls", {}))
 	var settings: Dictionary = game.get("settings", {})
 	if settings.get("fullscreen", false) and not args.has("fenster"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
@@ -92,6 +94,52 @@ func setup_attack_input() -> void:
 			var jb := InputEventJoypadButton.new()
 			jb.button_index = pad[i]
 			InputMap.action_add_event(action, jb)
+
+
+## Steuerung aus dem Editor: ersetzt die Standardbelegung je Aktion (Tastatur, Maus, Controller).
+const PAD_BUTTONS := {"A": JOY_BUTTON_A, "B": JOY_BUTTON_B, "X": JOY_BUTTON_X, "Y": JOY_BUTTON_Y,
+	"LB": JOY_BUTTON_LEFT_SHOULDER, "RB": JOY_BUTTON_RIGHT_SHOULDER, "Start": JOY_BUTTON_START,
+	"Back": JOY_BUTTON_BACK, "LS": JOY_BUTTON_LEFT_STICK, "RS": JOY_BUTTON_RIGHT_STICK,
+	"Hoch": JOY_BUTTON_DPAD_UP, "Runter": JOY_BUTTON_DPAD_DOWN, "Links": JOY_BUTTON_DPAD_LEFT,
+	"Rechts": JOY_BUTTON_DPAD_RIGHT}
+const PAD_AXES := {"LT": [JOY_AXIS_TRIGGER_LEFT, 1.0], "RT": [JOY_AXIS_TRIGGER_RIGHT, 1.0],
+	"LS-Links": [JOY_AXIS_LEFT_X, -1.0], "LS-Rechts": [JOY_AXIS_LEFT_X, 1.0],
+	"LS-Hoch": [JOY_AXIS_LEFT_Y, -1.0], "LS-Runter": [JOY_AXIS_LEFT_Y, 1.0],
+	"RS-Links": [JOY_AXIS_RIGHT_X, -1.0], "RS-Rechts": [JOY_AXIS_RIGHT_X, 1.0],
+	"RS-Hoch": [JOY_AXIS_RIGHT_Y, -1.0], "RS-Runter": [JOY_AXIS_RIGHT_Y, 1.0]}
+const MOUSE_BUTTONS := {"Links": MOUSE_BUTTON_LEFT, "Rechts": MOUSE_BUTTON_RIGHT, "Mitte": MOUSE_BUTTON_MIDDLE,
+	"RadHoch": MOUSE_BUTTON_WHEEL_UP, "RadRunter": MOUSE_BUTTON_WHEEL_DOWN, "Seite1": MOUSE_BUTTON_XBUTTON1,
+	"Seite2": MOUSE_BUTTON_XBUTTON2}
+
+
+func apply_controls(controls: Dictionary) -> void:
+	for action in controls:
+		var b: Dictionary = controls[action]
+		if InputMap.has_action(action):
+			InputMap.action_erase_events(action)
+		else:
+			InputMap.add_action(action, 0.25)
+		for name in b.get("keys", []):
+			var code := OS.find_keycode_from_string(String(name))
+			if code != KEY_NONE:
+				var ev := InputEventKey.new()
+				ev.keycode = code             # Tastaturbelegung wie gedrückt (deutsches Layout)
+				InputMap.action_add_event(action, ev)
+		for name in b.get("mouse", []):
+			if MOUSE_BUTTONS.has(name):
+				var mb := InputEventMouseButton.new()
+				mb.button_index = MOUSE_BUTTONS[name]
+				InputMap.action_add_event(action, mb)
+		for name in b.get("pad", []):
+			if PAD_BUTTONS.has(name):
+				var jb := InputEventJoypadButton.new()
+				jb.button_index = PAD_BUTTONS[name]
+				InputMap.action_add_event(action, jb)
+			elif PAD_AXES.has(name):
+				var jm := InputEventJoypadMotion.new()
+				jm.axis = PAD_AXES[name][0]
+				jm.axis_value = PAD_AXES[name][1]
+				InputMap.action_add_event(action, jm)
 
 
 func _take_screenshot() -> void:
@@ -436,7 +484,7 @@ func make_level(s: Dictionary) -> Node:
 	var levels: Dictionary = game.get("levels", {})
 	var data: Dictionary = levels.get(String(s.get("id", "")), {})
 	var lvl := Node3D.new()
-	lvl.set_script(LevelScript)
+	lvl.set_script(SpaceScript if String(data.get("kind", "")) == "weltraum" else LevelScript)
 	lvl.setup(data, game, score, args.has("autotest"))
 	lvl.finished.connect(_level_done)
 	lvl.game_over.connect(show_game_over)
@@ -447,7 +495,7 @@ func make_level(s: Dictionary) -> Node:
 func _level_done(points: int) -> void:
 	score = points
 	if args.has("autotest"):
-		print("AUTOTEST: Level geschafft, Münzen ", points)
+		print("AUTOTEST: Level geschafft, Punkte ", points)
 	call_deferred("next_step")
 
 
@@ -460,6 +508,7 @@ func show_game_over() -> void:
 
 func show_finish() -> void:
 	clear()
-	current = make_text({"text": "Geschafft!\n%d Münzen" % score, "textSize": 64, "bg": "#12151b",
+	var unit := "Punkte" if String(game.get("genre", "")) == "weltraum" else "Münzen"
+	current = make_text({"text": "Geschafft!\n%d %s" % [score, unit], "textSize": 64, "bg": "#12151b",
 		"textColor": "#6fdcc0"}, goto_menu)
 	add_child(current)

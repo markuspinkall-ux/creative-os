@@ -46,6 +46,23 @@ level["decor"] += [{"model": "assets/baum.glb", "x": 14, "y": 2, "z": -4, "heigh
                    {"model": "assets/baum.glb", "x": 30, "y": 2, "z": -6, "height": 5}]
 proj.save(folder, data)
 dialogs = []
+space_folder = Path(os.environ["HOME"]) / "Creative Engine" / "Sternenjagd"
+space = proj.new_project("Sternenjagd", "weltraum")
+proj.save(space_folder, space)
+
+
+def open_space():
+    w.open_project(str(space_folder))
+    w.timeline.setCurrentRow(2)
+    w.space.view.scale = 0.42
+    w.space.view.update()
+
+
+def space_pick():
+    planet = next(e for e in w.project["levels"][w.current]["entities"] if e["kind"] == "planet")
+    w.space.view.sel = planet
+    w.space.show_props(planet)
+    w.space.view.update()
 
 
 def splash_video():
@@ -97,7 +114,11 @@ steps = [
     ("menue", lambda: (w.timeline.setCurrentRow(1)), None),
     ("splash", splash_video, None),
     ("einstellungen", lambda: w.show_section("settings"), None),
-    ("charakter", character, lambda: dialogs[0]),
+    ("weltraum-sektor", open_space, None),
+    ("weltraum-auswahl", space_pick, None),
+    ("weltraum-einstellungen", lambda: w.show_section("settings"), None),
+    ("weltraum-steuerung", lambda: None, lambda: w.settings.panels["controls"]),
+    ("charakter", lambda: (w.open_project(str(folder)), character()), lambda: dialogs[0]),
 ]
 
 
