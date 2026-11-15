@@ -1,0 +1,26 @@
+name: npm im Abbild prüfen
+# Stellt die Lage im bootc-Abbild nach (/root ist ein Verweis ins noch leere /var) und führt
+# genau den npm-Schritt aus dem Containerfile aus.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [image/Containerfile, webbrowser/app/package*.json, .github/workflows/npm-abbild-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm-Schritt wie im Abbild
+        run: |
+          cmd=$(awk '/^RUN cd \/usr\/lib\/creative-browser\/electron\/resources\/app/{f=1} f{print} f&&!/\\$/{exit}' image/Containerfile | sed 's/^RUN //; s/\\$//' | tr '\n' ' ')
+          echo "Befehl: $cmd"
+          docker run --rm -v "$PWD/webbrowser/app:/src:ro" registry.fedoraproject.org/fedora:44 sh -c "
+            set -e
+            dnf -y -q install nodejs npm >/dev/null
+            rm -rf /root && ln -s var/roothome /root && ls -la / | grep root
+            mkdir -p /usr/lib/creative-browser/electron/resources && cp -a /src /usr/lib/creative-browser/electron/resources/app
+            $cmd
+            echo OK: Werbeblocker installiert
+          "
