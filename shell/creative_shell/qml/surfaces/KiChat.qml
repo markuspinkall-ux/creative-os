@@ -31,7 +31,15 @@ Window {
         input.text = ""
     }
 
-    Shortcut { sequence: "Escape"; onActivated: win.close() }
+    // Esc: erst das Vorlesen anhalten, dann das Fenster schließen
+    Shortcut {
+        sequence: "Escape"
+        onActivated: {
+            if (voicePanel.opened) voicePanel.close()
+            else if (win.ki.voice.speaking) win.ki.voice.stop()
+            else win.close()
+        }
+    }
 
     Connections {
         target: win.ki
@@ -65,6 +73,25 @@ Window {
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
                     elide: Text.ElideRight
                 }
+            }
+            IconButton {
+                visible: !win.setupMode && ki.voice.speaking
+                icon: "stop"; iconSize: 18; width: 34; height: 34
+                label: "Vorlesen anhalten"
+                onClicked: ki.voice.stop()
+            }
+            IconButton {
+                visible: !win.setupMode && ki.voice.available
+                icon: ki.voice.autoRead ? "volume" : "volume-off"; iconSize: 18; width: 34; height: 34
+                active: ki.voice.autoRead
+                label: ki.voice.autoRead ? "Antworten vorlesen: an" : "Antworten vorlesen: aus"
+                onClicked: ki.voice.setAutoRead(!ki.voice.autoRead)
+            }
+            IconButton {
+                visible: !win.setupMode
+                icon: "settings"; iconSize: 18; width: 34; height: 34
+                label: "Stimme wählen"
+                onClicked: voicePanel.open()
             }
             IconButton {
                 visible: !win.setupMode
@@ -337,6 +364,27 @@ Window {
                         Accessible.role: Accessible.Button
                         Accessible.name: "Antwort kopieren"
                     }
+                    Rectangle {
+                        visible: win.ki.voice.available
+                        width: speakRow.implicitWidth + 16; height: 24; radius: 12
+                        color: speakMouse.containsMouse ? Theme.hover : "transparent"
+                        Row {
+                            id: speakRow
+                            anchors.centerIn: parent
+                            spacing: 5
+                            SvgIcon { name: "volume"; size: 13; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "Vorlesen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        }
+                        MouseArea {
+                            id: speakMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: win.ki.speak(msg.index)
+                        }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Antwort vorlesen"
+                    }
                     Repeater {
                         model: msg.modelData.quellen || []
                         delegate: Rectangle {
@@ -420,6 +468,131 @@ Window {
                     }
                     Accessible.role: Accessible.Button
                     Accessible.name: win.ki.busy ? "Antwort anhalten" : "Senden"
+                }
+            }
+        }
+    }
+
+    // ---- Stimme wählen ------------------------------------------------------------------------
+    Popup {
+        id: voicePanel
+        parent: Overlay.overlay
+        width: Math.min(win.width - 32, 440)
+        height: Math.min(win.height - 60, voiceCol.implicitHeight + 36)
+        x: (win.width - width) / 2
+        y: 56
+        modal: true
+        padding: 18
+        background: Rectangle { radius: 18; color: Theme.raised; border.color: Theme.hairline }
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
+        contentItem: Flickable {
+            contentHeight: voiceCol.implicitHeight
+            clip: true
+            ColumnLayout {
+                id: voiceCol
+                width: parent.width
+                spacing: 10
+                Text { text: "Stimme"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true }
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: ki.voice.available
+                        ? "Der KI-Helfer liest seine Antworten vor – offline auf deinem PC. Code wird nicht vorgelesen."
+                        : "Die Sprachausgabe ist auf diesem PC noch nicht verfügbar."
+                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+                }
+                CSwitch {
+                    Layout.fillWidth: true
+                    label: "Antworten automatisch vorlesen"
+                    checked: ki.voice.autoRead
+                    onToggled: (value) => ki.voice.setAutoRead(value)
+                }
+                Repeater {
+                    model: ki.voice.voices
+                    delegate: Rectangle {
+                        id: vopt
+                        required property var modelData
+                        readonly property bool chosen: ki.voice.voice === modelData.key
+                        readonly property bool loading: ki.voice.loadingVoice === modelData.key
+                        Layout.fillWidth: true
+                        implicitHeight: 58
+                        radius: 14
+                        color: chosen ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.13)
+                                      : (vMouse.containsMouse ? Theme.hover : Theme.subtle)
+                        border.color: chosen ? Theme.accent : Theme.hairline
+                        border.width: chosen ? 1.5 : 1
+                        MouseArea {
+                            id: vMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: vopt.modelData.installiert
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: ki.voice.setVoice(vopt.modelData.key)
+                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 10
+                            spacing: 10
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 1
+                                Text {
+                                    text: vopt.modelData.name + "  ·  " + vopt.modelData.geschlecht
+                                    color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: vopt.loading ? ki.voice.progress + " % · " + ki.voice.status : vopt.modelData.beschreibung
+                                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            CButton {
+                                visible: vopt.modelData.installiert
+                                text: "Probe"
+                                onClicked: ki.voice.preview(vopt.modelData.key)
+                            }
+                            CButton {
+                                visible: !vopt.modelData.installiert
+                                enabled: ki.voice.loadingVoice === ""
+                                text: vopt.loading ? "Lädt …" : "Laden · " + vopt.modelData.mb + " MB"
+                                onClicked: ki.voice.installVoice(vopt.modelData.key)
+                            }
+                        }
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: modelData.name + ", " + modelData.geschlecht
+                        Accessible.checked: chosen
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: ki.voice.loadingVoice === "" && ki.voice.status.length > 0
+                    text: ki.voice.status
+                    color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+                Text { text: "Tempo"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                CSlider {
+                    Layout.fillWidth: true
+                    from: 0.7; to: 1.5; stepSize: 0.05
+                    value: ki.voice.speed
+                    onMoved: ki.voice.setSpeed(value)
+                    Accessible.name: "Tempo der Stimme"
+                }
+                Text { text: "Lautstärke"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                CSlider {
+                    Layout.fillWidth: true
+                    from: 0.1; to: 1.0; stepSize: 0.05
+                    value: ki.voice.volume
+                    onMoved: ki.voice.setVolume(value)
+                    Accessible.name: "Lautstärke der Stimme"
+                }
+                CButton {
+                    Layout.alignment: Qt.AlignRight
+                    text: "Fertig"
+                    primary: true
+                    onClicked: voicePanel.close()
                 }
             }
         }

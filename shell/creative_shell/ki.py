@@ -25,6 +25,7 @@ from PySide6.QtGui import QGuiApplication
 
 from . import config
 from .mainthread import post
+from .stimme import Sprecher
 
 LIB = Path(os.environ.get("CREATIVE_KI_LIB", "/usr/lib/creative-ki"))
 MODELLE = Path(os.environ.get("CREATIVE_KI_MODELLE", "/var/lib/creative-ki/modelle"))
@@ -172,6 +173,7 @@ class KiHelfer(QObject):
         self._busy = False
         self._stop = threading.Event()
         self._setup = None
+        self._stimme = Sprecher()
         self._chunk.connect(self._on_chunk)
         self._done.connect(self._on_done)
         self._setupLine.connect(self._on_setup_line)
@@ -183,6 +185,7 @@ class KiHelfer(QObject):
         app = QGuiApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.unload)
+            app.aboutToQuit.connect(self._stimme.quit)
         # Ein anderes Konto hat das Modell vielleicht gerade geladen
         self._poll = QTimer(self)
         self._poll.setInterval(15000)
@@ -359,6 +362,7 @@ class KiHelfer(QObject):
         self._messages.append({"role": "assistant", "text": "", "quellen": []})
         self._busy = True
         self._stop.clear()
+        self._stimme.beginn()
         self._idle.stop()
         self._status = "Denkt nach …" if self._proc is not None and self._proc.poll() is None else "KI wird geladen …"
         self.messagesChanged.emit()
@@ -420,6 +424,7 @@ class KiHelfer(QObject):
             self._status = ""
             self.changed.emit()
         self._messages[-1]["text"] += text
+        self._stimme.dazu(text)
         self.messagesChanged.emit()
 
     def _on_done(self, error, quellen):
@@ -433,8 +438,10 @@ class KiHelfer(QObject):
                 last["fehler"] = True
             elif self._stop.is_set():
                 last["text"] += " …"
+                self._stimme.stop()
             else:
                 last["quellen"] = quellen
+                self._stimme.ende()
         self._status = ""
         self.messagesChanged.emit()
         self.changed.emit()
@@ -443,8 +450,15 @@ class KiHelfer(QObject):
     def stop(self):
         self._stop.set()
 
+    @Slot(int)
+    def speak(self, index):
+        """🔊 an einer Antwort: diese Nachricht (nochmal) vorlesen."""
+        if 0 <= index < len(self._messages) and self._messages[index]["role"] == "assistant":
+            self._stimme.speakText(self._messages[index]["text"])
+
     @Slot()
     def clear(self):
+        self._stimme.stop()
         if self._busy:
             self._stop.set()
         self._messages = []
@@ -479,3 +493,4 @@ class KiHelfer(QObject):
     messages = Property("QVariantList", lambda self: self._messages, notify=messagesChanged)
     posX = Property(float, lambda self: self._position(0), notify=changed)
     posY = Property(float, lambda self: self._position(1), notify=changed)
+    voice = Property(QObject, lambda self: self._stimme, constant=True)
