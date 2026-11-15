@@ -9,12 +9,14 @@ cp -r shell/kwin/creative-abstand "$XDG_DATA_HOME/kwin/scripts/"
 cp shell/kwin/kwinrc "$XDG_CONFIG_HOME/kwinrc"
 sed -i 's/^creative-tasksEnabled=true//' "$XDG_CONFIG_HOME/kwinrc"
 printf '\n[Script-creative-abstand]\ngap=%s\n' "${GAP:-6}" >> "$XDG_CONFIG_HOME/kwinrc"
+# kwin_wayland hat Datei-Capabilities, die im Container nicht erlaubt sind – Kopie ohne
+cp /usr/bin/kwin_wayland /tmp/kwin_wayland
 dbus-run-session -- sh -c '
-  kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-7 >/tmp/kwin.log 2>&1 &
+  /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-7 >/tmp/kwin.log 2>&1 &
   sleep 5
   WAYLAND_DISPLAY=wayland-7 QT_QPA_PLATFORM=wayland timeout 30 python3 tools/abstand-client.py /tmp/abstand.json || true
 ' || true
-tail -5 /tmp/kwin.log
+tail -15 /tmp/kwin.log
 python3 - <<'PY'
 import json, os
 r = {x["step"]: x for x in json.load(open("/tmp/abstand.json"))}
