@@ -178,11 +178,20 @@ def new_project(name, genre="jumpnrun", sample=True):
                               else sample_level("Level 1") if sample else empty_level("Level 1"))},
         "ship": new_ship(),
         "player": {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3, "attacks": [new_attack(0)]},
-        "settings": {"width": 1280, "height": 720, "fullscreen": False, "ui": dict(UI_DEFAULT)},
+        "settings": {"width": 1280, "height": 720, "fullscreen": False, "ui": dict(UI_DEFAULT),
+                     "music": dict(MUSIC_DEFAULT)},
     }
 
 
 ATTACK_KEYS = ["J", "K", "L", "U", "I", "O"]
+# Hintergrundmusik: Menü (auch Vorspann/Texte) und Level; ein Level kann eigene Musik haben ("aus" = Stille)
+MUSIC_DEFAULT = {"menu": "", "level": "", "volume": 0.7, "sfx": 0.8}
+AUDIO_FILTER = "Musik und Klänge (*.ogg *.mp3 *.wav)"
+# Klänge des Weltraum-Shooters, die man durch eigene Dateien ersetzen kann (eingebaut = berechnet)
+SPACE_SOUNDS = [("triebwerk", "Triebwerk (Fliegen, läuft dauernd)"), ("boost", "Boost"), ("bremse", "Bremsen"),
+                ("laser", "Laser"), ("plasma", "Plasma"), ("rakete", "Rakete"), ("streu", "Streuschuss"),
+                ("rolle", "Fassrolle"), ("looping", "Looping"), ("explosion", "Abschuss / Explosion"),
+                ("treffer", "Treffer am eigenen Schiff"), ("klick", "Waffe wechseln"), ("reparatur", "Repariert")]
 ATTACK_NAMES = ["Schlag", "Tritt", "Hieb", "Wirbel"]
 UI_DEFAULT = {"lives": "herzen", "heart": "", "heartEmpty": "", "coin": "", "panel": "", "panelMargin": 16,
               "barFill": "", "barBack": "", "barMargin": 6, "bubble": "", "bubbleMargin": 24, "bubbleText": "#1c2433"}
@@ -297,7 +306,14 @@ def assets_used(project):
                 used.add(e["model"])
     if project["player"].get("model"):
         used.add(project["player"]["model"])
+    music = project.get("settings", {}).get("music", {})
+    for key in ("menu", "level"):
+        if music.get(key):
+            used.add(music[key])
     ship = project.get("ship", {})
+    for rel in ship.get("sounds", {}).values():
+        if rel:
+            used.add(rel)
     for key in SHIP_IMAGES:
         if ship.get(key):
             used.add(ship[key])
@@ -308,6 +324,8 @@ def assets_used(project):
     for lvl in project["levels"].values():
         if lvl.get("skyImage"):
             used.add(lvl["skyImage"])
+        if lvl.get("music") and lvl["music"] != "aus":
+            used.add(lvl["music"])
         if lvl.get("horizon", {}).get("texture"):
             used.add(lvl["horizon"]["texture"])
         for e in lvl["entities"]:
@@ -359,6 +377,7 @@ def load(folder):
     data.setdefault("player", {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3})
     data.setdefault("settings", {"width": 1280, "height": 720, "fullscreen": False})
     data["player"].setdefault("attacks", [])
+    data.setdefault("settings", {}).setdefault("music", dict(MUSIC_DEFAULT))
     if data.get("genre") == "weltraum":
         ship = data.setdefault("ship", new_ship())
         for key, value in new_ship().items():

@@ -492,6 +492,20 @@ class GameSettings(QWidget):
             full.toggled.connect(lambda val: self.set(st, "fullscreen", val))
             form.addRow("", full)
             lay.addLayout(form)
+        from .audio_widgets import audio_row
+        music = st.setdefault("music", dict(proj.MUSIC_DEFAULT))
+        lay.addWidget(QLabel("MUSIK UND KLANG", objectName="section"))
+        mform = QFormLayout()
+        mform.addRow("Musik im Menü", audio_row(self.win, music, "menu", "Keine Musik", self.win.touched))
+        mform.addRow("Musik in Levels", audio_row(self.win, music, "level", "Wie im Menü", self.win.touched))
+        mform.addRow("Lautstärke Musik", self.spin(music, "volume", 0, 1, 0.05, 0.7, 2))
+        mform.addRow("Lautstärke Effekte", self.spin(music, "sfx", 0, 1, 0.05, 0.8, 2))
+        lay.addLayout(mform)
+        mtip = QLabel("OGG, MP3 oder WAV – läuft in Dauerschleife und wird beim Wechsel übergeblendet. "
+                      "Jedes Level kann eigene Musik bekommen (Level anklicken → „Musik“).")
+        mtip.setWordWrap(True)
+        mtip.setObjectName("sub")
+        lay.addWidget(mtip)
         info = QLabel("Tastatur, Maus und Controller: siehe „Steuerung“ unten. Controller werden im Spiel "
                       "automatisch erkannt.")
         info.setWordWrap(True)
@@ -623,6 +637,13 @@ class GameSettings(QWidget):
         form.addRow("Symbol für Leben", self.graphic(ship, "lifeIcon"))
         form.addRow("Explosion", self.graphic(ship, "explosion"))
         lay.addLayout(form)
+        from .audio_widgets import audio_row
+        sounds = ship.setdefault("sounds", {})
+        lay.addWidget(QLabel("KLÄNGE", objectName="section"))
+        sform = QFormLayout()
+        for key, label in proj.SPACE_SOUNDS:
+            sform.addRow(label, audio_row(self.win, sounds, key, "Eingebaut", self.win.touched))
+        lay.addLayout(sform)
         tip = QLabel("Eigene Bilder als PNG mit durchsichtigem Hintergrund. Schiff und Leben werden nach dem "
                      "Zustand eingefärbt – am besten helle Bilder. Planeten, Asteroiden, Gegner und Basen bekommen "
                      "eigene Grafiken im Sektor-Editor, Geschosse und Waffen-Symbole oben bei den Waffen.")

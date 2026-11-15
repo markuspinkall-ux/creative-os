@@ -51,6 +51,7 @@ SHAPES = {
     "pagebreak": '<path d="M6 3v6h12V3"/><path d="M6 21v-6h12v6"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>',
     "table": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/>',
     "image": '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5L5 20"/>',
+    "music": '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
     "link": '<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
     "header": '<path d="M5 3h14v18H5z"/><path d="M5 8h14"/><rect x="7.5" y="4.6" width="9" height="2" fill="{a}" stroke="none"/><path d="M8 12h8M8 15h6"/>',
     "footer": '<path d="M5 3h14v18H5z"/><path d="M5 16h14"/><rect x="7.5" y="17.6" width="9" height="2" fill="{a}" stroke="none"/><path d="M8 7h8M8 10h6"/>',

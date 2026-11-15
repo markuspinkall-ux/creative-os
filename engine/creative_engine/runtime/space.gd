@@ -8,6 +8,10 @@ signal game_over
 signal to_menu
 
 const Assets = preload("res://assets.gd")
+const Sound = preload("res://sound.gd")
+## Klänge, die man im Editor durch eigene Dateien ersetzen kann (Schlüssel in ship.sounds)
+const SOUND_KEYS := ["triebwerk", "boost", "bremse", "laser", "plasma", "rakete", "streu", "rolle", "looping",
+	"explosion", "treffer", "klick", "reparatur"]
 
 const ENEMY_TYPES := {
 	"jaeger": {"name": "Jäger", "hp": 3, "speed": 46.0, "turn": 1.8, "weapon": "laser", "radius": 3.2,
@@ -121,6 +125,14 @@ var boost_energy := 1.0          # Boost hält ein paar Sekunden, lädt sich dan
 var boost_kick := 0.0            # kurzer Stoß beim Zünden (Sichtfeld, Kamera)
 var boost_blocked := false
 var maneuver := {}               # laufendes Manöver: Looping oder Fassrolle
+var sounds := {}                 # Schlüssel → AudioStream (eigene Datei oder eingebaut)
+var sfx_players: Array = []
+var sfx_3d: Array = []
+var engine_player: AudioStreamPlayer
+var sfx_volume := 0.8
+var played := {}                 # für den Autotest: welche Klänge liefen
+var was_boosting := false
+var was_braking := false
 var maneuver_wait := 0.0
 var shake := 0.0
 var streaks: Array = []          # Geschwindigkeitsstreifen um die Kamera
@@ -216,6 +228,7 @@ func _ready() -> void:
 	build_ship()
 	build_camera()
 	build_hud()
+	build_sounds()
 	total_enemies = enemies.size()
 	if not autotest:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -227,6 +240,75 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+# ---- Klänge ------------------------------------------------------------------------------------
+func build_sounds() -> void:
+	var music: Dictionary = game.get("settings", {}).get("music", {})
+	sfx_volume = clampf(float(music.get("sfx", 0.8)), 0.0, 1.0)
+	var own: Dictionary = ship_cfg.get("sounds", {})
+	for key in SOUND_KEYS:
+		var st: AudioStream = Sound.load_file(String(own.get(key, "")), key == "triebwerk")
+		sounds[key] = st if st else Sound.builtin(key)
+	for i in 10:
+		var p := AudioStreamPlayer.new()
+		p.process_mode = Node.PROCESS_MODE_PAUSABLE
+		add_child(p)
+		sfx_players.append(p)
+	for i in 8:
+		var p3 := AudioStreamPlayer3D.new()
+		p3.unit_size = 60.0
+		p3.max_distance = 1400.0
+		p3.process_mode = Node.PROCESS_MODE_PAUSABLE
+		add_child(p3)
+		sfx_3d.append(p3)
+	engine_player = AudioStreamPlayer.new()
+	engine_player.stream = sounds["triebwerk"]
+	engine_player.volume_db = linear_to_db(0.35 * sfx_volume)
+	engine_player.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(engine_player)
+	engine_player.play()
+	if autotest:
+		print("AUTOTEST: Klänge bereit ", sounds.values().filter(func(x): return x != null).size(), "/", SOUND_KEYS.size())
+
+
+func sfx(key: String, volume := 1.0, pitch := 1.0, at = null) -> void:
+	## Effekt abspielen – mit Position (at: Vector3) räumlich, sonst direkt
+	var st: AudioStream = sounds.get(key)
+	if st == null or sfx_volume <= 0.0:
+		return
+	played[key] = int(played.get(key, 0)) + 1
+	var pool: Array = sfx_3d if at != null else sfx_players
+	var player = null
+	for p in pool:
+		if not p.playing:
+			player = p
+			break
+	if player == null:
+		player = pool[0]
+	player.stream = st
+	player.pitch_scale = pitch * randf_range(0.96, 1.04)
+	player.volume_db = linear_to_db(maxf(0.0001, volume * sfx_volume))
+	if at != null:
+		(player as AudioStreamPlayer3D).global_position = at
+	player.play()
+
+
+func update_engine_sound() -> void:
+	if engine_player == null:
+		return
+	var k := speed / maxf(1.0, max_speed)
+	var on := landed.is_empty() and not done
+	engine_player.stream_paused = not on
+	engine_player.pitch_scale = clampf(0.65 + 0.45 * k + (0.25 if boosting else 0.0), 0.4, 2.5)
+	var vol := (0.22 + 0.25 * minf(k, 1.5) + (0.25 if boosting else 0.0)) * sfx_volume
+	engine_player.volume_db = lerpf(engine_player.volume_db, linear_to_db(maxf(0.0001, vol)), 0.15)
+	if boosting and not was_boosting:
+		sfx("boost", 0.9)
+	if braking and not was_braking:
+		sfx("bremse", 0.8)
+	was_boosting = boosting
+	was_braking = braking
 
 
 func setup_input() -> void:
@@ -1443,6 +1525,7 @@ func fire() -> void:
 		dir = (to + aim_target.get("vel", Vector3.ZERO) * (to.length() / float(w.get("speed", 400)))).normalized()
 	var base := ship.global_position + forward() * 3.5
 	var color := Color(String(w.get("color", "#ff5d6c")))
+	sfx(type if sounds.has(type) else "laser", 0.55 if type == "laser" else 0.8)
 	var spd := float(w.get("speed", 400)) + speed
 	if type == "streu":
 		for a in [-0.06, -0.03, 0.0, 0.03, 0.06]:
@@ -1609,6 +1692,7 @@ func damage_enemy(e: Dictionary, dmg: float) -> void:
 		print("AUTOTEST: Treffer auf ", e["name"])
 	if int(e["hp"]) <= 0:
 		var n: Node3D = e["node"]
+		sfx("explosion", 1.0, 1.15 - minf(0.4, float(e["radius"]) / 25.0), n.global_position)
 		blast(n.global_position, float(e["radius"]) * 2.5)
 		blast(n.global_position, float(e["radius"]) * 1.4, Color("#fff3c4"))
 		n.queue_free()
@@ -1633,6 +1717,7 @@ func hurt(dmg: float) -> void:
 	hull -= rest
 	shield_wait = 3.0
 	flash = 0.35 if rest > 0.0 else 0.15
+	sfx("treffer", 0.7 if rest > 0.0 else 0.45, 1.0 if rest > 0.0 else 1.4)
 	if autotest and not test_said.has("schaden"):
 		test_said["schaden"] = true
 		print("AUTOTEST: Schaden genommen, Schild %d Hülle %d" % [shield, hull])
@@ -1644,6 +1729,7 @@ func hurt(dmg: float) -> void:
 
 func lose_life() -> void:
 	blast(ship.global_position, 10.0)
+	sfx("explosion", 1.0, 0.75)
 	lives -= 1
 	if lives <= 0:
 		done = true
@@ -1717,6 +1803,7 @@ func update_enemies(delta: float) -> void:
 				var spread := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * dist * 0.03
 				var dir := (lead + spread).normalized()
 				var col := Color("#ff6b4a") if wtype != "plasma" else Color("#c86bff")
+				sfx("laser" if wtype != "plasma" else "plasma", 0.7, 0.8, n.global_position)
 				spawn_shot(n.global_position + fwd * (float(e["radius"]) + 1.0), dir * bspeed,
 					float(ENEMY_DAMAGE.get(wtype, 6.0)), "gegner", wtype, col, {})
 				e["cd"] = float(info["cooldown"]) * randf_range(0.8, 1.3)
@@ -1769,6 +1856,7 @@ func update_places(delta: float) -> void:
 			prompt.text = "%s · Reparatur %d %%" % [docked["name"], roundi(100.0 * hull / max_hull)] if not full else "%s · Schiff repariert ✓" % docked["name"]
 			if before < max_hull + max_shield and full:
 				show_message("Schiff vollständig repariert", 2.0)
+				sfx("reparatur", 0.7)
 				if autotest:
 					print("AUTOTEST: Repariert an ", docked["name"], ", Hülle ", roundi(hull))
 			if full and goal == "basis" and (goal_target == "" or goal_target == docked["name"]):
@@ -1938,6 +2026,7 @@ func start_maneuver(kind: String, side := 1.0) -> void:
 	if not maneuver.is_empty() or maneuver_wait > 0.0:
 		return
 	maneuver = {"kind": kind, "t": 0.0, "side": side, "dur": 1.7 if kind == "looping" else 0.55, "done": 0.0}
+	sfx("looping" if kind == "looping" else "rolle", 0.9)
 	if kind == "looping":
 		shake = 0.25
 	if autotest and not test_said.has(kind):
@@ -1976,6 +2065,7 @@ func select_weapon(i: int) -> void:
 	if i == weapon_i:
 		return
 	weapon_i = i
+	sfx("klick", 0.5)
 	cooldown = minf(cooldown, 0.15)
 	update_weapons()
 	show_message(String(weapons[i].get("name", "Waffe")), 0.9)
@@ -2096,6 +2186,7 @@ func _process(delta: float) -> void:
 		var cp := ship.global_position + Vector3(cos(t * 0.15) * 16.0, 6.0, sin(t * 0.15) * 16.0)
 		camera.global_transform = Transform3D(Basis.looking_at(ship.global_position - cp, Vector3.UP), cp)
 	smoke.emitting = hull < max_hull * 0.5 and landed.is_empty()
+	update_engine_sound()
 	update_shots(delta)
 	update_blasts(delta)
 	update_horizon()
@@ -2155,6 +2246,8 @@ func autopilot(delta: float) -> Dictionary:
 			steer_to(b["pos"], delta)
 			var dist := ship.global_position.distance_to(b["pos"])
 			throttle = 0.9 if dist > 120.0 else 0.0
+			if dist <= 160.0 and speed > max_speed * 0.4:
+				input["throttle"] = -1.0          # bremsen vor der Basis (Bremse + Klang)
 			if docked == b and hull >= max_hull and shield >= max_shield:
 				next_phase("landen")
 			elif phase_time > 30.0:
@@ -2182,6 +2275,7 @@ func autopilot(delta: float) -> Dictionary:
 				phase_time = 0.0
 		"ende":
 			if phase_time > 1.0:
+				print("AUTOTEST: Klänge gespielt ", ",".join(PackedStringArray(played.keys())))
 				print("AUTOTEST: Fertig, Punkte ", points, ", Hülle ", roundi(hull), ", Leben ", lives)
 				done = true
 				finished.emit(points)

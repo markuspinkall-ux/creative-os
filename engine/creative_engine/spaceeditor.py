@@ -578,6 +578,8 @@ class SpaceEditor(QWidget):
                          and (kind != "planet" or e.get("landable", True))]
                 form.addRow("Ziel-Ort", self.combo(lvl, "goalTarget", [("", "egal welcher")] + [(n, n) for n in names], ""))
             form.addRow("Kartengröße", self.number(lvl, "size", 300, 5000, 100, 1000, " m"))
+            from .audio_widgets import level_music
+            form.addRow("Musik", level_music(self.host, lvl, self.changed.emit))
             self.pv.addLayout(form)
             self.pv.addWidget(QLabel("HIMMEL", objectName="section"))
             form = QFormLayout()
