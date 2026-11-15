@@ -334,10 +334,11 @@ RUN dnf install -y --skip-unavailable unzip librsvg2-tools nss gtk3 alsa-lib lib
 # (ohne default_app.asar kann Electron keinen Ordner als Argument laden).
 COPY webbrowser/app /usr/lib/creative-browser/electron/resources/app
 # Werbeblocker (Ghostery, MPL-2.0) genau in den Versionen aus package-lock.json
+# (/root ist im bootc-Abbild nur ein Verweis nach /var – npm bekommt deshalb HOME und Cache in /tmp)
 RUN cd /usr/lib/creative-browser/electron/resources/app \
- && npm ci --omit=dev --no-audit --no-fund --ignore-scripts \
+ && HOME=/tmp/npm-home npm ci --omit=dev --no-audit --no-fund --ignore-scripts --cache /tmp/npm-cache \
  && test -f node_modules/@ghostery/adblocker-electron-preload/dist/index.cjs \
- && rm -rf /root/.npm
+ && rm -rf /tmp/npm-cache /tmp/npm-home
 COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
 COPY webbrowser/bin/creative-whatsapp /usr/bin/creative-whatsapp
 COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
