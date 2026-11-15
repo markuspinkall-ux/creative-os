@@ -1,0 +1,15 @@
+name: Bluetooth prüfen
+# Einstellungen für stabile Controller-Verbindungen (BlueZ, udev, modprobe) in Fedora 44 prüfen.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [image/bluetooth/**, tools/bluetooth-test.sh, .github/workflows/bluetooth-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh tools/bluetooth-test.sh

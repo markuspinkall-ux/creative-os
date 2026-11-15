@@ -121,6 +121,11 @@ class WidgetExtras(QObject):
         if not self._save(clock=clock_descriptor(raw), clockEnabled=True):
             raise ValueError("Das Widget konnte nicht gespeichert werden.")
 
+    def removeClock(self):
+        # wie bei den Notizen: Position bleibt gespeichert, beim erneuten Herunterladen ist die Uhr wieder dort
+        if not self._save(clock=None, clockEnabled=False):
+            raise ValueError("Das Widget konnte nicht entfernt werden.")
+
     def installNotes(self):
         if not self._save(notesInstalled=True, notesEnabled=True):
             raise ValueError("Das Widget konnte nicht gespeichert werden.")

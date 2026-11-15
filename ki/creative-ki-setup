@@ -5,6 +5,7 @@ Läuft als root über pkexec (polkit: org.creativeos.ki.setup) – so teilen sic
 Benutzerkonten dasselbe Modell und es liegt nur einmal auf der Platte.
 
   creative-ki-setup laden <gross|mittel|klein>
+  creative-ki-setup stimme <thorsten|kerstin|…>     (Stimmen fürs Vorlesen, siehe stimmen.json)
 
 Ausgabe: Zeilen „FORTSCHRITT <prozent> <text>“, am Ende „FERTIG“ oder „FEHLER <text>“.
 Nur Modelle aus der festen Liste (modelle.json) mit geprüfter SHA-256-Summe.
@@ -21,6 +22,8 @@ from urllib.request import Request, urlopen
 
 LISTE = Path("/usr/lib/creative-ki/modelle.json")
 ZIEL = Path("/var/lib/creative-ki/modelle")
+STIMMEN_LISTE = Path("/usr/lib/creative-ki/stimmen.json")
+STIMMEN = Path("/var/lib/creative-ki/stimmen")
 
 
 def melde(text):
@@ -98,9 +101,59 @@ def lade(info):
     melde("FERTIG")
 
 
+def stimme(info):
+    """Stimme fürs Vorlesen (zwei kleine Dateien) – mit Größe und Prüfsumme aus stimmen.json."""
+    STIMMEN.mkdir(parents=True, exist_ok=True)
+    os.chmod(STIMMEN.parent, 0o755)
+    os.chmod(STIMMEN, 0o755)
+    gesamt = sum(d["groesse"] for d in info["dateien"]) or 1
+    fertig = 0
+    for d in info["dateien"]:
+        ziel = STIMMEN / d["datei"]
+        if not ziel.is_file() or ziel.stat().st_size != d["groesse"]:
+            teil = STIMMEN / (d["datei"] + ".teil")
+            h = hashlib.sha256()
+            schon = 0
+            for versuch in range(3):
+                try:
+                    with urlopen(Request(d["url"], headers={"User-Agent": "CreativeOS-KI/1.0"}), timeout=30) as a, \
+                            open(teil, "wb") as f:
+                        h, schon, zuletzt = hashlib.sha256(), 0, 0.0
+                        while True:
+                            block = a.read(1 << 20)
+                            if not block:
+                                break
+                            f.write(block)
+                            h.update(block)
+                            schon += len(block)
+                            if time.monotonic() - zuletzt > 0.4:
+                                zuletzt = time.monotonic()
+                                melde(f"FORTSCHRITT {(fertig + schon) * 98 // gesamt} "
+                                      f"{(fertig + schon) / 1e6:.0f} von {gesamt / 1e6:.0f} MB")
+                    break
+                except OSError as exc:
+                    melde(f"FORTSCHRITT {fertig * 98 // gesamt} Verbindung unterbrochen ({exc.__class__.__name__}) – neuer Versuch …")
+                    time.sleep(2 + versuch * 3)
+            if schon != d["groesse"] or h.hexdigest() != d["sha256"]:
+                teil.unlink(missing_ok=True)
+                fehler("Die Stimme ließ sich nicht vollständig laden. Bitte später noch einmal versuchen.")
+            os.chmod(teil, 0o644)
+            teil.replace(ziel)
+        fertig += d["groesse"]
+    melde("FORTSCHRITT 100 Fertig")
+    melde("FERTIG")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "stimme":
+        stimmen = json.loads(STIMMEN_LISTE.read_text(encoding="utf-8"))
+        info = stimmen.get(sys.argv[2])
+        if info is None:
+            fehler("Unbekannte Stimme.")
+        stimme(info)
+        return
     if len(sys.argv) != 3 or sys.argv[1] != "laden":
-        fehler("Aufruf: creative-ki-setup laden <gross|mittel|klein>")
+        fehler("Aufruf: creative-ki-setup laden <gross|mittel|klein> | stimme <name>")
     modelle = json.loads(LISTE.read_text(encoding="utf-8"))
     info = modelle.get(sys.argv[2])
     if info is None:

@@ -163,8 +163,12 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
         <ins class="adsbygoogle" data-ad-client="ca-pub-1234" data-ad-slot="5678" style="display:block;width:300px;height:250px;background:red">Werbung</ins>
         <div id="ad-banner" data-ad-cls="banner" style="width:300px;height:90px;background:red">Werbung</div>
         <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" onerror="window.__blocked=1" onload="window.__loaded=1"></script>
+        <video id="clip" src="/clip.webm" preload="auto" muted></video>
         </body>`;
-      const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
+      const server = http.createServer((q, r) => {
+        if (q.url.startsWith('/clip')) { r.writeHead(200, { 'content-type': 'video/webm' }); r.end(Buffer.alloc(2048)); return; }
+        r.writeHead(200, { 'content-type': 'text/html' }); r.end(page);
+      });
       await new Promise((r) => server.listen(0, '127.0.0.1', r));
       // Echter Hostname (über /etc/hosts): Ghostery wendet Ausblend-Regeln nicht auf IP-Adressen an
       const host = process.env.CREATIVE_WERBETEST_HOST || '127.0.0.1';
@@ -179,6 +183,12 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       check('Werbeskript blockiert', res.blocked === 1 && !res.loaded);
       check('Werbeflächen ausgeblendet', res.ins === 0 && res.banner === 0 && res.inhalt > 0);
       check('Zähler zählt', adblock.count(t.wc.id) >= 1);
+      // Videodaten gehen ohne Filterprüfung durch (schnellerer Start bei YouTube & Co.)
+      const { isMediaFast } = require('./adblock');
+      check('Videodaten ungeprüft durchgelassen', adblock.fastPassed >= 1
+        && isMediaFast('https://rr1---sn-abc.googlevideo.com/videoplayback?id=1')
+        && !isMediaFast('https://www.youtube.com/pagead/adview?ai=1'));
+      result.adblockSchnell = adblock.fastPassed;
       await shot(win, dir, '9-werbeblocker');
       await within(win.ui.webContents.executeJavaScript("document.getElementById('shield').click()"), 5000);
       await sleep(500);

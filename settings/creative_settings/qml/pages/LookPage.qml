@@ -3,6 +3,7 @@ import Creative
 import ".."
 
 SettingsPage {
+    id: root
     PageHeader {
         title: "Darstellung"
         subtitle: "Design, Akzentfarbe, Hintergrundbild, Musik-Visualizer, Leistungsanzeige, Widgets"
@@ -247,22 +248,38 @@ SettingsPage {
         }
     }
 
+    // Startmenü-Karte: zuerst nur der erste Eintrag; beim Drüberfahren (oder Klick auf „weitere“)
+    // klappt sie auf und bleibt offen, solange die Seite offen ist.
+    property bool startMenuOpen: false
+
     Card {
         title: "Startmenü"
         subtitle: "Apps, die du per Rechtsklick › „Aus Startmenü entfernen“ ausgeblendet hast"
+        HoverHandler {
+            onHoveredChanged: if (hovered && look.hiddenApps.length > 1) root.startMenuOpen = true
+        }
         Repeater {
             model: look.hiddenApps
             delegate: SettingRow {
                 required property var modelData
                 required property int index
+                visible: index === 0 || root.startMenuOpen
                 label: modelData.name
                 hint: "Ausgeblendet"
-                last: index === look.hiddenApps.length - 1
+                last: root.startMenuOpen ? index === look.hiddenApps.length - 1
+                                         : look.hiddenApps.length === 1
                 CButton {
                     text: "Wieder anzeigen"
                     onClicked: look.showInStartMenu(modelData.desktopId)
                 }
             }
+        }
+        SettingRow {
+            visible: !root.startMenuOpen && look.hiddenApps.length > 1
+            label: "+ " + (look.hiddenApps.length - 1) + (look.hiddenApps.length === 2 ? " weitere App" : " weitere Apps")
+            hint: "Mit der Maus drüberfahren, um alle zu sehen"
+            last: true
+            CButton { text: "Alle zeigen"; onClicked: root.startMenuOpen = true }
         }
         SettingRow {
             visible: look.hiddenApps.length === 0

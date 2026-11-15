@@ -97,7 +97,7 @@ class WidgetWindow(QMainWindow):
         detail.addWidget(QLabel("Uhr mit Stunden-, Minuten- und Sekundenzeiger"))
         row.addLayout(detail, 1)
         self.download_button = QPushButton("Herunterladen")
-        self.download_button.clicked.connect(self.download_clock)
+        self.download_button.clicked.connect(self.toggle_clock)
         row.addWidget(self.download_button)
         catalog.addLayout(row)
         row = QHBoxLayout()
@@ -208,8 +208,14 @@ class WidgetWindow(QMainWindow):
     def update_download_button(self):
         self.notes_button.setEnabled(self.available)
         self.notes_button.setText("Entfernen" if self.notes_installed else "Installieren")
-        self.download_button.setEnabled(self.available and not self.loading and not self.installed)
-        self.download_button.setText("Installiert" if self.installed else "Lädt …" if self.loading else "Herunterladen")
+        self.download_button.setEnabled(self.available and not self.loading)
+        self.download_button.setText("Entfernen" if self.installed else "Lädt …" if self.loading else "Herunterladen")
+
+    def toggle_clock(self):
+        if not self.installed:
+            self.download_clock()
+        elif self.apply("removeClockWidget"):
+            self.message.setText("Die analoge Uhr wurde entfernt. Über „Herunterladen“ kommt sie jederzeit wieder.")
 
     def toggle_notes(self):
         install = not self.notes_installed

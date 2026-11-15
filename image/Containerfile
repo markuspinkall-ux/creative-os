@@ -418,6 +418,12 @@ COPY broadcast/creative-broadcast.desktop /usr/share/applications/creative-broad
 RUN chmod 755 /usr/bin/creative-broadcast /usr/bin/creative-broadcastd
 # Bluetooth: BlueZ-Steuerung im Tray, KDE-Agent für sichere PIN-Kopplung.
 RUN dnf install -y bluez bluedevil && systemctl enable bluetooth.service && dnf clean all
+# Bluetooth für Controller stabil: Adapter nie schlafen legen, schnell wieder verbinden,
+# kurze Abstände für Bluetooth-LE-Controller (Xbox). Siehe image/bluetooth/.
+COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-bluetooth.conf
+COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
+COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py
+RUN python3 /tmp/bluez-anpassen.py /etc/bluetooth/main.conf && rm -f /tmp/bluez-anpassen.py
 # Benachrichtigungen (org.freedesktop.Notifications) im Creative-Look
 RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
 COPY notify/creative_notify /usr/lib/creative-notify/creative_notify
@@ -534,10 +540,15 @@ COPY ki/install-llama.sh /tmp/install-llama.sh
 RUN dnf install -y --skip-unavailable vulkan-loader mesa-vulkan-drivers libgomp && dnf clean all \
  && sh /tmp/install-llama.sh /usr/lib/creative-ki/llama && rm -f /tmp/install-llama.sh
 COPY ki/modelle.json /usr/lib/creative-ki/modelle.json
+# Stimme des KI-Helfers: Piper (offline) + „Thorsten“; weitere Stimmen lädt man in der App nach
+COPY ki/stimmen.json /usr/lib/creative-ki/stimmen.json
+COPY ki/install-piper.sh /tmp/install-piper.sh
+RUN dnf install -y --skip-unavailable pipewire-utils && dnf clean all \
+ && sh /tmp/install-piper.sh /usr/lib/creative-ki && rm -f /tmp/install-piper.sh
 COPY ki/creative-ki-setup /usr/libexec/creative-ki-setup
 COPY ki/org.creativeos.ki.policy /usr/share/polkit-1/actions/org.creativeos.ki.policy
 RUN chmod 755 /usr/libexec/creative-ki-setup \
- && printf 'd /var/lib/creative-ki 0755 root root -\nd /var/lib/creative-ki/modelle 0755 root root -\n' > /usr/lib/tmpfiles.d/creative-ki.conf
+ && printf 'd /var/lib/creative-ki 0755 root root -\nd /var/lib/creative-ki/modelle 0755 root root -\nd /var/lib/creative-ki/stimmen 0755 root root -\n' > /usr/lib/tmpfiles.d/creative-ki.conf
 
 # ---------------------------------------------------------------------------
 # 8b4) Klang- und Medienwerkzeuge (Systemklänge, mpv)

@@ -18,6 +18,20 @@ try {
 
 const MAX_AGE = 2 * 24 * 3600 * 1000;
 
+// Videodaten selbst (YouTube-Videostücke, Twitch-Segmente …) enthalten nie Werbung, die sich per
+// Netzfilter blocken ließe – YouTube-Werbung entfernen die Skripte in der Seite. Diese Anfragen
+// (bei einem Video hunderte) gehen deshalb ohne Prüfung durch: weniger Arbeit im Hauptprozess,
+// das Video startet schneller.
+const MEDIA_FAST = [
+  /^https:\/\/[^/]+\.googlevideo\.com\/videoplayback/,
+  /^https:\/\/[^/]+\.ytimg\.com\/(vi|vi_webp|sb)\//,
+  /^https:\/\/[^/]+\.(ttvnw|twitchcdn)\.net\//,
+  /^https:\/\/[^/]+\.(akamaized|fastly|cloudfront)\.net\/.*\.(m4s|ts|mp4|webm)(\?|$)/,
+];
+const isMediaFast = (url) => MEDIA_FAST.some((r) => r.test(url));
+// Zähler und Anzeige höchstens alle 400 ms neu zeichnen (statt bei jeder geblockten Anfrage)
+const COUNT_DELAY = 400;
+
 class AdBlock {
   constructor(dir, store, onChange) {
     this.dir = dir;
@@ -28,6 +42,8 @@ class AdBlock {
     this.active = new Set();      // Sitzungen, in denen gerade blockiert wird
     this.counts = new Map();      // webContentsId → blockierte Anfragen auf der aktuellen Seite
     this.error = loadError;
+    this.countTimer = null;
+    this.fastPassed = 0;          // ungeprüft durchgelassene Videoanfragen (Selbsttest/Statistik)
     this.ready = this.init();
   }
 
@@ -40,6 +56,16 @@ class AdBlock {
       const wc = webContents.fromId(id);
       return wc ? new URL(wc.getURL()).hostname.replace(/^www\./, '') : '';
     } catch (_) { return ''; }
+  }
+
+  countChanged() {
+    if (this.countTimer) return;
+    this.countTimer = setTimeout(() => { this.countTimer = null; this.onChange(); }, COUNT_DELAY);
+  }
+
+  isAllowed(id) {
+    // nur nachsehen, wenn es überhaupt Ausnahmen gibt
+    return id !== undefined && this.allowedHosts().length > 0 && this.isAllowedHost(this.hostOf(id));
   }
 
   isAllowedHost(host) {
@@ -70,12 +96,17 @@ class AdBlock {
     // die Prüfung jeder Anfrage läuft über unsere Hülle.
     const original = this.blocker.onBeforeRequest;
     this.blocker.onBeforeRequest = (details, callback) => {
+      if (details.resourceType === 'media' || isMediaFast(details.url)) {
+        this.fastPassed += 1;
+        callback({});
+        return;
+      }
       const id = details.webContentsId;
-      if (id !== undefined && this.isAllowedHost(this.hostOf(id))) { callback({}); return; }
+      if (this.isAllowed(id)) { callback({}); return; }
       original.call(this.blocker, details, (response) => {
         if (response && (response.cancel || response.redirectURL) && id !== undefined) {
           this.counts.set(id, (this.counts.get(id) || 0) + 1);
-          this.onChange();
+          this.countChanged();
         }
         callback(response);
       });
@@ -83,8 +114,9 @@ class AdBlock {
     const originalHeaders = this.blocker.onHeadersReceived;
     if (originalHeaders) {
       this.blocker.onHeadersReceived = (details, callback) => {
-        const id = details.webContentsId;
-        if (id !== undefined && this.isAllowedHost(this.hostOf(id))) { callback({}); return; }
+        // Kopfzeilen braucht der Blocker nur für Seiten und Rahmen (Inhaltsrichtlinie), nicht für Videostücke
+        if (details.resourceType === 'media' || isMediaFast(details.url)) { callback({}); return; }
+        if (this.isAllowed(details.webContentsId)) { callback({}); return; }
         originalHeaders.call(this.blocker, details, callback);
       };
     }
@@ -141,4 +173,4 @@ class AdBlock {
   }
 }
 
-module.exports = { AdBlock };
+module.exports = { AdBlock, isMediaFast };
