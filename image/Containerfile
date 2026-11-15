@@ -334,6 +334,11 @@ RUN dnf install -y --skip-unavailable unzip librsvg2-tools nss gtk3 alsa-lib lib
 # Die App liegt als resources/app in Electron – so startet Electron sie von selbst
 # (ohne default_app.asar kann Electron keinen Ordner als Argument laden).
 COPY webbrowser/app /usr/lib/creative-browser/electron/resources/app
+# Werbeblocker (Ghostery, MPL-2.0) genau in den Versionen aus package-lock.json
+RUN cd /usr/lib/creative-browser/electron/resources/app \
+ && npm ci --omit=dev --no-audit --no-fund --ignore-scripts \
+ && test -f node_modules/@ghostery/adblocker-electron-preload/dist/index.cjs \
+ && rm -rf /root/.npm
 COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
 COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
 COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg

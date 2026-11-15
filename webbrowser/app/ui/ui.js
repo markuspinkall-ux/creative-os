@@ -36,6 +36,7 @@ const P = {
   play: '<path d="M8 5l11 7-11 7z"/>',
   power: '<path d="M12 3v8M6.3 7a8 8 0 1 0 11.4 0"/>',
   bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
 };
 const icon = (name, size = 18, fill = false) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${fill ? 0 : 1.8}" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>`;
@@ -47,6 +48,8 @@ $('menu-btn').innerHTML = icon('menu', 18, true);
 
 const isPrivate = new URLSearchParams(location.search).get('privat') === '1';
 document.body.classList.toggle('private', isPrivate);
+// Web-App (WhatsApp, Claude …): keine Tabs, keine Adressleiste – nur Rückfragen, Suche und Menüs
+document.body.classList.toggle('appmode', new URLSearchParams(location.search).get('app') === '1');
 
 let S = { tabs: [], active: null, bookmarks: [], downloads: [], settings: {}, engines: [] };
 
@@ -55,7 +58,7 @@ const chrome = $('chrome');
 new ResizeObserver(() => api.cmd('chrome-height', chrome.offsetHeight)).observe(chrome);
 
 // ---- Schicht für Menüs ----
-const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog'];
+const popups = ['suggest', 'menu', 'downloads', 'ctx', 'dialog', 'shield-panel', 'boost-panel'];
 function openLayer(id) {
   for (const p of popups) $(p).hidden = p !== id;
   $('layer').hidden = false;
@@ -92,7 +95,14 @@ function tabEl(t) {
     });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(t.id, e.clientX, e.clientY); });
     el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-tab', String(t.id)); el.classList.add('dragging'); });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragend', (e) => {
+      el.classList.remove('dragging');
+      // Außerhalb der Tab-Leiste losgelassen (z. B. auf einem anderen Bildschirm): eigenes Fenster
+      const strip = $('tabstrip').getBoundingClientRect();
+      const offStrip = e.clientY > strip.bottom + 40 || e.clientY < -10 || e.clientX < -10 || e.clientX > innerWidth + 10
+        || (e.clientX === 0 && e.clientY === 0);
+      if (e.dataTransfer.dropEffect === 'none' && offStrip) api.cmd('tear-off', t.id);
+    });
     el.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('text/x-tab')) { e.preventDefault(); el.classList.add('drop-before'); } });
     el.addEventListener('dragleave', () => el.classList.remove('drop-before'));
     el.addEventListener('drop', (e) => {
@@ -150,6 +160,7 @@ function tabMenu(id, x, y) {
     '-',
     { label: 'Neu laden', icon: 'reload', run: () => api.cmd('reload-tab', id) },
     { label: 'Duplizieren', icon: 'window', run: () => api.cmd('duplicate-tab', id) },
+    { label: 'In neues Fenster verschieben', icon: 'open', enabled: S.tabs.length > 1, run: () => api.cmd('tear-off', id) },
     { label: t.muted ? 'Ton wieder an' : 'Tab stummschalten', icon: t.muted ? 'speaker' : 'muted', run: () => api.cmd('mute-tab', id) },
     '-',
     { label: 'Andere Tabs schließen', run: () => api.cmd('close-others', id), enabled: S.tabs.length > 1 },
@@ -182,11 +193,86 @@ function renderNav() {
   $('star').innerHTML = icon('star', 17, !!a.bookmarked);
   $('star').classList.toggle('on', !!a.bookmarked);
   $('star').hidden = !a.url;
+  renderShield(a.adblock);
+  renderBoost(a);
   $('zoom-badge').textContent = `${a.zoom || 100} %`;
   $('zoom-badge').classList.toggle('show', !!a.zoom && a.zoom !== 100);
   const prog = $('progress');
   if (a.loading) { prog.className = 'loading'; } else if (prog.classList.contains('loading')) { prog.className = 'done'; }
 }
+
+// ---- Werbeblocker ----
+function renderShield(ab) {
+  const b = $('shield');
+  b.hidden = !ab || !ab.host;
+  if (!ab) return;
+  const on = ab.enabled && !ab.siteAllowed && ab.available;
+  b.classList.toggle('off', !on);
+  if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', icon('shield', 17));
+  $('shield-count').textContent = on && ab.blocked ? (ab.blocked > 99 ? '99+' : String(ab.blocked)) : '';
+  b.title = !ab.available ? (ab.loading ? 'Werbeblocker lädt die Filterliste …' : 'Werbeblocker nicht verfügbar')
+    : on ? `Werbeblocker: ${ab.blocked} blockiert` : 'Werbeblocker ist hier aus';
+  if (!$('shield-panel').hidden) renderShieldPanel();
+}
+function renderShieldPanel() {
+  const ab = (S.active && S.active.adblock) || {};
+  const on = ab.enabled && !ab.siteAllowed;
+  const box = $('shield-panel');
+  box.innerHTML = `<h3>${icon('shield', 18)} Werbeblocker</h3>
+    ${!ab.available ? `<p>${esc(ab.loading ? 'Die Filterliste wird gerade geladen …' : (ab.error || 'Nicht verfügbar'))}</p>` : `
+    <div class="big">${on ? ab.blocked : '–'}</div>
+    <p>${on ? 'Werbungen und Tracker auf dieser Seite blockiert' : (ab.enabled ? `Auf ${esc(ab.host)} ausgeschaltet` : 'Werbeblocker ist überall aus')}</p>`}
+    <div class="switchrow"><span>Auf <b>${esc(ab.host || 'dieser Seite')}</b> blockieren</span>
+      <button class="switch${!ab.siteAllowed ? ' on' : ''}" id="sw-site" aria-label="Auf dieser Seite blockieren" ${ab.enabled ? '' : 'disabled'}></button></div>
+    <div class="switchrow"><span>Werbeblocker überall</span>
+      <button class="switch${ab.enabled ? ' on' : ''}" id="sw-all" aria-label="Werbeblocker überall"></button></div>`;
+  $('sw-site').onclick = () => api.cmd('adblock-site', !ab.siteAllowed);
+  $('sw-all').onclick = () => api.cmd('adblock', !ab.enabled);
+}
+$('shield').onclick = () => {
+  const box = $('shield-panel');
+  renderShieldPanel();
+  const r = $('shield').getBoundingClientRect();
+  box.style.top = `${r.bottom + 8}px`;
+  box.style.left = `${Math.max(8, Math.min(r.right - 330, innerWidth - 338))}px`;
+  openLayer('shield-panel');
+};
+
+// ---- Lautstärke-Verstärker ----
+$('boost-btn').insertAdjacentHTML('afterbegin', icon('speaker'));
+function renderBoost(a) {
+  const b = $('boost-btn');
+  const boost = a.boost || 1;
+  b.classList.toggle('show', !!a.audible || boost > 1);
+  b.classList.toggle('on', boost > 1);
+  $('boost-badge').textContent = boost > 1 ? `${Math.round(boost * 100)}` : '';
+  if (!$('boost-panel').hidden) renderBoostPanel();
+}
+function renderBoostPanel() {
+  const boost = (S.active && S.active.boost) || 1;
+  const box = $('boost-panel');
+  const pct = Math.round(boost * 100);
+  if (!box.querySelector('input')) {
+    box.innerHTML = `<h3>${icon('speaker', 18)} Lautstärke-Verstärker</h3><div class="big" id="boost-val"></div>
+      <input type="range" id="boost-range" min="100" max="600" step="25" aria-label="Verstärkung">
+      <div class="presets">${[100, 200, 300, 400, 600].map((v) => `<button class="btn" data-v="${v}">${v} %</button>`).join('')}</div>
+      <p>Macht leise Videos lauter – über 100 % hinaus. Gilt für diesen Tab, bis du ihn schließt. Sehr hohe Werte können übersteuern.</p>`;
+    $('boost-range').addEventListener('input', (e) => { $('boost-val').textContent = `${e.target.value} %`; api.cmd('boost', Number(e.target.value) / 100); });
+    box.querySelectorAll('[data-v]').forEach((el) => el.addEventListener('click', () => api.cmd('boost', Number(el.dataset.v) / 100)));
+  }
+  $('boost-val').textContent = `${pct} %`;
+  if (document.activeElement !== $('boost-range')) $('boost-range').value = pct;
+  box.querySelectorAll('[data-v]').forEach((el) => el.classList.toggle('sel', Number(el.dataset.v) === pct));
+}
+$('boost-btn').onclick = () => {
+  const box = $('boost-panel');
+  const r = $('boost-btn').getBoundingClientRect();
+  box.style.top = `${r.bottom + 8}px`;
+  box.style.left = `${Math.max(8, Math.min(r.right - 320, innerWidth - 328))}px`;
+  box.style.right = 'auto';
+  renderBoostPanel();
+  openLayer('boost-panel');
+};
 
 // Adressleiste mit Vorschlägen
 let sugItems = [];
@@ -343,6 +429,7 @@ $('menu-btn').onclick = () => {
     { label: 'Drucken …', icon: 'print', key: 'Strg+P', run: () => api.cmd('print') },
     { label: 'Entwicklerwerkzeuge', icon: 'code', key: 'F12', run: () => api.cmd('devtools') },
     '-',
+    { label: 'Werbeblocker', check: !!S.settings.adblock, run: () => api.cmd('adblock', !S.settings.adblock) },
     { label: 'Lesezeichenleiste anzeigen', check: !!S.settings.bookmarksBar, run: () => api.cmd('toggle-bookmarks-bar') },
     { label: 'Tabs beim Start wiederherstellen', check: !!S.settings.restoreSession, run: () => api.cmd('restore-session', !S.settings.restoreSession) },
     { html: '<div class="label">SUCHMASCHINE</div>' },
@@ -464,9 +551,17 @@ $('perm-allow').onclick = () => answer(true);
 $('perm-deny').onclick = () => answer(false);
 
 // ---- Zustand ----
+function applyLook(look, isPriv) {
+  if (!look) return;
+  document.body.dataset.design = look.design;
+  const root = document.body.style;
+  root.setProperty('--accent', isPriv ? look.privateColor : look.accentColor);
+}
+
 api.on('state', (s) => {
   S = s;
   document.body.classList.toggle('private', s.private);
+  applyLook(s.look, s.private);
   renderTabs();
   renderNav();
   renderBookmarks();

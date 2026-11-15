@@ -205,7 +205,7 @@ class AssistantWindow(QWidget):
             QMessageBox.warning(self, APP_NAME, "Konsole konnte nicht geöffnet werden.")
 
     def open_chat(self):
-        started, _ = QProcess.startDetached("creative-webapp", [WEB])
+        started, _ = QProcess.startDetached("creative-webapp", [WEB, "claude"])
         if not started:
             QDesktopServices.openUrl(QUrl(WEB))
 

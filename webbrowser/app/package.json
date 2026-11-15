@@ -6,5 +6,8 @@
   "description": "Webbrowser von Creative OS (Electron, Chromium mit H.264)",
   "main": "main.js",
   "license": "MIT",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.3.1"
+  }
 }

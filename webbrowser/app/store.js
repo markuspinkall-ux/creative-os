@@ -15,7 +15,7 @@ const ENGINES = {
 
 const DEFAULTS = () => ({
   version: 1,
-  settings: { engine: 'brave', restoreSession: true, bookmarksBar: true },
+  settings: { engine: 'brave', restoreSession: true, bookmarksBar: true, adblock: true, adblockAllow: [] },
   bookmarks: [
     { title: 'YouTube', url: 'https://www.youtube.com/' },
     { title: 'Twitch', url: 'https://www.twitch.tv/' },

@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, store, START_URL, arg }) {
+async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -104,11 +104,97 @@ async function run({ Win, store, START_URL, arg }) {
     const sug = store.suggest('twi');
     check('Vorschläge aus dem Verlauf', sug.length > 0 && sug[0].url.includes('twitch'));
 
-    // Seite durchsuchen
-    win.activate(win.tabs.find((t) => t.url.includes('h264')) || win.tabs[1]);
+    // Lautstärke-Verstärker am H.264-Testvideo (hat Ton)
+    const vt = win.tabs.find((t) => t.url.includes('h264'));
+    if (vt) {
+      win.activate(vt);
+      await sleep(400);
+      const hooked = await within(win.setBoost(vt, 3), 5000, 0);
+      await sleep(1200);
+      const still = await within(vt.wc.executeJavaScript('(() => { const v = document.querySelector("video"); return { t: v.currentTime, p: v.paused }; })()'), 3000, {});
+      check('Verstärker hängt sich ans Video', hooked >= 1 && vt.boost === 3);
+      check('Video läuft mit Verstärker weiter', still.t > 0 && !still.p);
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('boost-btn').click()"), 3000);
+      await sleep(500);
+      await shot(win, dir, '10-verstaerker');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 3000);
+
+      // Tab in eigenes Fenster ziehen
+      const before = windows.size;
+      const nw = win.tearOff(vt);
+      await sleep(800);
+      check('Tab wandert in neues Fenster', windows.size === before + 1 && nw && nw.tabs[0] === vt && !win.tabs.includes(vt));
+      const inNew = await within(vt.wc.executeJavaScript('document.querySelector("video") ? document.querySelector("video").currentTime : 0'), 3000, 0);
+      check('Video läuft im neuen Fenster weiter', inNew > 0 && vt.win === nw);
+      nw.win.close();
+      await sleep(500);
+    }
+
+    // Beide Designs wie in Creative OS (Graphit ist Standard)
+    win.activate(win.tabs[0]);
+    win.command('navigate', 'creative://start/');
+    await sleep(1200);
+    const design = () => within(win.ui.webContents.executeJavaScript('document.body.dataset.design'), 3000, '');
+    check('Graphit als Standard', (await design()) === 'graphit');
+    await shot(win, dir, '5-graphit');
+    setLook(lookFor('porzellan', 'blau'));
+    await sleep(900);
+    check('Porzellan wird übernommen', (await design()) === 'porzellan');
+    await shot(win, dir, '6-porzellan');
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('menu-btn').click()"), 5000);
+    await sleep(500);
+    await shot(win, dir, '7-porzellan-menue');
+    await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 5000);
+    setLook(lookFor('graphit', 'orange'));
+    await sleep(900);
+    const acc = await within(win.ui.webContents.executeJavaScript("getComputedStyle(document.body).getPropertyValue('--accent').trim()"), 3000, '');
+    check('Akzentfarbe wird übernommen', acc === '#ffb07a');
+    await shot(win, dir, '8-graphit-orange');
+    setLook(lookFor('graphit', 'blau'));
     await sleep(300);
 
+    // Werbeblocker mit einer Testseite auf einem eigenen kleinen Webserver
     if (process.argv.includes('--creative-online')) {
+      const ok = await within(adblock.ready, 60000, false);
+      check('Werbeblocker geladen', ok === true);
+      const http = require('http');
+      const page = `<!doctype html><title>Werbetest</title><body>
+        <p id="inhalt">Inhalt</p>
+        <ins class="adsbygoogle" data-ad-client="ca-pub-1234" data-ad-slot="5678" style="display:block;width:300px;height:250px;background:red">Werbung</ins>
+        <div id="ad-banner" data-ad-cls="banner" style="width:300px;height:90px;background:red">Werbung</div>
+        <script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" onerror="window.__blocked=1" onload="window.__loaded=1"></script>
+        </body>`;
+      const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(page); });
+      await new Promise((r) => server.listen(0, '127.0.0.1', r));
+      // Echter Hostname (über /etc/hosts): Ghostery wendet Ausblend-Regeln nicht auf IP-Adressen an
+      const host = process.env.CREATIVE_WERBETEST_HOST || '127.0.0.1';
+      const url = `http://${host}:${server.address().port}/`;
+      const t = win.addTab(url);
+      await waitLoad(t.wc, 20000);
+      await sleep(2500);
+      const res = await within(t.wc.executeJavaScript(`({ blocked: window.__blocked || 0, loaded: window.__loaded || 0,
+        ins: document.querySelector('ins.adsbygoogle').offsetHeight, banner: document.getElementById('ad-banner').offsetHeight,
+        inhalt: document.getElementById('inhalt').offsetHeight })`), 5000, {});
+      result.adblock = { ...res, count: adblock.count(t.wc.id) };
+      check('Werbeskript blockiert', res.blocked === 1 && !res.loaded);
+      check('Werbeflächen ausgeblendet', res.ins === 0 && res.banner === 0 && res.inhalt > 0);
+      check('Zähler zählt', adblock.count(t.wc.id) >= 1);
+      await shot(win, dir, '9-werbeblocker');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('shield').click()"), 5000);
+      await sleep(500);
+      await shot(win, dir, '9-werbeblocker-panel');
+      await within(win.ui.webContents.executeJavaScript("document.getElementById('backdrop').dispatchEvent(new MouseEvent('mousedown'))"), 5000);
+      win.command('adblock-site', true);                  // auf dieser Seite erlauben
+      await sleep(400);
+      await waitLoad(t.wc, 20000);
+      await sleep(2500);
+      const res2 = await within(t.wc.executeJavaScript('({ blocked: window.__blocked || 0, loaded: window.__loaded || 0 })'), 5000, {});
+      result.adblockErlaubt = res2;
+      check('Seite erlauben lässt Werbung durch', res2.loaded === 1 && !res2.blocked);
+      win.command('adblock-site', false);
+      server.close();
+      win.closeTab(t);
+
       // Echte Seiten – nur zur Info, nicht entscheidend (CI-Netz, Cookie-Banner …)
       result.online = {};
       for (const [name, url, wait] of [

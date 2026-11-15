@@ -3,7 +3,7 @@ name: Creative Browser prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [webbrowser/**, browser/startpage/**, .github/workflows/browser-pruefung.yml]
+    paths: [webbrowser/**, browser/startpage/**, shell/webapps/**, .github/workflows/browser-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -34,6 +34,8 @@ jobs:
           cp -a /tmp/el/node_modules/electron/dist /tmp/pkg
           rm -f /tmp/pkg/resources/default_app.asar
           cp -a webbrowser/app /tmp/pkg/resources/app
+          # Abhängigkeiten (Werbeblocker) genau wie im Abbild aus package-lock.json
+          (cd /tmp/pkg/resources/app && npm ci --omit=dev --no-audit --no-fund --ignore-scripts && npm ls --omit=dev --depth=0)
           mkdir -p /tmp/browser && cp -a browser/startpage /tmp/browser/startpage
           ELECTRON_RUN_AS_NODE=1 /tmp/pkg/electron -e "console.log('Electron', process.versions.electron)"
       - name: H.264-Testvideo bauen
@@ -43,7 +45,10 @@ jobs:
             -c:v libx264 -profile:v high -pix_fmt yuv420p -c:a aac -movflags +faststart /tmp/video/h264.mp4
           printf '<!doctype html><title>H.264-Test</title><body style="margin:0;background:#000"><video src="h264.mp4" autoplay muted loop playsinline style="width:100%%"></video>' > /tmp/video/h264.html
       - name: Browser prüfen
+        env:
+          CREATIVE_WERBETEST_HOST: werbetest.creativeos.de
         run: |
+          echo "127.0.0.1 werbetest.creativeos.de" | sudo tee -a /etc/hosts
           set +e
           xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
             timeout 300 /tmp/pkg/electron --no-sandbox \
@@ -69,6 +74,15 @@ jobs:
             HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 20 /tmp/pkg/electron --no-sandbox https://example.org
             kill $pid
             [ "$n" -ge 1 ] || { echo "FEHLER: kein Fenster"; exit 1; }
+            # Web-App (wie WhatsApp): eigenes Fenster, eigene Fensterklasse, eigene Anmeldedaten
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 40 /tmp/pkg/electron --no-sandbox --class=creative-whatsapp --app=https://example.org/ --app-name=whatsapp &
+            pid=$!
+            sleep 10
+            kill -0 $pid 2>/dev/null || { echo "FEHLER: Web-App beendet sich sofort"; exit 1; }
+            m=$(for w in $(xwininfo -root -children | awk "/0x/{print \$1}"); do xprop -id $w WM_CLASS 2>/dev/null; done | grep -c creative-whatsapp)
+            echo "Web-App-Fenster: $m"; ls '"$H"'/.config/creative-browser/apps/
+            kill $pid
+            [ "$m" -ge 1 ] && [ -d '"$H"'/.config/creative-browser/apps/whatsapp ] || { echo "FEHLER: Web-App"; exit 1; }
           '
       - name: Fotos zusammensetzen
         if: always()
