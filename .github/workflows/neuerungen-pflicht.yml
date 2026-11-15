@@ -19,3 +19,5 @@ jobs:
             exit 1
           fi
           echo "Neuerungen gepflegt."
+      # Gleiche Prüfung wie im Build (ein Eintrag pro Datum, neueste zuerst) – am Stand nach dem Merge
+      - run: python3 -m unittest tests/test_neuerungen.py
