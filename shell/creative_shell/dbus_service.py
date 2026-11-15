@@ -95,6 +95,7 @@ class ShellBus(QObject):
             "clock": extras.clockEnabled, "clockInstalled": extras.clockInstalled,
             "twitch": extras.twitchEnabled, "channels": extras.channel_names(),
             "notes": extras.notesEnabled, "notesInstalled": extras.notesInstalled,
+            "akku": extras.akkuEnabled,
             "ki": self._widgets["ki"].enabled,
             "viz": self._widgets["viz"].enabled if "viz" in self._widgets else False,
             "screens": self._shell.screenNames, "targets": self._shell.widgetScreens,

@@ -34,6 +34,7 @@ from .printers import PrinterModel
 from .session import SessionModel
 from .sni import TrayItems
 from .trash import TrashModel
+from .akku import Akku
 from .desktopstats import DesktopStats
 from .desktopwidgets import DesktopWidget
 from .widget_extras import WidgetExtras
@@ -52,7 +53,7 @@ PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu")
 SURFACES = POPUPS + ("tasktip",)   # „tasktip“: Name über dem Taskleisten-Symbol (nimmt keine Eingaben)
-DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "notes", "ki")
+DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "notes", "akku", "ki")
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
@@ -537,6 +538,7 @@ def main():
         "desktop": DesktopModel(),
         "trayApps": TrayItems(tasks),
         "desktopStats": DesktopStats(),
+        "akku": Akku(),
         "rssWidget": DesktopWidget("RSS"),
         "widgetExtras": WidgetExtras(),
         "kiHelper": KiHelfer(),

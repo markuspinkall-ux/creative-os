@@ -328,6 +328,28 @@ Item {
                     name: network.wired ? "wired" : (network.connected ? "wifi" : "wifi-off")
                     size: 16
                 }
+                // Akku (nur bei Laptops): Symbol mit Füllstand und Prozent
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: akku.present
+                    spacing: 5
+                    BatteryGlyph {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 24; height: 12
+                        level: akku.percent
+                        charging: akku.charging
+                        low: akku.low
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: akku.percent + "%"
+                        color: akku.low ? Theme.flame : Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                    }
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: "Akku " + akku.percent + " Prozent, " + akku.statusText
+                }
                 IconButton {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 30; height: 30; iconSize: 17

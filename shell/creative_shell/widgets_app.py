@@ -58,6 +58,7 @@ class WidgetWindow(QMainWindow):
         for name, label in (
             ("shelf", "Ablage"), ("stats", "Leistungsanzeige"), ("rss", "RSS-Nachrichten"),
             ("weather", "Wetter"), ("clock", "Analoge Uhr"), ("notes", "Notizen"),
+            ("akku", "Akku (nur bei Laptops sichtbar)"),
             ("twitch", "Twitch-Favoriten"),
             ("ki", "KI-Helfer (lokale KI, Open Source)"), ("viz", "Musik-Visualizer (hinter der Taskleiste)"),
         ):
