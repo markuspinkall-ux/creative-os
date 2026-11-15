@@ -33,6 +33,17 @@ function fullyMaximized(w) {
     return g.x === a.x && g.y === a.y && g.width === a.width && g.height === a.height;
 }
 
+function same(a, b) {
+    return Math.round(a.x) === Math.round(b.x) && Math.round(a.y) === Math.round(b.y)
+        && Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height);
+}
+
+// Größe, die gerade nur vom Maximieren kommt (der Zustand wird manchmal erst danach gemeldet)
+function transient(w) {
+    const g = w.frameGeometry;
+    return fullyMaximized(w) || same(g, area(w)) || same(g, gapRect(w));
+}
+
 function gapRect(w) {
     const a = area(w);
     return { x: a.x + GAP, y: a.y + GAP, width: a.width - 2 * GAP, height: a.height - 2 * GAP };
@@ -66,9 +77,9 @@ function onMaximized(w) {
 
 function watch(w) {
     if (!w || !w.normalWindow) return;
-    if (!fullyMaximized(w)) normal.set(w, rect(w.frameGeometry));
+    if (!transient(w)) normal.set(w, rect(w.frameGeometry));
     w.frameGeometryChanged.connect(function () {
-        if (busy || gapped.has(w) || fullyMaximized(w) || w.fullScreen) return;
+        if (busy || gapped.has(w) || w.fullScreen || transient(w)) return;
         normal.set(w, rect(w.frameGeometry));
     });
     if (w.maximizedChanged) w.maximizedChanged.connect(function () { onMaximized(w); });

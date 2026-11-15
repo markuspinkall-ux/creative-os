@@ -3,7 +3,7 @@ Maximiert sich, meldet Größe und Zustand, maximiert dann nochmal (= wiederhers
 import json
 import sys
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QRect, QTimer, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QRasterWindow
 
 app = QGuiApplication(sys.argv)
@@ -13,9 +13,10 @@ out = []
 class Win(QRasterWindow):
     def paintEvent(self, _e):
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor("#1c2029"))
+        r = QRect(0, 0, self.width(), self.height())
+        p.fillRect(r, QColor("#1c2029"))
         p.setPen(QColor("#dce6ff"))
-        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Creative Abstand")
+        p.drawText(r, Qt.AlignmentFlag.AlignCenter, "Creative Abstand")
 
 
 w = Win()
