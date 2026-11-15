@@ -1,37 +1,21 @@
 [
   {
     "datum": "2026-11-15",
-    "titel": "Kurz „Browser“",
-    "neu": [],
-    "verbessert": [
-      "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)"
-    ],
-    "behoben": []
-  },
-  {
-    "datum": "2026-11-15",
-    "titel": "Creative WhatsApp",
+    "titel": "Creative WhatsApp, Fenster mit Abstand und kurz „Browser“",
     "neu": [
       "Creative WhatsApp: eigene App statt der bisherigen WhatsApp-Verknüpfung – mit dem offiziellen WhatsApp Web innen (kein Sperr-Risiko für die Nummer). Zähler für ungelesene Nachrichten am Taskleisten-Symbol, Benachrichtigungen mit Klick zum Chat, läuft beim Schließen im Hintergrund weiter (Tray-Symbol), auf Wunsch Start mit dem PC, Nicht stören von Hand oder zu festen Zeiten, Vorschau und Ton abschaltbar, Rechtschreibprüfung Deutsch mit Vorschlägen per Rechtsklick, Downloads landen direkt in „Downloads“. Einstellungen mit Strg+, oder über das Tray-Symbol. Die bisherige Anmeldung bleibt erhalten",
       "Taskleiste: Apps können einen Zähler am Symbol zeigen (z. B. ungelesene Nachrichten)"
     ],
     "verbessert": [
-      "Symbole: WhatsApp und Discord sehen jetzt wie ihre Originale aus – im Graphit- und Porzellan-Stil"
-    ],
-    "behoben": []
-  },
-  {
-    "datum": "2026-11-15",
-    "titel": "Fenster mit Abstand",
-    "neu": [],
-    "verbessert": [
+      "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",
+      "Symbole: WhatsApp und Discord sehen jetzt wie ihre Originale aus – im Graphit- und Porzellan-Stil",
       "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos"
     ],
     "behoben": []
   },
   {
     "datum": "2026-11-14",
-    "titel": "Server-Modus bis zum Neustart",
+    "titel": "Creative Browser mit Werbeblocker, Proton VPN, Notizen und Server-Modus",
     "neu": [
       "Schnellzugriff › „Nicht sperren“: verhindert für die laufende Sitzung, dass der PC nach 10 Minuten ohne Eingabe in den Anmeldebildschirm wechselt – der Bildschirm bleibt an. Nach dem Abmelden oder Neustart ist wieder alles wie gewohnt",
       "Creative Deck: das Elgato Stream Deck ohne Elgato-Software – jede Taste mit Beschriftung, Symbol und Farbe belegen: Programme starten, Befehle, Webseiten, Tastenkürzel, Text einfügen, Musik steuern, Lautstärke, Mikrofon stumm, Töne abspielen, Seiten wie Ordner und OBS Studio (Aufnahme, Stream, Szenen, Replay). Einstecken genügt – die Tasten sind sofort da, auch ohne geöffnetes Programm. Unterstützt Stream Deck MK.2, Original, XL, Mini, Neo und +",
