@@ -344,7 +344,7 @@ class FindBar(QWidget):
 class NotesWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Creative Notes")
+        self.setWindowTitle("Notes")
         self.setWindowIcon(QIcon.fromTheme("creative-notes", icon("notes")))
         self.resize(1180, 760)
         self.setAcceptDrops(True)
@@ -603,7 +603,7 @@ class NotesWindow(QMainWindow):
 
         m = mb.addMenu("&Hilfe")
         self._act(m, "Tastenkürzel", self.show_shortcuts, "F1")
-        self._act(m, "Über Creative Notes", self.show_about)
+        self._act(m, "Über Notes", self.show_about)
 
     def _build_status(self):
         sb = self.statusBar()
@@ -1327,11 +1327,11 @@ class NotesWindow(QMainWindow):
     def _update_title(self):
         d = self.doc()
         if not d:
-            self.setWindowTitle("Creative Notes")
+            self.setWindowTitle("Notes")
             return
         mark = "● " if d.modified else ""
         ro = "  [schreibgeschützt]" if d.readonly else ""
-        self.setWindowTitle(f"{mark}{d.title}{ro} – Creative Notes")
+        self.setWindowTitle(f"{mark}{d.title}{ro} – Notes")
 
     def _tab_changed(self, _):
         self._update_status()
@@ -1394,7 +1394,7 @@ class NotesWindow(QMainWindow):
 
     def show_about(self):
         from . import __version__
-        QMessageBox.about(self, "Über Creative Notes",
+        QMessageBox.about(self, "Über Notes",
                           f"<b>Creative Notes {__version__}</b><br>Der Texteditor von Creative OS.<br><br>"
                           "Reiter, Syntaxfarben für viele Sprachen, Suchen und Ersetzen<br>"
                           "(auch mit regulären Ausdrücken) – und nichts geht verloren:<br>"

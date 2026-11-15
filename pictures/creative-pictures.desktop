@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Pictures
+Name=Pictures
 GenericName=Bildbetrachter
 Comment=Fotos und Bilder ansehen, drehen, sammeln
-Keywords=Bilder;Fotos;Bildbetrachter;Galerie;Foto;Diashow;
+Keywords=Creative Pictures;Bilder;Fotos;Bildbetrachter;Galerie;Foto;Diashow;
 Exec=creative-pictures %f
 Icon=creative-pictures
 Terminal=false

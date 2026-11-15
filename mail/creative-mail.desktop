@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Mail
+Name=Mail
+Keywords=Creative Mail;E-Mail;Post;Nachrichten;
 Comment=Gmail im Creative-OS-Design
 Exec=/usr/lib/creative-mail/creative-mail
 Icon=creative-mail
