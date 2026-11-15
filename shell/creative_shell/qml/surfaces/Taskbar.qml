@@ -118,7 +118,8 @@ Item {
                     }
                     onRightClicked: shell.toggleTaskMenu(root.screenName, {
                         key: modelData.key, desktopId: modelData.desktopId, name: modelData.name,
-                        running: modelData.running, count: modelData.count
+                        running: modelData.running, count: modelData.count,
+                        pinned: !!modelData.pinned   // ohne das zeigte das Menü nie „Von der Taskleiste lösen“
                     }, mapToItem(null, width / 2, 0).x)
                 }
             }

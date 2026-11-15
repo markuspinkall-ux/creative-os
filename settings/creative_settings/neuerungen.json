@@ -19,7 +19,8 @@
       "Discord hat jetzt auch im Startmenü sein neues Symbol"
     ],
     "behoben": [
-      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
+      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",
+      "Taskleiste: Angeheftete Apps lassen sich per Rechtsklick wieder lösen – das Menü bot bisher immer nur „An die Taskleiste anheften“ an, weil es nicht wusste, dass die App schon angeheftet ist"
     ]
   },
   {
