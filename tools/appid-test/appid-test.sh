@@ -7,7 +7,9 @@ ELECTRON_VERSION="${ELECTRON_VERSION:-45.3.1}"
 dnf -y -q install kwin-wayland dbus-daemon nodejs npm unzip gtk3 nss alsa-lib libxkbcommon mesa-libgbm libdrm \
     cups-libs at-spi2-atk mesa-dri-drivers liberation-sans-fonts >/dev/null
 cp /usr/bin/kwin_wayland /tmp/kwin_wayland
-mkdir -p /tmp/pkg && cd /tmp && npm init -y >/dev/null && npm install --no-audit --no-fund "electron@${ELECTRON_VERSION}" >/dev/null
+mkdir -p /tmp/pkg && cd /tmp && npm init -y >/dev/null && npm install --no-audit --no-fund --foreground-scripts "electron@${ELECTRON_VERSION}" >/dev/null
+[ -x /tmp/node_modules/electron/dist/electron ] || node /tmp/node_modules/electron/install.js
+ls /tmp/node_modules/electron/dist | head -3
 cp -a /tmp/node_modules/electron/dist/. /tmp/pkg/ && rm -f /tmp/pkg/resources/default_app.asar
 cp -a /src/webbrowser/app /tmp/pkg/resources/app
 (cd /tmp/pkg/resources/app && npm ci --omit=dev --no-audit --no-fund --ignore-scripts >/dev/null)
