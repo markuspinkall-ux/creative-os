@@ -52,7 +52,7 @@ PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
 POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu")
 SURFACES = POPUPS + ("tasktip",)   # „tasktip“: Name über dem Taskleisten-Symbol (nimmt keine Eingaben)
-DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "ki")
+DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "notes", "ki")
 
 
 # Kleine Helfer: Die in QML erzeugten Fenster werden über das Qt-Metasystem
