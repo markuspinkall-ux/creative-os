@@ -14,6 +14,7 @@ from pathlib import Path
 DEFAULTS = {
     # Eigenes Hintergrundbild: Pfad zu einer Bild-Datei, leer = Creative-Graphit
     "wallpaper": "",
+    "wallpaperAnimated": True,     # „Vivid Venus“ bewegt sich (Rakete, Sterne, Wolken)
     # Leistungsanzeige (CPU, Speicher …) oben rechts auf dem Schreibtisch
     "desktopStats": True,
     "desktopWidgetRSS": {},

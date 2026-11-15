@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
+  <!-- Creative OS 2 „Vivid Venus“ – Ebene für den bewegten Hintergrund (graphit) -->
+  <defs><linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#161a24"/><stop offset="1" stop-color="#0d1015"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffe0b0" stop-opacity="0.5"/>
+      <stop offset="0.25" stop-color="#ffb07a" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#ffb07a" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffb07a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haze" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#ffcf8a" stop-opacity="0.2"/>
+      <stop offset="0.75" stop-color="#ffcf8a" stop-opacity="0.070"/>
+      <stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="venus" cx="0.25" cy="0.22" r="0.95">
+      <stop offset="0" stop-color="#fff1cf"/><stop offset="0.35" stop-color="#f4d9a0"/>
+      <stop offset="0.7" stop-color="#e2b46e"/><stop offset="1" stop-color="#b9844a"/>
+    </radialGradient>
+    <radialGradient id="night" cx="0.85" cy="0.85" r="0.8">
+      <stop offset="0" stop-color="rgb(13,16,21)" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="rgb(13,16,21)" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="rgb(13,16,21)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trail" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb07a" stop-opacity="0"/><stop offset="1" stop-color="#ffb07a" stop-opacity="0.75"/>
+    </linearGradient>
+    <clipPath id="disc"><circle cx="3300" cy="2900" r="1750"/></clipPath></defs>
+  <circle cx="3300" cy="2900" r="1750" fill="url(#venus)"/>
+  <g clip-path="url(#disc)">
+    <g transform="translate(105.0 0) rotate(-18 3300 2900)">
+    <path d="M1375 1062 C 2425 542, 3825 775, 5225 1016 L5225 1569 C 3825 1282, 2425 1048, 1375 1569 Z" fill="#f4d9a0" fill-opacity="0.15"/>
+    <path d="M1375 1446 C 2425 920, 3825 1333, 5225 1363 L5225 1830 C 3825 1717, 2425 1303, 1375 1830 Z" fill="#e2b46e" fill-opacity="0.10"/>
+    <path d="M1375 1693 C 2425 1319, 3825 1536, 5225 1650 L5225 1977 C 3825 1820, 2425 1603, 1375 1977 Z" fill="#e2b46e" fill-opacity="0.11"/>
+    <path d="M1375 1858 C 2425 1435, 3825 1821, 5225 1780 L5225 2311 C 3825 2275, 2425 1889, 1375 2311 Z" fill="#f4d9a0" fill-opacity="0.07"/>
+    <path d="M1375 2176 C 2425 1829, 3825 2204, 5225 2101 L5225 2645 C 3825 2673, 2425 2298, 1375 2645 Z" fill="#fff1cf" fill-opacity="0.14"/>
+    <path d="M1375 2542 C 2425 2251, 3825 2674, 5225 2457 L5225 2974 C 3825 3106, 2425 2683, 1375 2974 Z" fill="#e2b46e" fill-opacity="0.10"/>
+    <path d="M1375 2835 C 2425 2635, 3825 3006, 5225 2761 L5225 3255 C 3825 3426, 2425 3056, 1375 3255 Z" fill="#e2b46e" fill-opacity="0.16"/>
+    <path d="M1375 3186 C 2425 3081, 3825 3416, 5225 3119 L5225 3509 C 3825 3740, 2425 3405, 1375 3509 Z" fill="#f4d9a0" fill-opacity="0.12"/>
+    <path d="M1375 3436 C 2425 3355, 3825 3754, 5225 3357 L5225 3761 C 3825 4078, 2425 3680, 1375 3761 Z" fill="#fff1cf" fill-opacity="0.12"/>
+    <path d="M1375 3674 C 2425 3734, 3825 3955, 5225 3630 L5225 4097 C 3825 4378, 2425 4157, 1375 4097 Z" fill="#fff1cf" fill-opacity="0.08"/>
+    <path d="M1375 3947 C 2425 4021, 3825 4334, 5225 3885 L5225 4368 C 3825 4755, 2425 4441, 1375 4368 Z" fill="#e2b46e" fill-opacity="0.10"/>
+    <path d="M1375 4221 C 2425 4370, 3825 4653, 5225 4164 L5225 4576 C 3825 5007, 2425 4725, 1375 4576 Z" fill="#f4d9a0" fill-opacity="0.12"/>
+    <path d="M1375 4429 C 2425 4592, 3825 4940, 5225 4360 L5225 4901 C 3825 5412, 2425 5064, 1375 4901 Z" fill="#e2b46e" fill-opacity="0.14"/>
+    <path d="M1375 2288 Q 3125 2812 5225 2865 L5225 3110 Q 3125 3040 1375 3600 Z" fill="#b9844a" fill-opacity="0.10"/>
+    </g>
+    <circle cx="3300" cy="2900" r="1750" fill="url(#night)"/>
+  </g>
+  <circle cx="3300" cy="2900" r="1750" fill="none" stroke="#fff1cf" stroke-opacity="0.35" stroke-width="5"/>
+</svg>

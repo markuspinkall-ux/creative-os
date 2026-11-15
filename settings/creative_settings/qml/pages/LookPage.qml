@@ -126,6 +126,19 @@ SettingsPage {
                 }
             }
         }
+        SettingRow {
+            label: "Hintergrund bewegt"
+            hint: look.current === "" ? "Die Rakete schwebt, Sterne funkeln, Wolken ziehen – pausiert, sobald ein Fenster den Schreibtisch verdeckt"
+                                      : "Nur beim mitgelieferten Bild „Vivid Venus“"
+            enabled: look.current === ""
+            opacity: enabled ? 1 : 0.45
+            last: true
+            CSwitch {
+                checked: look.wallpaperAnimated
+                label: "Hintergrund bewegt"
+                onToggled: (v) => look.setWallpaperAnimated(v)
+            }
+        }
     }
 
     Card {

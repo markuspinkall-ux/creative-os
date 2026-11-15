@@ -32,7 +32,7 @@ def os_name():
 
 
 def release_info():
-    """Versionsnummer und Codename von Creative OS, z. B. „Creative OS 1 · Mighty Mercury“."""
+    """Versionsnummer und Codename von Creative OS, z. B. „Creative OS 2 · Vivid Venus“."""
     try:
         data = json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
         return f"Creative OS {data['nummer']} · {data['codename']}"
@@ -628,6 +628,7 @@ class LookModel(QObject):
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
         self._login_sound = bool(cfg.get("loginSound", True))
+        self._wall_anim = bool(cfg.get("wallpaperAnimated", True))
         self._gadgets = {}
         self._read_gadgets(cfg)
         # Gadgets können auch per Creative Widgets umgeschaltet werden – Stand mitverfolgen
@@ -647,7 +648,7 @@ class LookModel(QObject):
         default = _look.default_wallpaper(self._builtin.parent.parent)
         if default.exists():
             images.append({"path": "", "url": QUrl.fromLocalFile(str(default)).toString(),
-                           "label": "Mighty Mercury (passt zum Design)"})
+                           "label": "Vivid Venus (passt zum Design)"})
         home = Path.home()
         pics = home / "Bilder"
         if not pics.exists() and not pics.is_symlink():
@@ -767,6 +768,12 @@ class LookModel(QObject):
         spawn_detached(["creative-widgets"])
 
     @Slot(bool)
+    def setWallpaperAnimated(self, on):
+        self._wall_anim = bool(on)
+        shell_config.set_value("wallpaperAnimated", self._wall_anim)
+        self.changed.emit()
+
+    @Slot(bool)
     def setLoginSound(self, on):
         self._login_sound = bool(on)
         shell_config.set_value("loginSound", self._login_sound)
@@ -826,4 +833,5 @@ class LookModel(QObject):
     nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
     widgets = Property("QVariantMap", lambda self: dict(self._gadgets), notify=changed)
     loginSound = Property(bool, lambda self: self._login_sound, notify=changed)
+    wallpaperAnimated = Property(bool, lambda self: self._wall_anim, notify=changed)
     current = Property(str, lambda self: self._current, notify=changed)

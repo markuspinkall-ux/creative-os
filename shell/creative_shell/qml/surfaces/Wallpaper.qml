@@ -188,12 +188,82 @@ Item {
     Image {
         anchors.fill: parent
         source: wallpaperUrl
+        // Beim bewegten Hintergrund liegt dieselbe Szene in Ebenen darüber
+        visible: !(wallAnim.on && wallGround.status === Image.Ready)
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: width
         sourceSize.height: height
         asynchronous: true
         smooth: true
         cache: true
+    }
+
+    // „Vivid Venus“ bewegt sich: Wolken ziehen, die Rakete schwebt, Sterne funkeln.
+    // Sehr ruhig (eine Runde = 24 s) und nur, solange man den Schreibtisch auch sieht.
+    Item {
+        id: wallAnim
+        objectName: "wallAnim"
+        readonly property var d: (typeof wallpaperAnim !== "undefined" && wallpaperAnim) ? wallpaperAnim : ({})
+        readonly property bool on: !!d.folder
+        readonly property real s: Math.max(root.width / 3840, root.height / 2160)
+        readonly property bool covered: {
+            tasks.revision
+            return tasks.largestWindowArea(root.screenName) > root.width * root.height * 0.85
+        }
+        readonly property bool running: on && root.visible && !covered
+        property real phase: 0
+        visible: on
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
+        width: 3840 * s
+        height: 2160 * s
+
+        NumberAnimation on phase {
+            from: 0; to: 1
+            duration: 24000
+            loops: Animation.Infinite
+            running: wallAnim.running
+        }
+
+        Image {
+            id: wallGround
+            anchors.fill: parent
+            source: wallAnim.on ? wallAnim.d.folder + "grund.svg" : ""
+            sourceSize: Qt.size(width, height)
+            asynchronous: true
+        }
+        // Wolken: zweite Lage mit verschobenen Schleiern, langsam überblendet
+        Image {
+            anchors.fill: parent
+            source: wallAnim.on ? wallAnim.d.folder + "wolken.svg" : ""
+            sourceSize: Qt.size(width, height)
+            asynchronous: true
+            opacity: 0.5 - 0.5 * Math.cos(2 * Math.PI * wallAnim.phase)
+        }
+        Repeater {
+            model: wallAnim.on ? wallAnim.d.stars : []
+            delegate: Rectangle {
+                required property var modelData
+                x: modelData.x * wallAnim.s - width / 2
+                y: modelData.y * wallAnim.s - height / 2
+                width: Math.max(1.5, modelData.r * 2 * wallAnim.s)
+                height: width
+                radius: width / 2
+                color: wallAnim.d.starColor || "#dce6ff"
+                opacity: modelData.o * (0.55 + 0.45 * Math.sin(2 * Math.PI * (wallAnim.phase * 6 * modelData.s + modelData.p)))
+            }
+        }
+        // Rakete samt Spur schwebt in Flugrichtung vor und zurück
+        Image {
+            id: wallRocket
+            anchors.fill: parent
+            source: wallAnim.on ? wallAnim.d.folder + "rakete.svg" : ""
+            sourceSize: Qt.size(width, height)
+            asynchronous: true
+            readonly property real heading: ((wallAnim.d.rocket ? wallAnim.d.rocket.angle : 90) - 90) * Math.PI / 180
+            readonly property real bob: 18 * wallAnim.s * Math.sin(2 * Math.PI * wallAnim.phase * 2)
+            transform: Translate { x: wallRocket.bob * Math.cos(wallRocket.heading); y: wallRocket.bob * Math.sin(wallRocket.heading) }
+        }
     }
 
     // Klick auf den freien Desktop: Menüs schließen, Auswahl aufheben, Rechtsklick-Menü
