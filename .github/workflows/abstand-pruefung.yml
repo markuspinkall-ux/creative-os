@@ -4,7 +4,7 @@ name: Fensterabstand prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/kwin/creative-abstand/**, tools/abstand-test.sh, tools/abstand-client.py, .github/workflows/abstand-pruefung.yml]
+    paths: [shell/kwin/creative-abstand/**, shell/kwin/creative-tasks/**, tools/abstand-test.sh, tools/abstand-client.py, .github/workflows/abstand-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:

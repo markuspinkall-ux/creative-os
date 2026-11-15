@@ -12,7 +12,9 @@
       "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos",
       "Startmenü: Taschenrechner, Notes, Pictures und Mail liegen jetzt direkt im Startmenü statt im Ordner „Creative Apps“ und heißen kürzer (die Suche nach den alten Namen findet sie weiterhin)"
     ],
-    "behoben": []
+    "behoben": [
+      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
+    ]
   },
   {
     "datum": "2026-11-14",

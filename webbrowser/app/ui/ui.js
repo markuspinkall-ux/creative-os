@@ -95,13 +95,18 @@ function tabEl(t) {
     });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(t.id, e.clientX, e.clientY); });
     el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/x-tab', String(t.id)); el.classList.add('dragging'); });
+    el.addEventListener('dragstart', () => { dragLeftWindow = false; });
     el.addEventListener('dragend', (e) => {
       el.classList.remove('dragging');
-      // Außerhalb der Tab-Leiste losgelassen (z. B. auf einem anderen Bildschirm): eigenes Fenster
+      // Außerhalb der Tab-Leiste losgelassen (z. B. auf einem anderen Bildschirm): eigenes Fenster.
+      // Unter Wayland kennt der Browser die Stelle außerhalb seines Fensters nicht – dann meldet er die
+      // letzte Stelle im Fenster (beim Ziehen nach links z. B. x≈0 auf Höhe der Tabs). Darum zählt auch,
+      // ob der Zeiger das Fenster verlassen hat.
       const strip = $('tabstrip').getBoundingClientRect();
       const offStrip = e.clientY > strip.bottom + 40 || e.clientY < -10 || e.clientX < -10 || e.clientX > innerWidth + 10
         || (e.clientX === 0 && e.clientY === 0);
-      if (e.dataTransfer.dropEffect === 'none' && offStrip) api.cmd('tear-off', t.id);
+      if (e.dataTransfer.dropEffect === 'none' && (offStrip || dragLeftWindow)) api.cmd('tear-off', t.id);
+      dragLeftWindow = false;
     });
     el.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('text/x-tab')) { e.preventDefault(); el.classList.add('drop-before'); } });
     el.addEventListener('dragleave', () => el.classList.remove('drop-before'));
@@ -117,6 +122,11 @@ function tabEl(t) {
   el.dataset.id = t.id;
   return el;
 }
+
+// Hat ein gezogener Tab das Browserfenster verlassen? (dragleave ohne neues Ziel im Fenster)
+var dragLeftWindow = false;
+document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) dragLeftWindow = true; });
+document.addEventListener('dragenter', () => { dragLeftWindow = false; });
 
 function renderTabs() {
   const box = $('tabs');

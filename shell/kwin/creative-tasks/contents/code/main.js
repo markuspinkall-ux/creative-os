@@ -57,7 +57,22 @@ function watch(w) {
 }
 
 workspace.windowList().forEach(watch);
-workspace.windowAdded.connect(function (w) { watch(w); push(); });
+// Neue Browserfenster (auch ein herausgezogener Tab) erscheinen auf dem Bildschirm mit dem
+// Mauszeiger – unter Wayland kann der Browser seine Position nicht selbst bestimmen.
+function placeUnderMouse(w) {
+    if (!w || !w.normalWindow || w.fullScreen || !workspace.screenAt) return;
+    const cls = (w.resourceClass || "").toString().toLowerCase();
+    if (cls !== "creative-browser") return;
+    const out = workspace.screenAt(workspace.cursorPos);
+    if (!out || w.output === out) return;
+    const a = workspace.clientArea(KWin.PlacementArea, out, workspace.currentDesktop);
+    const g = w.frameGeometry;
+    const width = Math.min(g.width, a.width), height = Math.min(g.height, a.height);
+    w.frameGeometry = { x: a.x + Math.round((a.width - width) / 2), y: a.y + Math.round((a.height - height) / 2),
+                        width: width, height: height };
+}
+
+workspace.windowAdded.connect(function (w) { placeUnderMouse(w); watch(w); push(); });
 workspace.windowRemoved.connect(push);
 workspace.windowActivated.connect(push);
 
