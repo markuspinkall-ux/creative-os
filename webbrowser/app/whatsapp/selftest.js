@@ -23,6 +23,8 @@ async function run(ctx) {
   const check = (cond, what) => { if (!cond) throw new Error(`FEHLER: ${what}`); ok.push(what); console.log('✓', what); };
   setTimeout(() => { console.error('Selbsttest hängt – Abbruch'); app.exit(3); }, 150000).unref();
   try {
+    // eigene App-Kennung (Wayland app_id), damit die Taskleiste WhatsApp nicht zum Browser stapelt
+    check(process.env.CHROME_DESKTOP === 'creative-whatsapp.desktop', `eigene App-Kennung (${process.env.CHROME_DESKTOP})`);
     // Nicht-stören-Zeiten
     const at = (h, m) => { const d = new Date(2026, 10, 15, h, m); return d; };
     const night = { dndTimes: true, dndFrom: '22:00', dndTo: '07:00' };

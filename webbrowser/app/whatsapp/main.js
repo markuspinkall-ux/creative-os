@@ -13,12 +13,17 @@ const {
   app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, ipcMain, session, shell, clipboard, Notification,
 } = require('electron');
 
-const WA_URL = 'https://web.whatsapp.com/';
+// CREATIVE_WHATSAPP_URL nur für Tests (z. B. ohne Netz eine leere Seite)
+const WA_URL = process.env.CREATIVE_WHATSAPP_URL || 'https://web.whatsapp.com/';
 const DESKTOP_ID = 'creative-whatsapp';
 const SELFTEST = (process.argv.find((a) => a.startsWith('--creative-selftest=')) || '').split('=').slice(1).join('=');
 const HIDDEN = process.argv.includes('--hidden');
 
 app.setName('WhatsApp');
+// Eigene App-Kennung (Wayland app_id) – sonst hält die Taskleiste WhatsApp für ein Browserfenster
+// und stapelt beide unter einem Symbol. Electron nimmt sonst „desktopName“ aus package.json.
+if (typeof app.setDesktopName === 'function') app.setDesktopName(`${DESKTOP_ID}.desktop`);
+process.env.CHROME_DESKTOP = `${DESKTOP_ID}.desktop`;
 // Gleicher Ordner wie die frühere WhatsApp-Verknüpfung – die Anmeldung (QR-Code) bleibt erhalten.
 app.setPath('userData', process.env.CREATIVE_WHATSAPP_DATA
   || path.join(app.getPath('appData'), 'creative-browser', 'apps', 'whatsapp'));
@@ -385,6 +390,8 @@ function createWindow({ hidden }) {
   });
   win.on('closed', () => { win = null; });
   win.once('ready-to-show', () => { if (!hidden) showWindow(); });
+  // Lädt WhatsApp Web langsam (schwaches Netz), das Fenster trotzdem nach kurzer Zeit zeigen
+  if (!hidden) setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible()) showWindow(); }, 3000);
   wc.setUserAgent(userAgent());
   wc.loadURL(WA_URL, { userAgent: userAgent() });
   return win;
