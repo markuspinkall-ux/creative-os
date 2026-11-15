@@ -12,7 +12,9 @@
       "Weltraum-Shooter: spürbarer Boost (Sichtfeld weitet sich mit Stoß, Kamera fällt zurück und wackelt, Geschwindigkeitsstreifen, lange Triebwerksflammen, Boost-Energie) und spürbares Bremsen (Bild zieht sich zusammen, Schiff nickt nach vorn, Bremsdüsen leuchten)",
       "Weltraum-Shooter: Looping und Fassrollen – bei der Fassrolle prallen feindliche Schüsse ab",
       "Creative Engine: Sektor-Editor – Gegner, Planeten, Raumbasen, Asteroidenfelder und einzelne Asteroiden frei auf der Karte setzen, verschieben, drehen; Höhe, Größe, Farben, Ring, Atmosphäre, eigenes Himmelsbild und Horizont rechts einstellen",
-      "Creative Engine: Steuerung selbst festlegen – für jede Aktion zwei Tasten, eine Maustaste und zwei Controller-Eingaben, mit Warnung bei doppelter Belegung und „Standard wiederherstellen“ (Jump'n'Run und Weltraum-Shooter)"
+      "Creative Engine: Steuerung selbst festlegen – für jede Aktion zwei Tasten, eine Maustaste und zwei Controller-Eingaben, mit Warnung bei doppelter Belegung und „Standard wiederherstellen“ (Jump'n'Run und Weltraum-Shooter)",
+      "Weltraum-Shooter: alle Grafiken austauschbar – eigene GLB-Modelle für Raumschiff, Gegner, Raumbasen, Planeten, Asteroiden und Geschosse; eigene Bilder für Planeten-Oberflächen, Horizont-Planet, Boden nach der Landung, Himmel, Fadenkreuz, Waffen-Symbole, Schiff in der Schadensanzeige, Leben-Symbol und Explosionen",
+      "Weltraum-Shooter: Proportionen der Raumschiffe einstellbar – Breite, Höhe und Länge einzeln für das eigene Schiff und jeden Gegner, dazu die Gesamtgröße von Gegnern und Raumbasen (Treffer-Bereich wächst mit)"
     ],
     "verbessert": [
       "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",
@@ -22,7 +24,8 @@
       "Startmenü: „Aus Startmenü entfernen“ fragt jetzt nach, bevor die App verschwindet",
       "Startmenü: Angeheftete Apps lösen sich nur noch über die Taskleiste (Rechtsklick dort) – im Startmenü steht „In der Taskleiste angeheftet“",
       "Brave ist nicht mehr im System – Webseiten, Links und PDFs öffnet der Creative Browser. Eigene Standard-Apps, die noch auf Brave zeigten, werden umgestellt",
-      "Discord hat jetzt auch im Startmenü sein neues Symbol"
+      "Discord hat jetzt auch im Startmenü sein neues Symbol",
+      "Creative Engine: Speichern-Knopf immer sichtbar oben (zeigt „Speichern“, wenn es Änderungen gibt, sonst „Gespeichert“), „Speichern unter … (Kopie)“ im Datei-Menü, Fehlermeldung, falls das Speichern nicht klappt"
     ],
     "behoben": [
       "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger",

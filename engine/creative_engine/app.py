@@ -366,7 +366,7 @@ class GameSettings(QWidget):
         controls = ControlsBox(data)
         controls.changed.connect(self.win.touched)
         self.boxes["controls"].addWidget(controls)
-        self.panels["ui"].setVisible(not proj.is_space(data))
+        self.panels["ui"].setVisible(True)
         if proj.is_space(data):
             self.load_space(data)
             return
@@ -506,9 +506,12 @@ class GameSettings(QWidget):
         form = QFormLayout()
         self.ship_btn = QPushButton(Path(ship.get("model", "")).name or "Eingebautes Schiff")
         self.ship_btn.setIcon(icons.icon("model", C["accent"]))
-        self.ship_btn.clicked.connect(lambda: self.win.choose_model_for(ship, self.ship_btn))
+        self.ship_btn.clicked.connect(lambda: self.win.choose_model_for(ship, self.ship_btn, "Eingebautes Schiff"))
         form.addRow("3D-Modell (GLB)", self.ship_btn)
         form.addRow("Größe", self.spin(ship, "size", 0.5, 40, 0.5, 2.2, 1, " m"))
+        prop = ship.setdefault("proportion", {"x": 1.0, "y": 1.0, "z": 1.0})
+        for key, label in (("x", "Breite"), ("y", "Höhe"), ("z", "Länge")):
+            form.addRow(f"Proportion {label}", self.spin(prop, key, 0.2, 5, 0.05, 1.0, 2, " ×"))
         form.addRow("Modell drehen", self.spin(ship, "modelTurn", -180, 180, 90, 0, 0, "°"))
         form.addRow("Akzentfarbe", self.color(ship, "color", "#8fb3ff", data))
         form.addRow("Tempo", self.spin(ship, "speed", 10, 400, 5, 60, 0, " m/s"))
@@ -598,11 +601,34 @@ class GameSettings(QWidget):
                 ammo_row.addWidget(note)
             ammo_row.addStretch(1)
             cv.addLayout(ammo_row, 2, 1, 1, 5)
+            looks = QFormLayout()
+            shot = QPushButton(Path(w.get("model", "")).name or "Eingebautes Geschoss")
+            shot.setIcon(icons.icon("model", C["accent"]))
+            shot.clicked.connect(lambda _=False, w=w, shot=shot: self.win.choose_model_for(w, shot, "Eingebautes Geschoss"))
+            looks.addRow("Geschoss (GLB)", shot)
+            looks.addRow("Symbol (Bild)", self.graphic(w, "icon"))
+            cv.addLayout(looks, 3, 1, 1, 5)
             lay.addWidget(card)
         if len(weapons) < 6:
             add = QPushButton("+ Waffe hinzufügen")
             add.clicked.connect(lambda: (weapons.append(proj.new_weapon("laser")), self.win.touched(), self.load(data)))
             lay.addWidget(add)
+        lay = self.boxes["ui"]
+        lay.addWidget(QLabel("ANZEIGE UND EIGENE GRAFIKEN", objectName="section"))
+        form = QFormLayout()
+        form.addRow("Fadenkreuz", self.graphic(ship, "crosshair"))
+        if ship.get("crosshair"):
+            form.addRow("Größe Fadenkreuz", self.spin(ship, "crosshairSize", 0.3, 4, 0.1, 1.0, 1, " ×"))
+        form.addRow("Schiff in der Schadensanzeige", self.graphic(ship, "hudIcon"))
+        form.addRow("Symbol für Leben", self.graphic(ship, "lifeIcon"))
+        form.addRow("Explosion", self.graphic(ship, "explosion"))
+        lay.addLayout(form)
+        tip = QLabel("Eigene Bilder als PNG mit durchsichtigem Hintergrund. Schiff und Leben werden nach dem "
+                     "Zustand eingefärbt – am besten helle Bilder. Planeten, Asteroiden, Gegner und Basen bekommen "
+                     "eigene Grafiken im Sektor-Editor, Geschosse und Waffen-Symbole oben bei den Waffen.")
+        tip.setWordWrap(True)
+        tip.setObjectName("sub")
+        lay.addWidget(tip)
         self.window_box(data["settings"])
 
     def color(self, target, key, default, data):
@@ -686,11 +712,20 @@ class Window(QMainWindow):
         fm = QMenu(self)
         fm.addAction(icons.icon("new", C["text"]), "Neues Spiel …", self.go_home)
         fm.addAction(icons.icon("open", C["text"]), "Öffnen …", self.ask_open)
-        fm.addAction(icons.icon("save", C["text"]), "Speichern", self.save)
+        fm.addAction(icons.icon("save", C["text"]), "Speichern  (Strg+S)", lambda: self.save())
+        fm.addAction(icons.icon("duplicate", C["text"]), "Speichern unter … (Kopie)", self.save_as)
         fm.addAction(icons.icon("folder", C["text"]), "Projektordner anzeigen",
                      lambda: self.folder and __import__("subprocess").Popen(["xdg-open", str(self.folder)]))
         self.file_btn.setMenu(fm)
         th.addWidget(self.file_btn)
+        # Immer sichtbar: Speichern mit Zustand (gespeichert / ungespeichert)
+        self.save_btn = QToolButton()
+        self.save_btn.setText("Gespeichert")
+        self.save_btn.setIcon(icons.icon("save", C["text"]))
+        self.save_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.save_btn.setToolTip("Projekt speichern (Strg+S) – speichert außerdem alle 30 Sekunden und beim Schließen")
+        self.save_btn.clicked.connect(lambda: self.save())
+        th.addWidget(self.save_btn)
         self.nav = {}
         for key, icon, text in (("flow", "level", "Ablauf"), ("settings", "settings", "Spieleinstellungen"),
                                 ("character", "bone", "Charakter-Editor")):
@@ -713,7 +748,8 @@ class Window(QMainWindow):
         th.addWidget(self.play_btn)
         th.addWidget(self.export_btn)
         v.addWidget(top)
-        self.project_only = [self.file_btn.menu().actions()[2], self.play_btn, self.export_btn] + list(self.nav.values())
+        acts = self.file_btn.menu().actions()
+        self.project_only = [acts[2], acts[3], acts[4], self.save_btn, self.play_btn, self.export_btn] + list(self.nav.values())
 
         # Ablauf-Leiste
         self.flow_bar = QWidget(objectName="topBar")
@@ -829,6 +865,8 @@ class Window(QMainWindow):
     def load(self, folder, data):
         self.folder, self.project = Path(folder), data
         self.dirty = False
+        self.save_btn.setText("Gespeichert")
+        self.save_btn.setIcon(icons.icon("save", C["text"]))
         remember(self.folder)
         for w in self.project_only:
             w.setEnabled(True)
@@ -850,16 +888,59 @@ class Window(QMainWindow):
 
     def save(self, quiet=False):
         if not self.project:
-            return
-        proj.save(self.folder, self.project)
+            return False
+        try:
+            proj.save(self.folder, self.project)
+        except OSError as exc:
+            self.status_msg(f"Speichern fehlgeschlagen: {exc}")
+            if not quiet or not getattr(self, "_save_warned", False):
+                self._save_warned = True
+                QMessageBox.warning(self, APP_NAME, f"Das Projekt konnte nicht gespeichert werden:\n{exc}\n\n"
+                                    f"Ordner: {self.folder}")
+            return False
+        self._save_warned = False
         self.dirty = False
         self.setWindowTitle(f"{self.project['name']} – {APP_NAME}")
-        if not quiet:
-            self.status_msg("Gespeichert.")
+        self.save_btn.setText("Gespeichert")
+        self.save_btn.setIcon(icons.icon("save", C["text"]))
+        from time import strftime
+        self.status_msg(f"Gespeichert um {strftime('%H:%M:%S')} · {self.folder}" if not quiet
+                        else f"Automatisch gespeichert um {strftime('%H:%M')}")
+        return True
+
+    def save_as(self):
+        """Ganzes Projekt (mit allen Grafiken) als Kopie unter neuem Namen speichern und dort weiterarbeiten."""
+        if not self.project:
+            return
+        name, ok = QInputDialog.getText(self, "Speichern unter", "Name der Kopie:", text=self.project["name"] + " Kopie")
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        base = Path(self.folder).parent / proj.slug(name)
+        target, n = base, 2
+        while target.exists():
+            target = Path(f"{base} {n}")
+            n += 1
+        import copy
+        import shutil
+        data = copy.deepcopy(self.project)
+        data["name"] = name
+        try:
+            if (Path(self.folder) / "assets").is_dir():
+                shutil.copytree(Path(self.folder) / "assets", target / "assets")
+            proj.save(target, data)
+        except OSError as exc:
+            QMessageBox.warning(self, APP_NAME, f"Die Kopie konnte nicht gespeichert werden:\n{exc}")
+            return
+        self.save(quiet=True)
+        self.load(target, data)
+        self.status_msg(f"Als „{name}“ gespeichert · {target}")
 
     def touched(self):
         self.dirty = True
         self.setWindowTitle(f"{self.project['name']} • – {APP_NAME}")
+        self.save_btn.setText("Speichern")
+        self.save_btn.setIcon(icons.icon("save", C["accent"]))
         self.check()
 
     def check(self):
@@ -976,9 +1057,9 @@ class Window(QMainWindow):
             self.levels.set_brush(("decor", rel))
             self.status_msg(f"{Path(rel).name} hinzugefügt – jetzt ins Level klicken.")
 
-    def choose_model_for(self, target, button):
+    def choose_model_for(self, target, button, standard="Standardfigur"):
         m = QMenu(self)
-        m.addAction("Standardfigur", lambda: self._set_model(target, button, ""))
+        m.addAction(standard, lambda: self._set_model(target, button, "", standard))
         models = self.models()
         if models:
             m.addSeparator()
@@ -994,9 +1075,9 @@ class Window(QMainWindow):
             self.refresh_models()
             self._set_model(target, button, rel)
 
-    def _set_model(self, target, button, rel):
+    def _set_model(self, target, button, rel, standard="Standardfigur"):
         target["model"] = rel
-        button.setText(Path(rel).name or "Standardfigur")
+        button.setText(Path(rel).name or standard)
         self.touched()
 
     def open_character_editor(self):

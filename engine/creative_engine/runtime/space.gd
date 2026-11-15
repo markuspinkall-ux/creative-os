@@ -299,8 +299,70 @@ func glow_mat(color: Color) -> StandardMaterial3D:
 	return m
 
 
+## Proportionen aus dem Editor: Breite (x), Höhe (y), Länge (z) als Faktor, dazu „size“ für alles.
+func proportion(cfg: Dictionary) -> Vector3:
+	var p: Dictionary = cfg.get("proportion", {})
+	var k := float(cfg.get("scale", 1.0))
+	return Vector3(float(p.get("x", 1.0)), float(p.get("y", 1.0)), float(p.get("z", 1.0))) * clampf(k, 0.05, 50.0)
+
+
 func pos_of(e: Dictionary) -> Vector3:
 	return Vector3(float(e.get("x", 0)), float(e.get("y", 0)), float(e.get("z", 0)))
+
+
+# ---- Eigene Grafiken (GLB-Modelle, Bilder) ----------------------------------------------------
+var model_cache := {}
+var tex_cache := {}
+
+
+func model_copy(rel: String) -> Node3D:
+	## Eigenes GLB, einmal geladen und dann kopiert (Geschosse, Asteroiden …). null = keins/kaputt.
+	if rel == "":
+		return null
+	if not model_cache.has(rel):
+		model_cache[rel] = Assets.model(rel)
+	var m: Node3D = model_cache[rel]
+	return m.duplicate() as Node3D if m else null
+
+
+func fit_model(rel: String, size: float, turn := true) -> Node3D:
+	## Modell mittig, größte Ausdehnung = size; glTF schaut nach +Z, Godot nach -Z → 180° drehen.
+	var m := model_copy(rel)
+	if m == null:
+		return null
+	var holder := Node3D.new()
+	var pivot := Node3D.new()
+	holder.add_child(pivot)
+	pivot.add_child(m)
+	var box := Assets.bounds(m)
+	var biggest := maxf(box.size.x, maxf(box.size.y, box.size.z))
+	if biggest > 0.0001:
+		var k := size / biggest
+		m.scale = Vector3.ONE * k
+		m.position = -box.get_center() * k
+	if turn:
+		pivot.rotation_degrees.y = 180
+	return holder
+
+
+func image(rel: String) -> Texture2D:
+	if rel == "":
+		return null
+	if not tex_cache.has(rel):
+		tex_cache[rel] = Assets.texture(rel)
+	return tex_cache[rel]
+
+
+func textured(rel: String, uv_scale := Vector3.ONE) -> StandardMaterial3D:
+	var tex := image(rel)
+	if tex == null:
+		return null
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.roughness = 0.95
+	m.uv1_scale = uv_scale
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	return m
 
 
 # ---- Himmel und Horizont --------------------------------------------------------------------
@@ -387,7 +449,8 @@ func build_horizon() -> void:
 	body.mesh = sm
 	var c := Color(String(horizon_cfg.get("color", "#2f5fb3")))
 	var c2 := Color(String(horizon_cfg.get("color2", "#3f8f4f")))
-	body.material_override = planet_material(c, c2, 9.0, float(horizon_cfg.get("bands", 0.0)))
+	var htex := textured(String(horizon_cfg.get("texture", "")))
+	body.material_override = htex if htex else planet_material(c, c2, 9.0, float(horizon_cfg.get("bands", 0.0)))
 	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	horizon.add_child(body)
 	horizon.add_child(atmosphere(r * 1.03, Color(String(horizon_cfg.get("atmosphere", "#7fc4ff"))), 2.2))
@@ -423,7 +486,8 @@ func build_entity(e: Dictionary) -> void:
 		"asteroids":
 			add_asteroids(e, p)
 		"asteroid":
-			add_rock(p, float(e.get("size", 18.0)), Color(String(e.get("color", "#6e6259"))), int(p.x * 31 + p.z))
+			add_rock(p, float(e.get("size", 18.0)), Color(String(e.get("color", "#6e6259"))), int(p.x * 31 + p.z),
+				String(e.get("model", "")))
 
 
 func add_planet(e: Dictionary, p: Vector3) -> void:
@@ -440,8 +504,13 @@ func add_planet(e: Dictionary, p: Vector3) -> void:
 	mi.mesh = sm
 	var a := Color(String(e.get("color", "#c8673a")))
 	var b := Color(String(e.get("color2", "#7a3a22")))
-	mi.material_override = planet_material(a, b, float(e.get("detail", 3.0)), float(e.get("bands", 0.0)))
-	node.add_child(mi)
+	var own_tex := textured(String(e.get("texture", "")))
+	mi.material_override = own_tex if own_tex else planet_material(a, b, float(e.get("detail", 3.0)), float(e.get("bands", 0.0)))
+	var own_model := fit_model(String(e.get("model", "")), r * 2.0, false)
+	if own_model:
+		node.add_child(own_model)          # eigenes Planeten-Modell statt der Kugel
+	else:
+		node.add_child(mi)
 	if String(e.get("atmosphere", "")) != "":
 		node.add_child(atmosphere(r * 1.06, Color(String(e["atmosphere"]))))
 	if e.get("ring", false):
@@ -467,6 +536,7 @@ func add_base(e: Dictionary, p: Vector3) -> void:
 	var node := Node3D.new()
 	node.position = p
 	node.rotation_degrees = Vector3(0, float(e.get("dir", 0.0)), 0)
+	node.scale = Vector3.ONE * clampf(float(e.get("scale", 1.0)), 0.1, 20.0)
 	world.add_child(node)
 	var model := Assets.fitted(String(e.get("model", "")), 30.0)
 	if model:
@@ -519,7 +589,7 @@ func add_base(e: Dictionary, p: Vector3) -> void:
 	light.omni_range = 80
 	light.light_energy = 1.5
 	node.add_child(light)
-	bases.append({"node": node, "pos": p, "radius": 45.0, "data": e, "name": String(e.get("name", "Raumbasis")),
+	bases.append({"node": node, "pos": p, "radius": 45.0 * node.scale.x, "data": e, "name": String(e.get("name", "Raumbasis")),
 		"rate": float(e.get("repair", 25.0))})
 
 
@@ -634,17 +704,21 @@ func add_enemy(e: Dictionary, p: Vector3) -> void:
 	world.add_child(node)
 	var size := float(info["radius"]) * 2.0
 	var model := Assets.fitted(String(e.get("model", "")), size * 0.5)
+	var body := Node3D.new()
+	body.scale = proportion(e)
+	node.add_child(body)
 	if model:
 		var pivot := Node3D.new()
 		pivot.rotation_degrees = Vector3(0, 180, 0)      # glTF schaut nach +Z, Godot nach -Z
 		pivot.add_child(model)
-		node.add_child(pivot)
+		body.add_child(pivot)
 	else:
-		node.add_child(enemy_mesh(type, Color(String(e.get("color", info["color"])))))
+		body.add_child(enemy_mesh(type, Color(String(e.get("color", info["color"])))))
+	var sc := body.scale
 	var hp := int(e.get("hp", info["hp"]))
 	enemies.append({"node": node, "type": type, "hp": hp, "max": hp, "info": info, "home": p,
 		"weapon": String(e.get("weapon", info["weapon"])), "cd": randf_range(0.5, 2.0), "evade": 0.0,
-		"speed": float(e.get("speed", info["speed"])), "radius": float(info["radius"]), "hit": 0.0,
+		"speed": float(e.get("speed", info["speed"])), "radius": float(info["radius"]) * maxf(sc.x, maxf(sc.y, sc.z)), "hit": 0.0,
 		"angle": randf() * TAU, "name": String(e.get("name", info["name"]))})
 
 
@@ -655,15 +729,18 @@ func add_asteroids(e: Dictionary, p: Vector3) -> void:
 	rng.seed = int(p.x * 13 + p.z * 7 + count)
 	var rock_mat := mat(Color(String(e.get("color", "#6e6259"))), 0.0, 1.0, 0.0)
 	for i in count:
-		var mi := MeshInstance3D.new()
-		var sm := SphereMesh.new()
 		var r := rng.randf_range(2.0, float(e.get("size", 9.0)))
-		sm.radius = r
-		sm.height = r * 2.0
-		sm.radial_segments = 10
-		sm.rings = 6
-		mi.mesh = sm
-		mi.material_override = rock_mat
+		var mi: Node3D = fit_model(String(e.get("model", "")), r * 2.0, false)
+		if mi == null:
+			var mesh := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = r
+			sm.height = r * 2.0
+			sm.radial_segments = 10
+			sm.rings = 6
+			mesh.mesh = sm
+			mesh.material_override = rock_mat
+			mi = mesh
 		mi.position = p + Vector3(rng.randf_range(-1, 1), rng.randf_range(-0.4, 0.4), rng.randf_range(-1, 1)) * spread
 		mi.scale = Vector3(rng.randf_range(0.7, 1.3), rng.randf_range(0.6, 1.0), rng.randf_range(0.7, 1.4))
 		mi.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0)
@@ -671,17 +748,20 @@ func add_asteroids(e: Dictionary, p: Vector3) -> void:
 		rocks.append({"node": mi, "radius": r, "spin": Vector3(rng.randf_range(-0.4, 0.4), rng.randf_range(-0.4, 0.4), 0)})
 
 
-func add_rock(p: Vector3, r: float, color: Color, seed_: int) -> void:
+func add_rock(p: Vector3, r: float, color: Color, seed_: int, model_rel := "") -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_
-	var mi := MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = r
-	sm.height = r * 2.0
-	sm.radial_segments = 14
-	sm.rings = 8
-	mi.mesh = sm
-	mi.material_override = planet_material(color, color.darkened(0.35), 2.5)
+	var mi: Node3D = fit_model(model_rel, r * 2.0, false)
+	if mi == null:
+		var mesh := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = r
+		sm.height = r * 2.0
+		sm.radial_segments = 14
+		sm.rings = 8
+		mesh.mesh = sm
+		mesh.material_override = planet_material(color, color.darkened(0.35), 2.5)
+		mi = mesh
 	mi.position = p
 	mi.scale = Vector3(rng.randf_range(0.8, 1.2), rng.randf_range(0.65, 0.95), rng.randf_range(0.8, 1.3))
 	mi.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0)
@@ -696,6 +776,7 @@ func build_ship() -> void:
 	ship.basis = spawn_basis
 	add_child(ship)
 	ship_visual = Node3D.new()
+	ship_visual.scale = proportion(ship_cfg)
 	ship.add_child(ship_visual)
 	var model := Assets.fitted(String(ship_cfg.get("model", "")), float(ship_cfg.get("size", 2.2)))
 	if model:
@@ -885,6 +966,11 @@ func update_streaks(k: float) -> void:
 		n.scale = Vector3(1, 1, len)
 
 
+func ship_size() -> float:
+	var sc := ship_visual.scale if ship_visual else Vector3.ONE
+	return maxf(sc.x, maxf(sc.y, sc.z))
+
+
 func forward() -> Vector3:
 	return -ship.global_basis.z
 
@@ -1056,6 +1142,16 @@ func ship_glyph(c: Control, center: Vector2, size: float, color: Color) -> void:
 	c.draw_polyline(body, color, 2.0, true)
 
 
+func hud_ship(c: Control, key: String, center: Vector2, size: float, color: Color) -> void:
+	## Schiffssymbol der Anzeige: eigenes Bild (eingefärbt nach Zustand) oder der gezeichnete Umriss
+	var tex := image(String(ship_cfg.get(key, "")))
+	if tex:
+		var sz := Vector2(size, size) * 2.0
+		c.draw_texture_rect(tex, Rect2(center - sz * 0.5, sz), false, color.lightened(0.35))
+	else:
+		ship_glyph(c, center, size, color)
+
+
 func weapon_glyph(c: Control, center: Vector2, type: String, color: Color, s: float) -> void:
 	match type:
 		"plasma":
@@ -1113,18 +1209,24 @@ func draw_reticle(c: Control, vp: Vector2, u: float, t: float) -> void:
 		var sp := camera.unproject_position(p)
 		var r := float(steps[i][1]) * u
 		if i == 0:
-			for k in 4:
-				var a := k * PI / 2 + PI / 4
-				var d := Vector2(cos(a), sin(a))
-				var n := d.orthogonal()
-				c.draw_polyline(PackedVector2Array([sp + d * r * 1.6 + n * r * 0.6, sp + d * r, sp + d * r * 1.6 - n * r * 0.6]), col, 2.0 * u, true)
-			c.draw_circle(sp, 2.2 * u, col)
+			var own := image(String(ship_cfg.get("crosshair", "")))
+			if own:
+				# eigenes Fadenkreuz: Bild mittig, rot getönt bei erfasstem Ziel
+				var size := Vector2(56, 56) * u * float(ship_cfg.get("crosshairSize", 1.0))
+				c.draw_texture_rect(own, Rect2(sp - size * 0.5, size), false, Color(1, 0.5, 0.5) if not aim_target.is_empty() else Color.WHITE)
+			else:
+				for k in 4:
+					var a := k * PI / 2 + PI / 4
+					var d := Vector2(cos(a), sin(a))
+					var n := d.orthogonal()
+					c.draw_polyline(PackedVector2Array([sp + d * r * 1.6 + n * r * 0.6, sp + d * r, sp + d * r * 1.6 - n * r * 0.6]), col, 2.0 * u, true)
+				c.draw_circle(sp, 2.2 * u, col)
 			# Nachladen der Waffe als Bogen
 			var w: Dictionary = weapons[weapon_i]
 			var wait := clampf(cooldown / maxf(0.01, float(w.get("cooldown", 0.3))), 0, 1)
 			if wait > 0.0:
 				c.draw_arc(sp, r * 2.1, -PI / 2, -PI / 2 + TAU * (1.0 - wait), 32, Color(String(w.get("color", "#ffffff")), 0.9), 2.0 * u, true)
-		else:
+		elif String(ship_cfg.get("crosshair", "")) == "":
 			c.draw_rect(Rect2(sp - Vector2(r, r), Vector2(r, r) * 2), Color(col, 0.55), false, 1.5 * u)
 	# Zielerfassung: drehende Raute um das erfasste Ziel
 	if not aim_target.is_empty():
@@ -1192,7 +1294,7 @@ func draw_status(c: Control, vp: Vector2, u: float, t: float) -> void:
 	var hk := hull / maxf(1.0, max_hull)
 	var hcol := HUD_RED.lerp(HUD_AMBER, clampf(hk * 2.0, 0, 1)).lerp(HUD_GREEN, clampf(hk * 2.0 - 1.0, 0, 1))
 	var blink := hk < 0.25 and fmod(t, 0.6) < 0.3
-	ship_glyph(c, r.position + Vector2(46, 46) * u, 26 * u, HUD_RED if blink else hcol)
+	hud_ship(c, "hudIcon", r.position + Vector2(46, 46) * u, 26 * u, HUD_RED if blink else hcol)
 	if shield > 0.0:
 		c.draw_arc(r.position + Vector2(46, 50) * u, 38 * u, PI * 1.1, PI * 1.9, 24, Color("#6fa8ff", 0.35 + 0.5 * shield / maxf(1.0, max_shield)), 3 * u, true)
 	var x := r.position.x + 96 * u
@@ -1203,7 +1305,7 @@ func draw_status(c: Control, vp: Vector2, u: float, t: float) -> void:
 	hud_text(c, Vector2(r.end.x - 14 * u, r.position.y + 62 * u), "%d%%" % roundi(100.0 * hk), int(14 * u), hcol, HORIZONTAL_ALIGNMENT_RIGHT)
 	seg_bar(c, Vector2(x, r.position.y + 68 * u), 255 * u, 10 * u, hk, hcol, 20)
 	for i in maxi(0, lives):
-		ship_glyph(c, Vector2(r.position.x + (14 + i * 22) * u, r.end.y + 18 * u), 8 * u, Color(HUD_CYAN, 0.9))
+		hud_ship(c, "lifeIcon", Vector2(r.position.x + (14 + i * 22) * u, r.end.y + 18 * u), 8 * u, Color(HUD_CYAN, 0.9))
 	if hk < 0.25 and landed.is_empty():
 		if blink:
 			hud_text(c, Vector2(vp.x * 0.5, vp.y * 0.5 + 90 * u), "WARNUNG · HÜLLE KRITISCH", int(20 * u), HUD_RED, HORIZONTAL_ALIGNMENT_CENTER)
@@ -1284,7 +1386,13 @@ func draw_weapons(c: Control, vp: Vector2, u: float) -> void:
 			# Nachladebalken unten
 			var wait := clampf(cooldown / maxf(0.01, float(wd.get("cooldown", 0.3))), 0, 1)
 			c.draw_rect(Rect2(r.position + Vector2(6 * u, h - 5 * u), Vector2((w - 24 * u) * (1.0 - wait), 3 * u)), col)
-		weapon_glyph(c, r.position + Vector2(32, h * 0.5 / u) * u, String(wd.get("type", "laser")), col if active else HUD_DIM, 20 * u)
+		var icon := image(String(wd.get("icon", "")))
+		if icon:
+			var isz := Vector2(34, 34) * u
+			c.draw_texture_rect(icon, Rect2(r.position + Vector2(32 * u, h * 0.5) - isz * 0.5, isz), false,
+				Color.WHITE if active else Color(1, 1, 1, 0.55))
+		else:
+			weapon_glyph(c, r.position + Vector2(32, h * 0.5 / u) * u, String(wd.get("type", "laser")), col if active else HUD_DIM, 20 * u)
 		hud_text(c, r.position + Vector2(56, 20) * u, String(wd.get("name", "")).to_upper().left(11), int((13 if active else 12) * u), Color.WHITE if active else HUD_DIM)
 		var sub := "∞"
 		if ammo.has(i):
@@ -1339,15 +1447,26 @@ func fire() -> void:
 	if type == "streu":
 		for a in [-0.06, -0.03, 0.0, 0.03, 0.06]:
 			var d := dir.rotated(ship.global_basis.y, a)
-			spawn_shot(base, d * spd, float(w.get("damage", 1)), "spieler", "laser", color, {})
+			spawn_shot(base, d * spd, float(w.get("damage", 1)), "spieler", "laser", color, {}, String(w.get("model", "")))
 	elif type == "rakete":
-		spawn_shot(base + ship.global_basis.y * -0.6, dir * spd, float(w.get("damage", 6)), "spieler", "rakete", color, aim_target)
+		spawn_shot(base + ship.global_basis.y * -0.6, dir * spd, float(w.get("damage", 6)), "spieler", "rakete", color, aim_target,
+			String(w.get("model", "")))
 	else:
 		for x in [-0.6, 0.6] if type == "laser" else [0.0]:
-			spawn_shot(base + ship.global_basis.x * x, dir * spd, float(w.get("damage", 1)), "spieler", type, color, {})
+			spawn_shot(base + ship.global_basis.x * x, dir * spd, float(w.get("damage", 1)), "spieler", type, color, {},
+				String(w.get("model", "")))
 
 
-func spawn_shot(p: Vector3, vel: Vector3, dmg: float, team: String, type: String, color: Color, target: Dictionary) -> void:
+func spawn_shot(p: Vector3, vel: Vector3, dmg: float, team: String, type: String, color: Color, target: Dictionary,
+		model_rel := "") -> void:
+	var own := fit_model(model_rel, 2.6 if type != "plasma" else 2.0)
+	if own:
+		add_child(own)
+		own.global_position = p
+		orient(own, vel)
+		shots.append({"node": own, "vel": vel, "life": 3.5 if type != "rakete" else 6.0, "dmg": dmg, "team": team,
+			"type": type, "target": target, "color": color, "own": true})
+		return
 	var mi := MeshInstance3D.new()
 	if type == "plasma":
 		var sm := SphereMesh.new()
@@ -1383,6 +1502,20 @@ func orient(n: Node3D, vel: Vector3, cylinder := false) -> void:
 
 
 func blast(p: Vector3, size: float, color := Color("#ffb347")) -> void:
+	var tex := image(String(ship_cfg.get("explosion", "")))
+	if tex:
+		# eigenes Explosionsbild: Leuchtbild, das immer zur Kamera schaut, wächst und verblasst
+		var sp := Sprite3D.new()
+		sp.texture = tex
+		sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sp.shaded = false
+		sp.transparent = true
+		sp.pixel_size = 2.0 / maxf(1.0, float(tex.get_width()))
+		add_child(sp)
+		sp.global_position = p
+		sp.scale = Vector3.ONE * size * 0.4
+		blasts.append({"node": sp, "t": 0.0, "size": size * 2.0, "sprite": sp})
+		return
 	var mi := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	sm.radius = 1.0
@@ -1411,7 +1544,7 @@ func update_shots(delta: float) -> void:
 			var tn: Node3D = s["target"]["node"]
 			var want: Vector3 = (tn.global_position - n.global_position).normalized() * (s["vel"] as Vector3).length()
 			s["vel"] = (s["vel"] as Vector3).lerp(want, clampf(delta * 2.5, 0, 1))
-			orient(n, s["vel"], true)
+			orient(n, s["vel"], not s.get("own", false))
 		n.global_position += s["vel"] * delta
 		var hit := false
 		var p := n.global_position
@@ -1422,7 +1555,7 @@ func update_shots(delta: float) -> void:
 					damage_enemy(e, float(s["dmg"]))
 					hit = true
 					break
-		elif s["team"] == "gegner" and ship.global_position.distance_to(p) < 2.6 and landed.is_empty():
+		elif s["team"] == "gegner" and ship.global_position.distance_to(p) < 2.6 * ship_size() and landed.is_empty():
 			if not maneuver.is_empty() and maneuver["kind"] == "rolle":
 				# Fassrolle: Schuss prallt ab
 				s["vel"] = ((s["vel"] as Vector3).bounce(((p - ship.global_position).normalized())))
@@ -1457,8 +1590,11 @@ func update_blasts(delta: float) -> void:
 		var k: float = b["t"] / 0.55
 		var n: Node3D = b["node"]
 		n.scale = Vector3.ONE * float(b["size"]) * (0.2 + k)
-		var m: StandardMaterial3D = b["mat"]
-		m.albedo_color.a = clampf(1.0 - k, 0, 1)
+		if b.has("sprite"):
+			(b["sprite"] as Sprite3D).modulate.a = clampf(1.0 - k, 0, 1)
+		else:
+			var m: StandardMaterial3D = b["mat"]
+			m.albedo_color.a = clampf(1.0 - k, 0, 1)
 		if k >= 1.0:
 			n.queue_free()
 			blasts.remove_at(i)
@@ -1679,7 +1815,8 @@ func land(p: Dictionary) -> void:
 	pm.size = Vector2(3000, 3000)
 	pm.subdivide_width = 1
 	gnd.mesh = pm
-	gnd.material_override = planet_material(ground_c, ground_c.darkened(0.3), 0.004, 0.0)
+	var gtex := textured(String(e.get("groundTexture", "")), Vector3(60, 60, 1))
+	gnd.material_override = gtex if gtex else planet_material(ground_c, ground_c.darkened(0.3), 0.004, 0.0)
 	surface.add_child(gnd)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = String(p["name"]).hash()

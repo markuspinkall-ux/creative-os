@@ -128,6 +128,10 @@ def space_level(name="Sektor 1", sample=True):
     return lvl
 
 
+# Eigene Grafiken des Raumschiffs und der Anzeige (Weltraum-Shooter)
+SHIP_IMAGES = ("model", "crosshair", "hudIcon", "lifeIcon", "explosion")
+
+
 def new_ship():
     return {"model": "", "size": 2.2, "color": "#8fb3ff", "speed": 60.0, "boost": 1.8, "turn": 1.6, "hull": 100,
             "shield": 60, "lives": 3, "mouse": 1.0, "invertY": False,
@@ -293,11 +297,23 @@ def assets_used(project):
                 used.add(e["model"])
     if project["player"].get("model"):
         used.add(project["player"]["model"])
-    if project.get("ship", {}).get("model"):
-        used.add(project["ship"]["model"])
+    ship = project.get("ship", {})
+    for key in SHIP_IMAGES:
+        if ship.get(key):
+            used.add(ship[key])
+    for w in ship.get("weapons", []):
+        for key in ("model", "icon"):
+            if w.get(key):
+                used.add(w[key])
     for lvl in project["levels"].values():
         if lvl.get("skyImage"):
             used.add(lvl["skyImage"])
+        if lvl.get("horizon", {}).get("texture"):
+            used.add(lvl["horizon"]["texture"])
+        for e in lvl["entities"]:
+            for key in ("texture", "groundTexture"):
+                if e.get(key):
+                    used.add(e[key])
     ui = project.get("settings", {}).get("ui", {})
     for key in UI_IMAGES:
         if ui.get(key):
