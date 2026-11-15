@@ -13,7 +13,8 @@
       "Weltraum-Shooter: Looping und Fassrollen – bei der Fassrolle prallen feindliche Schüsse ab",
       "Creative Engine: Sektor-Editor – Gegner, Planeten, Raumbasen, Asteroidenfelder und einzelne Asteroiden frei auf der Karte setzen, verschieben, drehen; Höhe, Größe, Farben, Ring, Atmosphäre, eigenes Himmelsbild und Horizont rechts einstellen",
       "Creative Engine: Steuerung selbst festlegen – für jede Aktion zwei Tasten, eine Maustaste und zwei Controller-Eingaben, mit Warnung bei doppelter Belegung und „Standard wiederherstellen“ (Jump'n'Run und Weltraum-Shooter)",
-      "KI-Helfer mit Stimme: liest Antworten vor – Satz für Satz schon während er schreibt, Code wird übersprungen („Den Code siehst du im Fenster“). Offline mit Piper, sechs deutsche Stimmen (Thorsten ist dabei, Kerstin, Ramona, Eva, Karlsson und Pavoque mit einem Klick nachladbar), Tempo und Lautstärke einstellbar, „Vorlesen“ an jeder Antwort, Esc hält an"
+      "KI-Helfer mit Stimme: liest Antworten vor – Satz für Satz schon während er schreibt, Code wird übersprungen („Den Code siehst du im Fenster“). Offline mit Piper, sechs deutsche Stimmen (Thorsten ist dabei, Kerstin, Ramona, Eva, Karlsson und Pavoque mit einem Klick nachladbar), Tempo und Lautstärke einstellbar, „Vorlesen“ an jeder Antwort, Esc hält an",
+      "Startauswahl (GRUB) im Creative-Design: Vivid-Venus-Hintergrund, Logo, Graphit-Farben und deutsche Hinweise – erscheint nur bei Problemen oder mit gedrückter Umschalttaste; „sudo creative-grub-design aus“ schaltet zurück aufs Textmenü"
     ],
     "verbessert": [
       "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",

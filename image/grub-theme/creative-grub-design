@@ -1,0 +1,57 @@
+#!/bin/sh
+# Creative OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
+#   sudo creative-grub-design        einschalten bzw. aktualisieren (läuft bei jedem Start automatisch)
+#   sudo creative-grub-design aus    wieder das schlichte Textmenü
+# Die Dateien liegen im Abbild unter /usr/share/creative-os/grub-theme und werden nach
+# /boot/grub2/themes/creative kopiert; user.cfg bekommt einen markierten Block.
+set -eu
+SRC="${CREATIVE_GRUB_SRC:-/usr/share/creative-os/grub-theme}"
+BOOT_DIRS="${CREATIVE_BOOT_DIRS:-/boot/grub2 /boot/efi/EFI/fedora}"   # nur für Tests anders
+mode="${1:-an}"
+BEGIN="### BEGIN creative-os grub-design"
+END="### END creative-os grub-design"
+
+[ "$(id -u)" = 0 ] || [ -n "${CREATIVE_BOOT_DIRS:-}" ] || { echo "Bitte mit sudo ausführen."; exit 1; }
+
+dir=""
+for d in $BOOT_DIRS; do
+    if [ -f "$d/grub.cfg" ] && grep -q "user.cfg" "$d/grub.cfg"; then dir="$d"; break; fi
+done
+[ -n "$dir" ] || { echo "Keine GRUB-Konfiguration mit user.cfg gefunden – nichts zu tun."; exit 0; }
+
+# /boot ist bei Creative OS meist schreibgeschützt eingehängt – kurz freigeben
+ro=""
+if ! touch "$dir/.creative-test" 2>/dev/null; then
+    mount -o remount,rw /boot 2>/dev/null && ro=1
+fi
+rm -f "$dir/.creative-test"
+fertig() { [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true; }
+trap fertig EXIT
+
+cfg="$dir/user.cfg"
+touch "$cfg"
+# alten Block entfernen (Neuschreiben bzw. Ausschalten)
+tmp="$(mktemp)"
+awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$cfg" > "$tmp"
+
+if [ "$mode" = "aus" ]; then
+    cat "$tmp" > "$cfg"; rm -f "$tmp"
+    rm -rf "$dir/themes/creative"
+    sync
+    echo "Startauswahl wieder im schlichten Textmenü."
+    exit 0
+fi
+
+[ -f "$SRC/theme.txt" ] || { rm -f "$tmp"; echo "Design fehlt im System ($SRC)."; exit 1; }
+if ! cmp -s "$SRC/version" "$dir/themes/creative/version" 2>/dev/null; then
+    rm -rf "$dir/themes/creative.neu"
+    mkdir -p "$dir/themes/creative.neu"
+    cp "$SRC"/* "$dir/themes/creative.neu/"
+    rm -rf "$dir/themes/creative"
+    mv "$dir/themes/creative.neu" "$dir/themes/creative"
+fi
+cat "$SRC/grub-snippet.cfg" >> "$tmp"
+if ! cmp -s "$tmp" "$cfg"; then cat "$tmp" > "$cfg"; fi
+rm -f "$tmp"
+sync
+echo "Startauswahl im Creative-Design eingerichtet ($dir)."

@@ -55,3 +55,5 @@ for dir in /boot/grub2 /boot/efi/EFI/fedora; do
         [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true
     fi
 done
+# Startauswahl im Creative-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
+[ -x /usr/bin/creative-grub-design ] && /usr/bin/creative-grub-design >/dev/null 2>&1 || true
