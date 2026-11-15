@@ -1,0 +1,14 @@
+name: Lautsprecher-Korrektur prüfen
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [image/geraete/**, tools/ton-fix-test.sh, .github/workflows/ton-fix-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: registry.fedoraproject.org/fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - run: dnf install -y -q binutils >/dev/null && sh tools/ton-fix-test.sh
