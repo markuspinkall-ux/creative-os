@@ -110,6 +110,16 @@ class WidgetWindow(QMainWindow):
         self.notes_button.clicked.connect(self.toggle_notes)
         row.addWidget(self.notes_button)
         catalog.addLayout(row)
+        row = QHBoxLayout()
+        detail = QVBoxLayout()
+        detail.addWidget(QLabel("Akku"))
+        detail.addWidget(QLabel("Für Laptops: Ladestand auf dem Schreibtisch und in der Taskleiste, Warnung bei wenig Akku"))
+        row.addLayout(detail, 1)
+        self.akku_button = QPushButton("Installieren")
+        self.akku_button.clicked.connect(self.toggle_akku)
+        row.addWidget(self.akku_button)
+        catalog.addLayout(row)
+        self.akku_installed = False
         self.notes_installed = False
         self.message = QLabel()
         self.message.setWordWrap(True)
@@ -154,9 +164,10 @@ class WidgetWindow(QMainWindow):
             self.available = True
         self.installed = state.get("clockInstalled", False)
         self.notes_installed = state.get("notesInstalled", False)
+        self.akku_installed = state.get("akkuInstalled", False)
         for name, switch in self.switches.items():
             enabled = self.available and (name != "clock" or self.installed) and (
-                name != "notes" or self.notes_installed)
+                name != "notes" or self.notes_installed) and (name != "akku" or self.akku_installed)
             switch.setEnabled(enabled)
             monitor = self.monitors[name]
             monitor.setEnabled(enabled)
@@ -208,6 +219,8 @@ class WidgetWindow(QMainWindow):
 
     def update_download_button(self):
         self.notes_button.setEnabled(self.available)
+        self.akku_button.setEnabled(self.available)
+        self.akku_button.setText("Entfernen" if self.akku_installed else "Installieren")
         self.notes_button.setText("Entfernen" if self.notes_installed else "Installieren")
         self.download_button.setEnabled(self.available and not self.loading)
         self.download_button.setText("Entfernen" if self.installed else "Lädt …" if self.loading else "Herunterladen")
@@ -217,6 +230,13 @@ class WidgetWindow(QMainWindow):
             self.download_clock()
         elif self.apply("removeClockWidget"):
             self.message.setText("Die analoge Uhr wurde entfernt. Über „Herunterladen“ kommt sie jederzeit wieder.")
+
+    def toggle_akku(self):
+        install = not self.akku_installed
+        if self.apply("installAkkuWidget", install):
+            self.message.setText(
+                "Das Akku-Widget wurde installiert: Ladestand auf dem Schreibtisch und in der Taskleiste. "
+                "Auf PCs ohne Akku bleibt es unsichtbar." if install else "Das Akku-Widget wurde entfernt.")
 
     def toggle_notes(self):
         install = not self.notes_installed

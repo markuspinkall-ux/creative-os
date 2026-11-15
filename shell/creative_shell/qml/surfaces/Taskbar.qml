@@ -331,7 +331,7 @@ Item {
                 // Akku (nur bei Laptops): Symbol mit Füllstand und Prozent
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: akku.present
+                    visible: akku.present && widgetExtras.akkuInstalled
                     spacing: 5
                     BatteryGlyph {
                         anchors.verticalCenter: parent.verticalCenter

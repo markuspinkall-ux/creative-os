@@ -90,6 +90,30 @@ m.refresh()
 assert m.notifications[-1][0] == "Akku schwach" and len(m.notifications) == 3, m.notifications
 print("Warnungen: ok (15 % und 5 % je einmal, nach dem Laden wieder)")
 
+# Katalog: erst installieren, dann an; Entfernen schaltet alles ab
+import os  # noqa: E402
+home = Path(tempfile.mkdtemp())
+os.environ["HOME"] = str(home)
+os.environ["XDG_CONFIG_HOME"] = str(home / ".config")
+from creative_shell import widget_extras as we  # noqa: E402
+we.twitch_status = lambda name: {"name": name, "status": "unknown"}
+x = we.WidgetExtras()
+assert not x.akkuInstalled and not x.akkuEnabled, "Akku-Widget darf nicht von selbst da sein"
+try:
+    x.setEnabled("akku", True)
+    raise AssertionError("ohne Installation einschaltbar")
+except ValueError:
+    pass
+x.installAkku()
+assert x.akkuInstalled and x.akkuEnabled
+x.setPosition("akku", 0.4, 0.2)
+x.setEnabled("akku", False)
+assert x.akkuInstalled and not x.akkuEnabled
+x.removeAkku()
+y = we.WidgetExtras()
+assert not y.akkuInstalled and not y.akkuEnabled and y.akkuX == 0.4
+print("Katalog: ok (installieren, ausschalten, entfernen)")
+
 if len(sys.argv) > 1:
     fake = Path(sys.argv[1])
     laptop(fake)
