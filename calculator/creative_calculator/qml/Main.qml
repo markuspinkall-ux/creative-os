@@ -15,7 +15,7 @@ Window {
     minimumWidth: 320
     minimumHeight: 520
     visible: true
-    title: "Creative Calculator"
+    title: "Taschenrechner"
     color: Theme.ground
 
     Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
@@ -45,7 +45,7 @@ Window {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Creative Calculator"
+                    text: "Taschenrechner"
                     color: Theme.textMuted
                     font.family: Theme.fontFamily
                     font.pixelSize: 13

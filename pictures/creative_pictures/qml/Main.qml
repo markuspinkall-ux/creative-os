@@ -12,7 +12,7 @@ Window {
     minimumWidth: 760
     minimumHeight: 520
     visible: true
-    title: pics.viewing ? pics.currentName + " – Creative Pictures" : "Creative Pictures"
+    title: pics.viewing ? pics.currentName + " – Pictures" : "Pictures"
     color: Theme.surface
 
     property bool fullscreen: false
@@ -44,7 +44,7 @@ Window {
                     color: Theme.accent
                     SvgIcon { anchors.centerIn: parent; name: "pictures"; size: 16 }
                 }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: "Creative Pictures"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15; font.bold: true }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: "Pictures"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15; font.bold: true }
             }
 
             Column {

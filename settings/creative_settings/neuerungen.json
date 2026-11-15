@@ -9,7 +9,8 @@
     "verbessert": [
       "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",
       "Symbole: WhatsApp und Discord sehen jetzt wie ihre Originale aus – im Graphit- und Porzellan-Stil",
-      "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos"
+      "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos",
+      "Startmenü: Taschenrechner, Notes, Pictures und Mail liegen jetzt direkt im Startmenü statt im Ordner „Creative Apps“ und heißen kürzer (die Suche nach den alten Namen findet sie weiterhin)"
     ],
     "behoben": []
   },

@@ -795,7 +795,7 @@ class LoginDialog(QDialog):
 class MailWindow(QMainWindow):
     def __init__(self, selftest=False):
         super().__init__()
-        self.setWindowTitle("Creative Mail")
+        self.setWindowTitle("Mail")
         self.resize(1360, 820)
         self.settings = QSettings()
         self.gmail = None
@@ -850,7 +850,7 @@ class MailWindow(QMainWindow):
         logo = QLabel()
         logo.setPixmap(QIcon.fromTheme("creative-mail", icon("unread", C["accent"], 26)).pixmap(26, 26))
         brand.addWidget(logo)
-        brand.addWidget(QLabel("Creative Mail", objectName="brand"), 1)
+        brand.addWidget(QLabel("Mail", objectName="brand"), 1)
         layout.addLayout(brand)
         compose_row = QHBoxLayout()
         compose_row.setContentsMargins(12, 4, 12, 4)
@@ -939,7 +939,7 @@ class MailWindow(QMainWindow):
         self.empty_icon = QLabel()
         self.empty_icon.setPixmap(icon("inbox", C["accent"], 44).pixmap(44, 44))
         self.empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.empty_title = QLabel("Willkommen bei Creative Mail", objectName="paneTitle")
+        self.empty_title = QLabel("Willkommen bei Mail", objectName="paneTitle")
         self.empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_text = QLabel(objectName="muted")
         self.empty_text.setWordWrap(True)
@@ -1071,7 +1071,7 @@ class MailWindow(QMainWindow):
         if connected:
             self.show_empty("Keine E-Mail ausgewählt", "Wähle links eine Nachricht aus.")
         else:
-            self.show_empty("Willkommen bei Creative Mail",
+            self.show_empty("Willkommen bei Mail",
                             "Melde dich mit deiner E-Mail-Adresse an – Gmail, GMX, WEB.DE, T-Online, Yahoo, "
                             "iCloud und viele mehr. Das Passwort bleibt im Schlüsselbund dieses PCs.")
 

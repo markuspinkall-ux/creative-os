@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Notes
+Name=Notes
 GenericName=Texteditor
 Comment=Texte und Code bearbeiten – mit Reitern, Syntaxfarben und Suchen/Ersetzen
-Keywords=Text;Editor;Notizen;Notepad;Code;Konfiguration;
+Keywords=Creative Notes;Text;Editor;Notizen;Notepad;Code;Konfiguration;
 Exec=creative-notes %F
 Icon=creative-notes
 Terminal=false
