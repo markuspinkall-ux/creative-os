@@ -14,3 +14,31 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prüfsummen der Stimmen
         run: python3 tools/stimmen-pruefsummen.py
+  sprechen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container: registry.fedoraproject.org/fedora:44
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pakete
+        run: dnf install -y -q python3 python3-pyside6 curl tar git ffmpeg-free >/dev/null
+      - name: Piper und Stimme (wie im Abbild)
+        run: |
+          install -Dm644 ki/stimmen.json /usr/lib/creative-ki/stimmen.json
+          sh ki/install-piper.sh /usr/lib/creative-ki
+          install -Dm755 ki/creative-ki-setup /usr/libexec/creative-ki-setup
+          ls -la /usr/lib/creative-ki/stimmen
+      - name: Vorlesen prüfen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 tools/stimme-test.py proben
+      - name: Hörproben als MP3 ablegen
+        if: always()
+        run: |
+          cd proben 2>/dev/null || exit 0
+          for f in *.wav; do ffmpeg -loglevel error -y -i "$f" -b:a 96k "${f%.wav}.mp3" && rm "$f"; done
+          git init -q -b stimme-proben && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Stimmen ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" stimme-proben
