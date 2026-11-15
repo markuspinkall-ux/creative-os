@@ -80,12 +80,53 @@ def stars(p, seed, n=80, avoid=None):
     return "\n  ".join(out)
 
 
+def _bezier(p0, p1, p2, p3, n=48):
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        a, b, c, d = (1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3
+        pts.append((a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0], a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1]))
+    return pts
+
+
+def _interp(pts, x):
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if x0 <= x <= x1:
+            return y0 + (y1 - y0) * ((x - x0) / (x1 - x0) if x1 != x0 else 0)
+    return pts[0][1] if x < pts[0][0] else pts[-1][1]
+
+
+def _band_in_disc(top, bot, cx, cy, r, steps=90):
+    """Fläche zwischen zwei Kurven, schon auf die Planetenscheibe zugeschnitten.
+    (Qt zeichnet SVG-clipPath nicht überall – darum wird hier selbst geschnitten.)"""
+    runs, run = [], []
+    for i in range(steps + 1):
+        x = cx - r + 2 * r * i / steps
+        half = math.sqrt(max(0.0, r * r - (x - cx) ** 2))
+        lo, hi = max(_interp(top, x), cy - half), min(_interp(bot, x), cy + half)
+        if hi - lo > 0.5:
+            run.append((x, lo, hi))
+        elif run:
+            runs.append(run)
+            run = []
+    if run:
+        runs.append(run)
+    paths = []
+    for run in runs:
+        if len(run) < 2:
+            continue
+        up = " L".join(f"{x:.0f} {lo:.0f}" for x, lo, _ in run)
+        down = " L".join(f"{x:.0f} {hi:.0f}" for x, _, hi in reversed(run))
+        paths.append(f"M{up} L{down} Z")
+    return " ".join(paths)
+
+
 def cloud_bands(cx, cy, r, seed, tilt=-18):
     """Venus-Wolken: wenige, breite und sehr weiche Schleier (keine Streifen wie beim Jupiter),
-    dazu das typische liegende „Y“ als zarter dunklerer Bogen."""
+    dazu das typische liegende „Y“ als zarter dunklerer Bogen. Alles liegt innerhalb der Scheibe."""
     rnd = random.Random(seed)
     drift = r * 0.06 * math.sin(2 * math.pi * T)     # Wolken ziehen langsam (Superrotation)
-    out = [f'<g transform="translate({drift:.1f} 0) rotate({tilt} {cx} {cy})">']
+    out = [f'<g transform="rotate({tilt} {cx} {cy})">']
     y = cy - r * 1.05
     while y < cy + r:
         h = rnd.uniform(0.16, 0.3) * r
@@ -93,17 +134,19 @@ def cloud_bands(cx, cy, r, seed, tilt=-18):
         op = rnd.uniform(0.07, 0.16)
         amp = rnd.uniform(0.06, 0.14) * r
         bend = (y - cy) / r * 0.22 * r
-        x0, x1 = cx - r * 1.1, cx + r * 1.1
-        top = (f"M{x0:.0f} {y:.0f} C {cx - r * 0.5:.0f} {y - amp + bend:.0f}, "
-               f"{cx + r * 0.3:.0f} {y + amp + bend:.0f}, {x1:.0f} {y - amp * 0.4:.0f}")
-        bot = (f"L{x1:.0f} {y + h:.0f} C {cx + r * 0.3:.0f} {y + h + amp + bend:.0f}, "
-               f"{cx - r * 0.5:.0f} {y + h - amp + bend:.0f}, {x0:.0f} {y + h:.0f} Z")
-        out.append(f'<path d="{top} {bot}" fill="{col}" fill-opacity="{op:.2f}"/>')
+        x0, x1 = cx - r * 1.1 + drift, cx + r * 1.1 + drift
+        top = _bezier((x0, y), (cx - r * 0.5 + drift, y - amp + bend), (cx + r * 0.3 + drift, y + amp + bend), (x1, y - amp * 0.4))
+        bot = _bezier((x0, y + h), (cx - r * 0.5 + drift, y + h - amp + bend), (cx + r * 0.3 + drift, y + h + amp + bend), (x1, y + h))
+        d = _band_in_disc(top, bot, cx, cy, r)
+        if d:
+            out.append(f'<path d="{d}" fill="{col}" fill-opacity="{op:.2f}"/>')
         y += h * rnd.uniform(0.55, 0.9)
     # liegendes Y
-    out.append(f'<path d="M{cx - r * 1.1:.0f} {cy - r * 0.35:.0f} Q {cx - r * 0.1:.0f} {cy - r * 0.05:.0f} {cx + r * 1.1:.0f} {cy - r * 0.02:.0f} '
-               f'L{cx + r * 1.1:.0f} {cy + r * 0.12:.0f} Q {cx - r * 0.1:.0f} {cy + r * 0.08:.0f} {cx - r * 1.1:.0f} {cy + r * 0.4:.0f} Z" '
-               f'fill="{VENUS[3]}" fill-opacity="0.10"/>')
+    top = _bezier((cx - r * 1.1, cy - r * 0.35), (cx - r * 0.4, cy - r * 0.15), (cx + r * 0.2, cy - r * 0.04), (cx + r * 1.1, cy - r * 0.02))
+    bot = _bezier((cx - r * 1.1, cy + r * 0.4), (cx - r * 0.4, cy + r * 0.18), (cx + r * 0.2, cy + r * 0.1), (cx + r * 1.1, cy + r * 0.12))
+    d = _band_in_disc(top, bot, cx, cy, r)
+    if d:
+        out.append(f'<path d="{d}" fill="{VENUS[3]}" fill-opacity="0.10"/>')
     out.append("</g>")
     return "\n    ".join(out)
 
