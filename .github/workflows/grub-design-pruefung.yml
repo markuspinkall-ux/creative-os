@@ -1,0 +1,26 @@
+name: Startauswahl prüfen
+# GRUB-Design des installierten Systems: Skript gegen nachgebautes /boot, echter GRUB in QEMU, Fotos.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [image/grub-theme/**, image/netinstall/grub-theme/**, image/quiet-boot/**, tools/grub-design-test.sh,
+            .github/workflows/grub-design-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: registry.fedoraproject.org/fedora:44
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh tools/grub-design-test.sh grub-fotos
+      - name: Fotos im Branch „grub-fotos“ ablegen
+        if: always()
+        run: |
+          dnf install -y -q git >/dev/null
+          cd grub-fotos 2>/dev/null || exit 0
+          git init -q -b grub-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "GRUB ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" grub-fotos
