@@ -57,6 +57,11 @@ class ShellBus(QObject):
         else:
             self._shell.restoreDesktop()
 
+    # ---- Zähler am Taskleisten-Symbol (z. B. ungelesene WhatsApp-Nachrichten) ----
+    @Slot(str, int)
+    def setBadge(self, app, count):
+        self._tasks.set_badge(app, count)
+
     # ---- vom KWin-Skript --------------------------------------------------------
     @Slot(str)
     def update(self, payload):

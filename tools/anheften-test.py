@@ -62,4 +62,25 @@ assert ids(m2) == ids(m), (ids(m2), ids(m))
 claude2 = next(p for p in m2.pinned if p["desktopId"] == "creative-claude.desktop")
 assert claude2["icon"] == "claude" and claude2["match"]
 print("Eigene Auswahl:", ids(m2))
+
+# Zähler an der Taskleiste (z. B. ungelesene WhatsApp-Nachrichten über D-Bus setBadge)
+from creative_shell.tasks import TaskModel  # noqa: E402
+
+
+class FakeKwin:
+    def request_snapshot(self):
+        pass
+
+
+m2.pin("creative-claude.desktop")
+t = TaskModel(m2, FakeKwin())
+rev = t._revision
+t.set_badge("creative-claude.desktop", 5)
+item = next(i for i in t.taskbarItems("") if i["key"] == "creative-claude")
+assert item["badge"] == 5 and t._revision > rev, item
+t.set_badge("creative-claude", 0)
+item = next(i for i in t.taskbarItems("") if i["key"] == "creative-claude")
+assert item["badge"] == 0, item
+assert all(i["badge"] == 0 for i in t.taskbarItems("")), "Zähler bei anderen Apps"
+print("Zähler an der Taskleiste: in Ordnung")
 print("Taskleiste anheften/lösen: alles in Ordnung")

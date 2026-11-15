@@ -53,6 +53,7 @@ class TaskModel(QObject):
         self._windows = []
         self._active_output = ""
         self._revision = 0
+        self._badges = {}       # App → Zahl ungelesener Nachrichten (z. B. WhatsApp)
         apps.pinnedChanged.connect(self._bump)
 
     # ---- Daten von KWin -------------------------------------------------------
@@ -64,6 +65,17 @@ class TaskModel(QObject):
         windows = data.get("windows", []) if isinstance(data, dict) else []
         self._windows = [w for w in windows if isinstance(w, dict) and w.get("id")]
         self._active_output = data.get("activeOutput", "") if isinstance(data, dict) else ""
+        self._bump()
+
+    def set_badge(self, app, count):
+        key = app_key(app)
+        count = max(0, min(int(count), 9999))
+        if not key or self._badges.get(key, 0) == count:
+            return
+        if count:
+            self._badges[key] = count
+        else:
+            self._badges.pop(key, None)
         self._bump()
 
     def _bump(self):
@@ -143,6 +155,7 @@ class TaskModel(QObject):
             item["running"] = bool(wins)
             item["active"] = any(w.get("active") and not w.get("minimized") for w in wins)
             item["count"] = len(wins)
+            item["badge"] = self._badges.get(item["key"], 0)
             item["title"] = wins[0].get("title", "") if len(wins) == 1 else item["name"]
             item["windowIds"] = [w["id"] for w in wins]
             del item["windows"]

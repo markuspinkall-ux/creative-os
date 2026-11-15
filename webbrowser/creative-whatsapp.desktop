@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=WhatsApp
+GenericName=Messenger
+Comment=Nachrichten schreiben – mit Benachrichtigungen, Zähler an der Taskleiste und Nicht stören
+Keywords=WhatsApp;Chat;Messenger;Nachrichten;
+Exec=creative-whatsapp
+Icon=creative-whatsapp
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+StartupWMClass=creative-whatsapp
+StartupNotify=true
+Actions=settings;
+
+[Desktop Action settings]
+Name=Einstellungen
+Exec=creative-whatsapp --einstellungen

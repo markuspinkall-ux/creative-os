@@ -102,6 +102,7 @@ Item {
                     running: modelData.running
                     active: modelData.active
                     count: modelData.count
+                    badge: modelData.badge || 0
                     onClicked: {
                         shell.closePopups()
                         tasks.activate(root.screenName, modelData.key, modelData.desktopId)

@@ -1,4 +1,9 @@
 'use strict';
+// Creative WhatsApp läuft mit derselben Electron-Laufzeit, ist aber eine eigene App (whatsapp/)
+if (process.argv.includes('--whatsapp')) {
+  require('./whatsapp/main.js');
+  return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
+}
 // Creative Browser – Hauptprozess.
 // Jedes Fenster: unten die Tabs (je ein WebContentsView), darüber die Oberfläche (ui/), ein
 // durchsichtiger WebContentsView. Öffnet die Oberfläche ein Menü, wird sie kurz fensterhoch.

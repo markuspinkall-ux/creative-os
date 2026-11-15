@@ -9,6 +9,18 @@
     "behoben": []
   },
   {
+    "datum": "2026-11-15",
+    "titel": "Creative WhatsApp",
+    "neu": [
+      "Creative WhatsApp: eigene App statt der bisherigen WhatsApp-Verknüpfung – mit dem offiziellen WhatsApp Web innen (kein Sperr-Risiko für die Nummer). Zähler für ungelesene Nachrichten am Taskleisten-Symbol, Benachrichtigungen mit Klick zum Chat, läuft beim Schließen im Hintergrund weiter (Tray-Symbol), auf Wunsch Start mit dem PC, Nicht stören von Hand oder zu festen Zeiten, Vorschau und Ton abschaltbar, Rechtschreibprüfung Deutsch mit Vorschlägen per Rechtsklick, Downloads landen direkt in „Downloads“. Einstellungen mit Strg+, oder über das Tray-Symbol. Die bisherige Anmeldung bleibt erhalten",
+      "Taskleiste: Apps können einen Zähler am Symbol zeigen (z. B. ungelesene Nachrichten)"
+    ],
+    "verbessert": [
+      "Symbole: WhatsApp und Discord sehen jetzt wie ihre Originale aus – im Graphit- und Porzellan-Stil"
+    ],
+    "behoben": []
+  },
+  {
     "datum": "2026-11-14",
     "titel": "Server-Modus bis zum Neustart",
     "neu": [
