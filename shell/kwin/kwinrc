@@ -7,6 +7,8 @@ Meta=org.creativeos.Shell,/Shell,org.creativeos.Shell,toggleStartMenu
 
 [Plugins]
 creative-tasksEnabled=true
+# Maximierte Fenster: kleiner Abstand rundum (auch zur Taskleiste) und runde Ecken
+creative-abstandEnabled=true
 
 [org.kde.kdecoration2]
 # Fensterrahmen: KWin-Standard (Breeze, sauber gezeichnet) in Graphit-Farben aus kdeglobals.

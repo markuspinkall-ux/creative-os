@@ -155,6 +155,7 @@ COPY login/creative/background.svg /usr/share/creative-os/lockscreen/background.
 COPY login/creative/background-light.svg /usr/share/creative-os/lockscreen/background-light.svg
 RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
+COPY shell/kwin/creative-abstand /usr/share/kwin/scripts/creative-abstand
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
 COPY shell/webapps/creative-webapp /usr/bin/creative-webapp

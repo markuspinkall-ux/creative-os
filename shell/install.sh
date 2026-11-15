@@ -30,13 +30,13 @@ install -Dm644 kwin/kwinrc /usr/share/creative-os/xdg/kwinrc
 install -Dm644 kwin/kscreenlockerrc /usr/share/creative-os/xdg/kscreenlockerrc
 install -Dm644 kwin/kxkbrc /usr/share/creative-os/xdg/kxkbrc
 sh lockscreen/install-lockscreen.sh
-rm -rf /usr/share/kwin/scripts/creative-tasks
+rm -rf /usr/share/kwin/scripts/creative-tasks /usr/share/kwin/scripts/creative-abstand
 mkdir -p /usr/share/kwin/scripts
-cp -r kwin/creative-tasks /usr/share/kwin/scripts/
+cp -r kwin/creative-tasks kwin/creative-abstand /usr/share/kwin/scripts/
 
-# Web-Apps als eigene Fenster (Claude, YouTube, Twitch); ChatGPT startet die offizielle App von OpenAI
+# Web-Apps als eigene Fenster (Claude); ChatGPT startet die offizielle App von OpenAI
 install -Dm755 webapps/creative-webapp /usr/bin/creative-webapp
-for app in claude chatgpt youtube twitch; do
+for app in claude chatgpt; do
     install -Dm644 "webapps/creative-$app.desktop" "/usr/share/applications/creative-$app.desktop"
     install -Dm644 "creative_shell/qml/Creative/icons/$app.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$app.svg"
 done
