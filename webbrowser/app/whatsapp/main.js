@@ -13,7 +13,8 @@ const {
   app, BrowserWindow, Menu, Tray, nativeImage, nativeTheme, ipcMain, session, shell, clipboard, Notification,
 } = require('electron');
 
-const WA_URL = 'https://web.whatsapp.com/';
+// CREATIVE_WHATSAPP_URL nur für Tests (z. B. ohne Netz eine leere Seite)
+const WA_URL = process.env.CREATIVE_WHATSAPP_URL || 'https://web.whatsapp.com/';
 const DESKTOP_ID = 'creative-whatsapp';
 const SELFTEST = (process.argv.find((a) => a.startsWith('--creative-selftest=')) || '').split('=').slice(1).join('=');
 const HIDDEN = process.argv.includes('--hidden');

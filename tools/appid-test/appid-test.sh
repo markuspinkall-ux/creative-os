@@ -24,7 +24,7 @@ dbus-run-session -- sh -c '
   sleep 5
   export WAYLAND_DISPLAY=wayland-6
   E="/tmp/pkg/electron --no-sandbox --ozone-platform=wayland --disable-gpu"
-  CHROME_DESKTOP=creative-whatsapp.desktop timeout 60 $E --class=creative-whatsapp --whatsapp >/tmp/w.log 2>&1 &
+  CREATIVE_WHATSAPP_URL=about:blank CHROME_DESKTOP=creative-whatsapp.desktop timeout 60 $E --class=creative-whatsapp --whatsapp >/tmp/w.log 2>&1 &
   sleep 4
   CHROME_DESKTOP=creative-browser.desktop timeout 50 $E --class=creative-browser about:blank >/tmp/b.log 2>&1 &
   sleep 4
@@ -38,6 +38,6 @@ dbus-run-session -- sh -c '
 echo "--- KWin sieht:"; grep "FENSTER" /tmp/kwin.log | sort -u || true
 grep -q FENSTER /tmp/kwin.log || { echo "--- kwin.log"; tail -30 /tmp/kwin.log; echo "--- browser"; tail -15 /tmp/b.log; }
 grep -q "FENSTER app=creative-browser" /tmp/kwin.log || { echo "FEHLER: Browserfenster fehlt"; tail -20 /tmp/b.log; exit 1; }
-grep -q "FENSTER app=creative-whatsapp" /tmp/kwin.log || { echo "FEHLER: WhatsApp hat keine eigene Kennung"; tail -20 /tmp/w.log; exit 1; }
+grep -q "FENSTER app=creative-whatsapp" /tmp/kwin.log || { echo "FEHLER: WhatsApp hat keine eigene Kennung"; grep -v "dbus\|drm_render" /tmp/w.log | tail -30; exit 1; }
 grep -q "FENSTER app=creative-claude" /tmp/kwin.log || { echo "FEHLER: Web-App Claude hat keine eigene Kennung"; tail -20 /tmp/c.log; exit 1; }
 echo "Eigene Taskleisten-Einträge: Browser, WhatsApp und Claude haben getrennte Kennungen"
