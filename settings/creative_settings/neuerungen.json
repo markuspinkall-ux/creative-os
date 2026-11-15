@@ -4,7 +4,8 @@
     "titel": "Creative WhatsApp, Fenster mit Abstand und kurz „Browser“",
     "neu": [
       "Creative WhatsApp: eigene App statt der bisherigen WhatsApp-Verknüpfung – mit dem offiziellen WhatsApp Web innen (kein Sperr-Risiko für die Nummer). Zähler für ungelesene Nachrichten am Taskleisten-Symbol, Benachrichtigungen mit Klick zum Chat, läuft beim Schließen im Hintergrund weiter (Tray-Symbol), auf Wunsch Start mit dem PC, Nicht stören von Hand oder zu festen Zeiten, Vorschau und Ton abschaltbar, Rechtschreibprüfung Deutsch mit Vorschlägen per Rechtsklick, Downloads landen direkt in „Downloads“. Einstellungen mit Strg+, oder über das Tray-Symbol. Die bisherige Anmeldung bleibt erhalten",
-      "Taskleiste: Apps können einen Zähler am Symbol zeigen (z. B. ungelesene Nachrichten)"
+      "Taskleiste: Apps können einen Zähler am Symbol zeigen (z. B. ungelesene Nachrichten)",
+      "Systemsteuerung › Darstellung › Startmenü: ausgeblendete Apps mit einem Klick wieder anzeigen"
     ],
     "verbessert": [
       "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",

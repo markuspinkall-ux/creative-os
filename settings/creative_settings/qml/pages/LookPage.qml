@@ -233,4 +233,31 @@ SettingsPage {
             CButton { text: "Creative Widgets öffnen"; onClicked: look.openWidgets() }
         }
     }
+
+    Card {
+        title: "Startmenü"
+        subtitle: "Apps, die du per Rechtsklick › „Aus Startmenü entfernen“ ausgeblendet hast"
+        Repeater {
+            model: look.hiddenApps
+            delegate: SettingRow {
+                required property var modelData
+                required property int index
+                label: modelData.name
+                hint: "Ausgeblendet"
+                last: index === look.hiddenApps.length - 1
+                CButton {
+                    text: "Wieder anzeigen"
+                    onClicked: look.showInStartMenu(modelData.desktopId)
+                }
+            }
+        }
+        SettingRow {
+            visible: look.hiddenApps.length === 0
+            label: "Keine ausgeblendeten Apps"
+            hint: "Alle Apps erscheinen im Startmenü"
+            last: true
+        }
+    }
+
+    Component.onCompleted: look.refreshHiddenApps()
 }

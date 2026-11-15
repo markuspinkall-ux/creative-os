@@ -57,6 +57,15 @@ class ShellBus(QObject):
         else:
             self._shell.restoreDesktop()
 
+    # ---- Startmenü: ausgeblendete Apps (Systemsteuerung › Darstellung) ----
+    @Slot(result=str)
+    def hiddenStartApps(self):
+        return json.dumps(self._apps.hidden_apps(), ensure_ascii=False)
+
+    @Slot(str)
+    def showInStartMenu(self, desktop_id):
+        self._apps.showInStartMenu(desktop_id)
+
     # ---- Zähler am Taskleisten-Symbol (z. B. ungelesene WhatsApp-Nachrichten) ----
     @Slot(str, int)
     def setBadge(self, app, count):

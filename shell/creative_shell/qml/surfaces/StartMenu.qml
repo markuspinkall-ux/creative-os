@@ -574,7 +574,7 @@ Item {
                 }
                 Text {
                     width: parent.width
-                    text: "Die App bleibt installiert – nur ihr Eintrag im Startmenü verschwindet."
+                    text: "Die App bleibt installiert. Wieder einblenden: Systemsteuerung › Darstellung › Startmenü."
                     color: Theme.textMuted
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
