@@ -36,7 +36,6 @@ VISIBLE = {
     "creative-widgets.desktop": (None, None),
     "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),
     "systemsettings.desktop": ("Systemsteuerung", "creative-settings"),
-    "brave-browser.desktop": ("Brave", "creative-browser"),
     "firefox.desktop": ("Firefox", "creative-browser"),
     "org.mozilla.firefox.desktop": ("Firefox", "creative-browser"),
     "org.gnome.Ptyxis.desktop": ("Terminal", "creative-terminal"),
@@ -48,7 +47,7 @@ VISIBLE = {
     "creative-3dansicht.desktop": (None, None),
     "creative-deck.desktop": (None, None),
     "creative-browser.desktop": (None, None),
-    "discord.desktop": ("Discord", "creative-chat"),
+    "discord.desktop": ("Discord", "creative-discord"),
     "creative-software.desktop": (None, None),
     "org.kde.konsole.desktop": ("Terminal", "creative-terminal"),
     "creative-notes.desktop": ("Notes", "creative-notes"),
@@ -71,9 +70,9 @@ VISIBLE = {
 # Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
 PREFER = {
     "systemsettings.desktop": "creative-settings.desktop",
-    # Firefox nur, solange Brave fehlt (z. B. beim Testen in einer VM)
-    "firefox.desktop": "brave-browser.desktop",
-    "org.mozilla.firefox.desktop": "brave-browser.desktop",
+    # Firefox nur, solange der Creative Browser fehlt (z. B. beim Testen in einer VM)
+    "firefox.desktop": "creative-browser.desktop",
+    "org.mozilla.firefox.desktop": "creative-browser.desktop",
     "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
     "org.kde.kcalc.desktop": "creative-calculator.desktop",
     "org.kde.kwrite.desktop": "creative-notes.desktop",

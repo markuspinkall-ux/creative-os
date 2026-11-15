@@ -296,7 +296,9 @@ Item {
                             if (row.isFolder)
                                 return
                             appMenu.desktopId = row.desktopId
+                            appMenu.appName = row.name
                             appMenu.pinned = apps.isPinned(row.desktopId)
+                            appMenu.confirming = false
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
                             appMenu.y = Math.min(p.y, menu.height - appMenu.height - 8)
@@ -478,101 +480,123 @@ Item {
         }
 
         // Rechtsklick auf eine App
+        // Angeheftete Apps lassen sich nur in der Taskleiste lösen (Rechtsklick dort) – hier steht dann
+        // nur ein Hinweis. „Aus Startmenü entfernen“ fragt vorher nach.
         Rectangle {
             id: appMenu
             property string desktopId: ""
+            property string appName: ""
             property bool pinned: false
+            property bool confirming: false
             visible: false
             z: 3
-            width: 250
-            height: 124
+            width: 270
+            height: confirming ? confirmCol.implicitHeight + 24 : menuCol.implicitHeight + 8
             radius: 12
             color: Theme.raised
             border.color: Theme.hairline
-            Rectangle {
+            onVisibleChanged: if (!visible) confirming = false
+
+            component MenuRow: Rectangle {
+                id: mrow
+                property string icon: ""
+                property string label: ""
+                property bool active: true
+                property bool danger: false
+                signal triggered()
+                width: appMenu.width - 8
+                height: 36
+                radius: 9
+                color: active && mrowMouse.containsMouse ? Theme.tint(0.08) : "transparent"
+                SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: mrow.icon; size: 15; visible: mrow.icon.length > 0; opacity: mrow.active ? 1 : 0.5 }
+                Text {
+                    x: mrow.icon.length > 0 ? 36 : 12
+                    width: parent.width - x - 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: mrow.label
+                    color: mrow.danger ? Theme.flame : (mrow.active ? Theme.text : Theme.textMuted)
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                MouseArea {
+                    id: mrowMouse
+                    anchors.fill: parent
+                    enabled: mrow.active
+                    hoverEnabled: true
+                    cursorShape: mrow.active ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: mrow.triggered()
+                }
+                Accessible.role: Accessible.MenuItem
+                Accessible.name: mrow.label
+                Accessible.onPressAction: if (mrow.active) mrow.triggered()
+            }
+
+            Column {
+                id: menuCol
+                visible: !appMenu.confirming
                 x: 4; y: 4
-                width: parent.width - 8; height: 36
-                radius: 9
-                color: amMouse.containsMouse ? Theme.tint(0.08) : "transparent"
-                SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "plus"; size: 15 }
-                Text {
-                    x: 36
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Zur Ablage hinzufügen"
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
+                spacing: 4
+                MenuRow {
+                    icon: "plus"
+                    label: "Zur Ablage hinzufügen"
+                    onTriggered: { shelf.addApp(appMenu.desktopId); appMenu.visible = false }
                 }
-                MouseArea {
-                    id: amMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { shelf.addApp(appMenu.desktopId); appMenu.visible = false }
+                MenuRow {
+                    objectName: "pinRow"
+                    icon: "pin"
+                    active: !appMenu.pinned
+                    label: appMenu.pinned ? "In der Taskleiste angeheftet" : "An die Taskleiste anheften"
+                    onTriggered: { apps.pin(appMenu.desktopId); appMenu.visible = false }
                 }
-            }
-            // An die Taskleiste anheften / davon lösen
-            Rectangle {
-                x: 4; y: 44
-                width: parent.width - 8; height: 36
-                radius: 9
-                color: pinMouse.containsMouse ? Theme.tint(0.08) : "transparent"
-                SvgIcon { x: 10; anchors.verticalCenter: parent.verticalCenter; name: "pin"; size: 15 }
-                Text {
-                    x: 36
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: appMenu.pinned ? "Von der Taskleiste lösen" : "An die Taskleiste anheften"
-                    color: Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                }
-                MouseArea {
-                    id: pinMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (appMenu.pinned) apps.unpin(appMenu.desktopId)
-                        else apps.pin(appMenu.desktopId)
-                        appMenu.visible = false
-                    }
-                }
-                Accessible.role: Accessible.MenuItem
-                Accessible.name: appMenu.pinned ? "Von der Taskleiste lösen" : "An die Taskleiste anheften"
-                Accessible.onPressAction: {
-                    if (appMenu.pinned) apps.unpin(appMenu.desktopId)
-                    else apps.pin(appMenu.desktopId)
-                    appMenu.visible = false
+                MenuRow {
+                    objectName: "hideRow"
+                    label: "Aus Startmenü entfernen …"
+                    onTriggered: appMenu.confirming = true
                 }
             }
-            Rectangle {
-                x: 4; y: 84
-                width: parent.width - 8; height: 36
-                radius: 9
-                color: hideMouse.containsMouse ? Theme.hover : "transparent"
+
+            // Nachfrage vor dem Entfernen
+            Column {
+                id: confirmCol
+                visible: appMenu.confirming
+                x: 12; y: 12
+                width: appMenu.width - 24
+                spacing: 10
                 Text {
-                    x: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "Aus Startmenü entfernen"
+                    width: parent.width
+                    text: "„" + appMenu.appName + "“ aus dem Startmenü entfernen?"
                     color: Theme.text
                     font.family: Theme.fontFamily
-                    font.pixelSize: 13
+                    font.pixelSize: 14
+                    font.bold: true
+                    wrapMode: Text.Wrap
                 }
-                MouseArea {
-                    id: hideMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        appMenu.visible = false
-                        apps.hideFromStartMenu(appMenu.desktopId)
+                Text {
+                    width: parent.width
+                    text: "Die App bleibt installiert – nur ihr Eintrag im Startmenü verschwindet."
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+                Row {
+                    anchors.right: parent.right
+                    spacing: 8
+                    CButton {
+                        objectName: "hideCancel"
+                        text: "Abbrechen"
+                        onClicked: appMenu.confirming = false
                     }
-                }
-                Accessible.role: Accessible.MenuItem
-                Accessible.name: "Aus Startmenü entfernen"
-                Accessible.onPressAction: {
-                    appMenu.visible = false
-                    apps.hideFromStartMenu(appMenu.desktopId)
+                    CButton {
+                        objectName: "hideConfirm"
+                        text: "Entfernen"
+                        primary: true
+                        onClicked: {
+                            appMenu.visible = false
+                            apps.hideFromStartMenu(appMenu.desktopId)
+                        }
+                    }
                 }
             }
         }

@@ -10,7 +10,11 @@
       "Startmenü und Taskleiste: Der Creative Browser heißt dort jetzt einfach „Browser“ (die Suche nach „Creative Browser“ findet ihn weiterhin)",
       "Symbole: WhatsApp und Discord sehen jetzt wie ihre Originale aus – im Graphit- und Porzellan-Stil",
       "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken. Nochmal maximieren (Knopf, Doppelklick auf die Titelleiste oder Win+Pfeil hoch) stellt die alte Größe wieder her. Vollbild bei Videos und Spielen bleibt randlos",
-      "Startmenü: Taschenrechner, Notes, Pictures und Mail liegen jetzt direkt im Startmenü statt im Ordner „Creative Apps“ und heißen kürzer (die Suche nach den alten Namen findet sie weiterhin)"
+      "Startmenü: Taschenrechner, Notes, Pictures und Mail liegen jetzt direkt im Startmenü statt im Ordner „Creative Apps“ und heißen kürzer (die Suche nach den alten Namen findet sie weiterhin)",
+      "Startmenü: „Aus Startmenü entfernen“ fragt jetzt nach, bevor die App verschwindet",
+      "Startmenü: Angeheftete Apps lösen sich nur noch über die Taskleiste (Rechtsklick dort) – im Startmenü steht „In der Taskleiste angeheftet“",
+      "Brave ist nicht mehr im System – Webseiten, Links und PDFs öffnet der Creative Browser. Eigene Standard-Apps, die noch auf Brave zeigten, werden umgestellt",
+      "Discord hat jetzt auch im Startmenü sein neues Symbol"
     ],
     "behoben": []
   },

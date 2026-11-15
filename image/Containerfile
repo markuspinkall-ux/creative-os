@@ -99,24 +99,10 @@ RUN if [ "$NVIDIA" = "1" ]; then \
     fi
 
 # ---------------------------------------------------------------------------
-# 5) Brave-Browser (offizielles Paket). Brave installiert nach /opt, das auf
-#    Atomic-Systemen beschreibbar ist – darum wird es nach /usr/lib verschoben
-#    und schreibgeschützt eingebunden.
+# 5) Startseite des Creative Browsers (Brave ist nicht mehr im System –
+#    der Browser ist jetzt der eigene Creative Browser, siehe unten)
 # ---------------------------------------------------------------------------
-RUN rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc \
- && curl -fsSLo /etc/yum.repos.d/brave-browser.repo \
-        https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo \
- && mkdir -p /var/opt \
- && dnf install -y brave-browser \
- && mv /var/opt/brave.com /usr/lib/brave.com \
- && printf 'L+ /var/opt/brave.com - - - - /usr/lib/brave.com\n' > /usr/lib/tmpfiles.d/creative-brave.conf \
- && dnf clean all
-# Startseite und Graphit-Farbe, ohne Werbe-Extras (Rewards, Wallet, VPN …)
 COPY browser/startpage /usr/share/creative-os/startpage
-COPY browser/youtube-desktop-video /usr/share/creative-os/brave-extensions/youtube-desktop-video
-COPY browser/brave-policies.json /etc/brave/policies/managed/creative-os.json
-# Neue Brave-Profile starten gleich mit dem GTK-Design (= Creative-Graphit, auch die Menüs)
-RUN printf '{"extensions":{"theme":{"system_theme":1}},"browser":{"theme":{}}}\n' > /usr/lib/brave.com/brave/initial_preferences
 
 # ---------------------------------------------------------------------------
 # 6) Creative Software: Flatpak und Flathub ab Werk
@@ -585,9 +571,11 @@ RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwall
         dnf remove -y "$p" >/dev/null 2>&1 && echo "entfernt: $p" || echo "bleibt (wird gebraucht): $p"; \
     done \
  && dnf clean all
-# PDFs öffnet der Browser (Okular ist entfernt)
+# Webseiten und PDFs öffnet der Creative Browser (Okular ist entfernt)
 RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
-        echo "application/pdf=brave-browser.desktop" >> "$f"; \
+        for m in application/pdf text/html application/xhtml+xml x-scheme-handler/http x-scheme-handler/https; do \
+            echo "$m=creative-browser.desktop" >> "$f"; \
+        done; \
     done
 
 # Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Creative-Symbole, Startmenü
