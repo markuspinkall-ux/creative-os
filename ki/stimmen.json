@@ -1,0 +1,122 @@
+{
+  "thorsten": {
+    "name": "Thorsten",
+    "geschlecht": "männlich",
+    "beschreibung": "Klar und natürlich – die Standardstimme",
+    "mitgeliefert": true,
+    "dateien": [
+      {
+        "datei": "de_DE-thorsten-medium.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-thorsten-medium.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  },
+  "kerstin": {
+    "name": "Kerstin",
+    "geschlecht": "weiblich",
+    "beschreibung": "Freundlich und ruhig",
+    "mitgeliefert": false,
+    "dateien": [
+      {
+        "datei": "de_DE-kerstin-low.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/kerstin/low/de_DE-kerstin-low.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-kerstin-low.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/kerstin/low/de_DE-kerstin-low.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  },
+  "ramona": {
+    "name": "Ramona",
+    "geschlecht": "weiblich",
+    "beschreibung": "Hell und deutlich",
+    "mitgeliefert": false,
+    "dateien": [
+      {
+        "datei": "de_DE-ramona-low.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/ramona/low/de_DE-ramona-low.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-ramona-low.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/ramona/low/de_DE-ramona-low.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  },
+  "eva_k": {
+    "name": "Eva",
+    "geschlecht": "weiblich",
+    "beschreibung": "Weich, etwas einfacher",
+    "mitgeliefert": false,
+    "dateien": [
+      {
+        "datei": "de_DE-eva_k-x_low.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/eva_k/x_low/de_DE-eva_k-x_low.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-eva_k-x_low.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/eva_k/x_low/de_DE-eva_k-x_low.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  },
+  "karlsson": {
+    "name": "Karlsson",
+    "geschlecht": "männlich",
+    "beschreibung": "Tief und gelassen",
+    "mitgeliefert": false,
+    "dateien": [
+      {
+        "datei": "de_DE-karlsson-low.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/karlsson/low/de_DE-karlsson-low.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-karlsson-low.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/karlsson/low/de_DE-karlsson-low.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  },
+  "pavoque": {
+    "name": "Pavoque",
+    "geschlecht": "männlich",
+    "beschreibung": "Sachlich, wie ein Sprecher",
+    "mitgeliefert": false,
+    "dateien": [
+      {
+        "datei": "de_DE-pavoque-low.onnx",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/pavoque/low/de_DE-pavoque-low.onnx",
+        "groesse": 0,
+        "sha256": ""
+      },
+      {
+        "datei": "de_DE-pavoque-low.onnx.json",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/pavoque/low/de_DE-pavoque-low.onnx.json",
+        "groesse": 0,
+        "sha256": ""
+      }
+    ]
+  }
+}

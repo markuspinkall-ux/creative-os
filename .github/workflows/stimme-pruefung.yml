@@ -1,0 +1,16 @@
+name: KI-Stimme prüfen
+# Sprachausgabe des KI-Helfers (Piper, offline): Prüfsummen der Stimmen, Text fürs Vorlesen, echte Sprachausgabe.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [ki/**, shell/creative_shell/stimme.py, shell/creative_shell/ki.py, tools/stimme-test.py,
+            tools/stimmen-pruefsummen.py, .github/workflows/stimme-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prüfsummen der Stimmen
+        run: python3 tools/stimmen-pruefsummen.py
