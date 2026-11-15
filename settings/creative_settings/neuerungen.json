@@ -18,7 +18,9 @@
       "Brave ist nicht mehr im System – Webseiten, Links und PDFs öffnet der Creative Browser. Eigene Standard-Apps, die noch auf Brave zeigten, werden umgestellt",
       "Discord hat jetzt auch im Startmenü sein neues Symbol"
     ],
-    "behoben": []
+    "behoben": [
+      "Creative Browser: Einen Tab auf den linken Bildschirm ziehen öffnet jetzt auch dort ein neues Fenster (bisher wurde das Herausziehen nach links nicht erkannt); neue Browserfenster erscheinen auf dem Bildschirm mit dem Mauszeiger"
+    ]
   },
   {
     "datum": "2026-11-14",

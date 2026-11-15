@@ -7,6 +7,7 @@ from PySide6.QtCore import QRect, QTimer, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QRasterWindow
 
 app = QGuiApplication(sys.argv)
+app.setDesktopFileName("creative-browser")   # wie der Browser – creative-tasks platziert ihn
 out = []
 
 
