@@ -232,13 +232,16 @@ function renderShieldPanel() {
     ${!ab.available ? `<p>${esc(ab.loading ? 'Die Filterliste wird gerade geladen …' : (ab.error || 'Nicht verfügbar'))}</p>` : `
     <div class="big">${on ? ab.blocked : '–'}</div>
     <p>${on ? 'Werbungen und Tracker auf dieser Seite blockiert' : (ab.enabled ? `Auf ${esc(ab.host)} ausgeschaltet` : 'Werbeblocker ist überall aus')}</p>
-    ${ab.videoPortal && ab.enabled ? `<p class="hint">Auf Videoportalen wie YouTube und Twitch ist der Werbeblocker von Haus aus aus – Videos laden so schneller und zuverlässiger.</p>` : ''}`}
+    ${ab.videoPortal && ab.enabled ? `<p class="hint">Auf YouTube und Twitch filtert der Werbeblocker das Netz nicht – Videos laden so schnell wie ohne. Videowerbung wird stattdessen direkt in der Seite übersprungen (Versuch). Auf Twitch steckt die Werbung im Stream: dort wird sie stumm geschaltet und abgedeckt.</p>` : ''}`}
+    ${ab.videoPortal ? `<div class="switchrow"><span>Videowerbung überspringen <small>(Versuch)</small></span>
+      <button class="switch${ab.videoAd ? ' on' : ''}" id="sw-video" aria-label="Videowerbung überspringen" ${ab.enabled ? '' : 'disabled'}></button></div>` : ''}
     <div class="switchrow"><span>Auf <b>${esc(ab.host || 'dieser Seite')}</b> blockieren</span>
       <button class="switch${!ab.siteAllowed ? ' on' : ''}" id="sw-site" aria-label="Auf dieser Seite blockieren" ${ab.enabled ? '' : 'disabled'}></button></div>
     <div class="switchrow"><span>Werbeblocker überall</span>
       <button class="switch${ab.enabled ? ' on' : ''}" id="sw-all" aria-label="Werbeblocker überall"></button></div>`;
   $('sw-site').onclick = () => api.cmd('adblock-site', !ab.siteAllowed);
   $('sw-all').onclick = () => api.cmd('adblock', !ab.enabled);
+  if ($('sw-video')) $('sw-video').onclick = () => api.cmd('adblock-video', !ab.videoAd);
 }
 $('shield').onclick = () => {
   const box = $('shield-panel');

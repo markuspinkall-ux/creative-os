@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-16",
+    "titel": "Browser: Videowerbung auf YouTube und Twitch (Versuch)",
+    "neu": [
+      "Browser: Videowerbung auf YouTube wird übersprungen, ohne dass die Videos langsamer laden – wie bei Brave greift der Schutz ganz früh direkt in der Seite und entfernt die Werbedaten, bevor der Player sie liest; Werbeflächen auf Startseite und Suche verschwinden. Rutscht doch eine Werbung durch, wird sie stumm vorgespult und übersprungen. Auf Twitch steckt die Werbung im Stream selbst: dort wird sie stumm geschaltet und abgedeckt. Im Schild (Werbeblocker-Symbol) unter „Videowerbung überspringen (Versuch)“ abschaltbar"
+    ],
+    "verbessert": [],
+    "behoben": []
+  },
+  {
     "datum": "2026-11-15",
     "titel": "Creative OS 2 „Vivid Venus“, Creative WhatsApp, Weltraum-Shooter für die Creative Engine, Fenster mit Abstand und kurz „Browser“",
     "neu": [

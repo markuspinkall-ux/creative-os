@@ -190,6 +190,10 @@ function prepareSession(ses, isPrivate) {
   preparedSessions.add(ses);
   ses.setUserAgent(cleanUserAgent(ses.getUserAgent()));
   adblock.attach(ses);
+  // Videowerbung auf YouTube/Twitch: früh und synchron in der Seite (wie Brave) – siehe preload-videoad.js
+  try {
+    ses.registerPreloadScript({ type: 'frame', id: 'creative-videoad', filePath: path.join(APP_DIR, 'preload-videoad.js') });
+  } catch (e) { console.error('Creative Browser: Videowerbung-Preload:', e.message); }
   try { ses.setSpellCheckerLanguages(['de-DE']); } catch (_) { /* Wörterbuch nicht verfügbar */ }
 
   ses.protocol.handle('creative', (req) => {
@@ -805,6 +809,7 @@ class Win {
       case 'tear-off': this.tearOff(this.tabById(arg1)); break;
       case 'adblock': adblock.setEnabled(!!arg1); if (wc) wc.reload(); break;
       case 'adblock-site': if (wc) { adblock.setAllowed(adblock.info(wc).host, !!arg1); wc.reload(); } break;
+      case 'adblock-video': adblock.setVideoAd(!!arg1); if (wc) wc.reload(); break;
       case 'new-window': new Win({}); break;
       case 'new-private': new Win({ isPrivate: true }); break;
       case 'devtools': if (wc) wc.toggleDevTools(); break;
@@ -847,6 +852,8 @@ ipcMain.on('cmd', (e, cmd, a1, a2) => {
   const w = windowOf(e.sender);
   if (w) w.command(cmd, a1, a2);
 });
+// Preload fragt beim Seitenstart synchron: Videowerbung hier überspringen?
+ipcMain.on('creative-videoad', (e, host) => { e.returnValue = !!(adblock && adblock.videoAdFor(host)); });
 ipcMain.handle('suggest', (_e, text) => store.suggest(text));
 
 // ---- Start ----------------------------------------------------------------------------------------
