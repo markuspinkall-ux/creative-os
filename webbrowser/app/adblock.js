@@ -59,6 +59,17 @@ class AdBlock {
 
   forcedHosts() { return this.store.settings.adblockForce || []; }   // Videoportale, auf denen trotzdem geblockt wird
 
+  // Videowerbung auf YouTube/Twitch (Versuch, preload-videoad.js): an, solange der Blocker überall an ist
+  get videoAd() { return this.enabled && this.store.settings.adblockVideo !== false; }
+
+  videoAdFor(host) { return this.videoAd && isVideoPortal(String(host || '').replace(/^www\./, '')); }
+
+  setVideoAd(on) {
+    this.store.settings.adblockVideo = !!on;
+    this.store.save();
+    this.onChange();
+  }
+
   hostOf(id) {
     try {
       const wc = webContents.fromId(id);
@@ -198,6 +209,7 @@ class AdBlock {
       host,
       siteAllowed: this.isAllowedHost(host),
       videoPortal: isVideoPortal(host),
+      videoAd: this.videoAd,
       blocked: wc ? this.count(wc.id) : 0,
     };
   }

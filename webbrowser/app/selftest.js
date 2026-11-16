@@ -218,6 +218,12 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       await adblock.blocker.onInjectCosmeticFilters(fakeEvent('https://www.youtube.com/watch?v=x'), 'https://www.youtube.com/watch?v=x');
       await adblock.blocker.onInjectCosmeticFilters(fakeEvent('https://example.org/'), 'https://www.youtube-nocookie.com/embed/x');
       check('Keine Seiten-Skripte auf YouTube (auch eingebettet)', injected === 0);
+      // Videowerbung (Versuch): nur auf YouTube/Twitch, abschaltbar, folgt dem Hauptschalter
+      check('Videowerbung-Skript nur auf Videoportalen', adblock.videoAdFor('www.youtube.com') && adblock.videoAdFor('twitch.tv')
+        && !adblock.videoAdFor('example.org'));
+      adblock.setVideoAd(false);
+      check('Videowerbung-Skript abschaltbar', !adblock.videoAdFor('youtube.com'));
+      adblock.setVideoAd(true);
       server.close();
       win.closeTab(t);
 
@@ -235,7 +241,16 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
             const v = vs.find((x) => x.currentTime > 0) || vs[0];
             return v ? { time: v.currentTime, width: v.videoWidth, height: v.videoHeight, paused: v.paused,
               frames: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().totalVideoFrames : 0),
-              dropped: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().droppedVideoFrames : 0) } : { video: false }; })()`), 10000, { timeout: true });
+              dropped: (v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality().droppedVideoFrames : 0),
+              host: location.hostname,
+              hooked: !!(Object.getOwnPropertyDescriptor(window, 'ytInitialPlayerResponse') || {}).get,
+              adData: !!(window.ytInitialPlayerResponse && (ytInitialPlayerResponse.adPlacements || ytInitialPlayerResponse.playerAds)),
+              adShowing: !!document.querySelector('.ad-showing') } : { video: false, host: location.hostname,
+              hooked: !!(Object.getOwnPropertyDescriptor(window, 'ytInitialPlayerResponse') || {}).get }; })()`), 10000, { timeout: true });
+          if (name === 'youtube' && /youtube\.com$/.test(result.online[name].host || '')) {
+            check('Videowerbung-Skript läuft früh auf YouTube', result.online[name].hooked === true);
+            check('Keine Werbedaten im YouTube-Player', !result.online[name].adData);
+          }
         } catch (e) { result.online[name] = { error: e.message }; }
         await shot(win, dir, `4-${name}`);
       }

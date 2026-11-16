@@ -28,7 +28,7 @@ jobs:
           [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
           ls node_modules/electron/dist | head
           /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
-          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js','preload-videoad.js','adblock.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
       - name: Wie im Abbild verpacken (App als resources/app, ohne default_app.asar)
         run: |
           cp -a /tmp/el/node_modules/electron/dist /tmp/pkg
