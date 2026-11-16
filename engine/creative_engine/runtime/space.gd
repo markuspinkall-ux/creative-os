@@ -6,8 +6,10 @@ extends Node3D
 signal finished(points: int)
 signal game_over
 signal to_menu
+signal restart
 
 const Assets = preload("res://assets.gd")
+const PauseMenu = preload("res://pausemenu.gd")
 const Sound = preload("res://sound.gd")
 ## Klänge, die man im Editor durch eigene Dateien ersetzen kann (Schlüssel in ship.sounds)
 const SOUND_KEYS := ["triebwerk", "boost", "bremse", "laser", "plasma", "rakete", "streu", "rolle", "looping",
@@ -163,6 +165,11 @@ var bases: Array = []
 var rocks: Array = []
 var landed := {}
 var land_option := {}
+var anim := {}                   # Lande-/Startanimation: {kind, t, p, …}
+var atmo_rect: ColorRect         # Färbung beim Eintauchen in eine Atmosphäre / Aufblenden
+var heat: MeshInstance3D         # Glühen am Bug beim Eintritt
+var dust: CPUParticles3D         # Staub beim Aufsetzen
+var atmo_depth := 0.0            # 0 = Weltraum, 1 = tief in der Atmosphäre
 var docked := {}
 var repair_done := false
 var flash := 0.0
@@ -182,7 +189,6 @@ var prompt: Label
 var message: Label
 var flash_rect: ColorRect
 var pause_panel: Control
-var pause_shade: Control
 
 # Autotest (Autopilot)
 var test_time := 0.0
@@ -977,7 +983,7 @@ func build_camera() -> void:
 	camera = Camera3D.new()
 	camera.fov = 70
 	camera.near = 0.3
-	camera.far = 20000.0
+	camera.far = 80000.0
 	add_child(camera)
 	camera.global_transform = chase_transform()
 	camera.current = true
@@ -1080,6 +1086,14 @@ func label(size: int, color := Color("#e8ecf4")) -> Label:
 func build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	atmo_rect = ColorRect.new()
+	atmo_rect.color = Color(1, 1, 1, 0)
+	atmo_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	atmo_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tint_layer := CanvasLayer.new()          # unter der Anzeige: nur die Welt wird eingefärbt
+	tint_layer.layer = 0
+	add_child(tint_layer)
+	tint_layer.add_child(atmo_rect)
 	flash_rect = ColorRect.new()      # nur noch Platzhalter, der Treffer-Rand wird gezeichnet
 	flash_rect.color = Color(0, 0, 0, 0)
 	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1101,56 +1115,28 @@ func build_hud() -> void:
 	message.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	message.position.y = 110
 	layer.add_child(message)
-	pause_shade = ColorRect.new()
-	(pause_shade as ColorRect).color = Color(0, 0, 0, 0.55)
-	pause_shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	pause_shade.visible = false
-	layer.add_child(pause_shade)
-	pause_panel = VBoxContainer.new()
-	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
-	pause_panel.add_theme_constant_override("separation", 14)
-	pause_panel.visible = false
+	pause_panel = PauseMenu.new()
 	layer.add_child(pause_panel)
-	var title := label(56)
-	title.text = "PAUSE"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_panel.add_child(title)
-	for pair in [["Weiter", "resume"], ["Hauptmenü", "menu"]]:
-		var b := Button.new()
-		b.text = pair[0]
-		b.custom_minimum_size = Vector2(260, 56)
-		b.add_theme_font_size_override("font_size", 26)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.05, 0.08, 0.13, 0.85)
-		sb.border_color = HUD_CYAN
-		sb.border_width_left = 3
-		sb.skew = Vector2(0.25, 0)
-		var hov := sb.duplicate() as StyleBoxFlat
-		hov.bg_color = Color(HUD_CYAN, 0.25)
-		hov.set_border_width_all(2)
-		b.add_theme_stylebox_override("normal", sb)
-		b.add_theme_stylebox_override("hover", hov)
-		b.add_theme_stylebox_override("focus", hov)
-		b.add_theme_stylebox_override("pressed", hov)
-		b.pressed.connect(_pause_button.bind(pair[1]))
-		pause_panel.add_child(b)
-	pause_panel.position = Vector2(-130, -120)
+	(pause_panel as PauseMenu).setup(game, PauseMenu.controls_summary(game))
+	(pause_panel as PauseMenu).chosen.connect(_pause_button)
 
 
 func _pause_button(what: String) -> void:
 	set_paused(false)
 	if what == "menu":
 		to_menu.emit()
+	elif what == "restart":
+		restart.emit()
 
 
 func set_paused(on: bool) -> void:
 	get_tree().paused = on
-	pause_panel.visible = on
-	pause_shade.visible = on
+	if on:
+		(pause_panel as PauseMenu).open()
+	else:
+		(pause_panel as PauseMenu).close()
 	if not autotest:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if on else Input.MOUSE_MODE_CAPTURED
-	if on:
-		(pause_panel.get_child(1) as Button).grab_focus()
 
 
 func show_message(text: String, secs := 2.5) -> void:
@@ -1814,6 +1800,36 @@ func update_enemies(delta: float) -> void:
 
 
 # ---- Planeten, Basen, Landen ----------------------------------------------------------------
+## Dicke der Atmosphäre: ein Fünftel des Radius (mindestens 120 m) – darin kann man landen
+func atmo_height(p: Dictionary) -> float:
+	return maxf(120.0, float(p["radius"]) * 0.2)
+
+
+func atmo_color(p: Dictionary) -> Color:
+	var e: Dictionary = p["data"]
+	return Color(String(e.get("atmosphere", "")) if String(e.get("atmosphere", "")) != "" else "#d9a07a")
+
+
+## Beim Eintauchen färbt sich das Bild in der Farbe der Atmosphäre, das Schiff wird gebremst
+func update_atmosphere(delta: float) -> void:
+	var deepest := 0.0
+	var color := Color.WHITE
+	for p in planets:
+		var d := ship.global_position.distance_to(p["pos"]) - float(p["radius"])
+		var depth := clampf(1.0 - d / atmo_height(p), 0.0, 1.0)
+		if depth > deepest and String(p["data"].get("atmosphere", "")) != "":
+			deepest = depth
+			color = atmo_color(p)
+	if deepest > 0.0 and atmo_depth <= 0.0:
+		show_message("Atmosphäre – L zum Landen", 2.0)
+	atmo_depth = deepest
+	if anim.is_empty():
+		atmo_rect.color = Color(color, deepest * 0.45)
+	if deepest > 0.0:
+		speed = minf(speed, max_speed * lerpf(boost, 0.9, deepest))     # Luftwiderstand
+		shake = maxf(shake, deepest * 0.15)
+
+
 func update_places(delta: float) -> void:
 	land_option = {}
 	docked = {}
@@ -1827,7 +1843,7 @@ func update_places(delta: float) -> void:
 			hurt(15.0)
 			throttle = 0.15
 			show_message("Zu schnell! L zum Landen drücken", 1.5)
-		elif d < float(p["radius"]) * 0.6 + 40.0 and p["landable"]:
+		elif d < atmo_height(p) and p["landable"]:
 			land_option = p
 	for b in bases:
 		if me.distance_to(b["pos"]) < float(b["radius"]):
@@ -1870,7 +1886,20 @@ func update_places(delta: float) -> void:
 		prompt.text = ""
 
 
+## Landeanflug: L in der Atmosphäre → Anflug (Glühen, Rütteln, Farbe) → Abstieg auf den Landeplatz
 func land(p: Dictionary) -> void:
+	if not anim.is_empty():
+		return
+	anim = {"kind": "anflug", "t": 0.0, "p": p, "from": ship.global_position, "speed": speed}
+	prompt.text = ""
+	maneuver = {}
+	sfx("bremse", 0.9)
+	show_message("Landeanflug auf %s" % p["name"], 2.5)
+	if autotest:
+		print("AUTOTEST: Landeanflug ", p["name"], " nach %.1f s" % test_time)
+
+
+func build_surface(p: Dictionary) -> void:
 	landed = p
 	world.visible = false
 	for s in shots:
@@ -1941,10 +1970,38 @@ func land(p: Dictionary) -> void:
 		l.position = Vector3(cos(i * TAU / 8) * 8.6, 0.4, sin(i * TAU / 8) * 8.6)
 		l.material_override = mat(Color("#ffd24a"), 4.0)
 		surface.add_child(l)
-	ship.global_position = Vector3(0, 1.6, 0)
-	ship.global_basis = Basis.IDENTITY
+	dust = CPUParticles3D.new()
+	dust.amount = 70
+	dust.lifetime = 1.6
+	dust.emitting = false
+	dust.local_coords = false
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	dust.emission_sphere_radius = 3.0
+	dust.direction = Vector3(0, 0.25, 0)
+	dust.spread = 90
+	dust.initial_velocity_min = 4.0
+	dust.initial_velocity_max = 11.0
+	dust.gravity = Vector3(0, -1.5, 0)
+	dust.scale_amount_min = 0.4
+	dust.scale_amount_max = 1.4
+	var dm := SphereMesh.new()
+	dm.radius = 0.5
+	dm.height = 1.0
+	dm.radial_segments = 8
+	dm.rings = 4
+	dust.mesh = dm
+	var dmat := StandardMaterial3D.new()
+	dmat.albedo_color = Color(ground_c.lightened(0.25), 0.22)
+	dmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust.material_override = dmat
+	surface.add_child(dust)
 	speed = 0.0
 	throttle = 0.0
+	prompt.text = ""
+
+
+func touched_down(p: Dictionary) -> void:
 	prompt.text = "Gelandet auf %s · L zum Starten" % p["name"]
 	show_message("Willkommen auf %s" % p["name"], 3.0)
 	if autotest:
@@ -1953,8 +2010,189 @@ func land(p: Dictionary) -> void:
 		reach_goal()
 
 
+func ease_out(k: float) -> float:
+	return 1.0 - pow(1.0 - clampf(k, 0.0, 1.0), 3.0)
+
+
+func ease_in_out(k: float) -> float:
+	k = clampf(k, 0.0, 1.0)
+	return k * k * (3.0 - 2.0 * k)
+
+
+## Ablauf der Animationen (Anflug → Abstieg → Aufsetzen, Start → Austritt)
+func update_anim(delta: float) -> void:
+	anim["t"] = float(anim["t"]) + delta
+	var t: float = anim["t"]
+	var p: Dictionary = anim["p"]
+	var center: Vector3 = p["pos"]
+	var r: float = p["radius"]
+	match String(anim["kind"]):
+		"anflug":
+			var dur := 4.0
+			var k := t / dur
+			var from: Vector3 = anim["from"]
+			var n := (from - center).normalized()
+			# entlang einer Kurve auf die Oberfläche zu, Nase zum Boden geneigt
+			var target := center + n * (r + 40.0)
+			var pos := from.lerp(target, ease_in_out(k))
+			var down := (center - pos).normalized()
+			var fwd := (target - from).normalized().slerp(down, 0.35)
+			ship.global_position = pos
+			ship.global_basis = Basis(Quaternion(ship.global_basis.orthonormalized()).slerp(
+				Quaternion(Basis.looking_at(fwd, n if absf(fwd.dot(n)) < 0.98 else Vector3.FORWARD)), clampf(delta * 3.0, 0, 1)))
+			speed = lerpf(float(anim["speed"]), max_speed * 0.6, k)
+			heat_glow(sin(clampf(k, 0, 1) * PI) * 1.2)
+			shake = maxf(shake, 0.25 + 0.5 * k)
+			var air := atmo_color(p)
+			atmo_rect.color = Color(air.lerp(Color.WHITE, smoothstep(0.75, 1.0, k)), lerpf(0.35, 1.0, smoothstep(0.55, 1.0, k)))
+			camera.global_transform = camera.global_transform.interpolate_with(chase_transform(), clampf(delta * 5.0, 0, 1))
+			speed_effects(delta)
+			if k >= 1.0:
+				heat_glow(0.0)
+				build_surface(p)
+				anim = {"kind": "abstieg", "t": 0.0, "p": p}
+				ship.global_position = Vector3(0, 140, 260)
+				ship.global_basis = Basis.looking_at(Vector3(0, -0.35, -1), Vector3.UP)
+				camera.global_transform = chase_transform()
+		"abstieg":
+			var dur := 5.0
+			var k := t / dur
+			# erst schräg heranfliegen, dann senkrecht auf den Landeplatz sinken
+			var glide := ease_out(minf(1.0, k / 0.6))
+			var drop := ease_out(clampf((k - 0.55) / 0.45, 0, 1))
+			var pos := Vector3(0, lerpf(140.0, 14.0, glide), lerpf(260.0, 0.0, glide))
+			pos.y = lerpf(pos.y, 1.6, drop)
+			ship.global_position = pos
+			var level := Basis.looking_at(Vector3(0, lerpf(-0.35, 0.0, glide), -1), Vector3.UP)
+			ship.global_basis = Basis(Quaternion(ship.global_basis.orthonormalized()).slerp(Quaternion(level), clampf(delta * 2.0, 0, 1)))
+			speed = lerpf(max_speed * 0.6, 0.0, glide)
+			braking = k > 0.4
+			for rr in retro:
+				(rr as Node3D).visible = k > 0.4 and k < 0.98
+			dust.global_position = Vector3(0, 0.3, 0)
+			dust.emitting = pos.y < 18.0 and k < 0.98
+			atmo_rect.color = Color(1, 1, 1, clampf(1.0 - t / 0.8, 0.0, 1.0))
+			var cam := pos + Vector3(0, 9.0 + 6.0 * (1.0 - glide), 22.0 - 6.0 * glide)
+			camera.global_transform = camera.global_transform.interpolate_with(
+				Transform3D(Basis.looking_at(pos - cam, Vector3.UP), cam), clampf(delta * 4.0, 0, 1))
+			shake = maxf(shake, 0.12 * (1.0 - k))
+			if k >= 1.0:
+				# Aufsetzen: kleiner Federweg, Staubwolke
+				ship.global_position = Vector3(0, 1.6, 0)
+				ship_visual.position.y = -0.25
+				dust.emitting = true
+				braking = false
+				for rr in retro:
+					(rr as Node3D).visible = false
+				sfx("treffer", 0.35, 0.6)
+				anim = {"kind": "aufsetzen", "t": 0.0, "p": p}
+		"aufsetzen":
+			ship_visual.position.y = lerpf(-0.25, 0.0, ease_out(t / 0.5))
+			if t > 0.6:
+				dust.emitting = false
+				anim = {}
+				touched_down(p)
+		"start":
+			var dur := 3.2
+			var k := t / dur
+			var up := ease_in_out(minf(1.0, k / 0.5)) * 45.0
+			var away := pow(clampf((k - 0.35) / 0.65, 0, 1), 2.0) * 420.0
+			ship.global_position = Vector3(0, 1.6 + up + away * 0.45, -away)
+			var climb := Basis.looking_at(Vector3(0, lerpf(0.0, 0.5, clampf((k - 0.3) / 0.7, 0, 1)), -1), Vector3.UP)
+			ship.global_basis = Basis(Quaternion(ship.global_basis.orthonormalized()).slerp(Quaternion(climb), clampf(delta * 2.0, 0, 1)))
+			speed = lerpf(0.0, max_speed * boost, k)
+			boosting = k > 0.35
+			dust.emitting = k < 0.4
+			atmo_rect.color = Color(1, 1, 1, smoothstep(0.75, 1.0, k))
+			# Kamera bleibt dicht hinter dem Schiff (sonst fliegt es aus dem Bild)
+			var cam := ship.global_position + Vector3(0, 6.0 - 2.0 * k, 18.0 + 4.0 * k)
+			camera.global_transform = Transform3D(Basis.looking_at(ship.global_position - cam, Vector3.UP), cam)
+			shake = maxf(shake, 0.1 + 0.3 * k)
+			if k >= 1.0:
+				leave_surface(p)
+				anim = {"kind": "austritt", "t": 0.0, "p": p}
+		"austritt":
+			var dur := 2.2
+			var k := t / dur
+			ship.global_position += forward() * max_speed * boost * delta
+			speed = max_speed * boost
+			boosting = true
+			heat_glow((1.0 - k) * 0.8)
+			atmo_rect.color = Color(atmo_color(p).lerp(Color.WHITE, 1.0 - k), clampf(1.0 - k * 1.3, 0.0, 1.0))
+			camera.global_transform = camera.global_transform.interpolate_with(chase_transform(), clampf(delta * 6.0, 0, 1))
+			speed_effects(delta)
+			if k >= 1.0:
+				heat_glow(0.0)
+				boosting = false
+				throttle = 0.6
+				anim = {}
+				show_message("Gestartet von %s" % p["name"], 2.0)
+				if autotest:
+					print("AUTOTEST: Gestartet von ", p["name"], " nach %.1f s" % test_time)
+
+
+## Testbild genau in einer Animationsphase: --foto=anflug:2.0 (Phase:Sekunden) mit --screenshot=…
+func photo_check() -> void:
+	if test_said.has("foto"):
+		return
+	var want := ""
+	var path := ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--foto="):
+			want = a.substr(7)
+		elif a.begins_with("--screenshot="):
+			path = a.substr(13)
+	if want == "" or path == "":
+		return
+	var kind := want.get_slice(":", 0)
+	var after := float(want.get_slice(":", 1))
+	var now := String(anim.get("kind", "gelandet" if not landed.is_empty() else ""))
+	if now != kind or (anim.is_empty() and kind != "gelandet"):
+		test_said.erase("foto_seit")
+		return
+	if not test_said.has("foto_seit"):
+		test_said["foto_seit"] = test_time
+	if test_time - float(test_said["foto_seit"]) >= after:
+		test_said["foto"] = true
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(path)
+		print("Bildschirmfoto: ", path)
+		get_tree().quit()
+
+
+## Glühen am Bug beim Eintritt in die Atmosphäre (0 = aus)
+func heat_glow(strength: float) -> void:
+	if heat == null:
+		heat = MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 1.6
+		sm.height = 3.2
+		heat.mesh = sm
+		heat.position = Vector3(0, 0, -2.8)
+		heat.scale = Vector3(1.3, 1.0, 2.2)
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.albedo_color = Color(1.0, 0.55, 0.2, 0.0)
+		heat.material_override = m
+		heat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ship_visual.add_child(heat)
+	var mm := heat.material_override as StandardMaterial3D
+	mm.albedo_color.a = clampf(strength, 0.0, 1.0) * (0.75 + 0.25 * randf())
+	heat.visible = strength > 0.01
+
+
 func take_off() -> void:
-	var p := landed
+	if not anim.is_empty() or landed.is_empty():
+		return
+	sfx("boost", 1.0, 0.85)
+	show_message("Start von %s" % landed["name"], 2.0)
+	anim = {"kind": "start", "t": 0.0, "p": landed}
+	prompt.text = ""
+
+
+func leave_surface(p: Dictionary) -> void:
 	landed = {}
 	if surface:
 		surface.queue_free()
@@ -1964,11 +2202,11 @@ func take_off() -> void:
 	var n := Vector3.UP
 	if spawn_pos.distance_to(p["pos"]) > 1.0:
 		n = (spawn_pos - (p["pos"] as Vector3)).normalized()
-	ship.global_position = (p["pos"] as Vector3) + n * (float(p["radius"]) * 1.25 + 30.0)
+	# oben in der Atmosphäre wieder auftauchen und hinausfliegen
+	ship.global_position = (p["pos"] as Vector3) + n * (float(p["radius"]) + atmo_height(p) * 0.6)
 	ship.global_basis = Basis.looking_at(n, Vector3.UP if absf(n.y) < 0.95 else Vector3.FORWARD)
-	throttle = 0.5
+	throttle = 0.6
 	camera.global_transform = chase_transform()
-	show_message("Gestartet von %s" % p["name"], 2.0)
 
 
 func reach_goal() -> void:
@@ -2166,6 +2404,16 @@ func _process(delta: float) -> void:
 	invulnerable = maxf(0.0, invulnerable - delta)
 	ship_visual.visible = invulnerable <= 0.0 or fmod(invulnerable, 0.25) < 0.15
 	var input := autopilot(delta) if autotest else player_input()
+	if autotest:
+		photo_check()
+	if not anim.is_empty():
+		update_anim(delta)
+		update_engine_sound()
+		update_shots(delta)
+		update_blasts(delta)
+		update_horizon()
+		overlay.queue_redraw()
+		return
 	if landed.is_empty():
 		if not update_maneuver(delta):
 			fly(delta, input)
@@ -2174,6 +2422,7 @@ func _process(delta: float) -> void:
 			fire()
 		update_enemies(delta)
 		update_places(delta)
+		update_atmosphere(delta)
 		shield_wait -= delta
 		if shield_wait <= 0.0 and shield < max_shield:
 			shield = minf(max_shield, shield + 6.0 * delta)
@@ -2206,7 +2455,10 @@ func autopilot(delta: float) -> Dictionary:
 	test_time += delta
 	phase_time += delta
 	var input := {"yaw": 0.0, "pitch": 0.0, "roll": 0.0, "throttle": 0.0, "boost": false, "fire": false}
-	if test_time > 75.0:
+	if not test_said.has("pausebild") and test_time > 1.0 and OS.get_cmdline_user_args().has("--pausebild"):
+		test_said["pausebild"] = true
+		set_paused(true)          # nur für das Bildschirmfoto des Pausenmenüs
+	if test_time > 130.0:
 		print("AUTOTEST: Zeit um, Phase ", test_phase, " Hülle ", roundi(hull), " Punkte ", points)
 		get_tree().quit(0)
 		return input
@@ -2262,18 +2514,24 @@ func autopilot(delta: float) -> Dictionary:
 			if target.is_empty():
 				next_phase("ende")
 				return input
+			if not anim.is_empty():
+				phase_time = 0.0
+				return input
 			if not landed.is_empty():
-				if phase_time > 3.0:
+				if phase_time > 2.0:
 					take_off()
 					next_phase("ende")
 				return input
 			steer_to(target["pos"], delta)
 			throttle = 1.0
-			input["boost"] = ship.global_position.distance_to(target["pos"]) > float(target["radius"]) + 300.0
+			input["boost"] = ship.global_position.distance_to(target["pos"]) > float(target["radius"]) + atmo_height(target)
 			if land_option == target:
 				land(target)
 				phase_time = 0.0
 		"ende":
+			if not anim.is_empty():
+				phase_time = 0.0
+				return input
 			if phase_time > 1.0:
 				print("AUTOTEST: Klänge gespielt ", ",".join(PackedStringArray(played.keys())))
 				print("AUTOTEST: Fertig, Punkte ", points, ", Hülle ", roundi(hull), ", Leben ", lives)

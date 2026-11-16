@@ -5,11 +5,13 @@ extends Node3D
 signal finished(points: int)
 signal game_over
 signal to_menu
+signal restart
 
 const Assets = preload("res://assets.gd")
 const PlayerScript = preload("res://player.gd")
 const EnemyScript = preload("res://enemy.gd")
 const BubbleScript = preload("res://bubble.gd")
+const PauseMenu = preload("res://pausemenu.gd")
 
 const TILE_COLORS := {
 	"gras": Color("#7a5a3a"), "erde": Color("#7a5a3a"), "stein": Color("#8a93a3"), "ziegel": Color("#b0603f"),
@@ -662,47 +664,26 @@ func build_hud() -> void:
 	bubble_layer = CanvasLayer.new()
 	bubble_layer.layer = 0
 	add_child(bubble_layer)
-	pause_panel = VBoxContainer.new()
-	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
-	pause_panel.alignment = BoxContainer.ALIGNMENT_CENTER
-	pause_panel.add_theme_constant_override("separation", 14)
-	pause_panel.visible = false
+	pause_panel = PauseMenu.new()
 	layer.add_child(pause_panel)
-	var shade := ColorRect.new()
-	shade.color = Color(0, 0, 0, 0.5)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shade.visible = false
-	layer.add_child(shade)
-	layer.move_child(shade, 1)
-	pause_panel.set_meta("shade", shade)
-	var title := Label.new()
-	title.text = "Pause"
-	title.add_theme_font_size_override("font_size", 56)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_panel.add_child(title)
-	for pair in [["Weiter", "resume"], ["Hauptmenü", "menu"]]:
-		var b := Button.new()
-		b.text = pair[0]
-		b.custom_minimum_size = Vector2(260, 56)
-		b.add_theme_font_size_override("font_size", 26)
-		b.pressed.connect(_pause_button.bind(pair[1]))
-		pause_panel.add_child(b)
-	pause_panel.position = Vector2(640 - 130, 230)
+	(pause_panel as PauseMenu).setup(game, PauseMenu.controls_summary(game))
+	(pause_panel as PauseMenu).chosen.connect(_pause_button)
 
 
 func _pause_button(what: String) -> void:
 	set_paused(false)
 	if what == "menu":
 		to_menu.emit()
+	elif what == "restart":
+		restart.emit()
 
 
 func set_paused(on: bool) -> void:
 	get_tree().paused = on
-	pause_panel.visible = on
-	(pause_panel.get_meta("shade") as Control).visible = on
 	if on:
-		(pause_panel.get_child(1) as Button).grab_focus()
+		(pause_panel as PauseMenu).open()
+	else:
+		(pause_panel as PauseMenu).close()
 
 
 ## Symbol in der Anzeige: eigene Grafik oder ein Zeichen

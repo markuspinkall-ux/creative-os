@@ -324,7 +324,7 @@ class GameSettings(QWidget):
         grid.setSpacing(18)
         self.boxes = {}
         self.panels = {}
-        for i, key in enumerate(("player", "attacks", "ui", "window", "controls")):
+        for i, key in enumerate(("player", "attacks", "ui", "window", "music", "pause", "controls")):
             box = QWidget(objectName="panel")
             box.setMinimumWidth(420)
             lay = QVBoxLayout(box)
@@ -333,7 +333,7 @@ class GameSettings(QWidget):
             self.boxes[key] = lay
             self.panels[key] = box
             if key == "controls":
-                grid.addWidget(box, 2, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
+                grid.addWidget(box, 3, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
             else:
                 grid.addWidget(box, i // 2, i % 2, Qt.AlignmentFlag.AlignTop)
         grid.setColumnStretch(2, 1)
@@ -492,9 +492,21 @@ class GameSettings(QWidget):
             full.toggled.connect(lambda val: self.set(st, "fullscreen", val))
             form.addRow("", full)
             lay.addLayout(form)
+        info = QLabel("Tastatur, Maus und Controller: siehe „Steuerung“ unten. Controller werden im Spiel "
+                      "automatisch erkannt.")
+        info.setWordWrap(True)
+        info.setObjectName("sub")
+        lay.addWidget(info)
+        self.music_box(st)
+        from .pause_widgets import pause_box
+        pause_box(self, self.boxes["pause"], st)
+
+    def music_box(self, st):
+        """Eigene Box: Hintergrundmusik für Menü und Levels, Lautstärken."""
+        lay = self.boxes["music"]
         from .audio_widgets import audio_row
         music = st.setdefault("music", dict(proj.MUSIC_DEFAULT))
-        lay.addWidget(QLabel("MUSIK UND KLANG", objectName="section"))
+        lay.addWidget(QLabel("HINTERGRUNDMUSIK UND KLANG", objectName="section"))
         mform = QFormLayout()
         mform.addRow("Musik im Menü", audio_row(self.win, music, "menu", "Keine Musik", self.win.touched))
         mform.addRow("Musik in Levels", audio_row(self.win, music, "level", "Wie im Menü", self.win.touched))
@@ -506,11 +518,6 @@ class GameSettings(QWidget):
         mtip.setWordWrap(True)
         mtip.setObjectName("sub")
         lay.addWidget(mtip)
-        info = QLabel("Tastatur, Maus und Controller: siehe „Steuerung“ unten. Controller werden im Spiel "
-                      "automatisch erkannt.")
-        info.setWordWrap(True)
-        info.setObjectName("sub")
-        lay.addWidget(info)
 
     # ---- Weltraum-Shooter: Raumschiff und Waffen ------------------------------------------
     def load_space(self, data):

@@ -120,6 +120,8 @@ steps = [
     ("weltraum-steuerung", lambda: None, lambda: w.settings.panels["controls"]),
     ("weltraum-grafiken", lambda: None, lambda: w.settings.panels["ui"]),
     ("weltraum-schiff", lambda: None, lambda: w.settings.panels["player"]),
+    ("weltraum-pausenmenue", lambda: None, lambda: w.settings.panels["pause"]),
+    ("weltraum-musik", lambda: None, lambda: w.settings.panels["music"]),
     ("charakter", lambda: (w.open_project(str(folder)), character()), lambda: dialogs[0]),
 ]
 

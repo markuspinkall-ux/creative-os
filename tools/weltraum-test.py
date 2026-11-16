@@ -97,7 +97,7 @@ game = builder.build(folder, data, work / "build")
 assert (game / "space.gd").exists()
 
 run([GODOT, *godot.import_args(game)], check=False)
-out = run([GODOT, "--headless", "--path", str(game), "--fixed-fps", "60", "--quit-after", "6000", "--",
+out = run([GODOT, "--headless", "--path", str(game), "--fixed-fps", "60", "--quit-after", "9000", "--",
            f"--level={level_id}", "--autotest"], timeout=400, check=False)
 lines = [l for l in out.splitlines() if "AUTOTEST" in l]
 print("Autotest:", lines)
@@ -110,17 +110,25 @@ if not any("Klänge bereit 13/13" in l for l in lines):
 need = {"Treffer": "eigene Schüsse treffen", "Gegner zerstört": "Gegner lassen sich abschießen",
         "Schaden genommen": "Gegner schießen zurück / Schaden", "Repariert": "Reparatur an der Basis",
         "Gelandet auf": "Landung auf einem Planeten", "Manöver Looping": "Looping",
-        "Manöver Fassrolle": "Fassrolle"}
+        "Manöver Fassrolle": "Fassrolle", "Landeanflug": "Landeanflug-Animation",
+        "Gestartet von": "Start-Animation zurück ins All"}
 missing = [why for key, why in need.items() if not any(key in l for l in lines)]
 if missing:
     raise SystemExit("Autotest unvollständig: " + ", ".join(missing))
 
 xvfb = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"]
 for name, extra in (("start", ["--nach=1.5"]), ("rolle", ["--autotest", "--nach=1.3"]),
-                    ("kampf", ["--autotest", "--nach=4"]), ("treffer", ["--autotest", "--nach=9"])):
+                    ("kampf", ["--autotest", "--nach=4"]), ("treffer", ["--autotest", "--nach=9"]),
+                    ("pause", ["--autotest", "--pausebild", "--nach=2"]),
+                    ("atmosphaere", ["--autotest", "--foto=anflug:0.6", "--nach=900"]),
+                    ("landeanflug", ["--autotest", "--foto=anflug:3.0", "--nach=900"]),
+                    ("abstieg", ["--autotest", "--foto=abstieg:3.6", "--nach=900"]),
+                    ("gelandet", ["--autotest", "--foto=gelandet:0.8", "--nach=900"]),
+                    ("abflug", ["--autotest", "--foto=start:2.2", "--nach=900"]),
+                    ("austritt", ["--autotest", "--foto=austritt:0.5", "--nach=900"])):
     run([*xvfb, GODOT, "--rendering-driver", "opengl3", "--path", str(game), "--resolution", "1280x720", "--",
          f"--level={level_id}", *extra, f"--screenshot={OUT / ('weltraum-' + name + '.png')}", "--fenster"],
-        timeout=120, check=False)
+        timeout=240, check=False)
 # ---- Alle Grafiken ausgetauscht: eigene GLB-Modelle und Bilder ---------------------------------
 own = work / "Eigene Grafiken"
 data2 = project.new_project("Eigene Grafiken", "weltraum")
@@ -167,7 +175,7 @@ game2 = builder.build(own, data2, work / "build2")
 assert all((game2 / u).exists() for u in used), "Grafik fehlt im Spiel"
 level2 = next(s["id"] for s in data2["flow"] if s["type"] == "level")
 run([GODOT, *godot.import_args(game2)], check=False)
-out2 = run([GODOT, "--headless", "--path", str(game2), "--fixed-fps", "60", "--quit-after", "6000", "--",
+out2 = run([GODOT, "--headless", "--path", str(game2), "--fixed-fps", "60", "--quit-after", "9000", "--",
             f"--level={level2}", "--autotest"], timeout=400, check=False)
 lines2 = [l for l in out2.splitlines() if "AUTOTEST" in l]
 print("Autotest (eigene Grafiken):", lines2)
