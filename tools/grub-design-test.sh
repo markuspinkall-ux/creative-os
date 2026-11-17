@@ -8,7 +8,7 @@ set -eu
 cd "$(dirname "$0")/.."
 OUT="$(realpath -m "${1:-grub-fotos}")"
 mkdir -p "$OUT"
-dnf install -y -q --setopt=install_weak_deps=False grub2-tools grub2-tools-extra grub2-pc-modules xorriso \
+dnf install -y -q --setopt=install_weak_deps=False grub2-tools grub2-tools-extra grub2-pc-modules grub2-efi-x64-modules edk2-ovmf xorriso \
     qemu-system-x86-core liberation-sans-fonts fontconfig python3-pillow mtools socat diffutils gawk >/dev/null
 
 W="$(mktemp -d)"
@@ -48,7 +48,7 @@ sh image/grub-theme/creative-grub-design
 [ ! -e "$CREATIVE_GRUB_AUS" ] || { echo "FEHLER: „an“ hebt „aus“ nicht auf"; exit 1; }
 sh image/grub-theme/creative-grub-design auto
 cmp "$BOOT/user.cfg" "$W/user.an" || { echo "FEHLER: auto nach „an“ anders"; exit 1; }
-grep -q "set gfxmode=auto," "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
+grep -q "            set gfxmode=auto$" "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
 echo "Skript: ok (an, zweimal, aus, aus bleibt beim Start aus, wieder an)"
 
 # ---- 2. Echter GRUB in QEMU ------------------------------------------------------------------
@@ -91,4 +91,31 @@ colors = {px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}
 assert len(colors) > 200, f"kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
 print(f"Grafikmenü: {w}x{h}, {len(colors)} Farben")
 PY
+# ---- 3. Dasselbe mit UEFI (wie auf echten PCs): Auflösung der Firmware, Grafikmenü ---------
+OVMF=""
+for f in /usr/share/edk2/ovmf/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2; do
+    [ -f "$f" ] && { OVMF="$f"; break; }
+done
+[ -n "$OVMF" ] || { echo "FEHLER: OVMF fehlt"; ls /usr/share/edk2/ovmf || true; exit 1; }
+cp /usr/share/edk2/ovmf/OVMF_VARS.fd "$W/vars.fd" 2>/dev/null || true
+rm -f "$W/qmp.sock"
+fmt=raw; case "$OVMF" in *.qcow2) fmt=qcow2;; esac
+qemu-system-x86_64 -m 512 -machine q35 -cdrom "$W/test.iso" -vga std -display none \
+    -drive if=pflash,format=$fmt,readonly=on,file="$OVMF" \
+    $( [ -f "$W/vars.fd" ] && echo "-drive if=pflash,format=raw,file=$W/vars.fd" ) \
+    -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid"
+sleep 35
+foto "$OUT/grub-startauswahl-uefi.png"
+kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
+python3 - "$OUT/grub-startauswahl-uefi.png" <<'PY'
+import sys
+from PIL import Image
+im = Image.open(sys.argv[1]).convert("RGB")
+w, h = im.size
+px = im.load()
+colors = {px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}
+assert len(colors) > 200, f"UEFI: kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
+print(f"UEFI-Grafikmenü: {w}x{h}, {len(colors)} Farben")
+PY
+for f in "$OUT"/*.png; do echo "PNG64:$(basename "$f"):$(base64 -w0 "$f")"; done
 echo "GRUB-Design: ok"
