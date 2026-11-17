@@ -1,14 +1,15 @@
 [Unit]
 Description=Creative OS – Lautsprecher-Korrekturen für bekannte Laptops
-DefaultDependencies=no
-# vor dem Laden der Treiber durch udev, damit die Einstellung schon beim ersten Start wirkt
-Before=systemd-udev-trigger.service systemd-modules-load.service
-After=local-fs.target
+# Läuft im normalen Start (nach dem Einhängen der Laufwerke) und schreibt nur auf passenden Geräten
+# /etc/modprobe.d/creative-ton-fix.conf – die Korrektur wirkt ab dem nächsten Start.
+# NICHT vor systemd-udev-trigger ordnen: die Laufwerke warten auf udev, das ergab eine
+# Verklemmung → Notfallmodus hinter dem Bootlogo (Update vom 15.11.).
 ConditionPathExists=/sys/class/dmi/id/sys_vendor
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/creative-ton-fix --boot
+TimeoutStartSec=20
 
 [Install]
-WantedBy=sysinit.target
+WantedBy=multi-user.target

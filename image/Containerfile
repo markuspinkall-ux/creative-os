@@ -423,7 +423,7 @@ RUN dnf install -y bluez bluedevil && systemctl enable bluetooth.service && dnf 
 # Lautsprecher-Korrekturen für Laptops, die der Kernel noch nicht kennt (z. B. Galaxy Book2 Pro 955XED)
 COPY image/geraete/creative-ton-fix /usr/bin/creative-ton-fix
 COPY image/geraete/creative-ton-fix.service /usr/lib/systemd/system/creative-ton-fix.service
-RUN chmod 755 /usr/bin/creative-ton-fix && systemctl enable creative-ton-fix.service
+RUN chmod 755 /usr/bin/creative-ton-fix && rm -f /etc/systemd/system/sysinit.target.wants/creative-ton-fix.service && systemctl enable creative-ton-fix.service
 COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-bluetooth.conf
 COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
 COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py
