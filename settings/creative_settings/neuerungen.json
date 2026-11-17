@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-17",
+    "titel": "Wichtige Korrektur: Start hängt nicht mehr am Bootlogo",
+    "neu": [],
+    "verbessert": [],
+    "behoben": [
+      "Start blieb seit dem Update vom 15.11. am Bootlogo hängen (dahinter lief der Notfallmodus): Die Lautsprecher-Korrektur für das Galaxy Book hatte sich vor die Geräteerkennung gedrängt und gleichzeitig auf die Laufwerke gewartet – beides wartete aufeinander. Sie läuft jetzt im normalen Start; auf dem Galaxy Book bleibt der Ton an. Eine neue Prüfung verhindert solche Startreihenfolgen künftig"
+    ]
+  },
+  {
     "datum": "2026-11-16",
     "titel": "Browser: Videowerbung auf YouTube und Twitch (Versuch)",
     "neu": [
