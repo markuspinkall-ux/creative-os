@@ -104,7 +104,7 @@ fmt=raw; case "$OVMF" in *.qcow2) fmt=qcow2;; esac
 cp "$VARS" "$W/vars.$fmt"
 echo "UEFI mit $OVMF ($fmt)"
 rm -f "$W/qmp.sock"
-qemu-system-x86_64 -m 1024 -machine q35,smm=off -cdrom "$W/test.iso" -vga std -display none \
+qemu-system-x86_64 -m 1024 -machine pc -drive file="$W/test.iso",media=cdrom,if=ide,index=0 -vga std -display none \
     -drive if=pflash,format=$fmt,unit=0,readonly=on,file="$OVMF" \
     -drive if=pflash,format=$fmt,unit=1,file="$W/vars.$fmt" \
     -debugcon file:"$W/ovmf.log" -global isa-debugcon.iobase=0x402 -serial file:"$W/serial.log" -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" \
