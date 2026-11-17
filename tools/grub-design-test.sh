@@ -109,8 +109,16 @@ qemu-system-x86_64 -m 1024 -machine pc -drive file="$W/test.iso",media=cdrom,if=
     -drive if=pflash,format=$fmt,unit=1,file="$W/vars.$fmt" \
     -debugcon file:"$W/ovmf.log" -global isa-debugcon.iobase=0x402 -serial file:"$W/serial.log" -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" \
     || { echo "FEHLER: QEMU (UEFI) startet nicht"; exit 1; }
-sleep 60
-foto "$OUT/grub-startauswahl-uefi.png"
+# UEFI startet in QEMU ohne KVM langsam – bis zu 120 s warten, bis das Menü zu sehen ist
+for i in $(seq 1 60); do
+    sleep 2
+    foto "$OUT/grub-startauswahl-uefi.png"
+    python3 -c "
+import sys
+from PIL import Image
+im = Image.open('$OUT/grub-startauswahl-uefi.png').convert('RGB'); px = im.load(); w, h = im.size
+sys.exit(0 if len({px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}) > 200 else 1)" && { echo "UEFI-Menü nach $((i*2)) s"; break; }
+done
 echo "--- OVMF ---"; tail -c 1500 "$W/ovmf.log" 2>/dev/null || true; echo "--- serielle Ausgabe (UEFI) ---"; tail -c 2000 "$W/serial.log" 2>/dev/null || true; echo
 kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
 python3 - "$OUT/grub-startauswahl-uefi.png" <<'PY'
