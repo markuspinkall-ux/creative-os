@@ -240,7 +240,7 @@ SettingsPage {
         title: "Quellcode und Lizenzen"
         SettingRow {
             label: "Eigene Programme von Orbit OS"
-            hint: "© 2026 Markus Pinkall – alle Rechte vorbehalten. Der Quellcode ist auf GitHub einsehbar, darf aber ohne Erlaubnis nicht übernommen werden."
+            hint: "© 2026 Markus Pinkall – freie Software unter der GPL-3.0. Du darfst sie nutzen, verändern und weitergeben; der Quellcode liegt auf GitHub."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }
         SettingRow {
@@ -248,6 +248,36 @@ SettingsPage {
             hint: "Behalten ihre eigenen Lizenzen (z. B. GPL, LGPL, MIT). Die Lizenztexte liegen unter /usr/share/licenses, die Quellen stellt das Fedora-Projekt bereit."
             last: true
             CButton { text: "Lizenzen ansehen"; onClicked: system.openUrl("file:///usr/share/licenses") }
+        }
+    }
+
+    // ---- Impressum (Angaben nach § 5 DDG) – erscheint erst, wenn impressum.json vollständig ist --
+    Card {
+        id: impCard
+        readonly property var imp: system.impressum || ({})
+        visible: !!imp.name && !!imp.anschrift && !!imp.email
+        title: "Impressum"
+        subtitle: "Angaben nach § 5 Digitale-Dienste-Gesetz"
+        SettingRow {
+            label: "Verantwortlich"
+            hint: impCard.imp.name || ""
+        }
+        SettingRow {
+            label: "Anschrift"
+            hint: impCard.imp.anschrift || ""
+        }
+        SettingRow {
+            label: "Kontakt"
+            hint: impCard.imp.email || ""
+            last: !(impCard.imp.web)
+            CButton { text: "E-Mail schreiben"; onClicked: system.openUrl("mailto:" + impCard.imp.email) }
+        }
+        SettingRow {
+            visible: !!impCard.imp.web
+            label: "Webseite"
+            hint: impCard.imp.web || ""
+            last: true
+            CButton { text: "Öffnen"; onClicked: system.openUrl(impCard.imp.web) }
         }
     }
 }

@@ -4,7 +4,7 @@
     "titel": "Aus Creative OS wird Orbit OS – und: Start hängt nicht mehr am Bootlogo",
     "neu": [
       "Neuer Name: Creative OS heißt jetzt Orbit OS – überall im System: Startauswahl, Anmeldung, Systemsteuerung, Installer, Willkommen, App-Katalog und Hilfetexte. Die eigenen Programme heißen ohne „Creative“ (Browser, Engine, Deck, WhatsApp, Player, Notes …) und liegen im Startmenü-Ordner „Orbit Suite“; aus Creative 3D wird „3D Studio“, die virtuellen Geräte heißen „Orbit Kamera“ und „Orbit Mikrofon“ (in Discord & Co. einmal neu auswählen). Version bleibt „Orbit OS 2 · Vivid Venus“. Eigene Dateien, Einstellungen und Sicherungen bleiben unverändert (der Sicherungsordner heißt weiter „Creative-OS-Sicherung“, damit alte Sicherungen gefunden werden)",
-      "Orbit OS ist jetzt freie Software: Die eigenen Programme stehen unter der GPL-3.0 – jeder darf sie nutzen, untersuchen, verändern und weitergeben (Name und Logo bleiben Orbit OS vorbehalten)"
+      "Orbit OS ist jetzt freie Software: Die eigenen Programme stehen unter der GPL-3.0 – jeder darf sie nutzen, untersuchen, verändern und weitergeben (Name und Logo bleiben Orbit OS vorbehalten). In der Systemsteuerung unter System › „Quellcode und Lizenzen“ steht das jetzt so, darunter das Impressum"
     ],
     "verbessert": [
       "Startbildschirm: nur noch die Rakete, ohne Schriftzug"
