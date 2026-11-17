@@ -15,7 +15,8 @@
     "behoben": [
       "Schwarzer Bildschirm oder Anmelde-Schleife nach dem Anmelden: Die Fenster-Software KWin 6.8.3 von Fedora stürzt ab, wenn beim Starten die Maus bewegt wird (bekannter KDE-Fehler). Orbit OS nutzt bis zur Reparatur durch Fedora wieder KWin 6.8.2",
       "Start blieb seit dem Update vom 15.11. am Bootlogo hängen (dahinter lief der Notfallmodus): Die Lautsprecher-Korrektur für das Galaxy Book hatte sich vor die Geräteerkennung gedrängt und gleichzeitig auf die Laufwerke gewartet – beides wartete aufeinander. Sie läuft jetzt im normalen Start; auf dem Galaxy Book bleibt der Ton an. Eine neue Prüfung verhindert solche Startreihenfolgen künftig",
-      "Startbildschirm mit NVIDIA: Die Rakete erscheint wieder. Der Startbildschirm wartete bis zu 8 Sekunden auf den NVIDIA-Treiber, der erst kurz vor Ende des Starts geladen wird – der Bildschirm blieb deshalb schwarz. Jetzt zeigt er die Rakete sofort über das Bild des Mainboards an und wechselt danach nahtlos auf die Grafikkarte"
+      "Startbildschirm mit NVIDIA: Die Rakete erscheint wieder. Der Startbildschirm wartete bis zu 8 Sekunden auf den NVIDIA-Treiber, der erst kurz vor Ende des Starts geladen wird – der Bildschirm blieb deshalb schwarz. Jetzt zeigt er die Rakete sofort über das Bild des Mainboards an und wechselt danach nahtlos auf die Grafikkarte",
+      "Startbildschirm: Die Rakete beim Hochfahren blieb auf manchen PCs schwarz (vor allem mit NVIDIA und mehreren oder gedrehten Monitoren). Die Startauswahl zwingt keine feste Auflösung mehr, sondern übernimmt die des Mainboards – so kann der Startbildschirm direkt weiterzeichnen. Außerdem bleibt „sudo creative-grub-design aus“ jetzt auch nach dem nächsten Neustart und nach Updates aus"
     ]
   },
   {

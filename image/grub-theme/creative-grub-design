@@ -1,13 +1,19 @@
 #!/bin/sh
 # Orbit OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
-#   sudo creative-grub-design        einschalten bzw. aktualisieren (läuft bei jedem Start automatisch)
-#   sudo creative-grub-design aus    wieder das schlichte Textmenü
+#   sudo creative-grub-design        einschalten bzw. aktualisieren
+#   sudo creative-grub-design aus    wieder das schlichte Textmenü (bleibt aus, auch nach Updates)
+#   creative-grub-design auto        beim Start: nur aktualisieren, wenn nicht ausgeschaltet
 # Die Dateien liegen im Abbild unter /usr/share/creative-os/grub-theme und werden nach
 # /boot/grub2/themes/creative kopiert; user.cfg bekommt einen markierten Block.
 set -eu
 SRC="${CREATIVE_GRUB_SRC:-/usr/share/creative-os/grub-theme}"
 BOOT_DIRS="${CREATIVE_BOOT_DIRS:-/boot/grub2 /boot/efi/EFI/fedora}"   # nur für Tests anders
 mode="${1:-an}"
+AUS_MARKE="${CREATIVE_GRUB_AUS:-/etc/creative-os/grub-design-aus}"   # nur für Tests anders
+if [ "$mode" = "auto" ]; then
+    [ -e "$AUS_MARKE" ] && exit 0
+    mode="an"
+fi
 BEGIN="### BEGIN creative-os grub-design"
 END="### END creative-os grub-design"
 
@@ -35,6 +41,7 @@ tmp="$(mktemp)"
 awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$cfg" > "$tmp"
 
 if [ "$mode" = "aus" ]; then
+    mkdir -p "$(dirname "$AUS_MARKE")" && echo "ausgeschaltet mit creative-grub-design aus" > "$AUS_MARKE" || true
     cat "$tmp" > "$cfg"; rm -f "$tmp"
     rm -rf "$dir/themes/creative"
     sync
@@ -42,6 +49,7 @@ if [ "$mode" = "aus" ]; then
     exit 0
 fi
 
+rm -f "$AUS_MARKE"
 [ -f "$SRC/theme.txt" ] || { rm -f "$tmp"; echo "Design fehlt im System ($SRC)."; exit 1; }
 if ! cmp -s "$SRC/version" "$dir/themes/creative/version" 2>/dev/null; then
     rm -rf "$dir/themes/creative.neu"
