@@ -29,7 +29,7 @@ printf 'set timeout=5\nif [ -f ${config_directory}/user.cfg ]; then source ${con
 # so sieht user.cfg nach creative-quiet-boot aus
 printf '# creative-os: GRUB-Textmeldungen unsichtbar\nset color_normal=black/black\nset menu_color_normal=light-gray/black\nset menu_color_highlight=white/dark-gray\n' > "$BOOT/user.cfg"
 cp "$BOOT/user.cfg" "$W/user.vorher"
-export CREATIVE_GRUB_SRC="$SRC" CREATIVE_BOOT_DIRS="$BOOT"
+export CREATIVE_GRUB_SRC="$SRC" CREATIVE_BOOT_DIRS="$BOOT" CREATIVE_GRUB_AUS="$W/etc/grub-design-aus"
 sh image/grub-theme/creative-grub-design
 grep -q "### BEGIN creative-os grub-design" "$BOOT/user.cfg"
 grep -q "color_normal=black/black" "$BOOT/user.cfg" || { echo "FEHLER: fremde Zeilen verloren"; exit 1; }
@@ -41,8 +41,15 @@ cmp "$BOOT/user.cfg" "$W/user.an" || { echo "FEHLER: zweiter Lauf ändert user.c
 sh image/grub-theme/creative-grub-design aus
 cmp "$BOOT/user.cfg" "$W/user.vorher" || { echo "FEHLER: „aus“ stellt user.cfg nicht wieder her"; exit 1; }
 [ ! -d "$BOOT/themes/creative" ] || { echo "FEHLER: Thema nach „aus“ noch da"; exit 1; }
+# „aus“ muss den automatischen Lauf beim Start überstehen
+sh image/grub-theme/creative-grub-design auto
+cmp "$BOOT/user.cfg" "$W/user.vorher" || { echo "FEHLER: Start schaltet Design trotz „aus“ wieder ein"; exit 1; }
 sh image/grub-theme/creative-grub-design
-echo "Skript: ok (an, zweimal, aus, wieder an)"
+[ ! -e "$CREATIVE_GRUB_AUS" ] || { echo "FEHLER: „an“ hebt „aus“ nicht auf"; exit 1; }
+sh image/grub-theme/creative-grub-design auto
+cmp "$BOOT/user.cfg" "$W/user.an" || { echo "FEHLER: auto nach „an“ anders"; exit 1; }
+grep -q "set gfxmode=auto" "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
+echo "Skript: ok (an, zweimal, aus, aus bleibt beim Start aus, wieder an)"
 
 # ---- 2. Echter GRUB in QEMU ------------------------------------------------------------------
 ISO="$W/iso"
