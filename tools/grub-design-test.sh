@@ -92,19 +92,24 @@ assert len(colors) > 200, f"kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
 print(f"Grafikmenü: {w}x{h}, {len(colors)} Farben")
 PY
 # ---- 3. Dasselbe mit UEFI (wie auf echten PCs): Auflösung der Firmware, Grafikmenü ---------
-OVMF=""
-for f in /usr/share/edk2/ovmf/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2; do
-    [ -f "$f" ] && { OVMF="$f"; break; }
+ls -l /usr/share/edk2/ovmf/ | head -30
+OVMF=""; VARS=""
+for f in /usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2:/usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 \
+         /usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd; do
+    c="${f%%:*}"; v="${f#*:}"
+    [ -f "$c" ] && [ -f "$v" ] && { OVMF="$c"; VARS="$v"; break; }
 done
-[ -n "$OVMF" ] || { echo "FEHLER: OVMF fehlt"; ls /usr/share/edk2/ovmf || true; exit 1; }
-cp /usr/share/edk2/ovmf/OVMF_VARS.fd "$W/vars.fd" 2>/dev/null || true
-rm -f "$W/qmp.sock"
+[ -n "$OVMF" ] || { echo "FEHLER: OVMF fehlt"; exit 1; }
 fmt=raw; case "$OVMF" in *.qcow2) fmt=qcow2;; esac
-qemu-system-x86_64 -m 512 -machine q35 -cdrom "$W/test.iso" -vga std -display none \
-    -drive if=pflash,format=$fmt,readonly=on,file="$OVMF" \
-    $( [ -f "$W/vars.fd" ] && echo "-drive if=pflash,format=raw,file=$W/vars.fd" ) \
-    -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid"
-sleep 35
+cp "$VARS" "$W/vars.$fmt"
+echo "UEFI mit $OVMF ($fmt)"
+rm -f "$W/qmp.sock"
+qemu-system-x86_64 -m 1024 -machine q35,smm=off -cdrom "$W/test.iso" -vga std -display none \
+    -drive if=pflash,format=$fmt,unit=0,readonly=on,file="$OVMF" \
+    -drive if=pflash,format=$fmt,unit=1,file="$W/vars.$fmt" \
+    -serial file:"$W/serial.log" -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" \
+    || { echo "FEHLER: QEMU (UEFI) startet nicht"; exit 1; }
+sleep 60
 foto "$OUT/grub-startauswahl-uefi.png"
 kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
 python3 - "$OUT/grub-startauswahl-uefi.png" <<'PY'
@@ -114,6 +119,7 @@ im = Image.open(sys.argv[1]).convert("RGB")
 w, h = im.size
 px = im.load()
 colors = {px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}
+if len(colors) <= 200: print(open(sys.argv[1].replace("grub-startauswahl-uefi.png","")+"../serial.log","rb").read()[-3000:] if False else "")
 assert len(colors) > 200, f"UEFI: kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
 print(f"UEFI-Grafikmenü: {w}x{h}, {len(colors)} Farben")
 PY
