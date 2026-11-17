@@ -30,3 +30,23 @@ jobs:
         run: node tools/messenger-test.js
       - name: Shell-Teil (Syntax)
         run: python3 -m py_compile shell/creative_shell/messenger.py shell/creative_shell/messenger_window.py
+  fotos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation
+          pip install -q PySide6
+      - name: Fenster und Tray fotografieren (nachgebauter Dienst)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: |
+          timeout 60 python3 tools/messenger-vorschau.py fotos
+          timeout 60 python3 tools/messenger-vorschau.py fotos --neu
+          for f in fotos/*.png; do
+            n=$(basename "$f" .png)
+            base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo
+          done
