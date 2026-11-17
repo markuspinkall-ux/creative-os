@@ -497,6 +497,18 @@ RUN chmod 755 /usr/bin/creative-files \
  && cat /etc/xdg/mimeapps.list > /usr/share/creative-os/xdg/creative-mimeapps.list \
  && echo "inode/directory=creative-files.desktop" >> /usr/share/creative-os/xdg/creative-mimeapps.list \
  && echo "inode/directory=creative-files.desktop" >> /etc/xdg/mimeapps.list
+# Tabellen-Ansicht: Excel-Dateien per Doppelklick ansehen (kein Startmenü-Eintrag)
+RUN dnf install -y --skip-unavailable python3-openpyxl && dnf clean all
+COPY tabellen/orbit_tabellen /usr/lib/orbit-tabellen/orbit_tabellen
+COPY --chmod=755 tabellen/bin/orbit-tabellen /usr/bin/orbit-tabellen
+COPY tabellen/orbit-tabellen.desktop /usr/share/applications/orbit-tabellen.desktop
+COPY tabellen/orbit-tabellen.svg /usr/share/icons/hicolor/scalable/apps/orbit-tabellen.svg
+RUN python3 -c "import openpyxl" \
+ && for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
+        sed -n 's/^MimeType=//p' /usr/share/applications/orbit-tabellen.desktop | tr ';' '\n' \
+            | sed '/^$/d; s/$/=orbit-tabellen.desktop/' >> "$f"; \
+    done
+
 # 3D-Dateien (GLB, glTF) öffnet die 3D-Ansicht
 RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
         printf 'model/gltf-binary=creative-3dansicht.desktop\nmodel/gltf+json=creative-3dansicht.desktop\n' >> "$f"; \

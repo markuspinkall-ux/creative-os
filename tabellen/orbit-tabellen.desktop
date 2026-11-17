@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Tabellen-Ansicht
+GenericName=Excel-Dateien ansehen
+Comment=Excel-Tabellen (.xlsx) ansehen
+Exec=orbit-tabellen %f
+Icon=orbit-tabellen
+Terminal=false
+NoDisplay=true
+Categories=Office;Spreadsheet;Viewer;
+MimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.openxmlformats-officedocument.spreadsheetml.template;application/vnd.ms-excel.template.macroEnabled.12;
+StartupWMClass=orbit-tabellen

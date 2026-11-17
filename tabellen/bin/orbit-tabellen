@@ -1,0 +1,4 @@
+#!/bin/sh
+# Tabellen-Ansicht – öffnet sich per Doppelklick auf eine Excel-Datei (kein Startmenü-Eintrag)
+export PYTHONPATH="/usr/lib/orbit-tabellen${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m orbit_tabellen "$@"
