@@ -121,6 +121,10 @@ RUN dnf install -y python3-pyside6 python3-numpy python3-paramiko qt6-qtsvg qt6-
                    brightnessctl ddcutil liberation-sans-fonts \
  && dnf clean all
 
+# KWin 6.8.3 stürzt beim Anmelden ab, wenn die Maus bewegt wird → 6.8.2, bis Fedora es repariert
+COPY image/kwin-pin.sh /tmp/kwin-pin.sh
+RUN bash /tmp/kwin-pin.sh && rm -f /tmp/kwin-pin.sh
+
 COPY shell/creative_shell /usr/lib/creative-shell/creative_shell
 COPY shell/bin/creative-shell /usr/bin/creative-shell
 COPY --chmod=755 shell/bin/creative-widgets /usr/bin/creative-widgets

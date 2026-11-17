@@ -1,0 +1,20 @@
+name: KWin-Version prüfen
+# Führt image/kwin-pin.sh im echten Fedora-Kinoite-Abbild aus: KWin 6.8.3 → 6.8.2.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [image/kwin-pin.sh, .github/workflows/kwin-pin-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Platz schaffen
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+      - name: Im Kinoite-Abbild ausführen
+        run: |
+          fv=$(grep -m1 -oE 'ARG FEDORA_VERSION=[0-9]+' image/Containerfile | cut -d= -f2)
+          echo "Fedora $fv"
+          sudo podman run --rm -v "$PWD/image/kwin-pin.sh:/kwin-pin.sh:ro,z" "quay.io/fedora-ostree-desktops/kinoite:$fv" bash /kwin-pin.sh
