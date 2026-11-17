@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert die Creative Shell auf einem bestehenden Fedora-System
+# Installiert die Shell auf einem bestehenden Fedora-System
 # (Vorstufe zum späteren RPM-Paket). Mit sudo ausführen.
 set -eu
 cd "$(dirname "$0")"
@@ -48,4 +48,4 @@ if getent group i2c >/dev/null 2>&1 && [ -n "${SUDO_USER:-}" ]; then
 fi
 
 echo
-echo "Fertig. Abmelden und im Anmeldebildschirm die Sitzung „Creative OS“ wählen."
+echo "Fertig. Abmelden und im Anmeldebildschirm die Sitzung „Orbit OS“ wählen."

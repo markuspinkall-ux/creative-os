@@ -1,4 +1,4 @@
-"""Prüft, ob alle QML-Dateien von Creative OS fehlerfrei geladen werden können
+"""Prüft, ob alle QML-Dateien von Orbit OS fehlerfrei geladen werden können
 (Syntax, Importe, Komponenten) – ohne das Abbild zu bauen.
 
     QT_QPA_PLATFORM=offscreen python3 tools/qml-check.py
@@ -32,7 +32,7 @@ for d in DIRS:
             bad += 1
             for e in comp.errors():
                 print(f"FEHLER {f.relative_to(ROOT)}: {e.toString()}")
-# Eigene Datei mit dem Namen eines Creative-Bauteils wird von „import Creative“ überdeckt
+# Eigene Datei mit dem Namen eines Orbit-Bauteils wird von „import Creative“ überdeckt
 # (so war „Papierkorb leeren“ in Dateien tot)
 module = {l.split()[0] for l in (ROOT / "shell/creative_shell/qml/Creative/qmldir").read_text().splitlines()
           if l and l[0].isupper()}
@@ -42,6 +42,6 @@ for d in DIRS:
     for f in sorted((ROOT / d).glob("*.qml")):
         if f.stem in module:
             bad += 1
-            print(f"FEHLER {f.relative_to(ROOT)}: heißt wie das Creative-Bauteil {f.stem} und wird davon überdeckt")
+            print(f"FEHLER {f.relative_to(ROOT)}: heißt wie das Orbit-Bauteil {f.stem} und wird davon überdeckt")
 print(f"{checked} QML-Dateien geprüft, {bad} mit Fehlern")
 sys.exit(1 if bad else 0)

@@ -1,4 +1,4 @@
-# Creative OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
+# Orbit OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
 #
 # Das fertige System ist schreibgeschützt und wird nur als Ganzes
 # aktualisiert. Läuft nach einem Update etwas nicht, startet man im
@@ -55,7 +55,7 @@ RUN mkdir -p /var/opt \
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 RUN mkdir -p /etc/skel/Bilder
 
-# Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
+# Secure Boot: öffentlicher Schlüssel der Orbit-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
 COPY image/secureboot/sign-modules.sh /usr/libexec/creative-sign-modules
 COPY image/secureboot/kernel-devel.sh /usr/libexec/creative-kernel-devel
@@ -84,7 +84,7 @@ RUN --mount=type=secret,id=mokkey if [ "$NVIDIA" = "1" ]; then \
      && dnf clean all ; \
     fi
 
-# NVIDIA-Grafikkarte für Container (Creative 3D rechnet mit TRELLIS in einem Container).
+# NVIDIA-Grafikkarte für Container (3D Studio rechnet mit TRELLIS in einem Container).
 # nvidia-container-toolkit beschreibt die Karte per CDI; der Dienst erzeugt die
 # Beschreibung bei jedem Start passend zum Treiber.
 COPY image/nvidia/creative-nvidia-cdi.service /usr/lib/systemd/system/creative-nvidia-cdi.service
@@ -99,13 +99,13 @@ RUN if [ "$NVIDIA" = "1" ]; then \
     fi
 
 # ---------------------------------------------------------------------------
-# 5) Startseite des Creative Browsers (Brave ist nicht mehr im System –
-#    der Browser ist jetzt der eigene Creative Browser, siehe unten)
+# 5) Startseite des Browsers (Brave ist nicht mehr im System –
+#    der Browser ist jetzt der eigene Browser, siehe unten)
 # ---------------------------------------------------------------------------
 COPY browser/startpage /usr/share/creative-os/startpage
 
 # ---------------------------------------------------------------------------
-# 6) Creative Software: Flatpak und Flathub ab Werk
+# 6) Software: Flatpak und Flathub ab Werk
 # ---------------------------------------------------------------------------
 RUN dnf install -y flatpak \
  && shops="$(rpm -qa --qf '%{NAME}\n' | awk '/^(plasma-discover|gnome-software)(-|$)/')" \
@@ -115,7 +115,7 @@ RUN dnf install -y flatpak \
  && dnf clean all
 
 # ---------------------------------------------------------------------------
-# 7) Creative Shell (Taskleiste, Startmenü, Schnellzugriff)
+# 7) Shell (Taskleiste, Startmenü, Schnellzugriff)
 # ---------------------------------------------------------------------------
 RUN dnf install -y python3-pyside6 python3-numpy python3-paramiko qt6-qtsvg qt6-qtwayland layer-shell-qt \
                    brightnessctl ddcutil liberation-sans-fonts \
@@ -185,7 +185,7 @@ COPY cut/cut_project.py cut/cut_timeline.py /usr/lib/creative-cut/
 COPY cut/creative-cut.desktop /usr/share/applications/creative-cut.desktop
 COPY cut/creative-cut.svg /usr/share/icons/hicolor/scalable/apps/creative-cut.svg
 RUN ln -s /usr/lib/creative-cut/creative-cut /usr/bin/creative-cut
-# Creative 3D: Foto → 3D-Figur mit TRELLIS (Microsoft, MIT). TRELLIS läuft in einem eigenen,
+# 3D Studio: Foto → 3D-Figur mit TRELLIS (Microsoft, MIT). TRELLIS läuft in einem eigenen,
 # fertig kompilierten Container (ghcr.io/…/creative-trellis), den die App beim ersten Start lädt –
 # hier nur Oberfläche, Einrichtung, Skelett und Vorschau.
 COPY --chmod=755 creative3d/creative-3d /usr/lib/creative-3d/creative-3d
@@ -203,7 +203,7 @@ RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \
  && test -s /usr/lib/creative-3d/model-viewer.min.js \
  && ln -s /usr/lib/creative-3d/creative-3d /usr/bin/creative-3d \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3d --selftest
-# 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus Creative 3D)
+# 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus 3D Studio)
 COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
 COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop
 COPY viewer3d/creative-3dansicht.svg /usr/share/icons/hicolor/scalable/apps/creative-3dansicht.svg
@@ -214,12 +214,12 @@ COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 
-# Creative OS ist die einzige Sitzung im Anmeldebildschirm
+# Orbit OS ist die einzige Sitzung im Anmeldebildschirm
 RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/libexec/creative-wallet-setup /usr/bin/creative-webapp \
  && rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop
 
 # ---------------------------------------------------------------------------
-# 8) Creative Player (Musik, Videos, IPTV) – Standardprogramm für Medien
+# 8) Player (Musik, Videos, IPTV) – Standardprogramm für Medien
 # ---------------------------------------------------------------------------
 # YouTube Music läuft über die offizielle Webseite → eingebauter Browser-Baustein (Qt WebEngine)
 RUN dnf install -y qt6-qtmultimedia python3-mutagen \
@@ -232,14 +232,14 @@ COPY media/creative-player.svg /usr/share/icons/hicolor/scalable/apps/creative-p
 COPY media/mimeapps.list /etc/xdg/mimeapps.list
 RUN chmod 755 /usr/bin/creative-player
 
-# Creative Art – eigenständige Rasterbildbearbeitung mit Qt Widgets.
+# Art – eigenständige Rasterbildbearbeitung mit Qt Widgets.
 COPY art/creative_art /usr/lib/creative-art/creative_art
 COPY art/creative-art /usr/bin/creative-art
 COPY art/creative-art.desktop /usr/share/applications/creative-art.desktop
 COPY art/creative-art.svg /usr/share/icons/hicolor/scalable/apps/creative-art.svg
 RUN chmod 755 /usr/bin/creative-art
 
-# Creative Writer – formatierte Dokumente, Druckvorschau und PDF.
+# Writer – formatierte Dokumente, Druckvorschau und PDF.
 # Word-Dateien (python3-docx) und Rechtschreibprüfung (Enchant + deutsches Hunspell-Wörterbuch).
 RUN dnf install -y --skip-unavailable python3-docx python3-enchant hunspell-de && dnf clean all
 COPY writer/creative-writer writer/writer_docx.py writer/writer_icons.py /usr/lib/creative-writer/
@@ -250,14 +250,14 @@ RUN chmod 755 /usr/lib/creative-writer/creative-writer \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/writer-home XDG_RUNTIME_DIR=/tmp timeout 60 /usr/lib/creative-writer/creative-writer --selftest \
  && rm -rf /tmp/writer-home
 
-# Creative Podcast nutzt dieselbe Qt-Multimedia-Laufzeit wie Creative Player.
+# Podcast nutzt dieselbe Qt-Multimedia-Laufzeit wie Player.
 COPY podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
 COPY podcast/bin/creative-podcast /usr/bin/creative-podcast
 COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.desktop
 COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
 RUN chmod 755 /usr/bin/creative-podcast
 
-# Creative Mail: Qt-Client (IMAP/SMTP) und Secret Service für die Passwörter.
+# Mail: Qt-Client (IMAP/SMTP) und Secret Service für die Passwörter.
 RUN dnf install -y libsecret && dnf clean all
 COPY mail/mailcore.py mail/creative-mail /usr/lib/creative-mail/
 COPY mail/creative-mail.desktop /usr/share/applications/creative-mail.desktop
@@ -266,7 +266,7 @@ RUN chmod 755 /usr/lib/creative-mail/creative-mail \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/mail-home timeout 30 /usr/lib/creative-mail/creative-mail --selftest \
  && rm -rf /tmp/mail-home
 
-# Creative Magazin – Lieblingsseiten per RSS als tägliche Zeitschrift lesen.
+# Magazin – Lieblingsseiten per RSS als tägliche Zeitschrift lesen.
 COPY magazin/creative_magazin /usr/lib/creative-magazin/creative_magazin
 COPY magazin/bin/creative-magazin /usr/bin/creative-magazin
 COPY magazin/creative-magazin.desktop /usr/share/applications/creative-magazin.desktop
@@ -274,7 +274,7 @@ COPY magazin/creative-magazin.svg /usr/share/icons/hicolor/scalable/apps/creativ
 RUN chmod 755 /usr/bin/creative-magazin
 
 # ---------------------------------------------------------------------------
-# 8a1) Creative Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
+# 8a1) Notes – eigener Texteditor (ersetzt KWrite), Standard für Textdateien
 # ---------------------------------------------------------------------------
 COPY notes/creative_notes /usr/lib/creative-notes/creative_notes
 COPY notes/bin/creative-notes /usr/bin/creative-notes
@@ -302,7 +302,7 @@ COPY gamelauncher/creative-gamelauncher.desktop /usr/share/applications/creative
 COPY gamelauncher/creative-gamelauncher.svg /usr/share/icons/hicolor/scalable/apps/creative-gamelauncher.svg
 RUN chmod 755 /usr/bin/creative-gamelauncher
 
-# Creative Browser: eigener Webbrowser auf Electron (Chromium mit H.264/AAC für Twitch und YouTube).
+# Browser: eigener Webbrowser auf Electron (Chromium mit H.264/AAC für Twitch und YouTube).
 # Electron-Version hier anheben, um Chromium-Sicherheitsupdates zu übernehmen.
 ARG ELECTRON_VERSION=45.3.1
 RUN dnf install -y --skip-unavailable unzip librsvg2-tools nss gtk3 alsa-lib libxkbcommon mesa-libgbm libdrm cups-libs at-spi2-atk \
@@ -336,14 +336,14 @@ RUN chmod 755 /usr/bin/creative-browser /usr/bin/creative-whatsapp \
  && python3 /tmp/tile-icons.py --file /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg /tmp/whatsapp-kachel.svg \
  && rsvg-convert -w 256 -h 256 /tmp/whatsapp-kachel.svg -o /usr/lib/creative-browser/electron/resources/app/whatsapp/icon.png \
  && rm -f /tmp/tile-icons.py /tmp/whatsapp-kachel.svg \
- && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Creative Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
+ && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
     || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT"
 
-# Creative Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
+# Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
 RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
  && (python3 -c "import StreamDeck" 2>/dev/null \
      || python3 -m pip install --no-cache-dir --no-deps --target /usr/lib/creative-deck/vendor "streamdeck==0.9.8") \
- && PYTHONPATH=/usr/lib/creative-deck/vendor python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Creative Deck: Stream-Deck-Bibliothek ok')" \
+ && PYTHONPATH=/usr/lib/creative-deck/vendor python3 -c "from StreamDeck.DeviceManager import DeviceManager; print('Deck: Stream-Deck-Bibliothek ok')" \
  || echo "CREATIVE DECK: STREAM-DECK-BIBLIOTHEK FEHLT"
 COPY deck/creative_deck /usr/lib/creative-deck/creative_deck
 COPY deck/creative-deck.svg /usr/lib/creative-deck/creative-deck.svg
@@ -355,7 +355,7 @@ RUN chmod 755 /usr/bin/creative-deck \
  && printf 'uinput\n' > /usr/lib/modules-load.d/creative-deck.conf
 
 # ---------------------------------------------------------------------------
-# 8a4) Creative Pictures (Bildbetrachter) und Creative Shots (Bildschirmfotos)
+# 8a4) Pictures (Bildbetrachter) und Shots (Bildschirmfotos)
 # ---------------------------------------------------------------------------
 RUN dnf install -y --skip-unavailable python3-pillow qt6-qtimageformats kf6-kimageformats spectacle xdg-user-dirs \
  && dnf clean all
@@ -370,8 +370,8 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
     | sed '/^$/d; s/$/=creative-pictures.desktop/' >> /etc/xdg/mimeapps.list
 
 # ---------------------------------------------------------------------------
-# 8a6) Creative Broadcast – rauschfreies Mikrofon (DeepFilterNet) und virtueller
-#      Greenscreen (Robust Video Matting → virtuelle Kamera „Creative Kamera“)
+# 8a6) Broadcast – rauschfreies Mikrofon (DeepFilterNet) und virtueller
+#      Greenscreen (Robust Video Matting → virtuelle Kamera „Orbit Kamera“)
 # ---------------------------------------------------------------------------
 # Virtuelle Kamera: Kernelmodul v4l2loopback (RPM Fusion), beim Bauen erzeugt
 RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
@@ -379,7 +379,7 @@ RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{A
  && dnf install -y --setopt=tsflags=noscripts akmod-v4l2loopback v4l2loopback \
  && akmods --force --kernels "${KVER}" --kmod v4l2loopback \
  && /usr/libexec/creative-sign-modules "${KVER}" 'v4l2loopback' \
- && (find "/usr/lib/modules/${KVER}" -name 'v4l2loopback.ko*' | grep -q . && echo "Creative Broadcast: virtuelle Kamera ok" \
+ && (find "/usr/lib/modules/${KVER}" -name 'v4l2loopback.ko*' | grep -q . && echo "Broadcast: virtuelle Kamera ok" \
      || echo "BROADCAST: V4L2LOOPBACK FEHLT") ; dnf clean all
 COPY broadcast/modprobe-creative-kamera.conf /usr/lib/modprobe.d/creative-kamera.conf
 COPY broadcast/modules-load-creative-kamera.conf /usr/lib/modules-load.d/creative-kamera.conf
@@ -394,13 +394,13 @@ RUN dnf install -y --skip-unavailable python3-opencv python3-numpy python3-onnxr
 # KI-Upscaling der Kamera: 2xNomosUni_span_multijpg (Philip Hofmann, CC-BY-4.0), FP16 für die Grafikkarte
 RUN curl -fsSL -o /usr/share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx \
         https://github.com/Phhofm/models/releases/download/2xNomosUni_span_multijpg/2xNomosUni_span_multijpg_fp16_opset17.onnx \
- && echo "Creative Broadcast: Upscaling-Modell ok" || echo "BROADCAST: UPSCALING-MODELL FEHLT"
+ && echo "Broadcast: Upscaling-Modell ok" || echo "BROADCAST: UPSCALING-MODELL FEHLT"
 # Rauschentfernung: DeepFilterNet als LADSPA-Filter für PipeWire (wird hier übersetzt)
 RUN dnf install -y --skip-unavailable cargo rust gcc git && dnf clean all \
  && cd /tmp && git clone -q --depth 1 https://github.com/Rikorose/DeepFilterNet \
  && cd DeepFilterNet && CARGO_HOME=/tmp/cargo cargo build -q --release -p deep-filter-ladspa \
  && install -Dm755 target/release/libdeep_filter_ladspa.so /usr/lib64/ladspa/libdeep_filter_ladspa.so \
- && echo "Creative Broadcast: DeepFilterNet ok" || echo "BROADCAST: DEEPFILTERNET FEHLT"; \
+ && echo "Broadcast: DeepFilterNet ok" || echo "BROADCAST: DEEPFILTERNET FEHLT"; \
     cd / && rm -rf /tmp/DeepFilterNet /tmp/cargo; dnf remove -y cargo rust >/dev/null 2>&1; dnf clean all
 # CUDA-Runtime nur im NVIDIA-Abbild, isoliert von anderen Systemprogrammen.
 # CUDA 12 bleibt für diese erste Integration explizit ausgewählt.
@@ -428,19 +428,19 @@ COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-blueto
 COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
 COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py
 RUN python3 /tmp/bluez-anpassen.py /etc/bluetooth/main.conf && rm -f /tmp/bluez-anpassen.py
-# Benachrichtigungen (org.freedesktop.Notifications) im Creative-Look
+# Benachrichtigungen (org.freedesktop.Notifications) im Orbit-Look
 RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
 COPY notify/creative_notify /usr/lib/creative-notify/creative_notify
 COPY notify/bin/creative-notifyd /usr/bin/creative-notifyd
 RUN chmod 755 /usr/bin/creative-notifyd
 
-# Creative Capture – Capture-Karte anzeigen (Bild + Ton, Vollbild, Foto, Aufnahme)
+# Capture – Capture-Karte anzeigen (Bild + Ton, Vollbild, Foto, Aufnahme)
 COPY capture/creative_capture /usr/lib/creative-capture/creative_capture
 COPY capture/bin/creative-capture /usr/bin/creative-capture
 COPY capture/creative-capture.desktop /usr/share/applications/creative-capture.desktop
 RUN chmod 755 /usr/bin/creative-capture
 
-# Creative Iso – Installations-ISOs erstellen (aus diesem System oder als Netzinstallation)
+# Iso – Installations-ISOs erstellen (aus diesem System oder als Netzinstallation)
 COPY iso/creative_iso /usr/lib/creative-iso/creative_iso
 COPY iso/bin/creative-iso /usr/bin/creative-iso
 COPY iso/creative-iso-helper /usr/libexec/creative-iso-helper
@@ -448,7 +448,7 @@ COPY iso/org.creativeos.iso.policy /usr/share/polkit-1/actions/org.creativeos.is
 COPY iso/creative-iso.desktop /usr/share/applications/creative-iso.desktop
 COPY image/netinstall /usr/share/creative-iso/netinstall
 RUN chmod 755 /usr/bin/creative-iso /usr/libexec/creative-iso-helper /usr/share/creative-iso/netinstall/brand-iso.sh \
- && (command -v podman >/dev/null && echo "Creative Iso: podman da" || echo "CREATIVE-ISO: PODMAN FEHLT") \
+ && (command -v podman >/dev/null && echo "Iso: podman da" || echo "CREATIVE-ISO: PODMAN FEHLT") \
  && mkdir -p /usr/share/creative-os && if [ "$NVIDIA" = "1" ]; then echo nvidia; else echo amd; fi > /usr/share/creative-os/variant
 
 # OBS Studio (Original, Qt) – läuft unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen.
@@ -462,7 +462,7 @@ RUN chmod 755 /usr/bin/creative-obs \
       sed -i -E 's#^Exec=obs( |$)#Exec=creative-obs\1#; s#^TryExec=obs$#TryExec=creative-obs#' "$f"; grep -n "^Exec" "$f"; fi
 
 # ---------------------------------------------------------------------------
-# 8a2) Creative Calculator – eigener Rechner (ersetzt KCalc)
+# 8a2) Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
 COPY calculator/creative_calculator /usr/lib/creative-calculator/creative_calculator
 COPY calculator/bin/creative-calculator /usr/bin/creative-calculator
@@ -570,7 +570,7 @@ RUN chmod 755 /usr/bin/creative-welcome
 # ---------------------------------------------------------------------------
 # Was das System braucht, lässt sich nicht entfernen (auch nicht versehentlich)
 COPY theme/protected.conf /etc/dnf/protected.d/creative-os.conf
-# Standard-Apps: Terminal, Spectacle (nimmt für Creative Shots im Hintergrund auf),
+# Standard-Apps: Terminal, Spectacle (nimmt für Shots im Hintergrund auf),
 # Entpacken (unsichtbar, für ZIP-Dateien)
 RUN dnf install -y --skip-unavailable konsole spectacle ark liberation-mono-fonts jetbrains-mono-fonts-all qt6-qttranslations \
         plasma-integration breeze-gtk breeze-icon-theme \
@@ -586,24 +586,24 @@ RUN for p in firefox firefox-langpacks okular kate kde-connect kdeconnectd kwall
         dnf remove -y "$p" >/dev/null 2>&1 && echo "entfernt: $p" || echo "bleibt (wird gebraucht): $p"; \
     done \
  && dnf clean all
-# Webseiten und PDFs öffnet der Creative Browser (Okular ist entfernt)
+# Webseiten und PDFs öffnet der Browser (Okular ist entfernt)
 RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps.list; do \
         for m in application/pdf text/html application/xhtml+xml x-scheme-handler/http x-scheme-handler/https; do \
             echo "$m=creative-browser.desktop" >> "$f"; \
         done; \
     done
 
-# Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Creative-Symbole, Startmenü
+# Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Orbit-Symbole, Startmenü
 COPY theme /tmp/creative-theme
 RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creative/icons \
         sh /tmp/creative-theme/install.sh \
  && rm -rf /tmp/creative-theme
-# Creative Engine (Flatpak aus „Eigene Apps“): Symbol aus dem Creative-Design hat Vorrang
+# Engine (Flatpak aus „Eigene Apps“): Symbol aus dem Orbit-Design hat Vorrang
 COPY engine/flatpak/org.creativeos.Engine.svg /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg
 RUN sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
         /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg \
         > /usr/share/icons/CreativePorzellan/apps/scalable/org.creativeos.Engine.svg
-# OBS Studio: Symbol im Creative-Stil (wie alle Apps) – ersetzt das Original überall
+# OBS Studio: Symbol im Orbit-Stil (wie alle Apps) – ersetzt das Original überall
 # (Startmenü, Taskleiste, Tray, Titelleiste), auch bei der Flatpak-Version von OBS
 COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.svg
 RUN for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
@@ -631,7 +631,7 @@ RUN (systemctl disable plasmalogin.service 2>/dev/null || true) \
  && systemctl enable --force sddm.service
 
 # ---------------------------------------------------------------------------
-# 8d) Start- und Ausschaltbildschirm mit Creative-Logo statt Fedora
+# 8d) Start- und Ausschaltbildschirm mit Orbit-Logo statt Fedora
 #     (Plymouth-Thema; die Startdatei initramfs wird dafür neu erzeugt)
 # ---------------------------------------------------------------------------
 COPY image/plymouth /tmp/creative-plymouth
@@ -654,7 +654,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
 # 9) Systemeinstellungen
 # ---------------------------------------------------------------------------
 # Name des Systems (ID bleibt "fedora", damit Updates und Paketquellen passen)
-# Überall „Creative OS“ statt Fedora (ID bleibt "fedora", damit Updates und
+# Überall „Orbit OS“ statt Fedora (ID bleibt "fedora", damit Updates und
 # Paketquellen weiter passen – Fedora ist nur noch der Unterbau)
 COPY image/plymouth/watermark.png /usr/share/pixmaps/creative-os-logo.png
 COPY LICENSE /usr/share/licenses/creative-os/LICENSE
@@ -664,11 +664,11 @@ RUN v="$(date +%Y.%m.%d)" \
  && nr="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["nummer"])')" \
  && cn="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["codename"])')" \
  && kurz="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["kurz"])')" \
- && sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
-           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Creative OS ${nr} · ${cn}\"/" \
+ && sed -i -e 's/^NAME=.*/NAME="Orbit OS"/' \
+           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Orbit OS ${nr} · ${cn}\"/" \
            -e "s/^VERSION=.*/VERSION=\"${nr} · ${cn} (${v})\"/" \
            -e "s/^VERSION_CODENAME=.*/VERSION_CODENAME=${kurz}/" \
-           -e 's/^VARIANT=.*/VARIANT="Creative OS"/' \
+           -e 's/^VARIANT=.*/VARIANT="Orbit OS"/' \
            -e 's/^LOGO=.*/LOGO=creative-os-logo/' \
            -e 's|^HOME_URL=.*|HOME_URL="https://github.com/markuspinkall-ux/creative-os"|' \
            -e 's|^SUPPORT_URL=.*|SUPPORT_URL="https://github.com/markuspinkall-ux/creative-os"|' \
@@ -679,7 +679,7 @@ RUN v="$(date +%Y.%m.%d)" \
  && (grep -q '^DEFAULT_HOSTNAME=' /usr/lib/os-release \
        && sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="creative-os"/' /usr/lib/os-release \
        || echo 'DEFAULT_HOSTNAME="creative-os"' >> /usr/lib/os-release)
-# Fedora-Logos überall durch das Creative-Logo ersetzen (Fedora bleibt nur der Unterbau)
+# Fedora-Logos überall durch das Orbit-Logo ersetzen (Fedora bleibt nur der Unterbau)
 COPY image/debrand.py /tmp/debrand.py
 RUN python3 /tmp/debrand.py /usr/share/pixmaps/creative-os-logo.png \
  && rm -f /tmp/debrand.py /usr/share/kf6/searchproviders/fedora.desktop \
@@ -730,11 +730,11 @@ RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rp
  && systemctl enable rpm-ostreed-automatic.timer
 
 # Abschlussprüfung des Abbilds
-# Druck-Taste gehört Creative Shots, Strg+Alt+Entf dem Taskmanager – Spectacle und
+# Druck-Taste gehört Shots, Strg+Alt+Entf dem Taskmanager – Spectacle und
 # das KDE-Abmelden sollen diese Tasten nicht mehr belegen
 RUN f=/usr/share/applications/org.kde.spectacle.desktop; [ -f "$f" ] && sed -i '/^X-KDE-Shortcuts/d' "$f" || true
 
-# „Software“ zeigt die Creative-Namen und -Logos (auch unter „Installiert“)
+# „Software“ zeigt die Orbit-Namen und -Logos (auch unter „Installiert“)
 COPY image/appstream-brand.py /tmp/appstream-brand.py
 RUN python3 /tmp/appstream-brand.py && rm -f /tmp/appstream-brand.py \
  && (command -v appstreamcli >/dev/null && appstreamcli refresh-cache --force >/dev/null 2>&1 || true)
@@ -787,19 +787,19 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/gl-home timeout 60 
     || echo "GAMELAUNCHER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/gl-home
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/deck-home timeout 60 /usr/bin/creative-deck --selftest \
     || echo "CREATIVE-DECK-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/deck-home
-# Creative Shots und Creative Pictures kurz ohne Bildschirm durchtesten
+# Shots und Pictures kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-shots --selftest \
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
     QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-pictures --selftest \
     || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home
-# Creative Player: startet er (mit eingebautem Browser für YouTube Music)?
+# Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
-# Creative Podcast: QML-Oberfläche und Multimedia-Laufzeit laden.
+# Podcast: QML-Oberfläche und Multimedia-Laufzeit laden.
 RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio /usr/bin/creative-cut --selftest
 RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio HOME=/tmp/podcast-home timeout 30 /usr/bin/creative-podcast --selftest \
  && rm -rf /tmp/podcast-home
-# Creative Broadcast: KI-Freistellung und Rauschfilter vorhanden?
+# Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home
 # Willkommens-Assistent: Oberfläche lädt?
@@ -808,13 +808,13 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 
 # Benachrichtigungen: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/nt-home timeout 60 /usr/bin/creative-notifyd --selftest \
     || echo "BENACHRICHTIGUNGEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/nt-home
-# Creative Capture: Oberfläche lädt?
+# Capture: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/cap-home timeout 60 /usr/bin/creative-capture --selftest \
     || echo "CAPTURE-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/cap-home
-# Creative Iso: Oberfläche lädt?
+# Iso: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/iso-home timeout 60 /usr/bin/creative-iso --selftest \
     || echo "ISO-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/iso-home
-# Creative Notes kurz ohne Bildschirm durchtesten
+# Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home
 

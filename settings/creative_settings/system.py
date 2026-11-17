@@ -32,10 +32,10 @@ def os_name():
 
 
 def release_info():
-    """Versionsnummer und Codename von Creative OS, z. B. „Creative OS 2 · Vivid Venus“."""
+    """Versionsnummer und Codename von Orbit OS, z. B. „Orbit OS 2 · Vivid Venus“."""
     try:
         data = json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
-        return f"Creative OS {data['nummer']} · {data['codename']}"
+        return f"Orbit OS {data['nummer']} · {data['codename']}"
     except (OSError, ValueError, KeyError):
         return ""
 
@@ -288,7 +288,7 @@ class SystemModel(QObject):
         elif staged:
             self._set_upd(state="reboot", text="Ein Update ist bereit. Es wird beim nächsten Neustart aktiv.")
         else:
-            self._set_upd(state="current", text="Creative OS ist auf dem neuesten Stand.")
+            self._set_upd(state="current", text="Orbit OS ist auf dem neuesten Stand.")
 
     @Slot()
     def checkUpdates(self):
@@ -300,7 +300,7 @@ class SystemModel(QObject):
         def done(code, out, err):
             self._upd["busy"] = False
             if code == 77 or "No updates available" in out:
-                self._set_upd(state="current", text="Creative OS ist auf dem neuesten Stand.")
+                self._set_upd(state="current", text="Orbit OS ist auf dem neuesten Stand.")
             elif code == 0:
                 self._set_upd(state="available", text="Ein Update ist verfügbar.")
             else:
@@ -631,7 +631,7 @@ class LookModel(QObject):
         self._wall_anim = bool(cfg.get("wallpaperAnimated", True))
         self._gadgets = {}
         self._read_gadgets(cfg)
-        # Gadgets können auch per Creative Widgets umgeschaltet werden – Stand mitverfolgen
+        # Gadgets können auch per Widgets umgeschaltet werden – Stand mitverfolgen
         cfg_dir = shell_config.config_dir()
         cfg_dir.mkdir(parents=True, exist_ok=True)
         self._cfg_watch = QFileSystemWatcher([str(cfg_dir)], self)
@@ -733,7 +733,7 @@ class LookModel(QObject):
             shell_config.set_value("hiddenStartApps", hidden)
         self.refreshHiddenApps()
 
-    # ---- Widgets (wie in Creative Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
+    # ---- Widgets (wie in Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
     GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
     WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "notes", "twitch", "ki", "viz")
 

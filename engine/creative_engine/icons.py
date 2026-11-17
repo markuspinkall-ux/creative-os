@@ -1,4 +1,4 @@
-"""Symbole für die Creative Engine (wie Creative Writer): schlichte Strich-Icons (24×24), passend zur Graphit-Optik.
+"""Symbole für die Engine (wie Writer): schlichte Strich-Icons (24×24), passend zur Graphit-Optik.
 
 icon(name, color) → QIcon. Die Formen sind bewusst einfach gehalten und werden in der
 Textfarbe des Designs gezeichnet (hell auf Graphit, dunkel auf Porzellan).
@@ -89,7 +89,7 @@ SHAPES = {
     "back": '<path d="M15 6l-6 6 6 6"/>',
     "up": '<path d="M6 15l6-6 6 6"/>',
     "bubble": '<path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 9.5h8M8 12.5h5" stroke="{a}"/>',
-    # Creative Engine
+    # Engine
     "play": '<path d="M7 4.5v15l12-7.5z" fill="{a}"/>',
     "stop": '<rect x="6" y="6" width="12" height="12" rx="2" fill="{a}"/>',
     "brick": '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 12h18M9 5v7M15 12v7"/>',

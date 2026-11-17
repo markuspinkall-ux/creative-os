@@ -1,4 +1,4 @@
-"""Tests für Creative Cut: Zeitleiste, Projektformat und FFmpeg-Export.
+"""Tests für Cut: Zeitleiste, Projektformat und FFmpeg-Export.
 
 python3 -m unittest tests/test_cut.py
 Der Render-Test läuft nur, wenn ffmpeg/ffprobe installiert sind.

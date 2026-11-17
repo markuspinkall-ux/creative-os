@@ -50,7 +50,7 @@ def main():
         shots._image = img
         shots.crop(strokes, 5, 5, 50, 40)
         assert shots._image.width() == 50 and shots._image.height() == 40
-        print("Creative Shots: Selbsttest bestanden")
+        print("Shots: Selbsttest bestanden")
         return 0
     if snip:
         QTimer.singleShot(150, shots.startSnip)

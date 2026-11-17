@@ -1,4 +1,4 @@
-"""Creative Mail: Nachrichten zerlegen und bauen (ohne Netz, ohne Qt)."""
+"""Mail: Nachrichten zerlegen und bauen (ohne Netz, ohne Qt)."""
 
 import sys
 import unittest

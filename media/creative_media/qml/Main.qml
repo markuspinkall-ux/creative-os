@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 import QtMultimedia
 import Creative
 
-// Creative Player – Musik, Videos und IPTV im Graphit-Look.
+// Player – Musik, Videos und IPTV im Graphit-Look.
 Window {
     id: win
 
@@ -13,7 +13,7 @@ Window {
     minimumWidth: 900
     minimumHeight: 600
     visible: true
-    title: nowTitle.length > 0 ? nowTitle + " – Creative Player" : "Creative Player"
+    title: nowTitle.length > 0 ? nowTitle + " – Player" : "Player"
     color: Theme.surface
 
     property string section: "music"          // music | ytmusic | videos | iptv
@@ -189,7 +189,7 @@ Window {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: sidebar.open
-                        text: "Creative Player"
+                        text: "Player"
                         color: Theme.text
                         font.family: Theme.fontFamily
                         font.pixelSize: 15

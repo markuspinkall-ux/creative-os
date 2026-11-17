@@ -62,18 +62,18 @@ def outputs():
         files[CREATIVE / "icons-light" / svg.name] = swap_hex(svg.read_text())
     gtk = ROOT / "theme/gtk/gtk.css"
     css = swap_rgba(swap_hex(gtk.read_text()))
-    css = css.replace("/* Creative OS – Graphit", "/* Creative OS – Porzellan", 1)
+    css = css.replace("/* Orbit OS – Graphit", "/* Orbit OS – Porzellan", 1)
     files[ROOT / "theme/gtk/gtk-light.css"] = css
     colors = (ROOT / "theme/CreativeGraphit.colors").read_text()
-    colors = swap_triplets(colors).replace("Name=Creative Graphit", "Name=Creative Porzellan") \
+    colors = swap_triplets(colors).replace("Name=Graphit", "Name=Porzellan") \
         .replace("ColorScheme=CreativeGraphit", "ColorScheme=CreativePorzellan")
     files[ROOT / "theme/CreativePorzellan.colors"] = colors
     kon = (ROOT / "theme/konsole/CreativeGraphit.colorscheme").read_text()
-    kon = swap_triplets(kon).replace("Description=Creative Graphit", "Description=Creative Porzellan")
+    kon = swap_triplets(kon).replace("Description=Graphit", "Description=Porzellan")
     files[ROOT / "theme/konsole/CreativePorzellan.colorscheme"] = kon
     prof = (ROOT / "theme/konsole/CreativeGraphit.profile").read_text()
     prof = prof.replace("ColorScheme=CreativeGraphit", "ColorScheme=CreativePorzellan") \
-        .replace("Name=Creative Graphit", "Name=Creative Porzellan") \
+        .replace("Name=Graphit", "Name=Porzellan") \
         .replace("CustomCursorColor=143,179,255", "CustomCursorColor=61,111,224") \
         .replace("CustomCursorTextColor=18,21,27", "CustomCursorTextColor=255,255,255")
     files[ROOT / "theme/konsole/CreativePorzellan.profile"] = prof

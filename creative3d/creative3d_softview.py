@@ -1,4 +1,4 @@
-"""Ausweich-Vorschau für Creative 3D – zeichnet die Figur ohne Grafikkarte.
+"""Ausweich-Vorschau für 3D Studio – zeichnet die Figur ohne Grafikkarte.
 
 Wird benutzt, wenn die Web-Vorschau (WebGL) auf dem PC nicht läuft, z. B.
 wenn die eingebaute Browser-Engine die Grafikkarte abschaltet. Die Figur wird

@@ -1,4 +1,4 @@
-"""Creative 3D – Gelenk-Editor: Ankerpunkte für das Skelett setzen.
+"""3D Studio – Gelenk-Editor: Ankerpunkte für das Skelett setzen.
 
 Zwei Ansichten der Figur (von vorn und von der Seite) als Silhouette.
 Gelenke sind Punkte, die man mit der Maus verschiebt: vorn ändert links/rechts
@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButt
 
 import creative3d_rig as R
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import themed as T
 except ImportError:
     def T(value):

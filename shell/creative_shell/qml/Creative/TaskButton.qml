@@ -6,7 +6,7 @@ import Creative
 Item {
     id: root
 
-    property string icon        // eigenes Creative-Symbol (files, browser, terminal)
+    property string icon        // eigenes Orbit-Symbol (files, browser, terminal)
     property string themeIcon   // sonst Symbol aus dem Icon-Theme
     property string label
     property bool running: false
@@ -35,7 +35,7 @@ Item {
         size: 22
     }
 
-    // Graphit-Kachel aus dem Creative-Symbolthema (wie im Startmenü)
+    // Graphit-Kachel aus dem Orbit-Symbolthema (wie im Startmenü)
     Image {
         anchors.centerIn: parent
         visible: root.icon.length === 0

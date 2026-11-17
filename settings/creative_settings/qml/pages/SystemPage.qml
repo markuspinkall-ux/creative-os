@@ -201,27 +201,27 @@ SettingsPage {
         onConfirmed: if (account) system.deleteAccount(account.uid, account.name)
     }
 
-    // ---- Danke: worauf Creative OS aufbaut --------------------------------------------------
+    // ---- Danke: worauf Orbit OS aufbaut --------------------------------------------------
     Card {
-        title: "Über Creative OS"
-        subtitle: "Creative OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
+        title: "Über Orbit OS"
+        subtitle: "Orbit OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
         Repeater {
             id: credits
             model: [
                 { app: "Unterbau", base: "Fedora Kinoite (Fedora-Projekt)" },
                 { app: "Fenster, Anmeldung, Sitzung", base: "KDE Plasma: KWin, SDDM, KDE Frameworks" },
-                { app: "Oberflächen der Creative-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
+                { app: "Oberflächen der Orbit-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
                 { app: "Software", base: "Flatpak und Flathub" },
                 { app: "Terminal", base: "Konsole (KDE)" },
                 { app: "Entpacken", base: "Ark (KDE)" },
                 { app: "Laufwerke", base: "UDisks, exfatprogs, ntfsprogs" },
                 { app: "OBS Studio", base: "OBS Studio (OBS Project, GPL v2) – unverändert, nur im Graphit-Look" },
-                { app: "Creative Broadcast", base: "DeepFilterNet (Rauschfilter), Robust Video Matting (Freistellung), v4l2loopback" },
-                { app: "Creative Iso", base: "bootc-image-builder, Lorax/mkksiso, Anaconda (Fedora-Installer)" },
+                { app: "Broadcast", base: "DeepFilterNet (Rauschfilter), Robust Video Matting (Freistellung), v4l2loopback" },
+                { app: "Iso", base: "bootc-image-builder, Lorax/mkksiso, Anaconda (Fedora-Installer)" },
                 { app: "Automatisches Zurückrollen", base: "greenboot" },
-                { app: "Bildschirmfoto-Dienst für Creative Shots", base: "Spectacle (KDE)" },
+                { app: "Bildschirmfoto-Dienst für Shots", base: "Spectacle (KDE)" },
                 { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
-                { app: "YouTube Music im Creative Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
+                { app: "YouTube Music im Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
                 { app: "Mein Server", base: "Caddy und PHP" },
                 { app: "Browser, Spiele, Chat", base: "Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
             ]
@@ -239,7 +239,7 @@ SettingsPage {
     Card {
         title: "Quellcode und Lizenzen"
         SettingRow {
-            label: "Eigene Programme von Creative OS"
+            label: "Eigene Programme von Orbit OS"
             hint: "© 2026 Markus Pinkall – alle Rechte vorbehalten. Der Quellcode ist auf GitHub einsehbar, darf aber ohne Erlaubnis nicht übernommen werden."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }

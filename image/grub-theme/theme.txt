@@ -1,4 +1,4 @@
-# Creative OS – Startauswahl des installierten Systems im Graphit-Look (GRUB 2)
+# Orbit OS – Startauswahl des installierten Systems im Graphit-Look (GRUB 2)
 # Erscheint nur bei Problemen oder mit gedrückter Umschalttaste beim Start.
 title-text: ""
 desktop-image: "background.png"
@@ -23,7 +23,7 @@ terminal-border: "0"
     top = 14%+8
     width = 70%
     height = 48
-    text = "Creative OS"
+    text = "Orbit OS"
     font = "Liberation Sans Bold 36"
     color = "#dce6ff"
 }

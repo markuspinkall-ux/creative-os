@@ -46,7 +46,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Iso: Selbsttest bestanden")
+        print("Iso: Selbsttest bestanden")
         return 0
     win = engine.rootObjects()[0]
     from PySide6.QtNetwork import QLocalServer

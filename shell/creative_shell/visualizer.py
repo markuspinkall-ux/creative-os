@@ -1,7 +1,7 @@
 """Musik-Visualizer hinter der Taskleiste.
 
 Hört am „Monitor“ der Standard-Audioausgabe mit (alles, was gerade zu hören
-ist – Creative Player, Brave, Spotify …) und rechnet daraus Balken.
+ist – Player, Brave, Spotify …) und rechnet daraus Balken.
 Läuft nur, solange überhaupt etwas abgespielt wird; ist es still,
 blenden die Balken aus und die Aufnahme wird beendet.
 """
@@ -82,7 +82,7 @@ class Visualizer(QObject):
         try:
             self._proc = subprocess.Popen(
                 ["parec", "--device=@DEFAULT_MONITOR@", f"--rate={RATE}", "--channels=1", "--format=float32le",
-                 "--raw", "--latency-msec=30", "--client-name=Creative Visualizer", "--stream-name=Taskleiste"],
+                 "--raw", "--latency-msec=30", "--client-name=Visualizer", "--stream-name=Taskleiste"],
                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         except OSError:
             self._proc = None

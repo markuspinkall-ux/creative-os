@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert den Creative Calculator (setzt die Creative Shell voraus).
+# Installiert den Calculator (setzt die Shell voraus).
 set -eu
 cd "$(dirname "$0")"
 if [ "$(id -u)" -ne 0 ]; then
@@ -13,4 +13,4 @@ find /usr/lib/creative-calculator -name '__pycache__' -prune -exec rm -rf {} +
 install -Dm755 bin/creative-calculator /usr/bin/creative-calculator
 install -Dm644 creative-calculator.desktop /usr/share/applications/creative-calculator.desktop
 update-desktop-database -q /usr/share/applications 2>/dev/null || true
-echo "Fertig. „Creative Calculator“ steht jetzt im Startmenü."
+echo "Fertig. „Calculator“ steht jetzt im Startmenü."

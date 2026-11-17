@@ -94,7 +94,7 @@ class AdBlock {
 
   async init() {
     if (!ElectronBlocker) {
-      console.error('Creative Browser: Werbeblocker nicht verfügbar:', this.error);
+      console.error('Browser: Werbeblocker nicht verfügbar:', this.error);
       return false;
     }
     const cache = path.join(this.dir, 'werbeblocker.bin');
@@ -109,7 +109,7 @@ class AdBlock {
       });
     } catch (e) {
       this.error = `Filterliste ließ sich nicht laden (${e.message})`;
-      console.error('Creative Browser:', this.error);
+      console.error('Browser:', this.error);
       return false;
     }
     // Ausnahmen (Seiten, auf denen der Nutzer den Blocker ausgeschaltet hat) und Zähler pro Tab:
@@ -166,7 +166,7 @@ class AdBlock {
     try {
       if (on && !this.active.has(ses)) { this.blocker.enableBlockingInSession(ses); this.active.add(ses); }
       if (!on && this.active.has(ses)) { this.blocker.disableBlockingInSession(ses); this.active.delete(ses); }
-    } catch (e) { console.error('Creative Browser: Werbeblocker:', e.message); }
+    } catch (e) { console.error('Browser: Werbeblocker:', e.message); }
   }
 
   setEnabled(on) {

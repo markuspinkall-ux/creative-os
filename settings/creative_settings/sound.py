@@ -57,7 +57,7 @@ def parse_streams(text, kind):
         props = s.get("properties") or {}
         app = props.get("application.name") or props.get("media.name") or "Programm"
         # Eigene Mess-Streams nicht anzeigen
-        if app in ("Creative Visualizer", "PulseAudio Volume Control") or props.get("media.role") == "test":
+        if app in ("Visualizer", "PulseAudio Volume Control") or props.get("media.role") == "test":
             continue
         if kind == "input" and props.get("application.process.binary") in ("parec",) and \
                 "Visualizer" in (props.get("application.name") or ""):
@@ -210,7 +210,7 @@ class SoundModel(QObject):
             self._meter.readyReadStandardOutput.connect(self._on_meter)
             self._meter.start("parec", ["--device=@DEFAULT_SOURCE@", "--rate=16000", "--channels=1",
                                         "--format=s16le", "--raw", "--latency-msec=50",
-                                        "--client-name=Creative Systemsteuerung", "--stream-name=Pegel"])
+                                        "--client-name=Systemsteuerung", "--stream-name=Pegel"])
         elif not on and self._meter is not None:
             self._meter.kill()
             self._meter.deleteLater()

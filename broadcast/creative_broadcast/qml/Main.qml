@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Broadcast – rauschfreies Mikrofon und virtueller Greenscreen.
+// Broadcast – rauschfreies Mikrofon und virtueller Greenscreen.
 Window {
     id: win
     width: 980
@@ -11,7 +11,7 @@ Window {
     minimumWidth: 820
     minimumHeight: 640
     visible: true
-    title: "Creative Broadcast"
+    title: "Broadcast"
     color: Theme.surface
 
     onActiveChanged: bc.setPreview(active && bc.camera)
@@ -29,7 +29,7 @@ Window {
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            Text { text: "Creative Broadcast"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
+            Text { text: "Broadcast"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
             Text { text: "Rauschfreies Mikrofon und virtueller Hintergrund für Discord, Teams, OBS und Co."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
         }
     }
@@ -89,7 +89,7 @@ Window {
                 }
                 CButton { id: refreshMics; text: "Aktualisieren"; onClicked: bc.refreshMicrophones() }
             }
-            InfoRow { label: "Neue Eingabe"; value: "Creative Mikrofon (rauschfrei)" }
+            InfoRow { label: "Neue Eingabe"; value: "Orbit Mikrofon (rauschfrei)" }
             InfoRow { label: "Technik"; value: bc.deepFilter ? "DeepFilterNet (KI)" : "WebRTC (Ersatz)" }
             InfoRow { label: "Zustand"; value: bc.voice ? bc.voiceStatus : "Aus" }
             Item { width: 1; height: 8 }
@@ -97,7 +97,7 @@ Window {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 visible: bc.voice
-                text: "In Discord, Teams oder Zoom „Creative Mikrofon (rauschfrei)“ als Mikrofon wählen."
+                text: "In Discord, Teams oder Zoom „Orbit Mikrofon (rauschfrei)“ als Mikrofon wählen."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }
@@ -291,7 +291,7 @@ Window {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 visible: bc.camera && !upWarn.visible
-                text: "In Discord, Teams, Zoom oder OBS die Kamera „Creative Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
+                text: "In Discord, Teams, Zoom oder OBS die Kamera „Orbit Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }

@@ -1,9 +1,9 @@
-"""Creative-Installation: reine Logik ohne Oberfläche (testbar ohne Qt und ohne root).
+"""Orbit-Installation: reine Logik ohne Oberfläche (testbar ohne Qt und ohne root).
 
 - Festplatten aus ``lsblk --json`` aufbereiten (welche dürfen gewählt werden?)
 - Benutzername aus dem vollen Namen vorschlagen
 - Eingaben prüfen
-- Kickstart-Datei für Anaconda erzeugen (ganze Platte, Btrfs, Creative OS aus dem
+- Kickstart-Datei für Anaconda erzeugen (ganze Platte, Btrfs, Orbit OS aus dem
   Abbild auf dem USB-Stick, danach Updates aus der GitHub-Registry)
 """
 
@@ -11,7 +11,7 @@ import json
 import re
 import unicodedata
 
-MIN_BYTES = 40 * 1000 ** 3          # unter 40 GB passt Creative OS nicht sinnvoll drauf
+MIN_BYTES = 40 * 1000 ** 3          # unter 40 GB passt Orbit OS nicht sinnvoll drauf
 IMAGE_REPO = "ghcr.io/markuspinkall-ux/creative-os"
 USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$")
@@ -181,7 +181,7 @@ def kickstart(cfg, password_hash, source_ref=None):
     disk = cfg["disk"].removeprefix("/dev/")
     vc, xl = KEYBOARDS[cfg.get("keyboard", "Deutsch")]
     gecos = cfg["fullName"].strip()
-    return f"""# Creative OS – automatisch erzeugt von der Creative-Installation
+    return f"""# Orbit OS – automatisch erzeugt von der Orbit-Installation
 lang de_DE.UTF-8
 keyboard --vckeymap={vc} --xlayouts='{xl}'
 timezone {cfg.get("timezone", "Europe/Berlin")} --utc
@@ -195,7 +195,7 @@ rootpw --lock
 # Grafische Anmeldung nach dem Start (sonst setzt die Kommandozeilen-Installation multi-user)
 xconfig --startxonboot
 user --name={cfg["userName"]} --gecos="{gecos}" --groups=wheel --iscrypted --password={password_hash}
-# Creative OS kommt vom Stick (ohne Internet) …
+# Orbit OS kommt vom Stick (ohne Internet) …
 ostreecontainer --url={source} --transport=containers-storage --no-signature-verification
 
 %pre-install --log=/tmp/creative-pre-install.log
@@ -214,17 +214,17 @@ bootc switch --mutate-in-place --transport registry {target} || rpm-ostree rebas
 # Platz für die Installation wieder freigeben (siehe %pre-install)
 umount /var/tmp 2>/dev/null || true
 rm -rf /mnt/sysroot/.creative-tmp /mnt/sysimage/.creative-tmp 2>/dev/null || true
-# Secure Boot: Schlüssel der Creative-OS-Treiber zur Freischaltung vormerken (Passwort: creative)
+# Secure Boot: Schlüssel der Orbit-OS-Treiber zur Freischaltung vormerken (Passwort: creative)
 if [ -d /sys/firmware/efi ] && mokutil --sb-state 2>/dev/null | grep -qi enabled; then
-    key=/usr/share/creative-os/secureboot/creative-os-mok.der   # die Live-Umgebung ist Creative OS selbst
+    key=/usr/share/creative-os/secureboot/creative-os-mok.der   # die Live-Umgebung ist Orbit OS selbst
     [ -f "$key" ] && printf 'creative\\ncreative\\n' | mokutil --import "$key" || true
 fi
-# Eintrag im Startmenü des PCs: „Creative OS“ statt „Fedora“
+# Eintrag im Startmenü des PCs: „Orbit OS“ statt „Fedora“
 if [ -d /sys/firmware/efi ] && command -v efibootmgr >/dev/null 2>&1; then
     num=$(efibootmgr 2>/dev/null | grep -E '^Boot[0-9A-F]{{4}}\\*? +Fedora' | head -1 | sed -E 's/^Boot([0-9A-F]{{4}}).*/\\1/')
     part=$(lsblk -lnpo NAME,PARTTYPE /dev/{disk} | awk 'tolower($2)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{{print $1; exit}}')
     pnum=$(cat "/sys/class/block/$(basename "$part")/partition" 2>/dev/null)
-    if [ -n "$num" ] && [ -n "$pnum" ] && efibootmgr -q -c -d /dev/{disk} -p "$pnum" -L "Creative OS" -l '\\EFI\\fedora\\shimx64.efi'; then
+    if [ -n "$num" ] && [ -n "$pnum" ] && efibootmgr -q -c -d /dev/{disk} -p "$pnum" -L "Orbit OS" -l '\\EFI\\fedora\\shimx64.efi'; then
         efibootmgr -q -b "$num" -B || true
     fi
 fi
@@ -241,12 +241,12 @@ STAGES = [
     ("Creating btrfs", 9, "Dateisystem wird angelegt"),
     ("Creating efi", 9, "Startpartition wird angelegt"),
     ("Running pre-installation", 11, "Installation wird vorbereitet"),
-    ("Starting package installation", 12, "Creative OS wird kopiert"),
-    ("Deployment starting", 14, "Creative OS wird kopiert"),
-    ("Pulling", 20, "Creative OS wird kopiert"),
-    ("Importing", 40, "Creative OS wird kopiert"),
-    ("Writing objects", 60, "Creative OS wird kopiert"),
-    ("Deployment complete", 75, "Creative OS ist kopiert"),
+    ("Starting package installation", 12, "Orbit OS wird kopiert"),
+    ("Deployment starting", 14, "Orbit OS wird kopiert"),
+    ("Pulling", 20, "Orbit OS wird kopiert"),
+    ("Importing", 40, "Orbit OS wird kopiert"),
+    ("Writing objects", 60, "Orbit OS wird kopiert"),
+    ("Deployment complete", 75, "Orbit OS ist kopiert"),
     ("Configuring installed system", 78, "System wird eingerichtet"),
     ("Creating users", 82, "Dein Benutzerkonto wird angelegt"),
     ("Installing boot loader", 86, "Startmenü wird eingerichtet"),
@@ -257,9 +257,9 @@ STAGES = [
     # Anaconda spricht Deutsch, sobald der Kickstart „lang de_DE“ setzt
     ("Speicher konfigurieren", 6, "Festplatte wird eingerichtet"),
     ("Vor-Installations-Aufgaben", 11, "Installation wird vorbereitet"),
-    ("Installieren der Software", 12, "Creative OS wird kopiert"),
-    ("Deployment startet", 14, "Creative OS wird kopiert"),
-    ("Deployment abgeschlossen", 75, "Creative OS ist kopiert"),
+    ("Installieren der Software", 12, "Orbit OS wird kopiert"),
+    ("Deployment startet", 14, "Orbit OS wird kopiert"),
+    ("Deployment abgeschlossen", 75, "Orbit OS ist kopiert"),
     ("Bootloader installieren", 78, "Startmenü wird eingerichtet"),
     ("Post-Installationsaufgaben", 80, "System wird eingerichtet"),
     ("Installiertes System konfigurieren", 82, "System wird eingerichtet"),

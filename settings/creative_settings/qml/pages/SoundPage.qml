@@ -59,9 +59,9 @@ SettingsPage {
 
     Card {
         title: "Rauschfreies Mikrofon und virtueller Hintergrund"
-        subtitle: "KI-Rauschentfernung fürs Mikrofon und Greenscreen für die Kamera – in Creative Broadcast"
+        subtitle: "KI-Rauschentfernung fürs Mikrofon und Greenscreen für die Kamera – in Broadcast"
         SettingRow {
-            label: "Creative Broadcast"
+            label: "Broadcast"
             hint: "Für Discord, Teams, Zoom und OBS"
             last: true
             CButton { text: "Öffnen"; onClicked: sound.openBroadcast() }

@@ -23,7 +23,7 @@ Window {
     color: "transparent"
     // Der Name über einem Taskleisten-Symbol darf keine Klicks abfangen
     flags: popupKey === "tasktip" ? (Qt.Window | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus) : Qt.Window
-    title: placement === "bar" ? "Creative Taskleiste" : (placement === "background" ? "Creative Hintergrund" : "Creative Menü")
+    title: placement === "bar" ? "Taskleiste" : (placement === "background" ? "Hintergrund" : "Menü")
 
     readonly property bool isBar: placement === "bar"
     readonly property bool isBackground: placement === "background"

@@ -1,4 +1,4 @@
-name: Creative 3D Rechenteil prüfen
+name: 3D Studio Rechenteil prüfen
 # Neuer Rechenteil (run.py) im echten TRELLIS-Container: Selbsttest und KI-Hochrechnen der Textur (auf CPU).
 on:
   push:

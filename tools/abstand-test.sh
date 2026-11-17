@@ -1,5 +1,5 @@
 #!/bin/sh
-# Creative Abstand in echtem KWin prüfen (Fedora-Container, virtueller Bildschirm 1600×1000).
+# Abstand in echtem KWin prüfen (Fedora-Container, virtueller Bildschirm 1600×1000).
 #   docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/abstand-test.sh
 set -eu
 dnf -y -q install kwin-wayland python3-pyside6 dbus-daemon dbus-tools plasma-breeze mesa-dri-drivers qt6-qtwayland >/dev/null
@@ -32,5 +32,5 @@ assert not m["maximized"], "Fenster ist echt maximiert – Skript greift nicht"
 assert m["w"] >= 1500 and m["h"] >= 880, "nicht groß gezogen"
 assert m["w"] <= 1600 - 2 * gap and m["h"] <= 1000 - 2 * gap - 20, "kein Abstand zum Rand"
 assert (b["w"], b["h"]) == (n["w"], n["h"]), "nochmal maximieren stellt die alte Größe nicht her"
-print("Creative Abstand: in Ordnung")
+print("Abstand: in Ordnung")
 PY

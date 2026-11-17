@@ -4,7 +4,7 @@
 name: Starttest
 on:
   workflow_run:
-    workflows: ["Creative OS bauen"]
+    workflows: ["Orbit OS bauen"]
     types: [completed]
   workflow_dispatch:
 permissions:

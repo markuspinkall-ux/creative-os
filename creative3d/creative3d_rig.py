@@ -1,4 +1,4 @@
-"""Creative 3D – Skelett für Figuren (nur numpy, läuft im System-Python).
+"""3D Studio – Skelett für Figuren (nur numpy, läuft im System-Python).
 
 - Vorlage: menschliches Skelett mit Mixamo-Namen („mixamorig:Hips“ …), die
   KI-Animationswerkzeuge und Engines kennen. Wird an die Größe der Figur angepasst.
@@ -6,7 +6,7 @@
   Arme/Beine der anderen Körperseite werden gemieden.
 - Export: GLB 2.0 mit Netz, Farben, Skin und optional einer kurzen Probe-Bewegung.
 
-Koordinaten wie im Export von Creative 3D: Y oben, die Figur schaut nach +Z,
+Koordinaten wie im Export von 3D Studio: Y oben, die Figur schaut nach +Z,
 ihre linke Seite liegt bei +X.
 """
 
@@ -223,7 +223,7 @@ def write_glb(path, vertices, faces, colors=None, normals=None, joints=None, ani
         if c.shape[1] == 3:
             c = np.concatenate([c, np.full((len(c), 1), 255, np.uint8)], axis=1)
         attributes["COLOR_0"] = b.add(c, UBYTE, "VEC4", ARRAY, normalized=True)
-    gltf = {"asset": {"version": "2.0", "generator": "Creative 3D"},
+    gltf = {"asset": {"version": "2.0", "generator": "3D Studio"},
             "scene": 0, "scenes": [{"nodes": [0]}],
             "materials": [{"name": "Figur", "pbrMetallicRoughness": {
                 "baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0.0, "roughnessFactor": 0.85}}],

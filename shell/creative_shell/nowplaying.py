@@ -1,7 +1,7 @@
 """„Gerade läuft“ für die Taskleiste: Interpret und Titel des aktuellen Liedes.
 
 Quellen:
-  1. Creative Player (lokale Musik, YouTube Music) – schreibt nach
+  1. Player (lokale Musik, YouTube Music) – schreibt nach
      $XDG_RUNTIME_DIR/creative-media/nowplaying.json
   2. Alle anderen Player über MPRIS (Brave, Spotify, VLC …)
 Läuft nichts, ist die Anzeige leer.
@@ -61,7 +61,7 @@ def _meta_value(meta, key):
 
 def read_now():
     """→ dict(title, artist, source) oder None."""
-    # 1. Creative Player
+    # 1. Player
     try:
         f = _player_file()
         if f.exists() and time.time() - f.stat().st_mtime < 3600:

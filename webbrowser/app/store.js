@@ -51,7 +51,7 @@ class Store {
         fs.mkdirSync(path.dirname(this.file), { recursive: true });
         fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.data, null, 1));
         fs.renameSync(this.file + '.tmp', this.file);
-      } catch (e) { console.error('Creative Browser: speichern ging nicht:', e.message); }
+      } catch (e) { console.error('Browser: speichern ging nicht:', e.message); }
     };
     if (now) write(); else this.timer = setTimeout(write, 800);
   }

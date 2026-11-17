@@ -1,4 +1,4 @@
-"""Testfenster für Creative Abstand (läuft unter kwin_wayland --virtual).
+"""Testfenster für Abstand (läuft unter kwin_wayland --virtual).
 Maximiert sich, meldet Größe und Zustand, maximiert dann nochmal (= wiederherstellen)."""
 import json
 import sys
@@ -17,7 +17,7 @@ class Win(QRasterWindow):
         r = QRect(0, 0, self.width(), self.height())
         p.fillRect(r, QColor("#1c2029"))
         p.setPen(QColor("#dce6ff"))
-        p.drawText(r, Qt.AlignmentFlag.AlignCenter, "Creative Abstand")
+        p.drawText(r, Qt.AlignmentFlag.AlignCenter, "Abstand")
 
 
 w = Win()

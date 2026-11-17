@@ -1,4 +1,4 @@
-"""FTP, explicit FTPS and SFTP operations for Creative FTP."""
+"""FTP, explicit FTPS and SFTP operations for FTP."""
 
 import base64
 import ftplib

@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative OS installieren – läuft in der Live-Umgebung über dem Desktop.
+// Orbit OS installieren – läuft in der Live-Umgebung über dem Desktop.
 ApplicationWindow {
     id: win
     width: 1060
@@ -12,7 +12,7 @@ ApplicationWindow {
     minimumHeight: 600
     visible: true
     visibility: installer.demo ? Window.Windowed : Window.Maximized
-    title: "Creative OS installieren"
+    title: "Orbit OS installieren"
     color: Theme.ground
     font.family: Theme.fontFamily
 
@@ -48,7 +48,7 @@ ApplicationWindow {
                 for (var i = 0; i < installer.disks.length; i++)
                     if (installer.disks[i].eligible) { win.disk = installer.disks[i].path; break }
             } else if (win.step === 2) {
-                win.fullName = "Creative Test"; win.userName = "tester"
+                win.fullName = "Test"; win.userName = "tester"
                 win.password = "creative-test"; win.password2 = "creative-test"
             } else if (win.step === 3) {
                 win.understood = true
@@ -164,7 +164,7 @@ ApplicationWindow {
                 }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    Text { text: "Creative OS"; color: Theme.text; font.pixelSize: 16; font.bold: true }
+                    Text { text: "Orbit OS"; color: Theme.text; font.pixelSize: 16; font.bold: true }
                     Text { text: "Installation"; color: Theme.textMuted; font.pixelSize: 12 }
                 }
             }
@@ -232,12 +232,12 @@ ApplicationWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
                 spacing: 18
-                Text { text: "Willkommen bei Creative OS"; color: Theme.text; font.pixelSize: 30; font.bold: true }
+                Text { text: "Willkommen bei Orbit OS"; color: Theme.text; font.pixelSize: 30; font.bold: true }
                 Text {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     lineHeight: 1.3
-                    text: "Du kannst Creative OS jetzt fest auf deinem PC einrichten. Das dauert etwa 10 bis 20 Minuten " +
+                    text: "Du kannst Orbit OS jetzt fest auf deinem PC einrichten. Das dauert etwa 10 bis 20 Minuten " +
                           "und klappt ohne Internet. Bis du auf „Jetzt installieren“ klickst, wird nichts verändert."
                     color: Theme.text; font.pixelSize: 15
                 }
@@ -290,10 +290,10 @@ ApplicationWindow {
                 visible: win.step === 1
                 width: parent.width
                 spacing: 8
-                Text { text: "Wohin soll Creative OS?"; color: Theme.text; font.pixelSize: 24; font.bold: true }
+                Text { text: "Wohin soll Orbit OS?"; color: Theme.text; font.pixelSize: 24; font.bold: true }
                 Text {
                     width: parent.width; wrapMode: Text.WordWrap
-                    text: "Die gewählte Festplatte wird komplett für Creative OS genutzt – alles, was bisher darauf ist, wird gelöscht."
+                    text: "Die gewählte Festplatte wird komplett für Orbit OS genutzt – alles, was bisher darauf ist, wird gelöscht."
                     color: Theme.textMuted; font.pixelSize: 13
                 }
                 Item { width: 1; height: 8 }
@@ -487,7 +487,7 @@ ApplicationWindow {
                 }
                 Text {
                     text: installer.error.length > 0 ? "Das hat leider nicht geklappt"
-                          : (installer.done ? "Creative OS ist installiert!" : "Creative OS wird installiert …")
+                          : (installer.done ? "Orbit OS ist installiert!" : "Orbit OS wird installiert …")
                     color: Theme.text; font.pixelSize: 26; font.bold: true
                 }
                 Text {

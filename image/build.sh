@@ -1,5 +1,5 @@
 #!/bin/sh
-# Baut das Creative-OS-Abbild und daraus eine Installations-ISO.
+# Baut das Orbit-OS-Abbild und daraus eine Installations-ISO.
 # Läuft auf Fedora (z. B. in deiner VirtualBox-VM).
 #
 #   ./image/build.sh            NVIDIA-Variante

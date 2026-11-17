@@ -1,6 +1,6 @@
 """Startpunkt: `creative-notes [Datei …]`.
 
-Läuft Creative Notes schon, öffnen weitere Aufrufe ihre Dateien als neue
+Läuft Notes schon, öffnen weitere Aufrufe ihre Dateien als neue
 Reiter im vorhandenen Fenster (wie bei Notepad++).
 """
 
@@ -84,7 +84,7 @@ def selftest():
     assert w2.restore_session()
     w.show()
     app.processEvents()
-    print("Creative Notes: Selbsttest bestanden")
+    print("Notes: Selbsttest bestanden")
     return 0
 
 

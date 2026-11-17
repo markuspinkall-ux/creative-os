@@ -42,7 +42,7 @@ Item {
         Hint {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: "Gib den Namen einer Seite (z. B. ComputerBase), ihre Adresse (z. B. golem.de) oder einen RSS-Link ein. Creative Magazin findet den Feed selbst."
+            text: "Gib den Namen einer Seite (z. B. ComputerBase), ihre Adresse (z. B. golem.de) oder einen RSS-Link ein. Magazin findet den Feed selbst."
         }
 
         RowLayout {

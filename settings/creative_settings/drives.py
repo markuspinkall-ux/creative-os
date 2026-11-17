@@ -120,7 +120,7 @@ def list_disks():
         removable = bool(d.get("rm")) or bool(d.get("hotplug"))
         lvl, text = health(d["path"]) if not removable else ("unknown", "")
         disks.append({
-            "device": d["path"], "kind": "Creative OS" if system else kind(d.get("tran"), d.get("rota"), d["path"]),
+            "device": d["path"], "kind": "Orbit OS" if system else kind(d.get("tran"), d.get("rota"), d["path"]),
             "model": (d.get("model") or "").strip(), "size": fmt_size(int(d.get("size") or 0)),
             "system": system, "removable": removable, "parts": [] if system else parts,
             # „leer“ nur, wenn wirklich nichts darauf ist und nichts eingebunden ist

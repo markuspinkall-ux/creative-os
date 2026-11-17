@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Lauf-ID von „Live-ISO mit Creative-Installation“, dessen ISO getestet wird"
+        description: "Lauf-ID von „Live-ISO mit Orbit-Installation“, dessen ISO getestet wird"
         required: true
       variant:
         type: choice
@@ -49,7 +49,7 @@ jobs:
           ls *.png >/dev/null 2>&1 || exit 0
           mkdir -p /tmp/pub && cp *.png /tmp/pub/ && cp serial-*.log /tmp/pub/ 2>/dev/null || true
           cd /tmp/pub
-          printf '# Creative OS – Live-ISO-Test\n\nISO aus Lauf %s, Test %s.\n\n![Übersicht](uebersicht.png)\n' \
+          printf '# Orbit OS – Live-ISO-Test\n\nISO aus Lauf %s, Test %s.\n\n![Übersicht](uebersicht.png)\n' \
             "${{ inputs.run_id }}" "${{ github.run_id }}" > README.md
           git init -q -b live-fotos
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"

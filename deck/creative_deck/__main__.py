@@ -1,4 +1,4 @@
-"""Creative Deck – Elgato Stream Deck einrichten und nutzen.
+"""Deck – Elgato Stream Deck einrichten und nutzen.
 
   creative-deck                  Editor öffnen (Tasten einrichten)
   creative-deck --hintergrund    Dienst für die Geräte (startet mit der Sitzung)
@@ -95,7 +95,7 @@ def run_editor(args):
     if "--selftest" in args:
         def done():
             bad = [w for w in warnings if "Main.qml" in w or "qml" in w.lower()]
-            print("\n".join(bad) if bad else "Creative Deck: Editor ok")
+            print("\n".join(bad) if bad else "Deck: Editor ok")
             app.exit(1 if bad else 0)
         QTimer.singleShot(1500, done)
     return app.exec()

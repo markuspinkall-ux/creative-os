@@ -1,7 +1,7 @@
 'use strict';
-// Creative WhatsApp – eigene App um das offizielle WhatsApp Web.
+// WhatsApp – eigene App um das offizielle WhatsApp Web.
 // Innen läuft web.whatsapp.com (kein nachgebautes Protokoll, also kein Sperr-Risiko für die Nummer),
-// drumherum Creative OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
+// drumherum Orbit OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
 // zum Chat, Hintergrundbetrieb mit Tray-Symbol, Start mit dem PC, Nicht-stören-Zeiten,
 // Rechtschreibprüfung und Dateien per Ziehen.
 // Start: creative-whatsapp [--hidden]   (wird über main.js mit --whatsapp geladen)
@@ -30,8 +30,8 @@ app.setPath('userData', process.env.CREATIVE_WHATSAPP_DATA
 try { fs.mkdirSync(app.getPath('userData'), { recursive: true }); } catch (_) { /* meldet die Sperre */ }
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 app.commandLine.appendSwitch('enable-wayland-ime');
-process.on('uncaughtException', (e) => console.error('Creative WhatsApp – Fehler:', e && e.stack || e));
-process.on('unhandledRejection', (e) => console.error('Creative WhatsApp – Fehler:', e && e.stack || e));
+process.on('uncaughtException', (e) => console.error('WhatsApp – Fehler:', e && e.stack || e));
+process.on('unhandledRejection', (e) => console.error('WhatsApp – Fehler:', e && e.stack || e));
 
 // ---- Einstellungen ----------------------------------------------------------------------------
 const DEFAULTS = {
@@ -52,7 +52,7 @@ function saveSettings() {
     const tmp = settingsFile() + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + '\n', { mode: 0o600 });
     fs.renameSync(tmp, settingsFile());
-  } catch (e) { console.error('Creative WhatsApp: Einstellungen nicht gespeichert:', e.message); }
+  } catch (e) { console.error('WhatsApp: Einstellungen nicht gespeichert:', e.message); }
 }
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 function cleanSettings(next) {
@@ -76,7 +76,7 @@ function inQuietTimes(s, now = new Date()) {
 }
 const isQuiet = () => settings.dnd || inQuietTimes(settings);
 
-// ---- Design von Creative OS --------------------------------------------------------------------
+// ---- Design von Orbit OS --------------------------------------------------------------------
 const lookFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'creative-os', 'look.conf');
 const ACCENTS = { blau: ['#8fb3ff', '#3d6fe0'], gruen: ['#6fdcc0', '#1f9e7f'], orange: ['#ffb07a', '#d9773a'], lila: ['#c3a6ff', '#7c4ddb'] };
 function readLook() {
@@ -113,7 +113,7 @@ function userAgent() {
   return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
 }
 
-// Zähler an der Taskleiste: die Creative-Shell nimmt ihn über D-Bus entgegen
+// Zähler an der Taskleiste: die Orbit-Shell nimmt ihn über D-Bus entgegen
 let badgeSent = -1;
 function sendBadge(n) {
   if (n === badgeSent || SELFTEST) return;
@@ -291,7 +291,7 @@ function setSettings(next) {
 }
 const publicSettings = () => { const { bounds, hintShown, ...rest } = settings; return { ...rest, quietNow: isQuiet() }; };
 
-// ---- Einstellungsfenster (Creative-Optik) -----------------------------------------------------------
+// ---- Einstellungsfenster (Orbit-Optik) -----------------------------------------------------------
 function openSettings() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
@@ -343,7 +343,7 @@ function createWindow({ hidden }) {
   });
   wc.on('did-finish-load', pushState);
   wc.on('context-menu', (_e, p) => contextMenu(wc, p));
-  // Fremde Links öffnen im Creative Browser, nie in diesem Fenster
+  // Fremde Links öffnen im Browser, nie in diesem Fenster
   wc.setWindowOpenHandler(({ url }) => {
     openExternal(url);
     return { action: 'deny' };

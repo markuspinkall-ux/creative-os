@@ -1,4 +1,4 @@
-# Dateien – der Dateimanager von Creative OS
+# Dateien – der Dateimanager von Orbit OS
 
 Graphit-Design, so einfach wie der Windows-Explorer – und so gebaut, dass man nichts kaputt machen kann:
 

@@ -1,4 +1,4 @@
-"""Creative Iso – Bedienung. Die eigentliche Arbeit macht /usr/libexec/creative-iso-helper
+"""Iso – Bedienung. Die eigentliche Arbeit macht /usr/libexec/creative-iso-helper
 (über pkexec, mit Administratorrechten). Die Ausgabe wird Zeile für Zeile gelesen:
 „@@ <prozent> <text>“ = Fortschritt, „@@ok <datei>“ = fertig, „@@fehler <text>“ = Fehler.
 """

@@ -25,7 +25,7 @@ HERE = Path(__file__).resolve().parent
 
 
 def creative_qml_dirs():
-    """Fundorte des gemeinsamen Creative-Designs (Theme, Knöpfe, Symbole)."""
+    """Fundorte des gemeinsamen Orbit-Designs (Theme, Knöpfe, Symbole)."""
     return [
         HERE.parent.parent / "shell" / "creative_shell" / "qml",   # Entwicklung
         Path("/usr/lib/creative-shell/creative_shell/qml"),         # installiert
@@ -91,7 +91,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-media: Creative-Design nicht gefunden (Creative Shell installiert?)")
+        print("creative-media: Orbit-Design nicht gefunden (Shell installiert?)")
         return 1
 
     settings = Settings()
@@ -120,7 +120,7 @@ def main():
         return 1
     win = engine.rootObjects()[0]
     if "--selftest" in sys.argv:
-        print("Creative Player: Selbsttest bestanden", "(mit eingebautem Browser)" if web_ok else "(ohne Browser)")
+        print("Player: Selbsttest bestanden", "(mit eingebautem Browser)" if web_ok else "(ohne Browser)")
         return 0
 
     # Befehle von außen (Sprachassistent, zweiter Start)

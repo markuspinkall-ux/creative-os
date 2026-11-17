@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative Writer – Textverarbeitung für Creative OS im Stil von Word, im Graphit-Look.
+"""Writer – Textverarbeitung für Orbit OS im Stil von Word, im Graphit-Look.
 
 Menüband (Start, Einfügen, Layout, Überprüfen, Ansicht) und Datei-Bereich, echte Seiten
 mit Rändern, Zoom, Formatvorlagen, Navigationsbereich, Rechtschreibprüfung,
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy,
     QSlider, QSpinBox, QStackedWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget, QWidgetAction,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox  # noqa: F811
 except ImportError:
     pass
@@ -54,7 +54,7 @@ try:
 except ImportError:
     enchant = None
 
-APP = "Creative Writer"
+APP = "Writer"
 STYLE_KEY = QTextFormat.Property.UserProperty + 1   # „titel“, „untertitel“, „zitat“, „toc“
 MM = 96 / 25.4                                      # Pixel je Millimeter (Layout in 96 dpi)
 
@@ -2586,9 +2586,9 @@ class Writer(QMainWindow):
             elif suffix in (".txt", ""):
                 doc.setPlainText(path.read_text(encoding="utf-8-sig", errors="replace"))
             elif suffix == ".odt":
-                raise ValueError("OpenDocument-Dateien kann Creative Writer exportieren, aber noch nicht öffnen.")
+                raise ValueError("OpenDocument-Dateien kann Writer exportieren, aber noch nicht öffnen.")
             else:
-                raise ValueError("Dieses Dateiformat kann Creative Writer nicht öffnen.")
+                raise ValueError("Dieses Dateiformat kann Writer nicht öffnen.")
         except Exception as error:
             self.error(f"„{path.name}“ konnte nicht geöffnet werden:\n{error}")
             return False
@@ -2798,7 +2798,7 @@ class Writer(QMainWindow):
         when = time.strftime("%d.%m. %H:%M", time.localtime(newest.stat().st_mtime))
         reply = QMessageBox.question(
             self, "Dokument wiederherstellen?",
-            f"Creative Writer wurde nicht richtig beendet. Es gibt eine automatische Sicherung "
+            f"Writer wurde nicht richtig beendet. Es gibt eine automatische Sicherung "
             f"von {when} („{newest.name.rsplit('-', 1)[0]}“). Wiederherstellen?")
         if reply == QMessageBox.StandardButton.Yes:
             content = newest.read_text(encoding="utf-8")

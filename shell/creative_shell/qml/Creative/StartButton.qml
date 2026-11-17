@@ -1,7 +1,7 @@
 import QtQuick
 import Creative
 
-// Startknopf mit der Creative-Rakete. Leuchtet mit einem Ring, solange das
+// Startknopf mit der Orbit-Rakete. Leuchtet mit einem Ring, solange das
 // Startmenü offen ist.
 Item {
     id: root

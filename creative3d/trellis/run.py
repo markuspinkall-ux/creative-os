@@ -1,6 +1,6 @@
-"""Creative 3D – Rechenteil im TRELLIS-Container: Bild → texturierte 3D-Figur.
+"""3D Studio – Rechenteil im TRELLIS-Container: Bild → texturierte 3D-Figur.
 
-Meldet sich zeilenweise (wie bisher), damit Creative 3D mitlesen kann:
+Meldet sich zeilenweise (wie bisher), damit 3D Studio mitlesen kann:
   P <prozent> <text>      Fortschritt
   OK <json>               fertig: {"files": {"glb": "name.glb", …}, "input": "eingabe.png", …}
                           (Dateinamen relativ zum Ausgabeordner)
@@ -317,7 +317,7 @@ def generate(args):
     from PIL import Image
 
     if not torch.cuda.is_available():
-        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Creative OS installiert?")
+        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Orbit OS installiert?")
         return 3
     settings = QUALITY.get(args.quality, QUALITY["normal"])
     out = Path(args.out)

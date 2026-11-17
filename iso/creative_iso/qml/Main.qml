@@ -4,7 +4,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Iso – Netzinstallations-ISOs und bootfähige USB-Sticks erstellen.
+// Iso – Netzinstallations-ISOs und bootfähige USB-Sticks erstellen.
 Window {
     id: win
     width: 1000
@@ -12,7 +12,7 @@ Window {
     minimumWidth: 860
     minimumHeight: 600
     visible: true
-    title: "Creative Iso"
+    title: "Iso"
     color: Theme.surface
 
     property string mode: "net"     // net | usb
@@ -35,8 +35,8 @@ Window {
         }
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            Text { text: "Creative Iso"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
-            Text { text: "Installations-ISOs von Creative OS erstellen und bootfähige USB-Sticks daraus machen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+            Text { text: "Iso"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
+            Text { text: "Installations-ISOs von Orbit OS erstellen und bootfähige USB-Sticks daraus machen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
         }
     }
 
@@ -55,7 +55,7 @@ Window {
             key: "net"
             icon: "download"
             title: "Kleine Installations-ISO"
-            text: "Unter 1 GB. Creative OS wird während der Installation frisch aus dem Internet geladen – immer die neueste Version."
+            text: "Unter 1 GB. Orbit OS wird während der Installation frisch aus dem Internet geladen – immer die neueste Version."
         }
         ModeCard {
             width: (modes.width - 16) / 2

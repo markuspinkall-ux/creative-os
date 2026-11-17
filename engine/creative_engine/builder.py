@@ -1,4 +1,4 @@
-"""Aus einem Creative-Engine-Projekt ein Godot-Projekt bauen (Spiel-Laufzeit + Daten + Assets).
+"""Aus einem Orbit-Engine-Projekt ein Godot-Projekt bauen (Spiel-Laufzeit + Daten + Assets).
 
 Die Laufzeit (runtime/*.gd) liest game.json und lädt Bilder/GLB selbst – Godot muss nichts importieren.
 """
@@ -13,7 +13,7 @@ from . import project as proj
 RUNTIME = Path(__file__).resolve().parent / "runtime"
 GODOT_FEATURES = "4.3"
 
-PROJECT_GODOT = """; Von der Creative Engine erzeugt – Änderungen bitte im Editor machen.
+PROJECT_GODOT = """; Von der Engine erzeugt – Änderungen bitte im Editor machen.
 config_version=5
 
 [application]
@@ -148,7 +148,7 @@ def build(project_folder, project_data, target):
             # Godot soll GLB/PNG nicht importieren – die Laufzeit lädt sie selbst
             if dst.suffix.lower() in (".glb", ".gltf", ".png", ".jpg", ".jpeg", ".webp", ".ogv"):
                 (dst.parent / (dst.name + ".import")).write_text('[remap]\n\nimporter="keep"\n', encoding="utf-8")
-    (target / ".gdignore_note").write_text("Erzeugt von der Creative Engine.\n", encoding="utf-8")
+    (target / ".gdignore_note").write_text("Erzeugt von der Engine.\n", encoding="utf-8")
     return target
 
 

@@ -1,4 +1,4 @@
-"""Tests für Creative 3D: Skelett (Vorlage, Gewichte, GLB mit Skin).
+"""Tests für 3D Studio: Skelett (Vorlage, Gewichte, GLB mit Skin).
 
 python3 -m unittest tests/test_creative3d.py   (braucht numpy)
 """

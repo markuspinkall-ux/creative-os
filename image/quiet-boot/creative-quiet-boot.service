@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS – ruhiger Start ohne Textmeldungen
+Description=Orbit OS – ruhiger Start ohne Textmeldungen
 After=rpm-ostreed.service
 ConditionPathExists=/run/ostree-booted
 

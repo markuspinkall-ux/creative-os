@@ -1,4 +1,4 @@
-"""Creative Broadcast fotografieren, mit gespielten Messwerten (ohne Kamera/Grafikkarte).
+"""Broadcast fotografieren, mit gespielten Messwerten (ohne Kamera/Grafikkarte).
    QT_QPA_PLATFORM=offscreen python3 tools/broadcast-vorschau.py <ausgabe.png> [graphit|porzellan] [langsam]"""
 import os
 import sys

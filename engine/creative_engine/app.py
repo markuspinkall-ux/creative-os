@@ -1,4 +1,4 @@
-"""Creative Engine – Spiele bauen per Klick: Genre wählen, Ablauf (Splash → Menü → Level) gestalten,
+"""Engine – Spiele bauen per Klick: Genre wählen, Ablauf (Splash → Menü → Level) gestalten,
 testen und als fertiges Spiel exportieren."""
 
 import json
@@ -20,7 +20,7 @@ from .spaceeditor import SpaceEditor
 from .screens import ScreenEditor
 from .style import C, apply_palette, stylesheet
 
-APP_NAME = "Creative Engine"
+APP_NAME = "Engine"
 STEP_ICON = {"splash": "splash", "menu": "menu", "text": "text", "level": "level", "seite": "bubble"}
 STEP_NAME = {"splash": "Splash", "menu": "Menü", "text": "Zwischentext", "level": "Level", "seite": "Seite"}
 STEP_KINDS = ("level", "seite", "splash", "menu", "text")
@@ -32,7 +32,7 @@ def config_dir():
 
 
 def projects_dir():
-    return Path.home() / "Creative Engine"
+    return Path.home() / "Engine"
 
 
 def recent_list():
@@ -191,7 +191,7 @@ class Welcome(QWidget):
         title = QLabel("Was für ein Spiel baust du?")
         title.setObjectName("heading")
         v.addWidget(title)
-        sub = QLabel("Wähle ein Genre – die Creative Engine richtet Kamera, Steuerung und Spielregeln passend ein.")
+        sub = QLabel("Wähle ein Genre – die Engine richtet Kamera, Steuerung und Spielregeln passend ein.")
         sub.setObjectName("sub")
         v.addWidget(sub)
         v.addSpacing(12)
@@ -1157,7 +1157,7 @@ def main():
         from . import selftest
         sys.exit(selftest.run())
     app = QApplication(sys.argv)
-    app.setApplicationName(APP_NAME)
+    app.setApplicationName("Creative Engine")   # bleibt: Ablageort der Einstellungen
     app.setDesktopFileName("org.creativeos.Engine")
     from PySide6.QtCore import QLocale
     QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Country.Germany))

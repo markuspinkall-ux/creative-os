@@ -11,7 +11,7 @@ ApplicationWindow {
     minimumHeight: 600
     visible: true
     color: Theme.ground
-    title: "Creative Magazin"
+    title: "Magazin"
     font.family: Theme.fontFamily
     palette.windowText: Theme.text
     palette.text: Theme.text
@@ -139,7 +139,7 @@ ApplicationWindow {
             spacing: 10
 
             Label {
-                text: "Creative Magazin"
+                text: "Magazin"
                 color: Theme.text
                 font.pixelSize: 22
                 font.bold: true

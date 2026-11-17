@@ -1,9 +1,9 @@
 #!/usr/bin/python3 -I
-"""Passwortspeicher (KWallet) ohne Nachfragen: Creative OS gibt der Standard-Brieftasche
+"""Passwortspeicher (KWallet) ohne Nachfragen: Orbit OS gibt der Standard-Brieftasche
 „kdewallet“ ein leeres Passwort und öffnet sie bei jeder Anmeldung selbst.
 
 So meldet sich der Passwortspeicher nie mehr mit einem Fenster, und Programme, die ihn
-brauchen (Chrome/Brave/Edge, Creative Mail, VS Code …), funktionieren trotzdem.
+brauchen (Chrome/Brave/Edge, Mail, VS Code …), funktionieren trotzdem.
 
 Ablauf (bei jeder Anmeldung, im Hintergrund):
  1. kwalletrc so einstellen, dass nichts nachfragt

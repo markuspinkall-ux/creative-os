@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-"""Creative-Namen und -Symbole in „Software“ (GNOME Software).
+"""Orbit-Namen und -Symbole in „Software“ (GNOME Software).
 
 1. Die Programm-Beschreibungen (AppStream) der mitgelieferten Programme, die in
-   Creative OS umbenannt sind, bekommen den Creative-Namen, das Creative-Symbol
+   Orbit OS umbenannt sind, bekommen den Orbit-Namen, das Orbit-Symbol
    und keine Original-Bildschirmfotos mehr.
-2. Die eigenen Creative-Apps bekommen eigene Beschreibungen, damit sie unter
+2. Die eigenen Orbit-Apps bekommen eigene Beschreibungen, damit sie unter
    „Installiert“ mit Logo erscheinen.
 
 Läuft beim Bauen des Abbilds (als root).
@@ -16,12 +16,12 @@ import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-BASE = "Creative OS"
+BASE = "Orbit OS"
 # AppStream-ID → (Name, Symbol, Kurzbeschreibung)
 REBRAND = {
-    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Creative OS"),
-    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Creative OS"),
-    "org.kde.spectacle": ("Bildschirmfoto-Dienst", "creative-shots", "Nimmt für Creative Shots im Hintergrund auf"),
+    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
+    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
+    "org.kde.spectacle": ("Bildschirmfoto-Dienst", "creative-shots", "Nimmt für Shots im Hintergrund auf"),
     "org.kde.ark": ("Entpacken", "creative-archive", "ZIP- und andere Archive öffnen und entpacken"),
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
     "org.kde.partitionmanager": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
@@ -33,15 +33,15 @@ REBRAND = {
     "org.kde.plasma-systemmonitor": ("Taskmanager", "creative-taskmanager", "Prozesse und Leistung"),
     "org.kde.systemsettings": ("KDE-Einstellungen", "creative-settings", "Erweiterte Einstellungen"),
     "org.kde.dolphin": ("Dateien", "creative-files", "Ordner, Laufwerke und USB-Sticks"),
-    "org.kde.elisa": ("Creative Player", "creative-player", "Musik, Videos und Fernsehen"),
+    "org.kde.elisa": ("Player", "creative-player", "Musik, Videos und Fernsehen"),
     "org.kde.plasma-welcome": ("Willkommen", "creative-settings", "Erste Schritte"),
 }
 
 # Eigene Apps: Desktop-Datei → (Name, Symbol, Kurzbeschreibung, Beschreibung, Kategorie)
 OWN = {
     "creative-files": ("Dateien", "creative-files", "Ordner, Laufwerke und USB-Sticks öffnen",
-                       "Der Dateimanager von Creative OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
-    "creative-player": ("Creative Player", "creative-player", "Musik, Videos, YouTube Music und Fernsehen",
+                       "Der Dateimanager von Orbit OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
+    "creative-player": ("Player", "creative-player", "Musik, Videos, YouTube Music und Fernsehen",
                         "Spielt Musik und Videos ab, zeigt die YouTube-Music-Top-10 mit Suche und Favoriten und deutsches Fernsehen (IPTV).", "AudioVideo"),
     "creative-notes": ("Notes", "creative-notes", "Texte und Code bearbeiten",
                        "Texteditor mit Reitern, Syntaxfarben, Suchen und Ersetzen – ungespeicherte Texte gehen nie verloren.", "Utility"),
@@ -51,12 +51,12 @@ OWN = {
                              "Prozesse, Leistung von CPU, Speicher, Datenträgern, Netzwerk und Grafikkarte, Autostart-Apps.", "System"),
     "creative-pictures": ("Pictures", "creative-pictures", "Fotos und Bilder ansehen",
                           "Sammlung nach Monaten, Favoriten, Zoom, Drehen, Diashow und Bildinfos.", "Graphics"),
-    "creative-shots": ("Creative Shots", "creative-shots", "Bildschirmfotos aufnehmen und beschriften",
+    "creative-shots": ("Shots", "creative-shots", "Bildschirmfotos aufnehmen und beschriften",
                        "Rechteck, Fenster, Vollbild oder Freihand – mit Stift, Textmarker, Pfeil und Zuschneiden.", "Graphics"),
-    "creative-broadcast": ("Creative Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
+    "creative-broadcast": ("Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
                            "KI-Rauschentfernung (DeepFilterNet) und virtueller Greenscreen (Robust Video Matting) als "
                            "virtuelle Kamera für Discord, Teams, Zoom und OBS.", "AudioVideo"),
-    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Creative OS",
+    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Orbit OS",
                           "Netzwerk, Bildschirme, Ton, Laufwerke, Drucker, Mein Server, Aussehen und Updates.", "Settings"),
 }
 
@@ -101,7 +101,7 @@ def rebrand(comp):
         comp.remove(el)
     d = ET.SubElement(comp, "description")
     ET.SubElement(d, "p").text = summary + "."
-    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Creative OS passt Namen, Aussehen und Bedienung an – "
+    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Orbit OS passt Namen, Aussehen und Bedienung an – "
                                   f"vielen Dank an die Entwicklerinnen und Entwickler von {orig}!")
     for tag in ("developer_name", "developer"):
         for el in comp.findall(tag):
@@ -163,7 +163,7 @@ def main():
                 except OSError as exc:
                     print(f"übersprungen: {f} ({exc})", file=sys.stderr)
     own_metainfo(Path("/usr/share/metainfo"))
-    print(f"Software: {total} Einträge auf Creative-Namen umgestellt, {len(OWN)} eigene Apps eingetragen.")
+    print(f"Software: {total} Einträge auf Orbit-Namen umgestellt, {len(OWN)} eigene Apps eingetragen.")
 
 
 if __name__ == "__main__":

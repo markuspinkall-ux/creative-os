@@ -23,7 +23,7 @@ from pathlib import Path
 
 SYSTEM_MOUNTS = ("/", "/sysroot", "/boot", "/boot/efi", "/efi", "/var", "/usr", "/etc", "/home", "/var/home")
 FSTAB = Path("/etc/fstab")
-MARK = "# Creative OS – Laufwerke"
+MARK = "# Orbit OS – Laufwerke"
 
 
 def run(*args, check=False, inp=None):

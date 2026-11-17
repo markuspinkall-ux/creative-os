@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Engine
+Name=Engine
 GenericName=Spiele-Editor
 Comment=Spiele bauen per Klick: Jump'n'Run gestalten, testen und als fertiges Spiel exportieren
 Exec=creative-engine %f

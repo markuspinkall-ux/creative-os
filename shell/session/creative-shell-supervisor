@@ -72,7 +72,7 @@ if command -v creative-automount >/dev/null 2>&1; then
     children="$children $!"
 fi
 
-# Creative Broadcast (rauschfreies Mikrofon / virtuelle Kamera) – ruht, solange alles aus ist
+# Broadcast (rauschfreies Mikrofon / virtuelle Kamera) – ruht, solange alles aus ist
 if command -v creative-broadcastd >/dev/null 2>&1; then
     # läuft immer (Symbol im Tray) und startet nach einem Absturz neu
     ( while true; do
@@ -88,7 +88,7 @@ if command -v creative-notifyd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
-# Creative Deck: Stream Decks erkennen und Tasten ausführen – startet nach einem Absturz neu
+# Deck: Stream Decks erkennen und Tasten ausführen – startet nach einem Absturz neu
 if command -v creative-deck >/dev/null 2>&1 && [ ! -e /run/creative-live ]; then
     ( while true; do creative-deck --hintergrund 2>&1 | systemd-cat -t creative-deck; sleep 5; done ) &
     children="$children $!"
@@ -107,7 +107,7 @@ if command -v creative-backup >/dev/null 2>&1; then
 fi
 
 
-# Live-Umgebung (vom USB-Stick): statt Willkommen gleich die Creative-Installation öffnen
+# Live-Umgebung (vom USB-Stick): statt Willkommen gleich die Orbit-Installation öffnen
 if [ -e /run/creative-live ] && command -v creative-installer >/dev/null 2>&1; then
     mkdir -p "$HOME/.cache"
     auto=""; [ -e /run/creative-live-autotest ] && auto="--auto"

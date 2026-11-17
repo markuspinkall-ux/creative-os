@@ -9,4 +9,4 @@ if [ "${1:-}" = "--restore" ]; then
     exit 0
 fi
 python3 style-lockscreen.py "$LS"
-echo "Creative-Graphit-Stil ergänzt; KDE-Entsperrmechanik beibehalten."
+echo "Orbit-Graphit-Stil ergänzt; KDE-Entsperrmechanik beibehalten."

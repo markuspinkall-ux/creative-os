@@ -36,7 +36,7 @@ WIKI = "https://de.wikipedia.org/w/api.php"
 WIKI_AGENT = "CreativeOS-KI/1.0 (https://github.com/markuspinkall-ux/creative-os)"
 
 SYSTEM = (
-    "Du bist der KI-Helfer von Creative OS. Du antwortest immer auf Deutsch, freundlich, "
+    "Du bist der KI-Helfer von Orbit OS. Du antwortest immer auf Deutsch, freundlich, "
     "klar und knapp – wie ein gut informierter Freund. Bei Wissensfragen nennst du zuerst "
     "die direkte Antwort in einem Satz und ergänzt dann höchstens drei Sätze Hintergrund. "
     "Wenn du dir nicht sicher bist, sag das ehrlich, statt etwas zu erfinden. "
@@ -245,7 +245,7 @@ class KiHelfer(QObject):
             return
         info = self._liste.get(self._wahl)
         if not info:
-            self._fail("Die Modellliste fehlt – bitte Creative OS aktualisieren.")
+            self._fail("Die Modellliste fehlt – bitte Orbit OS aktualisieren.")
             return
         self._state = "laedt"
         self._progress = 0
@@ -297,7 +297,7 @@ class KiHelfer(QObject):
         binary = server_binary()
         info = self._liste.get(self._modell)
         if binary is None or info is None:
-            raise RuntimeError("Der KI-Rechenteil fehlt – bitte Creative OS aktualisieren.")
+            raise RuntimeError("Der KI-Rechenteil fehlt – bitte Orbit OS aktualisieren.")
         self._port = freier_port()
         env = dict(os.environ)
         env["LD_LIBRARY_PATH"] = str(binary.parent) + (":" + env["LD_LIBRARY_PATH"] if env.get("LD_LIBRARY_PATH") else "")

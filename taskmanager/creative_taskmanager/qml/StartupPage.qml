@@ -86,7 +86,7 @@ Item {
         spacing: 8
         SvgIcon { anchors.horizontalCenter: parent.horizontalCenter; name: "rocket"; size: 34 }
         Text {
-            text: "Keine Autostart-Apps – Creative OS startet so schnell wie möglich."
+            text: "Keine Autostart-Apps – Orbit OS startet so schnell wie möglich."
             color: Theme.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: 14

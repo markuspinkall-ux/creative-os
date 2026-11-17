@@ -55,7 +55,7 @@ Item {
                     height: Math.max(2, viz.height * level)
                     anchors.bottom: parent.bottom
                     radius: Math.min(3, width / 2)
-                    // dunkles Creative-Blau, nach oben heller
+                    // dunkles Orbit-Blau, nach oben heller
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: Qt.rgba(0.40, 0.55, 0.92, 0.62) }
                         GradientStop { position: 1.0; color: Qt.rgba(0.16, 0.27, 0.55, 0.45) }
@@ -188,7 +188,7 @@ Item {
                 anchors.centerIn: parent
                 spacing: 14
 
-                // Tray-Symbole anderer Programme (Steam, Discord …) im Creative-Look
+                // Tray-Symbole anderer Programme (Steam, Discord …) im Orbit-Look
                 Repeater {
                     model: trayApps.items
                     delegate: Rectangle {
@@ -232,7 +232,7 @@ Item {
                     }
                 }
 
-                // Creative Broadcast: blau hinterlegt, wenn Mikrofon-Filter oder Kamera-Effekt an sind
+                // Broadcast: blau hinterlegt, wenn Mikrofon-Filter oder Kamera-Effekt an sind
                 Rectangle {
                     id: broadcastBtn
                     visible: broadcast.available
@@ -248,7 +248,7 @@ Item {
                         size: 17
                         opacity: broadcast.active ? 1 : 0.8
                     }
-                    // Punkt: eine App benutzt gerade die Creative Kamera
+                    // Punkt: eine App benutzt gerade die Orbit Kamera
                     Rectangle {
                         visible: broadcast.cameraInUse
                         anchors.right: parent.right

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Creative FTP
+Name=FTP
 GenericName=Dateiübertragung
 Comment=Dateien über SFTP, FTPS und FTP übertragen – wie FileZilla
 Exec=creative-ftp

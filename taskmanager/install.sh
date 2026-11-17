@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert den Taskmanager (setzt die Creative Shell voraus).
+# Installiert den Taskmanager (setzt die Shell voraus).
 set -eu
 cd "$(dirname "$0")"
 if [ "$(id -u)" -ne 0 ]; then

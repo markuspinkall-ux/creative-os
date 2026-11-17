@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Creative
 
-// YouTube Music: die offizielle Webseite im Creative Player.
+// YouTube Music: die offizielle Webseite im Player.
 // Oben unsere Leiste (Zurück, Startseite, Charts, Neu laden, gerade läuft, Herz),
 // rechts aufklappbar die Favoriten (Lesezeichen – ein Klick spielt im offiziellen Player).
 Item {

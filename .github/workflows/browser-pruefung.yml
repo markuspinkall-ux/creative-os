@@ -1,4 +1,4 @@
-name: Creative Browser prüfen
+name: Browser prüfen
 # Electron mit H.264: Testvideo (H.264/AAC) muss flüssig laufen, Oberfläche wird bedient und fotografiert.
 on:
   push:
@@ -60,7 +60,7 @@ jobs:
           '
           echo "exit=$?" | tee /tmp/exit
           grep -q "exit=0" /tmp/exit
-      - name: Creative WhatsApp prüfen (echtes WhatsApp Web, Anmeldeseite)
+      - name: WhatsApp prüfen (echtes WhatsApp Web, Anmeldeseite)
         run: |
           mkdir -p fotos
           H=$(mktemp -d)

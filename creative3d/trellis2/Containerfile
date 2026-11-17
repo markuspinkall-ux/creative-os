@@ -1,4 +1,4 @@
-# Creative 3D – TRELLIS.2 (Microsoft, MIT, 4 Mrd. Parameter) fertig kompiliert für NVIDIA.
+# 3D Studio – TRELLIS.2 (Microsoft, MIT, 4 Mrd. Parameter) fertig kompiliert für NVIDIA.
 # Gebaut von GitHub (.github/workflows/trellis2.yml) → ghcr.io/<besitzer>/creative-trellis2
 # Bau-Kontext: creative3d/  (nutzt auch trellis/run.py und trellis/foto_projektion.py)
 #

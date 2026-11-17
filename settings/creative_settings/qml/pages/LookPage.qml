@@ -12,7 +12,7 @@ SettingsPage {
 
     Card {
         title: "Design"
-        subtitle: "Gilt für Taskleiste, Startmenü, Einstellungen und alle Creative-Programme"
+        subtitle: "Gilt für Taskleiste, Startmenü, Einstellungen und alle Orbit-Programme"
         Row {
             spacing: 14
             bottomPadding: 6
@@ -188,7 +188,7 @@ SettingsPage {
         subtitle: "Interpret und Titel des laufenden Liedes mittig in der Taskleiste"
         SettingRow {
             label: "In der Taskleiste anzeigen"
-            hint: "Gilt für den Creative Player, YouTube Music und andere Musikprogramme"
+            hint: "Gilt für den Player, YouTube Music und andere Musikprogramme"
             last: true
             CSwitch {
                 checked: look.nowPlaying
@@ -214,7 +214,7 @@ SettingsPage {
 
     Card {
         title: "Widgets"
-        subtitle: "Auf dem Schreibtisch – wie in Creative Widgets. Ort, Feeds und Kanäle stellst du am Widget selbst ein"
+        subtitle: "Auf dem Schreibtisch – wie in Widgets. Ort, Feeds und Kanäle stellst du am Widget selbst ein"
         Repeater {
             model: [
                 { k: "shelf", t: "Ablage", h: "Dateien kurz zwischenlagern" },
@@ -222,8 +222,8 @@ SettingsPage {
                 { k: "rss", t: "RSS-Nachrichten", h: "Schlagzeilen aus bis zu fünf Feeds" },
                 { k: "ki", t: "KI-Helfer", h: "Lokale KI zum Fragen und Formulieren (Open Source)" },
                 { k: "twitch", t: "Twitch-Favoriten", h: "Wer von deinen Kanälen gerade live ist" },
-                { k: "clock", t: "Analoge Uhr", h: look.widgets.clockInstalled ? "Uhr mit Sekundenzeiger" : "Erst in Creative Widgets herunterladen" },
-                { k: "notes", t: "Notizen", h: look.widgets.notesInstalled ? "Notizzettel, wird automatisch gespeichert" : "Erst in Creative Widgets installieren" }
+                { k: "clock", t: "Analoge Uhr", h: look.widgets.clockInstalled ? "Uhr mit Sekundenzeiger" : "Erst in Widgets herunterladen" },
+                { k: "notes", t: "Notizen", h: look.widgets.notesInstalled ? "Notizzettel, wird automatisch gespeichert" : "Erst in Widgets installieren" }
             ]
             delegate: SettingRow {
                 required property var modelData
@@ -244,7 +244,7 @@ SettingsPage {
             hint: look.widgets.shell ? "Auf welchem Monitor ein Widget erscheint, neue Widgets herunterladen"
                                      : "Der Schreibtisch ist gerade nicht erreichbar – Widgets lassen sich nach der Anmeldung schalten"
             last: true
-            CButton { text: "Creative Widgets öffnen"; onClicked: look.openWidgets() }
+            CButton { text: "Widgets öffnen"; onClicked: look.openWidgets() }
         }
     }
 

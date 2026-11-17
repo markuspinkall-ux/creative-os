@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative Cut – Videos schneiden wie mit Final Cut.
+"""Cut – Videos schneiden wie mit Final Cut.
 
 Medien links, Vorschau in der Mitte, Inspektor rechts, unten die magnetische
 Zeitleiste mit Titel-, Video- und Musikspur. Effekte: Looks, Tempo, Rückwärts,
@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QListWidget, QMainWindow, QMessageBox, QProgressBar, QPushButton,
     QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox
 except ImportError:
     pass
@@ -36,7 +36,7 @@ from cut_project import (
 )
 from cut_timeline import CACHE, TimelineView
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -148,7 +148,7 @@ class CreativeCut(QMainWindow):
         layout_ = QVBoxLayout(central)
         layout_.setContentsMargins(14, 10, 14, 6)
         top = QHBoxLayout()
-        top.addWidget(QLabel("Creative Cut", objectName="title"))
+        top.addWidget(QLabel("Cut", objectName="title"))
         top.addStretch()
         self.button(top, "Neu", self.new_project)
         self.button(top, "Öffnen …", self.open_project)
@@ -417,7 +417,7 @@ class CreativeCut(QMainWindow):
         self.timeline.relayout()
         self.show_inspector()
         name = self.project.stem if self.project else "Neues Projekt"
-        self.setWindowTitle(f"{name}{' *' if self.snapshot() != self.saved else ''} – Creative Cut")
+        self.setWindowTitle(f"{name}{' *' if self.snapshot() != self.saved else ''} – Cut")
 
     def checkpoint(self):
         self.undo_stack.append(self.snapshot())
@@ -783,7 +783,7 @@ class CreativeCut(QMainWindow):
     def open_project(self):
         if not self.permit_project_change():
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Projekt öffnen", str(Path.home()), "Creative Cut (*.creativecut)")
+        path, _ = QFileDialog.getOpenFileName(self, "Projekt öffnen", str(Path.home()), "Cut (*.creativecut)")
         if path:
             try:
                 self.load_state(Path(path), *read_project(path))
@@ -794,7 +794,7 @@ class CreativeCut(QMainWindow):
         path = self.project
         if path is None:
             name, _ = QFileDialog.getSaveFileName(self, "Projekt speichern", str(Path.home() / "Neues Projekt.creativecut"),
-                                                  "Creative Cut (*.creativecut)")
+                                                  "Cut (*.creativecut)")
             if not name:
                 return False
             path = Path(name if name.endswith(".creativecut") else name + ".creativecut")

@@ -22,7 +22,7 @@ CLAUDE_CANDIDATES = (Path.home() / ".local/share/creative-claude/bin/claude", Pa
 
 
 def claude_command():
-    """Befehl für Claude (Creative Claude) – im Flatpak über den Host."""
+    """Befehl für Claude (Claude) – im Flatpak über den Host."""
     in_flatpak = os.path.exists("/.flatpak-info")
     for candidate in CLAUDE_CANDIDATES:
         if candidate.is_file():
@@ -493,7 +493,7 @@ class CharacterEditor(QDialog):
         cmd = claude_command()
         if not cmd:
             self.guess_from_text()
-            self.ai_state.setText("Claude ist nicht eingerichtet (Creative Claude). Ich habe die Regler aus deiner "
+            self.ai_state.setText("Claude ist nicht eingerichtet (Claude). Ich habe die Regler aus deiner "
                                   "Beschreibung geschätzt – feinjustieren und zuweisen.")
             return
         prompt = S.ai_prompt(text, self.kind.currentData(), self.joints)
@@ -524,7 +524,7 @@ class CharacterEditor(QDialog):
         except (ValueError, TypeError) as exc:
             hint = err.strip().splitlines()[-1] if err.strip() else str(exc)
             if "login" in (out + err).lower() or "auth" in (out + err).lower():
-                hint = "Bitte zuerst in Creative Claude anmelden."
+                hint = "Bitte zuerst in Claude anmelden."
             self.ai_failed(f"Das hat nicht geklappt: {hint[:200]}")
             return
         anim["source"] = {"ki": self.desc.toPlainText().strip()}

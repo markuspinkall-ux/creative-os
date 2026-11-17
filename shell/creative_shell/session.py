@@ -142,7 +142,7 @@ class SessionModel(QObject):
             bus = QDBusConnection.connectToBus(QDBusConnection.BusType.SessionBus, name)
             iface = QDBusInterface("org.freedesktop.ScreenSaver", "/ScreenSaver",
                                    "org.freedesktop.ScreenSaver", bus)
-            reply = iface.call("Inhibit", "Creative OS", "Nicht sperren (Schnellzugriff)")
+            reply = iface.call("Inhibit", "Orbit OS", "Nicht sperren (Schnellzugriff)")
             if not bus.isConnected() or reply.type() != QDBusMessage.MessageType.ReplyMessage:
                 print("Nicht sperren: ScreenSaver.Inhibit ging nicht:",
                       reply.errorName(), reply.errorMessage(), file=sys.stderr)

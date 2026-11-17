@@ -18,7 +18,7 @@ Window {
     height: surfaceHeight
     visible: false
     color: "transparent"
-    title: placement === "bar" ? "Creative Taskleiste" : "Creative Menü"
+    title: placement === "bar" ? "Taskleiste" : "Menü"
     flags: placement === "bar"
         ? (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus)
         : (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool

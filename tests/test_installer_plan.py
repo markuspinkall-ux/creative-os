@@ -1,4 +1,4 @@
-"""Tests für die Logik der Creative-Installation (ohne Qt, ohne root)."""
+"""Tests für die Logik der Orbit-Installation (ohne Qt, ohne root)."""
 import json
 import sys
 from pathlib import Path
@@ -14,7 +14,7 @@ LSBLK = {"blockdevices": [
     {"name": "/dev/sda", "path": "/dev/sda", "size": 32000000000, "model": "Kleine SSD", "tran": "sata",
      "type": "disk", "rm": False, "ro": False},
     {"name": "/dev/sdb", "path": "/dev/sdb", "size": 64000000000, "model": "SanDisk", "tran": "usb",
-     "type": "disk", "rm": True, "ro": False, "children": [{"fstype": "iso9660", "label": "Creative-Live"}]},
+     "type": "disk", "rm": True, "ro": False, "children": [{"fstype": "iso9660", "label": "Orbit-Live"}]},
     {"name": "/dev/vda", "path": "/dev/vda", "size": 64424509440, "model": None, "tran": None,
      "type": "disk", "rm": False, "ro": False},
     {"name": "/dev/loop0", "path": "/dev/loop0", "size": 5000000000, "type": "loop"},
@@ -84,7 +84,7 @@ def test_kickstart():
 
 
 def test_stage_never_goes_back():
-    assert plan.stage_for("Deployment starting: ...", 0) == (14, "Creative OS wird kopiert")
+    assert plan.stage_for("Deployment starting: ...", 0) == (14, "Orbit OS wird kopiert")
     assert plan.stage_for("Starting installer", 50) is None
     assert plan.stage_for("Installation complete", 90)[0] == 100
     assert plan.stage_for("irgendwas", 10) is None

@@ -1,4 +1,4 @@
-# Bildschirmsperre in der Creative-OS-Sitzung
+# Bildschirmsperre in der Orbit-OS-Sitzung
 # (liegt unter /usr/share/creative-os/xdg und wird von creative-session eingebunden)
 
 [Daemon]

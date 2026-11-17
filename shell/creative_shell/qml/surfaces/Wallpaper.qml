@@ -651,7 +651,7 @@ Item {
             }
             Text {
                 visible: widgetExtras.twitchRows.length === 0
-                text: widgetExtras.busy ? "Status wird geprüft …" : "Kanäle in Creative Widgets hinzufügen."
+                text: widgetExtras.busy ? "Status wird geprüft …" : "Kanäle in Widgets hinzufügen."
                 color: Theme.textMuted
                 width: parent.width
                 elide: Text.ElideRight
@@ -1734,7 +1734,7 @@ Item {
             { sep: true },
             { label: "Taskmanager", icon: "taskmanager", act: "taskmanager" },
             { sep: true },
-            { label: "Creative Widgets öffnen", icon: "settings", act: "widgets" },
+            { label: "Widgets öffnen", icon: "settings", act: "widgets" },
             { label: "Einstellungen", icon: "settings", act: "settings" }
         ])
         onTriggered: (act) => {

@@ -1,6 +1,6 @@
 # Taskmanager
 
-Der Taskmanager von Creative OS – aufgebaut wie bei Windows.
+Der Taskmanager von Orbit OS – aufgebaut wie bei Windows.
 
 - **Prozesse:** Apps (Programme mit Fenster, samt aller Unterprozesse), Hintergrundprozesse, Systemprozesse;
   CPU, Arbeitsspeicher und Datenträger mit „Wärme“-Färbung, Sortieren per Klick auf die Spalte, Suche.
@@ -12,5 +12,5 @@ Der Taskmanager von Creative OS – aufgebaut wie bei Windows.
 - **Details:** alle Prozesse einzeln mit PID, Status, Benutzer, Befehlszeile.
 - **Neuen Task ausführen**, Aktualisierung schnell/normal/langsam/Pause, Entf beendet den markierten Task.
 
-Die gleichen Kacheln wie unter „Leistung“ zeigt die Creative Shell oben rechts auf dem Schreibtisch
+Die gleichen Kacheln wie unter „Leistung“ zeigt die Shell oben rechts auf dem Schreibtisch
 (Rechtsklick auf den Schreibtisch → „Leistungsanzeige ausblenden/einblenden“).

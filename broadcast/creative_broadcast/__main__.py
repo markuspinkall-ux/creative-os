@@ -48,7 +48,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Broadcast: Oberfläche ok")
+        print("Broadcast: Oberfläche ok")
         return 0
     win = engine.rootObjects()[0]
     from PySide6.QtNetwork import QLocalServer

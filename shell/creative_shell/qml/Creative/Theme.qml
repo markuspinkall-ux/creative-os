@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick
 import QtCore
 
-// Design von Creative OS – alle Farben und Maße an einer Stelle.
+// Design von Orbit OS – alle Farben und Maße an einer Stelle.
 // „Graphit“ (dunkel) oder „Porzellan“ (hell), dazu eine Akzentfarbe.
 // Gewählt wird in den Einstellungen → Darstellung (Datei ~/.config/creative-os/look.conf).
 QtObject {

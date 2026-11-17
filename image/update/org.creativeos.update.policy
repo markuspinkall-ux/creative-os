@@ -2,9 +2,9 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Creative OS</vendor>
+  <vendor>Orbit OS</vendor>
   <action id="org.creativeos.update">
-    <description>Creative OS aktualisieren</description>
+    <description>Orbit OS aktualisieren</description>
     <message>Zum Aktualisieren wird dein Passwort benötigt.</message>
     <defaults>
       <allow_any>auth_admin</allow_any>

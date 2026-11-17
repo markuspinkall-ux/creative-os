@@ -1,4 +1,4 @@
-"""Bildschirmfotos des Creative-Engine-Editors (Graphit und Porzellan) – für den Workflow „Creative Engine prüfen“.
+"""Bildschirmfotos des Orbit-Engine-Editors (Graphit und Porzellan) – für den Workflow „Engine prüfen“.
 
     QT_QPA_PLATFORM=offscreen python3 tools/engine-editor-vorschau.py ausgabe/ [präfix]
 """
@@ -34,7 +34,7 @@ w = engine.Window()
 w.resize(1440, 900)
 w.show()
 
-folder = Path(os.environ["HOME"]) / "Creative Engine" / "Insel-Abenteuer"
+folder = Path(os.environ["HOME"]) / "Engine" / "Insel-Abenteuer"
 data = proj.new_project("Insel-Abenteuer")
 proj.add_step(data, "seite", 1)
 proj.save(folder, data)
@@ -46,7 +46,7 @@ level["decor"] += [{"model": "assets/baum.glb", "x": 14, "y": 2, "z": -4, "heigh
                    {"model": "assets/baum.glb", "x": 30, "y": 2, "z": -6, "height": 5}]
 proj.save(folder, data)
 dialogs = []
-space_folder = Path(os.environ["HOME"]) / "Creative Engine" / "Sternenjagd"
+space_folder = Path(os.environ["HOME"]) / "Engine" / "Sternenjagd"
 space = proj.new_project("Sternenjagd", "weltraum")
 proj.save(space_folder, space)
 

@@ -1,4 +1,4 @@
-"""Creative Capture – Bild und Ton einer Capture-Karte (HDMI-Grabber, Cam Link …) anzeigen.
+"""Capture – Bild und Ton einer Capture-Karte (HDMI-Grabber, Cam Link …) anzeigen.
 
 Startpunkt: `creative-capture`. Die Anzeige läuft über Qt Multimedia (V4L2 + PipeWire).
 """
@@ -159,7 +159,7 @@ class Capture(QObject):
             "-nostdin", "-loglevel", "error", "-f", "pulse", "-channels", str(channels),
             "-fragment_size", "4096", "-i", source,
             "-af", f"pan=stereo|c0=c{selected}|c1=c{selected},volume={gain}",
-            "-f", "pulse", "-buffer_duration", "50", "Creative Capture",
+            "-f", "pulse", "-buffer_duration", "50", "Capture",
         ])
 
     @Slot(str, result=str)
@@ -215,7 +215,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Capture: Selbsttest bestanden")
+        print("Capture: Selbsttest bestanden")
         return 0
     win = engine.rootObjects()[0]
     from PySide6.QtNetwork import QLocalServer

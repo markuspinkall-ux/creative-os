@@ -107,7 +107,7 @@ def request(settings, request_type, data=None):
         auth = (hello.get("d") or {}).get("authentication")
         if auth:
             if not settings.get("passwort"):
-                raise ObsError("OBS verlangt ein Passwort – in Creative Deck › OBS eintragen.")
+                raise ObsError("OBS verlangt ein Passwort – in Deck › OBS eintragen.")
             ident["authentication"] = _auth(settings["passwort"], auth["salt"], auth["challenge"])
         ws.send({"op": 1, "d": ident})
         if ws.recv().get("op") != 2:

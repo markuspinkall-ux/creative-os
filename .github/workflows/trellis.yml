@@ -1,7 +1,7 @@
-# Baut den TRELLIS-Container für Creative 3D (Bild → 3D-Figur) und legt ihn in die
+# Baut den TRELLIS-Container für 3D Studio (Bild → 3D-Figur) und legt ihn in die
 # GitHub-Registry: ghcr.io/<besitzer>/creative-trellis:latest
-# Creative 3D lädt ihn beim „KI einrichten“ herunter. Nur nötig, wenn sich
-# creative3d/trellis/ ändert – das Creative-OS-Abbild selbst bleibt klein.
+# 3D Studio lädt ihn beim „KI einrichten“ herunter. Nur nötig, wenn sich
+# creative3d/trellis/ ändert – das Orbit-OS-Abbild selbst bleibt klein.
 name: TRELLIS-Container bauen
 
 on:
@@ -45,7 +45,7 @@ jobs:
         run: |
           docker build \
             --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
-            --label org.opencontainers.image.description="TRELLIS (Microsoft, MIT) für Creative 3D" \
+            --label org.opencontainers.image.description="TRELLIS (Microsoft, MIT) für 3D Studio" \
             --label org.opencontainers.image.licenses=MIT \
             --label org.opencontainers.image.revision=${{ github.sha }} \
             -t "${{ steps.names.outputs.image }}:latest" \

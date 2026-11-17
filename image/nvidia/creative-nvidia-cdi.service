@@ -1,5 +1,5 @@
 [Unit]
-Description=NVIDIA-Grafikkarte für Container freigeben (CDI, z. B. Creative 3D)
+Description=NVIDIA-Grafikkarte für Container freigeben (CDI, z. B. 3D Studio)
 # Läuft bei jedem Start neu – so passt die Beschreibung immer zur installierten Treiberversion.
 After=systemd-modules-load.service local-fs.target
 ConditionPathExists=/usr/bin/nvidia-ctk

@@ -11,7 +11,7 @@ CustomCursorColor=61,111,224
 CustomCursorTextColor=255,255,255
 
 [General]
-Name=Creative Porzellan
+Name=Porzellan
 Parent=FALLBACK/
 TerminalMargin=16
 TerminalCenter=false

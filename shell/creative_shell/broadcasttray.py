@@ -1,4 +1,4 @@
-"""Creative Broadcast im Tray: Symbol zeigt, ob Mikrofon-Filter oder Kamera-Effekt an sind.
+"""Broadcast im Tray: Symbol zeigt, ob Mikrofon-Filter oder Kamera-Effekt an sind.
 
 Liest nur die Dateien des Hintergrunddienstes (creative-broadcastd) – kostet nichts.
 """
@@ -60,7 +60,7 @@ class BroadcastTray(QObject):
 
     def _tip(self):
         voice, cam, vst, cst = self._state
-        parts = ["Creative Broadcast"]
+        parts = ["Broadcast"]
         parts.append("Mikrofon: " + ("rauschfrei" if voice else "aus"))
         if cam:
             parts.append("Kamera: " + ("wird benutzt" if cst.startswith("aktiv") else "bereit"))

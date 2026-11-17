@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Creative
 
-// Rechtsklick-Menü eines Tray-Programms (z. B. Steam, Discord) im Creative-Look.
+// Rechtsklick-Menü eines Tray-Programms (z. B. Steam, Discord) im Orbit-Look.
 Item {
     id: root
     property string screenName

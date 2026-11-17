@@ -11,7 +11,7 @@ CustomCursorColor=143,179,255
 CustomCursorTextColor=18,21,27
 
 [General]
-Name=Creative Graphit
+Name=Graphit
 Parent=FALLBACK/
 TerminalMargin=16
 TerminalCenter=false

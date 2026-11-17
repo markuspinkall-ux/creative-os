@@ -205,7 +205,7 @@ class Daemon:
         err = self.runner.run(action, self.cfg)
         self.message = err
         if err:
-            print("Creative Deck:", err, flush=True)
+            print("Deck:", err, flush=True)
 
     def deck_action(self, st, action):
         typ = action.get("typ")

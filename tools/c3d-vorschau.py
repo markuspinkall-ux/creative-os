@@ -1,4 +1,4 @@
-"""Creative 3D fotografieren (ohne Grafikkarte): Einrichtungsseite für TRELLIS.2.
+"""3D Studio fotografieren (ohne Grafikkarte): Einrichtungsseite für TRELLIS.2.
    QT_QPA_PLATFORM=offscreen python3 tools/c3d-vorschau.py <ausgabe.png> [trellis|trellis2]"""
 import importlib.machinery
 import importlib.util

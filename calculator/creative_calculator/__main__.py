@@ -29,7 +29,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-calculator: Creative-Design nicht gefunden (Creative Shell installiert?)")
+        print("creative-calculator: Orbit-Design nicht gefunden (Shell installiert?)")
         return 1
 
     calc = Calculator()

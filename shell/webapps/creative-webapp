@@ -1,6 +1,6 @@
 #!/bin/sh
 # Öffnet eine Webseite als eigenes Fenster (ohne Adressleiste und Tabs),
-# z. B. Claude oder WhatsApp – im Creative Browser. Jede Web-App hat ihre
+# z. B. Claude oder WhatsApp – im Browser. Jede Web-App hat ihre
 # eigene Anmeldung (bleibt gespeichert) und ihr eigenes Taskleisten-Symbol.
 #   creative-webapp URL [name]    name: z. B. whatsapp → Fensterklasse creative-whatsapp
 url="$1"

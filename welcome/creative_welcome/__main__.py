@@ -61,7 +61,7 @@ def main():
     qml_root = next((Path(p) / "creative_shell" / "qml" for p in sys.path
                      if (Path(p) / "creative_shell" / "qml" / "Creative").is_dir()), None)
     if qml_root is None:
-        print("creative-welcome: Creative-Design nicht gefunden")
+        print("creative-welcome: Orbit-Design nicht gefunden")
         return 1
     engine.addImportPath(str(qml_root))
 
@@ -79,7 +79,7 @@ def main():
     try:
         import json as _json
         _v = _json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
-        ctx.setContextProperty("creativeRelease", f"Creative OS {_v['nummer']} · {_v['codename']}")
+        ctx.setContextProperty("creativeRelease", f"Orbit OS {_v['nummer']} · {_v['codename']}")
     except (OSError, ValueError, KeyError):
         ctx.setContextProperty("creativeRelease", "")
     ctx.setContextProperty("wallpaperUrl", QUrl.fromLocalFile(str(qml_root / "Creative" / "wallpapers" / "graphit.svg")))

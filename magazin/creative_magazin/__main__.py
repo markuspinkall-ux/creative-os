@@ -385,7 +385,7 @@ def main():
         if problems:
             print(f"Selbsttest: {len(problems)} QML-Warnung(en).", file=sys.stderr)
             return 1
-        print("Creative Magazin: Selbsttest bestanden")
+        print("Magazin: Selbsttest bestanden")
     return result
 
 

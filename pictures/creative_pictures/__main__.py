@@ -42,7 +42,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Pictures: Selbsttest bestanden")
+        print("Pictures: Selbsttest bestanden")
         return 0
 
     signal.signal(signal.SIGINT, lambda *_: app.quit())

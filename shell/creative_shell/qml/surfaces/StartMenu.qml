@@ -25,7 +25,7 @@ Item {
 
     Keys.onEscapePressed: root.back()
 
-    // Esc: erst aus dem Ordner „Creative Apps“ zurück, dann Menü schließen
+    // Esc: erst aus dem Ordner „Orbit Suite“ zurück, dann Menü schließen
     function back() {
         if (apps.folder !== "") {
             apps.closeFolder()
@@ -217,7 +217,7 @@ Item {
                 color: rowMouse.pressed ? Theme.pressed
                        : ((rowMouse.containsMouse || ListView.isCurrentItem) ? Theme.hover : "transparent")
 
-                // Ordner „Creative Apps“: kleine Vorschau der Apps darin
+                // Ordner „Orbit Suite“: kleine Vorschau der Apps darin
                 Rectangle {
                     visible: row.isFolder
                     x: 10

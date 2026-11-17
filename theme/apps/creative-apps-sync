@@ -1,13 +1,13 @@
 #!/usr/bin/python3
-"""Räumt das Startmenü von Creative OS auf.
+"""Räumt das Startmenü von Orbit OS auf.
 
 Nur die nötigsten Apps sind sichtbar – mit deutschen, einfachen Namen und
-Symbolen im Creative-Stil. Alles andere wird im Startmenü ausgeblendet
+Symbolen im Orbit-Stil. Alles andere wird im Startmenü ausgeblendet
 (bleibt aber installiert, z. B. damit sich ZIP-Dateien weiter öffnen lassen).
 
 Die Änderungen landen als „Schatten-Kopien“ in
 /usr/share/creative-os/data/applications und gelten nur in der
-Creative-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
+Orbit-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
 Später nachinstallierte Apps (Software, Flathub) erscheinen ganz normal.
 
 Aufruf (als root): creative-apps-sync [Zielordner]
@@ -24,7 +24,7 @@ SOURCES = [Path("/usr/local/share/applications"), Path("/usr/share/applications"
 # Sichtbare Apps: Desktop-Datei → (Name, Symbol). Mehrere Kandidaten pro App möglich.
 VISIBLE = {
     "creative-files.desktop": ("Dateien", "creative-files"),
-    "creative-player.desktop": ("Creative Player", "creative-player"),
+    "creative-player.desktop": ("Player", "creative-player"),
     "creative-art.desktop": (None, None),
     "creative-writer.desktop": (None, None),
     "creative-podcast.desktop": (None, None),
@@ -55,10 +55,10 @@ VISIBLE = {
     "org.kde.gwenview.desktop": ("Bildbetrachter", "creative-pictures"),
     "creative-calculator.desktop": ("Taschenrechner", "creative-calculator"),
     "org.kde.kcalc.desktop": ("Rechner", "creative-calculator"),
-    "creative-shots.desktop": ("Creative Shots", "creative-shots"),
-    "creative-broadcast.desktop": ("Creative Broadcast", "creative-broadcast"),
-    "creative-iso.desktop": ("Creative Iso", "creative-iso"),
-    "creative-capture.desktop": ("Creative Capture", "creative-capture"),
+    "creative-shots.desktop": ("Shots", "creative-shots"),
+    "creative-broadcast.desktop": ("Broadcast", "creative-broadcast"),
+    "creative-iso.desktop": ("Iso", "creative-iso"),
+    "creative-capture.desktop": ("Capture", "creative-capture"),
     "com.obsproject.Studio.desktop": (None, "creative-obs"),
     "creative-pictures.desktop": ("Pictures", "creative-pictures"),
     "org.kde.spectacle.desktop": ("Bildschirmfoto", "creative-shots"),
@@ -70,7 +70,7 @@ VISIBLE = {
 # Gibt es eine eigene Systemsteuerung, wird die von KDE ausgeblendet.
 PREFER = {
     "systemsettings.desktop": "creative-settings.desktop",
-    # Firefox nur, solange der Creative Browser fehlt (z. B. beim Testen in einer VM)
+    # Firefox nur, solange der Browser fehlt (z. B. beim Testen in einer VM)
     "firefox.desktop": "creative-browser.desktop",
     "org.mozilla.firefox.desktop": "creative-browser.desktop",
     "org.gnome.Ptyxis.desktop": "org.kde.konsole.desktop",
@@ -140,7 +140,7 @@ def main():
             label, icon = VISIBLE[name]
             if label is None:
                 shown.append(name)
-                continue          # eigene Creative-App, schon passend
+                continue          # eigene Orbit-App, schon passend
             orig = re.search(r"^Name=(.*)$", text, re.M)
             orig = orig.group(1).strip() if orig else ""
             text = drop_translations(text, "Name")

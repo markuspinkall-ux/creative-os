@@ -1,9 +1,13 @@
 [
   {
     "datum": "2026-11-17",
-    "titel": "Wichtige Korrektur: Start hängt nicht mehr am Bootlogo",
-    "neu": [],
-    "verbessert": [],
+    "titel": "Aus Creative OS wird Orbit OS – und: Start hängt nicht mehr am Bootlogo",
+    "neu": [
+      "Neuer Name: Creative OS heißt jetzt Orbit OS – überall im System: Startauswahl, Anmeldung, Systemsteuerung, Installer, Willkommen, App-Katalog und Hilfetexte. Die eigenen Programme heißen ohne „Creative“ (Browser, Engine, Deck, WhatsApp, Player, Notes …) und liegen im Startmenü-Ordner „Orbit Suite“; aus Creative 3D wird „3D Studio“, die virtuellen Geräte heißen „Orbit Kamera“ und „Orbit Mikrofon“ (in Discord & Co. einmal neu auswählen). Version bleibt „Orbit OS 2 · Vivid Venus“. Eigene Dateien, Einstellungen und Sicherungen bleiben unverändert (der Sicherungsordner heißt weiter „Creative-OS-Sicherung“, damit alte Sicherungen gefunden werden)"
+    ],
+    "verbessert": [
+      "Startbildschirm: nur noch die Rakete, ohne Schriftzug"
+    ],
     "behoben": [
       "Start blieb seit dem Update vom 15.11. am Bootlogo hängen (dahinter lief der Notfallmodus): Die Lautsprecher-Korrektur für das Galaxy Book hatte sich vor die Geräteerkennung gedrängt und gleichzeitig auf die Laufwerke gewartet – beides wartete aufeinander. Sie läuft jetzt im normalen Start; auf dem Galaxy Book bleibt der Ton an. Eine neue Prüfung verhindert solche Startreihenfolgen künftig"
     ]

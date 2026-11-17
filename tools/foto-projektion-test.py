@@ -1,4 +1,4 @@
-"""Prüfung der Foto-Projektion (Creative 3D) an einer Ellipsoid-Figur – ohne Grafikkarte.
+"""Prüfung der Foto-Projektion (3D Studio) an einer Ellipsoid-Figur – ohne Grafikkarte.
 
   python3 tools/foto-projektion-test.py [ausgabeordner] [unterteilung]
 """

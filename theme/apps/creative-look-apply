@@ -18,7 +18,7 @@ fi
 if [ "$1" != --no-gtk ]; then
     for v in gtk-3.0 gtk-4.0; do
         dst="$conf/$v/gtk.css"
-        if [ -f "$css" ] && { [ ! -e "$dst" ] || head -n1 "$dst" | grep -qF "/* Creative OS – "; }; then
+        if [ -f "$css" ] && { [ ! -e "$dst" ] || head -n1 "$dst" | grep -qE "^/\* (Orbit|Creative) OS – "; }; then
             mkdir -p "$conf/$v"; cp "$css" "$dst"
         fi
         ini="$conf/$v/settings.ini"

@@ -1,4 +1,4 @@
-"""Creative Mail: E-Mail-Konten über IMAP (Lesen) und SMTP (Senden).
+"""Mail: E-Mail-Konten über IMAP (Lesen) und SMTP (Senden).
 
 Anmeldung wie in jedem Mailprogramm: Adresse + Passwort (bei Gmail, Yahoo, iCloud und AOL
 ein App-Passwort). Die Serverdaten der bekanntesten Anbieter sind eingebaut; für alle
@@ -76,7 +76,7 @@ PROVIDERS = {
                                                          "live.com", "live.de", "msn.com"],
                 "imap": ("outlook.office365.com", 993), "smtp": ("smtp-mail.outlook.com", 587, "starttls"),
                 "unsupported": "Microsoft erlaubt seit September 2024 keine Anmeldung mit Passwort mehr "
-                               "(auch nicht mit App-Passwort). Outlook-/Hotmail-Konten gehen in Creative Mail "
+                               "(auch nicht mit App-Passwort). Outlook-/Hotmail-Konten gehen in Mail "
                                "deshalb im Moment nicht – bitte outlook.live.com im Browser nutzen.",
                 "help": "", "link": "https://outlook.live.com/"},
     "custom": {"name": "Anderer Anbieter", "domains": [], "imap": ("", 993), "smtp": ("", 587, "starttls"),
@@ -317,7 +317,7 @@ class MailAccount:
     def _keyring(self, action, value=None):
         args = ["secret-tool", action]
         if action == "store":
-            args += ["--label=Creative Mail – " + self.address]
+            args += ["--label=Mail – " + self.address]
         args += ["application", "creative-mail", "account", self.address, "protocol", "imap"]
         try:
             result = subprocess.run(args, input=value, text=True, capture_output=True, timeout=45)

@@ -276,7 +276,7 @@ Window {
             Text {
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: "Das ist ein Systemprozess. Wenn du ihn beendest, kann Creative OS instabil werden oder Dinge funktionieren nicht mehr bis zum Neustart. Ungespeicherte Daten können verloren gehen."
+                text: "Das ist ein Systemprozess. Wenn du ihn beendest, kann Orbit OS instabil werden oder Dinge funktionieren nicht mehr bis zum Neustart. Ungespeicherte Daten können verloren gehen."
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
             }
             Row {

@@ -1,4 +1,4 @@
-name: Live-ISO mit Creative-Installation
+name: Live-ISO mit Orbit-Installation
 
 on:
   workflow_dispatch:
@@ -93,7 +93,7 @@ jobs:
           ls *.png >/dev/null 2>&1 || exit 0
           mkdir -p /tmp/pub && cp *.png /tmp/pub/ && cp serial-*.log /tmp/pub/ 2>/dev/null || true
           cd /tmp/pub
-          printf '# Creative OS – Live-ISO-Test\n\nLauf %s (%s).\n\n![Übersicht](uebersicht.png)\n' \
+          printf '# Orbit OS – Live-ISO-Test\n\nLauf %s (%s).\n\n![Übersicht](uebersicht.png)\n' \
             "${{ github.run_id }}" "${{ github.sha }}" > README.md
           git init -q -b live-fotos
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"

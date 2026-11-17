@@ -1,10 +1,10 @@
 #!/bin/sh
-# Installiert das Creative-OS-Aussehen für alle Programme:
-#  - Fensterrahmen „Creative Graphit“ (KWin)
+# Installiert das Orbit-OS-Aussehen für alle Programme:
+#  - Fensterrahmen „Graphit“ (KWin)
 #  - Graphit-Farben + Arial für Qt/KDE-Programme (kdeglobals)
 #  - Graphit für GTK-Programme (z. B. Software)
-#  - aufgeräumtes Startmenü mit Creative-Symbolen
-# Alles gilt nur in der Creative-OS-Sitzung; Plasma bleibt unverändert.
+#  - aufgeräumtes Startmenü mit Orbit-Symbolen
+# Alles gilt nur in der Orbit-OS-Sitzung; Plasma bleibt unverändert.
 set -eu
 cd "$(dirname "$0")"
 
@@ -36,7 +36,7 @@ if [ -f "$KWINRC" ]; then
     else
         aur="$(ls /usr/lib64/qt6/plugins/org.kde.kdecoration3/ /usr/lib/qt6/plugins/org.kde.kdecoration3/ 2>/dev/null | grep -o 'org.kde.kwin.aurorae[.a-z0-9]*' | sort | tail -n1)"
         sed -i "s/^\[org.kde.kdecoration2\]\$/[org.kde.kdecoration2]\nlibrary=${aur:-org.kde.kwin.aurorae}\ntheme=__aurorae__svg__CreativeGraphit/" "$KWINRC"
-        echo "Fensterrahmen: Creative Graphit (Breeze ist nicht installiert)"
+        echo "Fensterrahmen: Graphit (Breeze ist nicht installiert)"
     fi
 fi
 
@@ -97,7 +97,7 @@ KDED
 install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
 install -Dm755 apps/creative-look-apply /usr/libexec/creative-look-apply
 
-# Creative-Symbole für die mitgelieferten Apps
+# Orbit-Symbole für die mitgelieferten Apps
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
 for pair in settings:settings browser:browser games:games chat:chat discord:discord whatsapp:whatsapp store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
@@ -110,7 +110,7 @@ gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 # Symbol-Design „Creative“: ersetzt die Original-Symbole der Standard-Apps
 # auch in Titelleiste und Taskleiste (z. B. Rechner, Terminal, Steam)
 sh icons/build-icon-theme.sh "$ICONS" /usr/share/icons/Creative
-# Startmenü: alle Creative-App-Symbole als Graphit-Kachel (wie Art, Writer, Cut …).
+# Startmenü: alle Orbit-App-Symbole als Graphit-Kachel (wie Art, Writer, Cut …).
 # Die Strichsymbole der Shell selbst bleiben unverändert.
 python3 icons/tile-icons.py /usr/share/icons/Creative/apps/scalable
 python3 icons/tile-icons.py --inplace /usr/share/icons/hicolor/scalable/apps/creative-*.svg
@@ -126,7 +126,7 @@ install -Dm755 apps/creative-apps-sync /usr/bin/creative-apps-sync
 creative-apps-sync
 
 echo
-echo "Fertig. Bitte Creative OS einmal neu starten (abmelden und wieder anmelden)."
+echo "Fertig. Bitte Orbit OS einmal neu starten (abmelden und wieder anmelden)."
 
 # GTK-Voreinstellungen auch für neue Benutzer (GSettings)
 if command -v dconf >/dev/null 2>&1; then

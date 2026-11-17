@@ -46,7 +46,7 @@ INDEX = """<!doctype html>
 <p>Diese Seite kommt aus dem Ordner <code>Webseite</code> in „Mein Server“.</p>
 <p>Ersetze diese Datei (<code>index.html</code>) durch deine eigene Webseite – fertig.
 Auch PHP-Seiten (<code>index.php</code>) funktionieren.</p>
-<p style="opacity:.6;font-size:13px">Creative OS · Mein Server</p>
+<p style="opacity:.6;font-size:13px">Orbit OS · Mein Server</p>
 </div></body></html>
 """
 
@@ -90,7 +90,7 @@ def ensure_mount(dev):
         fail("Das System-Laufwerk kann nicht als Server-Festplatte gewählt werden.")
     fstype = (n.get("fstype") or "").lower()
     if fstype not in FS_OK:
-        fail("Dieses Laufwerk hat kein lesbares Dateisystem. Creative OS formatiert nichts – bitte ein anderes wählen.")
+        fail("Dieses Laufwerk hat kein lesbares Dateisystem. Orbit OS formatiert nichts – bitte ein anderes wählen.")
     uuid = n.get("uuid")
     if not uuid:
         fail("Das Laufwerk hat keine Kennung (UUID).")
@@ -116,7 +116,7 @@ def ensure_mount(dev):
     for m in mps:
         run("umount", m)
     with open("/etc/fstab", "a", encoding="utf-8") as fh:
-        fh.write(f"\n# Creative OS – Mein Server\nUUID={uuid} {target} {fstype} {opts} 0 0\n")
+        fh.write(f"\n# Orbit OS – Mein Server\nUUID={uuid} {target} {fstype} {opts} 0 0\n")
     run("systemctl", "daemon-reload")
     r = run("mount", str(target))
     if r.returncode != 0:
@@ -242,7 +242,7 @@ def enable(target):
 
 DUCK = STATE_DIR / "duckdns.json"
 DUCK_TIMER = """[Unit]
-Description=Creative OS – Mein Server: Internet-Adresse aktuell halten
+Description=Orbit OS – Mein Server: Internet-Adresse aktuell halten
 
 [Timer]
 OnBootSec=1min
@@ -252,7 +252,7 @@ OnUnitActiveSec=5min
 WantedBy=timers.target
 """
 DUCK_SERVICE = """[Unit]
-Description=Creative OS – Mein Server: Internet-Adresse aktualisieren
+Description=Orbit OS – Mein Server: Internet-Adresse aktualisieren
 After=network-online.target
 Wants=network-online.target
 

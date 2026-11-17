@@ -1,4 +1,4 @@
-"""Bedienung von Creative Broadcast (die Arbeit macht creative-broadcastd)."""
+"""Bedienung von Broadcast (die Arbeit macht creative-broadcastd)."""
 
 import json
 import subprocess

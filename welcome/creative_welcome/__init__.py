@@ -1,1 +1,1 @@
-"""Willkommens-Assistent von Creative OS (erster Start)."""
+"""Willkommens-Assistent von Orbit OS (erster Start)."""

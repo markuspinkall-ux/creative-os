@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS – Server-Modus beim Hochfahren zurücksetzen (normale Anmeldung)
+Description=Orbit OS – Server-Modus beim Hochfahren zurücksetzen (normale Anmeldung)
 Documentation=file:///usr/share/doc/creative-server/README.md
 # Vor dem Anmeldebildschirm, damit er nicht die Server-Maske zeigt
 Before=display-manager.service sddm.service creative-servermode.service

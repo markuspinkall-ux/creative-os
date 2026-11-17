@@ -1,4 +1,4 @@
-"""Weltraum-Shooter der Creative Engine mit echtem Godot prüfen (für „Creative Engine prüfen“).
+"""Weltraum-Shooter der Engine mit echtem Godot prüfen (für „Engine prüfen“).
 
     python3 tools/weltraum-test.py GODOT ausgabe/
 

@@ -49,7 +49,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
 
 async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
   const dir = arg('creative-selftest');
-  setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
+  setTimeout(() => { console.log('Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
   const result = { ok: false, checks: {} };
   const check = (name, cond) => { result.checks[name] = !!cond; };
@@ -100,7 +100,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
     check('Lautsprecher nur bei Ton', audioIcons <= 1);
 
     // Adressleiste: Suche vs. Adresse
-    store.visit('https://www.twitch.tv/creativeos', 'Creative OS – Twitch');
+    store.visit('https://www.twitch.tv/creativeos', 'Orbit OS – Twitch');
     const sug = store.suggest('twi');
     check('Vorschläge aus dem Verlauf', sug.length > 0 && sug[0].url.includes('twitch'));
 
@@ -130,7 +130,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       await sleep(500);
     }
 
-    // Beide Designs wie in Creative OS (Graphit ist Standard)
+    // Beide Designs wie in Orbit OS (Graphit ist Standard)
     win.activate(win.tabs[0]);
     win.command('navigate', 'creative://start/');
     await sleep(1200);
@@ -262,7 +262,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
   fs.writeFileSync(path.join(dir, 'ergebnis.json'), JSON.stringify(result, null, 2));
   for (const [k, v] of Object.entries(result.checks)) console.log(`${v ? 'ok  ' : 'FEHLER'} ${k}`);
   console.log(JSON.stringify({ video: result.video, online: result.online, error: result.error }, null, 1));
-  console.log(result.ok ? 'Creative Browser: alle Prüfungen bestanden' : 'Creative Browser: Prüfung FEHLGESCHLAGEN');
+  console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
 

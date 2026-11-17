@@ -23,7 +23,7 @@ def web_url(url):
 def request(url):
     if not web_url(url):
         raise ValueError("Bitte eine HTTP- oder HTTPS-Adresse eingeben.")
-    return urlopen(Request(url, headers={"User-Agent": "Creative Podcast/1.0"}), timeout=15)
+    return urlopen(Request(url, headers={"User-Agent": "Podcast/1.0"}), timeout=15)
 
 
 def document(url):

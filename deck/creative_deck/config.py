@@ -1,4 +1,4 @@
-"""Einstellungen von Creative Deck: ~/.config/creative-deck/config.json
+"""Einstellungen von Deck: ~/.config/creative-deck/config.json
 
 Ein Profil für alle Stream Decks: Seiten mit Tasten (Nummer → Taste). Jede Taste hat
 Beschriftung, Symbol, Hintergrundfarbe und eine Aktion. Der Hintergrunddienst liest die
@@ -103,7 +103,7 @@ def _clean(cfg):
 
 
 def _to_creative_browser(cfg):
-    """Tasten, die Brave starten, auf den Creative Browser umstellen (einmalig beim Laden)."""
+    """Tasten, die Brave starten, auf den Browser umstellen (einmalig beim Laden)."""
     for seite in cfg["seiten"]:
         for key in seite["tasten"].values():
             a = key.get("aktion") or {}

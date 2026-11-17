@@ -1,5 +1,5 @@
 #!/bin/sh
-# Creative WhatsApp: eigene App um das offizielle WhatsApp Web (gleiche Electron-Laufzeit wie der Browser)
+# WhatsApp: eigene App um das offizielle WhatsApp Web (gleiche Electron-Laufzeit wie der Browser)
 #   creative-whatsapp            Fenster öffnen (läuft es schon: nach vorn holen)
 #   creative-whatsapp --hidden   unsichtbar im Hintergrund starten (Autostart)
 export CHROME_DESKTOP=creative-whatsapp.desktop

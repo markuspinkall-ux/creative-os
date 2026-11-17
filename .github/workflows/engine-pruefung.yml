@@ -1,4 +1,4 @@
-name: Creative Engine prüfen
+name: Engine prüfen
 # Spiel-Laufzeit mit echtem Godot testen (Autotest, Bildschirmfotos, Export Linux/Windows).
 on:
   push:

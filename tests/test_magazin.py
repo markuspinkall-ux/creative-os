@@ -1,4 +1,4 @@
-"""Tests für Creative Magazin ohne Internet und ohne Qt: python3 -m unittest tests/test_magazin.py"""
+"""Tests für Magazin ohne Internet und ohne Qt: python3 -m unittest tests/test_magazin.py"""
 
 import sys
 import tempfile

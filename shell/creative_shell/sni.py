@@ -25,9 +25,9 @@ WATCHER = ("org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher", "org.kde.S
 ITEM_IF = "org.kde.StatusNotifierItem"
 MENU_IF = "com.canonical.dbusmenu"
 
-# Bekannte Programme bekommen das passende Creative-Symbol
+# Bekannte Programme bekommen das passende Orbit-Symbol
 CREATIVE_ICONS = {"whatsapp": "whatsapp", "steam": "games", "discord": "discord", "brave": "browser", "creative": "rocket"}
-# Programme, deren Tray-Symbol durch das Creative-App-Symbol ersetzt wird (Id/IconName → Symbol)
+# Programme, deren Tray-Symbol durch das Orbit-App-Symbol ersetzt wird (Id/IconName → Symbol)
 APP_ICONS = {"obs": "com.obsproject.Studio", "obs-tray": "com.obsproject.Studio",
              "obs-tray-active": "com.obsproject.Studio", "com.obsproject.studio": "com.obsproject.Studio"}
 

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Writer
+Name=Writer
 GenericName=Textverarbeitung
 Comment=Dokumente wie in Word schreiben – mit Menüband, Word-Dateien, PDF und Rechtschreibprüfung
 Exec=creative-writer %f

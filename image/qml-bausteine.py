@@ -52,7 +52,7 @@ def main():
     # Bausteine wirklich erzeugen (prüft auch Eigenschaften und Bindungen)
     comp = QQmlComponent(engine)
     comp.setData(BAUSTEINE, QUrl("file:///bausteine.qml"))
-    check(comp, "Creative-Bausteine")
+    check(comp, "Orbit-Bausteine")
     if comp.status() == QQmlComponent.Status.Ready:
         obj = comp.create()
         if obj is None:

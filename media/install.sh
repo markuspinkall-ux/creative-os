@@ -1,6 +1,6 @@
 #!/bin/sh
-# Installiert den Creative Player auf einem bestehenden Fedora
-# (setzt die Creative Shell voraus – sie liefert das gemeinsame Design).
+# Installiert den Player auf einem bestehenden Fedora
+# (setzt die Shell voraus – sie liefert das gemeinsame Design).
 set -eu
 cd "$(dirname "$0")"
 
@@ -22,4 +22,4 @@ install -Dm644 creative-player.svg /usr/share/icons/hicolor/scalable/apps/creati
 gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 update-desktop-database -q /usr/share/applications 2>/dev/null || true
 
-echo "Fertig. „Creative Player“ steht jetzt im Startmenü."
+echo "Fertig. „Player“ steht jetzt im Startmenü."

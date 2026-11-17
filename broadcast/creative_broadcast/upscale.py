@@ -46,7 +46,7 @@ class Upscaler:
         inp = self.sess.get_inputs()[0]
         self.input = inp.name
         self.dtype = np.float16 if "float16" in inp.type else np.float32
-        print(f"Creative Broadcast: Upscaling {level} über {self.engine}", file=sys.stderr)
+        print(f"Broadcast: Upscaling {level} über {self.engine}", file=sys.stderr)
 
     def needed(self, frame):
         return frame.shape[0] < OUT_H

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Creative 3D – KI (TRELLIS) einmalig einrichten, ohne sudo.
+# 3D Studio – KI (TRELLIS) einmalig einrichten, ohne sudo.
 #   Container:  ghcr.io/markuspinkall-ux/creative-trellis:latest  (≈ 14 GB, fertig kompiliert)
 #   Modelle:    ~/.local/share/creative-3d/modelle  (≈ 4 GB: TRELLIS, DINOv2, Hintergrund-Entfernung)
 #   Markierung: ~/.local/share/creative-3d/trellis-ready
@@ -25,7 +25,7 @@ fail() { echo "FEHLER: $*"; exit 1; }
 if [ "${1:-}" = "--entfernen" ]; then
     podman rmi -f ghcr.io/markuspinkall-ux/creative-trellis:latest ghcr.io/markuspinkall-ux/creative-trellis2:latest >/dev/null 2>&1 || true
     rm -rf "$DATA"
-    echo "Creative-3D-KI entfernt."
+    echo "3D-Studio-KI entfernt."
     exit 0
 fi
 # Solange geladen wird, geht der PC nicht von selbst in den Standby
@@ -33,7 +33,7 @@ fi
 if [ -z "${CREATIVE_WACH:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 && systemd-inhibit --list >/dev/null 2>&1; then
     export CREATIVE_WACH=1
     # Die Modellwahl wurde oben schon ausgelesen (und aus "$@" entfernt) – beim Neustart wieder mitgeben
-    exec systemd-inhibit --what=idle --mode=block --who="Creative 3D" --why="KI wird eingerichtet" "$0" --modell "$MODELL" "$@"
+    exec systemd-inhibit --what=idle --mode=block --who="3D Studio" --why="KI wird eingerichtet" "$0" --modell "$MODELL" "$@"
 fi
 rm -f "$MARK" "$DATA/ready"
 
@@ -45,7 +45,7 @@ mkdir -p "$DATA/modelle"
 
 step 1 "Prüfe die Grafikkarte …"
 command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 \
-    || fail "Creative 3D braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Creative OS."
+    || fail "3D Studio braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Orbit OS."
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1 | sed 's/^/Grafikkarte: /'
 mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
 [ "${mem:-0}" -lt 11000 ] 2>/dev/null && echo "Hinweis: Unter 12 GB Grafikspeicher kann TRELLIS zu wenig Speicher haben."
@@ -55,13 +55,13 @@ podman_ok() {
     out=$(podman --version 2>&1) && return 0
     case "$out" in
         *"fatal error"*|*SIGSEGV*|*"unexpected fault"*)
-            fail "Das Container-Programm (podman) stürzt beim Start ab. Das liegt nicht am Download, sondern meist an einem Speicherfehler im laufenden System. Bitte den PC neu starten und Creative 3D erneut einrichten – bereits geladene Teile bleiben erhalten." ;;
+            fail "Das Container-Programm (podman) stürzt beim Start ab. Das liegt nicht am Download, sondern meist an einem Speicherfehler im laufenden System. Bitte den PC neu starten und 3D Studio erneut einrichten – bereits geladene Teile bleiben erhalten." ;;
     esac
     fail "podman funktioniert nicht: $(echo "$out" | head -1)"
 }
 
 step 2 "Prüfe den Container-Zugriff auf die Grafikkarte …"
-command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Creative OS aktualisieren."
+command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Orbit OS aktualisieren."
 podman_ok
 # Platz: Container ≈ 14 GB gepackt + ≈ 18 GB entpackt, Modelle ≈ 4 GB
 store="$HOME/.local/share/containers"
@@ -71,7 +71,7 @@ if podman image exists "$IMAGE" 2>/dev/null; then need=$((MODEL_GB + 2)); else n
 [ "${free_gb:-0}" -lt "$need" ] && fail "Zu wenig Speicherplatz: frei sind ${free_gb} GB, gebraucht werden etwa ${need} GB. Bitte Platz schaffen (z. B. Papierkorb leeren) und erneut versuchen."
 echo "Freier Speicher: ${free_gb} GB"
 if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
-    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Creative OS aktualisieren und neu starten."
+    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Orbit OS aktualisieren und neu starten."
 fi
 
 step 3 "Lade den $NAME-Container (≈ 14–18 GB, das dauert eine Weile) …"
@@ -100,9 +100,9 @@ podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entry
 
 step 5 "Lade die KI-Modelle (≈ $MODEL_GB GB) …"
 if [ "$MODELL" = trellis2 ]; then
-    # DINOv3 (Meta) ist freischaltpflichtig: Schlüssel aus Creative 3D, nur für diesen Schritt
+    # DINOv3 (Meta) ist freischaltpflichtig: Schlüssel aus 3D Studio, nur für diesen Schritt
     token_file="$DATA/hf-token"
-    [ -s "$token_file" ] || fail "Bitte zuerst deinen Hugging-Face-Schlüssel in Creative 3D eintragen."
+    [ -s "$token_file" ] || fail "Bitte zuerst deinen Hugging-Face-Schlüssel in 3D Studio eintragen."
     HF_TOKEN="$(cat "$token_file")"
     export HF_TOKEN
     out="$DATA/einrichten2.log"

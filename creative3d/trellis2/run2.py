@@ -1,6 +1,6 @@
-"""Creative 3D – Rechenteil im TRELLIS.2-Container: Bild → texturierte 3D-Figur (4 Mrd. Parameter).
+"""3D Studio – Rechenteil im TRELLIS.2-Container: Bild → texturierte 3D-Figur (4 Mrd. Parameter).
 
-Gleiche Zeilen-Sprache wie run.py (P/OK/ERR), damit Creative 3D mitlesen kann.
+Gleiche Zeilen-Sprache wie run.py (P/OK/ERR), damit 3D Studio mitlesen kann.
 
   run2.py --prepare                          Modelle laden (einmalig, ≈ 13 GB nach /cache), braucht HF_TOKEN
   run2.py --image /out/bild.png --out /out [--quality normal|hoch|sehr-hoch] [--seed 1]
@@ -139,7 +139,7 @@ def generate(args):
     from PIL import Image
 
     if not torch.cuda.is_available():
-        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Creative OS installiert?")
+        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Orbit OS installiert?")
         return 3
     settings = QUALITY.get(args.quality, QUALITY["normal"])
     out = Path(args.out)

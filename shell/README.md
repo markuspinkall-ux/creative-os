@@ -1,6 +1,6 @@
-# Creative Shell
+# Shell
 
-Taskleiste, Startmenü und Schnellzugriff von **Creative OS**, im Graphit-Design.
+Taskleiste, Startmenü und Schnellzugriff von **Orbit OS**, im Graphit-Design.
 
 ## Was schon drin ist
 
@@ -41,7 +41,7 @@ Die Leiste erscheint dann als normales Fenster am unteren Rand.
 sudo ./install.sh
 ```
 
-Danach abmelden und im Anmeldebildschirm „Creative OS“ wählen.
+Danach abmelden und im Anmeldebildschirm „Orbit OS“ wählen.
 
 ## Aufbau
 
@@ -71,7 +71,7 @@ Punkt = mehrere Fenster. Klick holt das Fenster nach vorn (nochmal klicken
 minimiert), bei mehreren Fenstern wird durchgeschaltet, mittlere Maustaste
 öffnet ein neues Fenster. Grundlage ist das KWin-Skript `kwin/creative-tasks`.
 
-### Windows-Tastenkürzel (nur in der Creative-OS-Sitzung)
+### Windows-Tastenkürzel (nur in der Orbit-OS-Sitzung)
 
 | Taste | Wirkung |
 |---|---|
