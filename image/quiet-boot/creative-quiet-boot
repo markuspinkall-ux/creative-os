@@ -3,7 +3,7 @@
 # sehen ist – keine Textmeldungen. Wirkt ab dem nächsten Neustart.
 # Die Textkonsole bleibt für Anmeldung und Fehlerdiagnose lesbar.
 set -eu
-args="rhgb quiet splash loglevel=3 rd.udev.log_level=3 rd.systemd.show_status=false systemd.show_status=false"
+args="rhgb quiet splash plymouth.use-simpledrm loglevel=3 rd.udev.log_level=3 rd.systemd.show_status=false systemd.show_status=false"
 missing=""
 for a in $args; do
     grep -qw -- "$a" /proc/cmdline || missing="$missing --append-if-missing=$a"
