@@ -27,7 +27,8 @@ LADSPA = [Path("/usr/lib64/ladspa/libdeep_filter_ladspa.so"), Path("/usr/lib/lad
 MODEL = Path("/usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx")
 VOICE_NODE = "creative_voice"
 DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "voiceInput": "", "camera": False, "cameraDevice": "",
-            "effect": "blur", "background": "", "quality": "sparsam", "upscale": "aus"}
+            "effect": "blur", "background": "", "quality": "sparsam", "upscale": "aus",
+            "resolution": "1080p"}
 
 for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
     if _v.is_dir() and str(_v) not in sys.path:
@@ -307,7 +308,7 @@ class Camera:
 
     def apply(self, cfg):
         want = bool(cfg["camera"])
-        key = (cfg["cameraDevice"], cfg["quality"], cfg.get("upscale", "aus"))
+        key = (cfg["cameraDevice"], cfg["quality"], cfg.get("upscale", "aus"), cfg.get("resolution", "1080p"))
         if not want:
             self.stop()
             return
@@ -326,12 +327,15 @@ class Camera:
         self.thread = None
         STATUS.set(camera="aus", fps=0)
 
-    def _pick_mode(self, device):
-        """Beste Einstellung der Kamera: höchste Bildrate (bis 60), dann größte Auflösung (bis 1080p)."""
+    def _pick_mode(self, device, resolution="1080p"):
+        """Beste Einstellung der Kamera. „1080p“: höchste Bildrate (bis 60), dann größte Auflösung bis 1080p.
+        „max“: volle Auflösung der Kamera (z. B. 2K/1440p, bis 4K) bei mindestens 24 Bildern/s."""
         from . import v4l2modes
         devices = [device] if device else [c["device"] for c in list_cameras()]
         for d in devices:
-            mode = v4l2modes.best_mode(v4l2modes.list_modes(d))
+            modes = v4l2modes.list_modes(d)
+            mode = (v4l2modes.best_mode(modes, max_width=3840, prefer="size") if resolution == "max"
+                    else v4l2modes.best_mode(modes))
             if mode:
                 self.W, self.H, self.FPS, self.FOURCC = mode["width"], mode["height"], mode["fps"], mode["format"]
                 return mode
@@ -344,7 +348,7 @@ class Camera:
             return None, "aus"
         from . import upscale
         if self.H >= upscale.OUT_H:
-            return None, "nicht nötig – Kamera liefert schon 1080p"
+            return None, f"nicht nötig – Kamera liefert schon {self.H}p"
         ok, why = upscale.available()
         if not ok:
             return None, f"nicht möglich: {why}"
@@ -373,7 +377,7 @@ class Camera:
             STATUS.set(camera=f"fehlt: KI ({exc.__class__.__name__})")
             return
         STATUS.set(engine=matting.engine)
-        mode = self._pick_mode(cfg["cameraDevice"])
+        mode = self._pick_mode(cfg["cameraDevice"], cfg.get("resolution", "1080p"))
         upscaler, up_state = self._make_upscaler(cfg.get("upscale", "aus"))
         from . import upscale as _up
         self.OW, self.OH = (_up.OUT_W, _up.OUT_H) if upscaler else (self.W, self.H)

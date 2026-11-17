@@ -43,6 +43,14 @@ jobs:
               got = (m["width"], m["height"], m["fps"])
               print(name, "→", got)
               assert got == want, (name, got, want)
+          c200 = [{"format": "MJPG", "width": 2560, "height": 1440, "fps": 30.0}, {"format": "MJPG", "width": 1920, "height": 1080, "fps": 30.0},
+                  {"format": "MJPG", "width": 1280, "height": 720, "fps": 30.0}, {"format": "YUYV", "width": 2560, "height": 1440, "fps": 2.0}]
+          for name, modes, want in (("C200 voll", c200, (2560, 1440, 30)), ("Brio voll", brio, (3840, 2160, 30)),
+                                    ("C920 voll", c920, (1920, 1080, 30)), ("C200 bis 1080p", c200, None)):
+              m = best_mode(modes, max_width=3840, prefer="size") if want else best_mode(c200)
+              got = (m["width"], m["height"], m["fps"])
+              print(name, "→", got)
+              assert got == (want or (1920, 1080, 30)), (name, got, want)
           print("Auswahl ok")
           PY
       - name: KI-Upscaling rechnen (Prozessor, nur Richtigkeit)

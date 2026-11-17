@@ -126,6 +126,11 @@ class Broadcast(QObject):
         if level in ("aus", "schnell", "beste"):
             self._set(upscale=level)
 
+    @Slot(str)
+    def setResolution(self, res):
+        if res in ("1080p", "max"):
+            self._set(resolution=res)
+
     @Slot(bool)
     def setPreview(self, on):
         self._preview_on = bool(on)
@@ -172,6 +177,7 @@ class Broadcast(QObject):
     deepFilter = Property(bool, lambda self: daemon.ladspa_plugin() is not None, constant=True)
     previewUrl = Property(str, _preview_url, notify=previewChanged)
     upscale = Property(str, lambda self: self._cfg.get("upscale", "aus"), notify=changed)
+    resolution = Property(str, lambda self: self._cfg.get("resolution", "1080p"), notify=changed)
     upscaleState = Property(str, lambda self: self._status.get("upscale", "aus"), notify=statusChanged)
     upscaleMs = Property(float, lambda self: float(self._status.get("upscaleMs", 0) or 0), notify=statusChanged)
     processingMs = Property(float, lambda self: float(self._status.get("processingMs", 0) or 0), notify=statusChanged)

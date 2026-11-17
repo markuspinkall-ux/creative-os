@@ -80,7 +80,7 @@ def list_modes(device):
                     sizes = [(s[3], s[4])]
                 else:                  # stufenlos: übliche Größen innerhalb der Grenzen
                     minw, maxw, _, minh, maxh, _ = s[3:9]
-                    sizes = [(w, h) for w, h in ((1920, 1080), (1280, 720), (640, 480))
+                    sizes = [(w, h) for w, h in ((3840, 2160), (2560, 1440), (1920, 1080), (1280, 720), (640, 480))
                              if minw <= w <= maxw and minh <= h <= maxh]
                 for w, h in sizes:
                     for r in _rates(fd, pix, w, h):
@@ -96,11 +96,19 @@ def list_modes(device):
 _PREFERENCE = {"MJPG": 3, "H264": 1, "YUYV": 2, "NV12": 2}
 
 
-def best_mode(modes, max_width=1920, max_fps=60):
-    """Höchste Bildrate (bis 60) bei mindestens 720p, dann größte Auflösung bis 1080p."""
+def best_mode(modes, max_width=1920, max_fps=60, prefer="fps"):
+    """prefer="fps": höchste Bildrate (bis 60) bei mindestens 720p, dann größte Auflösung bis max_width.
+    prefer="size": größte Auflösung (bis max_width, z. B. 2K/1440p), dabei mindestens 24 Bilder/s."""
     usable = [m for m in modes if m["width"] <= max_width and m["format"] in ("MJPG", "YUYV", "NV12")]
     if not usable:
         return None
+    if prefer == "size":
+        smooth = [m for m in usable if m["fps"] >= 23.5] or usable
+        smooth.sort(key=lambda m: (m["width"] * m["height"], min(m["fps"], max_fps), _PREFERENCE.get(m["format"], 0)),
+                    reverse=True)
+        best = dict(smooth[0])
+        best["fps"] = min(max_fps, best["fps"])
+        return best
     hd = [m for m in usable if m["height"] >= 720] or usable
     top = min(max_fps, max(m["fps"] for m in hd))
     fast = [m for m in hd if m["fps"] >= top - 0.5]
@@ -117,3 +125,4 @@ if __name__ == "__main__":
         for m in ms:
             print(dev, m)
         print("beste Einstellung:", best_mode(ms))
+        print("volle Auflösung:", best_mode(ms, max_width=3840, prefer="size"))

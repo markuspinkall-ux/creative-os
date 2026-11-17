@@ -229,6 +229,32 @@ Window {
                     }
                 }
             }
+            // Auflösung: bis 1080p (flüssigste Bildrate) oder volle Auflösung der Kamera (z. B. 2K)
+            Row {
+                spacing: 12
+                Column {
+                    spacing: 4
+                    Text { text: "Auflösung"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                    Row {
+                        spacing: 6
+                        Repeater {
+                            model: [{ k: "1080p", t: "Bis 1080p" }, { k: "max", t: "Volle Auflösung (2K/4K)" }]
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool cur: bc.resolution === modelData.k
+                                width: rText.implicitWidth + 24
+                                height: 32
+                                radius: 16
+                                color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.25) : (rm.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
+                                Text { id: rText; anchors.centerIn: parent; text: modelData.t; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: parent.cur }
+                                MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: bc.setResolution(modelData.k) }
+                                Accessible.role: Accessible.Button
+                                Accessible.name: "Auflösung: " + modelData.t
+                            }
+                        }
+                    }
+                }
+            }
             // KI-Upscaling auf 1080p
             Row {
                 spacing: 12
