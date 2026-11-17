@@ -107,6 +107,16 @@ def _save_update_history(data):
 MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober",
           "November", "Dezember"]
 CHANGELOG = Path(__file__).resolve().parent / "neuerungen.json"
+IMPRESSUM = Path(__file__).with_name("impressum.json")
+
+
+def load_impressum(path=IMPRESSUM):
+    """Impressum (Anbieterkennzeichnung) für „Über Orbit OS“: {name, anschrift, email, web}."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {k: str(data.get(k, "")).strip() for k in ("name", "anschrift", "email", "web")}
 
 
 def load_changelog(path=CHANGELOG):
@@ -541,6 +551,7 @@ class SystemModel(QObject):
     secureBootMessage = Property(str, lambda self: self._sb_msg, notify=sbChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
     changelog = Property("QVariantList", lambda self: load_changelog(), constant=True)
+    impressum = Property("QVariantMap", lambda self: load_impressum(), constant=True)
 
 
 UPDATE_RUN_DIR = Path("/run/creative-update")

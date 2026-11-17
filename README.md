@@ -36,3 +36,7 @@ beim nächsten Neustart. Im Bootmenü steht immer der vorherige Stand bereit.
   Grafik: VMSVGA mit 128 MB.
 - ISO einlegen, starten, „Install Orbit OS“ wählen, Festplatte und Benutzer festlegen.
 - Für die VM die Variante **amd** nehmen (NVIDIA-Treiber braucht echte NVIDIA-Hardware).
+
+## Lizenz
+
+Orbit OS ist freie Software unter der **GPL-3.0-or-later** – Details und die Hinweise zu Fremdsoftware, Name und Logo in [LIZENZ.md](LIZENZ.md), der Lizenztext in [LICENSE](LICENSE).

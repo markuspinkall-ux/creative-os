@@ -4,7 +4,8 @@
     "titel": "Aus Creative OS wird Orbit OS – und: Start hängt nicht mehr am Bootlogo",
     "neu": [
       "Neuer Name: Creative OS heißt jetzt Orbit OS – überall im System: Startauswahl, Anmeldung, Systemsteuerung, Installer, Willkommen, App-Katalog und Hilfetexte. Die eigenen Programme heißen ohne „Creative“ (Browser, Engine, Deck, WhatsApp, Player, Notes …) und liegen im Startmenü-Ordner „Orbit Suite“; aus Creative 3D wird „3D Studio“, die virtuellen Geräte heißen „Orbit Kamera“ und „Orbit Mikrofon“ (in Discord & Co. einmal neu auswählen). Version bleibt „Orbit OS 2 · Vivid Venus“. Eigene Dateien, Einstellungen und Sicherungen bleiben unverändert (der Sicherungsordner heißt weiter „Creative-OS-Sicherung“, damit alte Sicherungen gefunden werden)",
-      "Broadcast: Neue Wahl „Auflösung“ – „Volle Auflösung (2K/4K)“ nutzt die ganze Auflösung der Webcam, z. B. 2560×1440 bei der Anker PowerConf C200 oder 4K bei der Logitech Brio (mit mindestens 24 Bildern/s). „Bis 1080p“ bleibt Standard und nimmt die flüssigste Bildrate"
+      "Broadcast: Neue Wahl „Auflösung“ – „Volle Auflösung (2K/4K)“ nutzt die ganze Auflösung der Webcam, z. B. 2560×1440 bei der Anker PowerConf C200 oder 4K bei der Logitech Brio (mit mindestens 24 Bildern/s). „Bis 1080p“ bleibt Standard und nimmt die flüssigste Bildrate",
+      "Orbit OS ist jetzt freie Software: Die eigenen Programme stehen unter der GPL-3.0 – jeder darf sie nutzen, untersuchen, verändern und weitergeben (Name und Logo bleiben Orbit OS vorbehalten). In der Systemsteuerung unter System › „Quellcode und Lizenzen“ steht das jetzt so, darunter Impressum und Datenschutz (welche Funktion mit welchem Dienst spricht – Orbit OS selbst sammelt nichts)"
     ],
     "verbessert": [
       "Startbildschirm: nur noch die Rakete, ohne Schriftzug"

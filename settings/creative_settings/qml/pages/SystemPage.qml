@@ -240,7 +240,7 @@ SettingsPage {
         title: "Quellcode und Lizenzen"
         SettingRow {
             label: "Eigene Programme von Orbit OS"
-            hint: "© 2026 Markus Pinkall – alle Rechte vorbehalten. Der Quellcode ist auf GitHub einsehbar, darf aber ohne Erlaubnis nicht übernommen werden."
+            hint: "© 2026 Markus Pinkall – freie Software unter der GPL-3.0. Du darfst sie nutzen, verändern und weitergeben; der Quellcode liegt auf GitHub."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }
         SettingRow {
@@ -248,6 +248,63 @@ SettingsPage {
             hint: "Behalten ihre eigenen Lizenzen (z. B. GPL, LGPL, MIT). Die Lizenztexte liegen unter /usr/share/licenses, die Quellen stellt das Fedora-Projekt bereit."
             last: true
             CButton { text: "Lizenzen ansehen"; onClicked: system.openUrl("file:///usr/share/licenses") }
+        }
+    }
+
+    // ---- Impressum (Angaben nach § 5 DDG) – erscheint erst, wenn impressum.json vollständig ist --
+    Card {
+        id: impCard
+        readonly property var imp: system.impressum || ({})
+        visible: !!imp.name && !!imp.anschrift && !!imp.email
+        title: "Impressum"
+        subtitle: "Angaben nach § 5 Digitale-Dienste-Gesetz"
+        SettingRow {
+            label: "Verantwortlich"
+            hint: impCard.imp.name || ""
+        }
+        SettingRow {
+            label: "Anschrift"
+            hint: impCard.imp.anschrift || ""
+        }
+        SettingRow {
+            label: "Kontakt"
+            hint: impCard.imp.email || ""
+            last: !(impCard.imp.web)
+            CButton { text: "E-Mail schreiben"; onClicked: system.openUrl("mailto:" + impCard.imp.email) }
+        }
+        SettingRow {
+            visible: !!impCard.imp.web
+            label: "Webseite"
+            hint: impCard.imp.web || ""
+            last: true
+            CButton { text: "Öffnen"; onClicked: system.openUrl(impCard.imp.web) }
+        }
+    }
+
+    // ---- Datenschutz: was Orbit OS wohin schickt ------------------------------------------------
+    Card {
+        id: dsCard
+        title: "Datenschutz"
+        subtitle: "Orbit OS sammelt nichts über dich. Verbindungen nach außen entstehen nur, wenn du die jeweilige Funktion nutzt."
+        Repeater {
+            id: dsRows
+            model: [
+                { t: "Keine Datensammlung", d: "Keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte, kein Konto. Der Entwickler von Orbit OS erhält keine Daten von deinem Rechner." },
+                { t: "Updates und Software", d: "Updates kommen aus der GitHub Container Registry (GitHub Inc., USA), Apps von Flathub und den Fedora- und RPM-Fusion-Spiegeln. Diese Dienste sehen dabei deine IP-Adresse und was geladen wird." },
+                { t: "Nur auf deinem Rechner", d: "KI-Sprachmodell und Stimme, Broadcast (Rauschfilter, Freistellung), Sicherungen, Notizen, Fotos und Dokumente bleiben lokal." },
+                { t: "KI-Helfer", d: "Für Wissensfragen schickt er deine Suchbegriffe an die deutsche Wikipedia (Wikimedia Foundation, USA). Die Modelle lädt er einmalig von Hugging Face." },
+                { t: "Browser", d: "Der Werbeblocker lädt seine Filterlisten von Ghostery. Was du aufrufst, sehen nur die jeweiligen Webseiten und deine gewählte Suchmaschine." },
+                { t: "Widgets und Apps, nur bei Nutzung", d: "Wetter: Open-Meteo (der eingegebene Ort). Twitch-Status: decapi.me. Podcast-Suche: Apple (iTunes-Suche). Game Launcher: Steam (Spielbilder). Magazin: die Seiten, deren Feeds du abonnierst. Mein Server: ident.me und icanhazip.com für deine öffentliche IP, DuckDNS falls eingerichtet." },
+                { t: "Web-Apps und Konten", d: "WhatsApp, Claude, ChatGPT, Mail, YouTube Music, Proton VPN, Steam und Discord: Es gelten die Datenschutzerklärungen der jeweiligen Anbieter." },
+                { t: "Verantwortlich und Beschwerden", d: "Für Orbit OS selbst: siehe Impressum. Für die genannten Dienste sind deren Anbieter verantwortlich. Beschwerden: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Ansbach." }
+            ]
+            delegate: SettingRow {
+                required property var modelData
+                required property int index
+                label: modelData.t
+                hint: modelData.d
+                last: index === dsRows.count - 1
+            }
         }
     }
 }
