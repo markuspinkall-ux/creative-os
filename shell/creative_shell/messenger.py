@@ -113,9 +113,11 @@ class MessengerModel(QObject):
             elif cb:
                 cb(msg.get("result"))
 
-    def _call(self, obj, callback=None):
+    def _call(self, obj, callback=None, user=False):
         if not self._connected:
-            self._set_error("Der Messenger-Dienst läuft gerade nicht.")
+            # Abfragen holt _on_connected nach; nur echte Aktionen melden den Fehler
+            if user:
+                self._set_error("Der Messenger-Dienst läuft gerade nicht – gleich noch einmal versuchen.")
             return
         self._req += 1
         obj = dict(obj, req=self._req)
@@ -189,20 +191,20 @@ class MessengerModel(QObject):
     @Slot(str)
     def setup(self, name):
         self._set_error("")
-        self._call({"cmd": "setup", "name": name}, self._take_state)
+        self._call({"cmd": "setup", "name": name}, self._take_state, user=True)
 
     @Slot(str)
     def add(self, orbit_id):
         self._set_error("")
-        self._call({"cmd": "add", "id": orbit_id.strip().lower()}, self._take_state)
+        self._call({"cmd": "add", "id": orbit_id.strip().lower()}, self._take_state, user=True)
 
     @Slot(str)
     def accept(self, orbit_id):
-        self._call({"cmd": "accept", "id": orbit_id}, self._take_state)
+        self._call({"cmd": "accept", "id": orbit_id}, self._take_state, user=True)
 
     @Slot(str)
     def decline(self, orbit_id):
-        self._call({"cmd": "decline", "id": orbit_id}, self._take_state)
+        self._call({"cmd": "decline", "id": orbit_id}, self._take_state, user=True)
 
     @Slot(str)
     def remove(self, orbit_id):
@@ -210,16 +212,16 @@ class MessengerModel(QObject):
             self._chat = ""
             self._messages = []
             self.messagesChanged.emit()
-        self._call({"cmd": "remove", "id": orbit_id}, self._take_state)
+        self._call({"cmd": "remove", "id": orbit_id}, self._take_state, user=True)
 
     @Slot(str, str)
     def send(self, orbit_id, text):
         if text.strip():
-            self._call({"cmd": "send", "id": orbit_id, "text": text}, lambda _r: self._load_messages())
+            self._call({"cmd": "send", "id": orbit_id, "text": text}, lambda _r: self._load_messages(), user=True)
 
     @Slot(bool)
     def setDnd(self, on):
-        self._call({"cmd": "dnd", "on": bool(on)}, self._take_state)
+        self._call({"cmd": "dnd", "on": bool(on)}, self._take_state, user=True)
 
     @Slot(str)
     def openChat(self, orbit_id):

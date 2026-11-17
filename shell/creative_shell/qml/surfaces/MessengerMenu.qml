@@ -122,6 +122,7 @@ Item {
                     TextField {
                         id: quick
                         x: 12; width: parent.width - 54; height: parent.height
+                        placeholderTextColor: Theme.textMuted
                         placeholderText: root.replyTo ? "Schnell an " + root.replyTo.name + " antworten" : ""
                         color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13
                         background: Item {}

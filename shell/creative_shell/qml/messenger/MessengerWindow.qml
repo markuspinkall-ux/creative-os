@@ -73,6 +73,7 @@ ApplicationWindow {
             TextField {
                 id: nameField
                 width: parent.width; height: 44
+                placeholderTextColor: Theme.textMuted
                 placeholderText: "Dein Name"
                 color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15
                 background: Rectangle { radius: 12; color: Theme.ground; border.color: nameField.activeFocus ? Theme.accent : Theme.hairline }
@@ -249,6 +250,7 @@ ApplicationWindow {
                             id: input
                             width: parent.width - 52; height: 44
                             enabled: messenger.chatInfo.status === "accepted"
+                            placeholderTextColor: Theme.textMuted
                             placeholderText: messenger.chatInfo.status === "accepted" ? "Nachricht an " + (messenger.chatInfo.name || "") : "Erst schreiben, wenn die Anfrage angenommen ist"
                             color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14
                             background: Rectangle { radius: 12; color: Theme.raised; border.color: input.activeFocus ? Theme.accent : Theme.hairline }
@@ -310,6 +312,7 @@ ApplicationWindow {
                     TextField {
                         id: idField
                         width: parent.width - sendReq.width - 10; height: 44
+                        placeholderTextColor: Theme.textMuted
                         placeholderText: "z. B. jonas.orbitos4417"
                         color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14
                         background: Rectangle { radius: 12; color: Theme.ground; border.color: idField.activeFocus ? Theme.accent : Theme.hairline }
