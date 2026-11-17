@@ -48,7 +48,7 @@ sh image/grub-theme/creative-grub-design
 [ ! -e "$CREATIVE_GRUB_AUS" ] || { echo "FEHLER: „an“ hebt „aus“ nicht auf"; exit 1; }
 sh image/grub-theme/creative-grub-design auto
 cmp "$BOOT/user.cfg" "$W/user.an" || { echo "FEHLER: auto nach „an“ anders"; exit 1; }
-grep -q "set gfxmode=auto" "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
+grep -q "set gfxmode=auto," "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
 echo "Skript: ok (an, zweimal, aus, aus bleibt beim Start aus, wieder an)"
 
 # ---- 2. Echter GRUB in QEMU ------------------------------------------------------------------
