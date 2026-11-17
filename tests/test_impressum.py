@@ -31,3 +31,10 @@ def test_karte_unter_quellcode_und_lizenzen():
     assert qml.index('title: "Quellcode und Lizenzen"') < qml.index('title: "Impressum"')
     assert "visible: !!imp.name && !!imp.anschrift && !!imp.email" in qml
     assert "alle Rechte vorbehalten" not in qml
+
+
+def test_datenschutz_unter_impressum():
+    qml = (ROOT / "settings" / "creative_settings" / "qml" / "pages" / "SystemPage.qml").read_text(encoding="utf-8")
+    assert qml.index('title: "Impressum"') < qml.index('title: "Datenschutz"')
+    for dienst in ("GitHub", "Flathub", "Wikipedia", "Ghostery", "Open-Meteo", "decapi.me", "BayLDA"):
+        assert dienst in qml
