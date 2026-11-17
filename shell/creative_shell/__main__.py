@@ -44,6 +44,7 @@ from .loginsound import play_login_sound
 from .nowplaying import NowPlaying
 from .broadcasttray import BroadcastTray
 from .shelf import ShelfModel
+from .messenger import MessengerModel
 
 QML_DIR = Path(__file__).resolve().parent / "qml"
 BAR_HEIGHT = 74       # 60 px Leiste + 14 px Abstand zum Bildschirmrand
@@ -51,7 +52,7 @@ POPUP_GAP = 10        # Abstand zwischen Leiste und Menü
 START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
-POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu")
+POPUPS = ("start", "panel", "trash", "appmenu", "bluetooth", "taskmenu", "messenger")
 SURFACES = POPUPS + ("tasktip",)   # „tasktip“: Name über dem Taskleisten-Symbol (nimmt keine Eingaben)
 DESKTOP_WIDGETS = ("rss", "weather", "stats", "shelf", "clock", "twitch", "notes", "akku", "ki")
 
@@ -314,6 +315,9 @@ class ShellController(QObject):
             elif key == "bluetooth":
                 entry[key] = self._create(screen, "right", "BluetoothMenu.qml", PANEL_WIDTH,
                                           self._popup_height(screen, 620), True, key)
+            elif key == "messenger":
+                entry[key] = self._create(screen, "right", "MessengerMenu.qml", PANEL_WIDTH + 20,
+                                          self._popup_height(screen, 640), True, key)
             elif key == "trash":
                 entry[key] = self._create(screen, "right", "TrashMenu.qml", TRASH_WIDTH,
                                           200 + POPUP_GAP, True, key)
@@ -377,6 +381,10 @@ class ShellController(QObject):
         self._panel_focus = "calendar"
         self.openChanged.emit()
         self._toggle(name, "panel")
+
+    @Slot(str)
+    def toggleMessenger(self, name):
+        self._toggle(name, "messenger")
 
     @Slot(str)
     def toggleTrashMenu(self, name):
@@ -472,6 +480,7 @@ class ShellController(QObject):
     startMenuOpenOn = Property(str, lambda self: self._open["start"], notify=openChanged)
     quickPanelOpenOn = Property(str, lambda self: self._open["panel"], notify=openChanged)
     trashMenuOpenOn = Property(str, lambda self: self._open["trash"], notify=openChanged)
+    messengerOpenOn = Property(str, lambda self: self._open["messenger"], notify=openChanged)
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
     taskMenu = Property("QVariantMap", lambda self: dict(self._task_menu), notify=openChanged)
@@ -547,6 +556,7 @@ def main():
         "nowplaying": NowPlaying(),
         "broadcast": BroadcastTray(),
         "shelf": ShelfModel(apps),
+        "messenger": MessengerModel(),
     }
     use_layer = not args.dev and app.platformName() == "wayland" and layer_shell_available(engine)
     if not use_layer and not args.dev:

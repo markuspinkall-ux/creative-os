@@ -88,6 +88,13 @@ if command -v creative-notifyd >/dev/null 2>&1; then
     children="$children $!"
 fi
 
+# Messenger: direkte Verbindungen zu anderen Orbit-OS-Rechnern, Warteschlange – gehört zum System,
+# läuft immer (Symbol im Tray) und startet nach einem Absturz neu
+if command -v orbit-messenger >/dev/null 2>&1 && [ ! -e /run/creative-live ]; then
+    ( while true; do orbit-messenger 2>&1 | systemd-cat -t orbit-messenger; sleep 5; done ) &
+    children="$children $!"
+fi
+
 # Deck: Stream Decks erkennen und Tasten ausführen – startet nach einem Absturz neu
 if command -v creative-deck >/dev/null 2>&1 && [ ! -e /run/creative-live ]; then
     ( while true; do creative-deck --hintergrund 2>&1 | systemd-cat -t creative-deck; sleep 5; done ) &

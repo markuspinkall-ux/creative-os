@@ -1,0 +1,32 @@
+name: Messenger prüfen
+# Zwei echte Messenger-Dienste in einem lokalen Test-Netz: Anfrage, Annehmen, Nachricht,
+# Warteschlange bei ausgeschaltetem Empfänger, Gelesen-Meldung, Fremde abgewiesen.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [messenger/**, tools/messenger-test.js, shell/creative_shell/messenger*.py, shell/creative_shell/qml/**, .github/workflows/messenger-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Abhängigkeiten
+        working-directory: messenger/daemon
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund --ignore-scripts
+          else
+            npm install --no-audit --no-fund --ignore-scripts
+            echo "package-lock.json (neu erzeugt) als base64:"
+            base64 -w 0 package-lock.json | fold -w 3000 | sed 's/^/LOCK64:/'
+          fi
+          node -e "require('hyperswarm'); require('hyperdht/testnet'); console.log('Hyperswarm geladen')"
+      - name: Zwei Dienste im Test-Netz
+        run: node tools/messenger-test.js
+      - name: Shell-Teil (Syntax)
+        run: python3 -m py_compile shell/creative_shell/messenger.py shell/creative_shell/messenger_window.py

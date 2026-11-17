@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Messenger
+Comment=Mit anderen Orbit-OS-Nutzern schreiben
+Exec=orbit-messenger-window %u
+Icon=orbit-messenger
+Terminal=false
+NoDisplay=true
+StartupWMClass=orbit-messenger
+Categories=Network;InstantMessaging;

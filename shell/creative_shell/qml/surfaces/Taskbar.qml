@@ -232,6 +232,52 @@ Item {
                     }
                 }
 
+                // Messenger: Sprechblase mit Zähler ungelesener Nachrichten und Anfragen
+                Rectangle {
+                    id: messengerBtn
+                    visible: messenger.available
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30
+                    height: 30
+                    radius: 8
+                    readonly property int count: messenger.unread + messenger.requests.length
+                    color: (msgMouse.containsMouse || shell.messengerOpenOn === root.screenName) ? Theme.hover : "transparent"
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        name: "chat"
+                        size: 17
+                        opacity: messenger.connected ? 1 : 0.5
+                    }
+                    Rectangle {
+                        visible: messengerBtn.count > 0
+                        anchors.right: parent.right; anchors.top: parent.top
+                        anchors.rightMargin: -3; anchors.topMargin: -3
+                        width: Math.max(16, msgBadge.implicitWidth + 8); height: 16; radius: 8
+                        color: messenger.dnd ? Theme.track : Theme.flame
+                        Text {
+                            id: msgBadge
+                            anchors.centerIn: parent
+                            text: messengerBtn.count > 99 ? "99+" : messengerBtn.count
+                            color: Theme.accentText
+                            font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true
+                        }
+                    }
+                    MouseArea {
+                        id: msgMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: (mouse) => {
+                            if (mouse.button === Qt.MiddleButton) { shell.closePopups(); messenger.openWindow() }
+                            else shell.toggleMessenger(root.screenName)
+                        }
+                    }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Messenger" + (messengerBtn.count > 0 ? ", " + messengerBtn.count + " neu" : "")
+                    Accessible.onPressAction: shell.toggleMessenger(root.screenName)
+                }
+
                 // Broadcast: blau hinterlegt, wenn Mikrofon-Filter oder Kamera-Effekt an sind
                 Rectangle {
                     id: broadcastBtn

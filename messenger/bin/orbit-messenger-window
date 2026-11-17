@@ -1,0 +1,4 @@
+#!/bin/sh
+# Messenger-Fenster (aus dem Tray geöffnet)
+export PYTHONPATH="/usr/lib/creative-shell${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m creative_shell.messenger_window "$@"
