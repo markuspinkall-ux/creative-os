@@ -41,7 +41,7 @@ class Download(QObject):
         req = QNetworkRequest(QUrl(self.url))
         req.setAttribute(QNetworkRequest.Attribute.RedirectPolicyAttribute,
                          QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy)
-        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, "Creative-Engine")
+        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, "Orbit-Engine")
         self.reply = self.net.get(req)
         self.reply.readyRead.connect(lambda: self.file.write(bytes(self.reply.readAll())))
         self.reply.downloadProgress.connect(lambda a, b: self.progress.emit(int(a), int(b)))
@@ -77,7 +77,7 @@ class SetupDialog(QDialog):
         title.setStyleSheet("font-size:19px;font-weight:700")
         v.addWidget(title)
         text = QLabel(
-            "Die Creative Engine baut deine Spiele mit Godot, einer freien Spiel-Engine. Du merkst davon nichts – "
+            "Die Engine baut deine Spiele mit Godot, einer freien Spiel-Engine. Du merkst davon nichts – "
             "sie wird nur einmal heruntergeladen und liegt dann in deinem Benutzerordner.")
         text.setWordWrap(True)
         text.setObjectName("sub")
@@ -141,7 +141,7 @@ class SetupDialog(QDialog):
         self.go.setEnabled(False)
         self.vorlagen.setEnabled(False)
         self.bar.show()
-        self.inhibit = keep_awake("Creative Engine lädt den Spiel-Motor")
+        self.inhibit = keep_awake("Engine lädt den Spiel-Motor")
         self.next()
 
     def next(self):
@@ -201,7 +201,7 @@ def keep_awake(why):
     if not shutil.which("systemd-inhibit") and not shutil.which("flatpak-spawn"):
         return None
     p = QProcess()
-    cmd = ["systemd-inhibit", "--what=idle:sleep", "--who=Creative Engine", f"--why={why}", "sleep", "infinity"]
+    cmd = ["systemd-inhibit", "--what=idle:sleep", "--who=Engine", f"--why={why}", "sleep", "infinity"]
     if os.path.exists("/.flatpak-info"):
         cmd = ["flatpak-spawn", "--host"] + cmd
     p.start(cmd[0], cmd[1:])
@@ -280,7 +280,7 @@ class ExportDialog(QDialog):
         title = QLabel(f"„{data['name']}“ als fertiges Spiel")
         title.setStyleSheet("font-size:19px;font-weight:700")
         v.addWidget(title)
-        sub = QLabel("Das Ergebnis läuft ohne Creative Engine – zum Weitergeben, Hochladen (z. B. itch.io) oder Archivieren.")
+        sub = QLabel("Das Ergebnis läuft ohne Engine – zum Weitergeben, Hochladen (z. B. itch.io) oder Archivieren.")
         sub.setObjectName("sub")
         sub.setWordWrap(True)
         v.addWidget(sub)
@@ -352,7 +352,7 @@ class ExportDialog(QDialog):
         self.bar.show()
         self.bar.setMaximum(len(self.jobs))
         self.bar.setValue(0)
-        self.inhibit = keep_awake("Creative Engine exportiert ein Spiel")
+        self.inhibit = keep_awake("Engine exportiert ein Spiel")
         self.next()
 
     def next(self):

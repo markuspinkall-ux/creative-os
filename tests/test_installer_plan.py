@@ -1,4 +1,4 @@
-"""Tests für die Logik der Creative-Installation (ohne Qt, ohne root)."""
+"""Tests für die Logik der Orbit-Installation (ohne Qt, ohne root)."""
 import json
 import sys
 from pathlib import Path
@@ -14,7 +14,7 @@ LSBLK = {"blockdevices": [
     {"name": "/dev/sda", "path": "/dev/sda", "size": 32000000000, "model": "Kleine SSD", "tran": "sata",
      "type": "disk", "rm": False, "ro": False},
     {"name": "/dev/sdb", "path": "/dev/sdb", "size": 64000000000, "model": "SanDisk", "tran": "usb",
-     "type": "disk", "rm": True, "ro": False, "children": [{"fstype": "iso9660", "label": "Creative-Live"}]},
+     "type": "disk", "rm": True, "ro": False, "children": [{"fstype": "iso9660", "label": "Orbit-Live"}]},
     {"name": "/dev/vda", "path": "/dev/vda", "size": 64424509440, "model": None, "tran": None,
      "type": "disk", "rm": False, "ro": False},
     {"name": "/dev/loop0", "path": "/dev/loop0", "size": 5000000000, "type": "loop"},

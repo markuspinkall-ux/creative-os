@@ -1,4 +1,4 @@
-"""Graphit-Look für Creative Notes (Farben wie in der Creative Shell)."""
+"""Graphit-Look für Notes (Farben wie in der Shell)."""
 
 import os
 from pathlib import Path

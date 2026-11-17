@@ -1,4 +1,4 @@
-"""Pinsel-Engine von Creative Art: Tupfer-Pinsel wie in Photoshop.
+"""Pinsel-Engine von Art: Tupfer-Pinsel wie in Photoshop.
 
 Ein Strich setzt Tupfer der Pinselspitze im eingestellten Abstand. Der
 Farbauftrag („Fluss“) sammelt sich in einem Strichpuffer; dieser wird mit der

@@ -1,4 +1,4 @@
-"""Creative 3D: Ausweich-Vorschau ohne Grafikkarte."""
+"""3D Studio: Ausweich-Vorschau ohne Grafikkarte."""
 
 import sys
 import time

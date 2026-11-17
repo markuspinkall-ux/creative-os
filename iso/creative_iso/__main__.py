@@ -29,7 +29,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Iso")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-iso")
     app.setWindowIcon(QIcon.fromTheme("creative-iso"))
     if "--selftest" not in sys.argv and _raise_running():
@@ -46,7 +46,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Iso: Selbsttest bestanden")
+        print("Iso: Selbsttest bestanden")
         return 0
     win = engine.rootObjects()[0]
     from PySide6.QtNetwork import QLocalServer

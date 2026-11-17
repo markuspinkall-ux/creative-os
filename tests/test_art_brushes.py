@@ -1,4 +1,4 @@
-"""Creative Art: Pinsel-Import (.abr/.gbr), Spitzen, Fülleimer – ohne Qt."""
+"""Art: Pinsel-Import (.abr/.gbr), Spitzen, Fülleimer – ohne Qt."""
 
 import sys
 import unittest

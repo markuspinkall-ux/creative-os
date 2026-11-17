@@ -1,10 +1,10 @@
 'use strict';
-// Creative WhatsApp läuft mit derselben Electron-Laufzeit, ist aber eine eigene App (whatsapp/)
+// WhatsApp läuft mit derselben Electron-Laufzeit, ist aber eine eigene App (whatsapp/)
 if (process.argv.includes('--whatsapp')) {
   require('./whatsapp/main.js');
   return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
 }
-// Creative Browser – Hauptprozess.
+// Browser – Hauptprozess.
 // Jedes Fenster: unten die Tabs (je ein WebContentsView), darüber die Oberfläche (ui/), ein
 // durchsichtiger WebContentsView. Öffnet die Oberfläche ein Menü, wird sie kurz fensterhoch.
 
@@ -56,8 +56,8 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'creative', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 
-process.on('uncaughtException', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
-process.on('unhandledRejection', (e) => console.error('Creative Browser – Fehler:', e && e.stack || e));
+process.on('uncaughtException', (e) => console.error('Browser – Fehler:', e && e.stack || e));
+process.on('unhandledRejection', (e) => console.error('Browser – Fehler:', e && e.stack || e));
 
 // ---- Design von Orbit OS: Graphit (dunkel) / Porzellan (hell) + Akzentfarbe -------------------
 // Gleiche Quelle wie Taskleiste und Systemsteuerung: ~/.config/creative-os/look.conf
@@ -144,7 +144,7 @@ const closedTabs = [];
 
 // Kein „Electron“ in der Browserkennung – manche Seiten sperren sonst eingebettete Browser aus
 function cleanUserAgent(ua) {
-  return ua.replace(/ Electron\/\S+/, '').replace(/ (creative-browser|Creative Browser)\/\S+/i, '');
+  return ua.replace(/ Electron\/\S+/, '').replace(/ (creative-browser|Creative Browser|Browser)\/\S+/i, '');
 }
 
 function startpageDir() {
@@ -193,7 +193,7 @@ function prepareSession(ses, isPrivate) {
   // Videowerbung auf YouTube/Twitch: früh und synchron in der Seite (wie Brave) – siehe preload-videoad.js
   try {
     ses.registerPreloadScript({ type: 'frame', id: 'creative-videoad', filePath: path.join(APP_DIR, 'preload-videoad.js') });
-  } catch (e) { console.error('Creative Browser: Videowerbung-Preload:', e.message); }
+  } catch (e) { console.error('Browser: Videowerbung-Preload:', e.message); }
   try { ses.setSpellCheckerLanguages(['de-DE']); } catch (_) { /* Wörterbuch nicht verfügbar */ }
 
   ses.protocol.handle('creative', (req) => {
@@ -308,7 +308,7 @@ class Win {
     const b = store.settings.bounds || {};
     this.win = new BaseWindow({
       width: b.width || 1360, height: b.height || 880, minWidth: 560, minHeight: 400,
-      title: isPrivate ? 'Privates Fenster – Creative Browser' : 'Creative Browser',
+      title: isPrivate ? 'Privates Fenster – Browser' : 'Browser',
       backgroundColor: look.ground,
       icon: fs.existsSync(path.join(APP_DIR, 'icon.png')) ? path.join(APP_DIR, 'icon.png') : undefined,
       show: true,
@@ -422,7 +422,7 @@ class Win {
       wc.loadURL(`creative://fehler/?u=${encodeURIComponent(url)}&r=${encodeURIComponent(r)}`).catch(() => {});
     });
     wc.on('render-process-gone', () => { tab.crashed = true; tab.loading = false; upd(); });
-    wc.on('preload-error', (_e, file, err) => console.error('Creative Browser: Preload-Fehler', file, err && err.message));
+    wc.on('preload-error', (_e, file, err) => console.error('Browser: Preload-Fehler', file, err && err.message));
     wc.on('enter-html-full-screen', () => tab.win.setFullscreen(true));
     wc.on('leave-html-full-screen', () => tab.win.setFullscreen(false));
     wc.on('found-in-page', (_e, r) => { tab.win.send('find-result', { active: r.activeMatchOrdinal, total: r.matches }); });
@@ -436,7 +436,7 @@ class Win {
         return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 520, height: 680 } };
       }
       if (details.disposition === 'other' || details.disposition === 'save-to-disk') return { action: 'deny' };
-      if (tab.win.appMode) {          // Web-App: Links öffnen im normalen Creative Browser
+      if (tab.win.appMode) {          // Web-App: Links öffnen im normalen Browser
         openInBrowser(details.url);
         return { action: 'deny' };
       }
@@ -508,7 +508,7 @@ class Win {
   setTitle() {
     const t = this.active ? (this.active.title || 'Neuer Tab') : '';
     if (this.appMode) { this.win.setTitle(t); return; }
-    this.win.setTitle(`${t} – ${this.isPrivate ? 'Privates Fenster' : 'Creative Browser'}`);
+    this.win.setTitle(`${t} – ${this.isPrivate ? 'Privates Fenster' : 'Browser'}`);
   }
 
   closeTab(tab) {
@@ -830,7 +830,7 @@ class Win {
 }
 
 function openInBrowser(url) {
-  // eigener Prozess: der normale Creative Browser (übernimmt die Adresse, falls er schon läuft)
+  // eigener Prozess: der normale Browser (übernimmt die Adresse, falls er schon läuft)
   const { spawn } = require('child_process');
   try {
     const exe = fs.existsSync('/usr/bin/creative-browser') ? '/usr/bin/creative-browser' : process.execPath;
@@ -859,7 +859,7 @@ ipcMain.handle('suggest', (_e, text) => store.suggest(text));
 // ---- Start ----------------------------------------------------------------------------------------
 const single = SELFTEST ? true : app.requestSingleInstanceLock();
 if (!single) {
-  console.log('Creative Browser läuft schon – der Auftrag geht an das offene Fenster.');
+  console.log('Browser läuft schon – der Auftrag geht an das offene Fenster.');
   app.quit();
 } else {
   app.on('second-instance', (_e, argv) => {

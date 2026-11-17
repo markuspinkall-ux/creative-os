@@ -1,4 +1,4 @@
-# Creative Notes
+# Notes
 
 Der Texteditor von Orbit OS – im Graphit-Look, vom Umfang her an Notepad++ angelehnt.
 

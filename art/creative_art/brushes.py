@@ -1,4 +1,4 @@
-"""Pinselspitzen für Creative Art – ohne Qt, damit es sich überall testen lässt.
+"""Pinselspitzen für Art – ohne Qt, damit es sich überall testen lässt.
 
 - Photoshop-Pinsel (.abr, Version 1, 2 und 6–10, „sampled brushes“)
 - GIMP-Pinsel (.gbr, Version 1 und 2)

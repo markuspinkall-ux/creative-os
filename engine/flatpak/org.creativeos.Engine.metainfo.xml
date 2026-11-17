@@ -3,7 +3,7 @@
   <id>org.creativeos.Engine</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Creative Engine</name>
+  <name>Engine</name>
   <summary>Spiele bauen per Klick</summary>
   <description>
     <p>Wähle ein Genre, gestalte Splash, Startbildschirm und Level per Maus, lade eigene 3D-Figuren (GLB)

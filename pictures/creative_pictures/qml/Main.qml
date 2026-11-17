@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Pictures – Sammlung und Bildansicht wie „Fotos“ bei Windows 11.
+// Pictures – Sammlung und Bildansicht wie „Fotos“ bei Windows 11.
 Window {
     id: win
 

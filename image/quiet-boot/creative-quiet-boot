@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sorgt dafür, dass beim Starten und Herunterfahren nur das Creative-Logo zu
+# Sorgt dafür, dass beim Starten und Herunterfahren nur das Orbit-Logo zu
 # sehen ist – keine Textmeldungen. Wirkt ab dem nächsten Neustart.
 # Die Textkonsole bleibt für Anmeldung und Fehlerdiagnose lesbar.
 set -eu
@@ -55,5 +55,5 @@ for dir in /boot/grub2 /boot/efi/EFI/fedora; do
         [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true
     fi
 done
-# Startauswahl im Creative-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
+# Startauswahl im Orbit-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
 [ -x /usr/bin/creative-grub-design ] && /usr/bin/creative-grub-design >/dev/null 2>&1 || true

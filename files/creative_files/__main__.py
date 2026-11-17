@@ -53,7 +53,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Dateien")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-files")
     app.setWindowIcon(QIcon.fromTheme("creative-files", QIcon.fromTheme("system-file-manager")))
     app.setFont(QFont("Arial", 10))
@@ -64,7 +64,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-files: Creative-Design nicht gefunden (Creative Shell installiert?)")
+        print("creative-files: Orbit-Design nicht gefunden (Shell installiert?)")
         return 1
 
     start = start_folder(sys.argv[1:])

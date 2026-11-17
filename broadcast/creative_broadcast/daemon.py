@@ -3,12 +3,12 @@
 Läuft in der Sitzung im Hintergrund und tut nichts, solange beides aus ist.
 
 Mikrofon: PipeWire-Filter mit DeepFilterNet (KI-Rauschentfernung, CPU, sehr
-sparsam) → neue Eingabe „Creative Mikrofon (rauschfrei)“, wird Standard.
+sparsam) → neue Eingabe „Orbit Mikrofon (rauschfrei)“, wird Standard.
 Ohne DeepFilterNet: WebRTC-Rauschunterdrückung von PipeWire als Ersatz.
 
 Kamera: echte Kamera → Robust Video Matting (KI-Freistellung) → Hintergrund
-unscharf / Bild / Grün → virtuelle Kamera „Creative Kamera“ (v4l2loopback).
-Gerechnet wird nur, solange ein Programm die Creative Kamera benutzt (oder die
+unscharf / Bild / Grün → virtuelle Kamera „Orbit Kamera“ (v4l2loopback).
+Gerechnet wird nur, solange ein Programm die Orbit Kamera benutzt (oder die
 Vorschau offen ist); sonst wird die echte Kamera freigegeben.
 """
 
@@ -70,10 +70,10 @@ def ladspa_plugin():
 
 
 def loopback_device():
-    """/dev/videoN der virtuellen „Creative Kamera“."""
+    """/dev/videoN der virtuellen „Orbit Kamera“."""
     for d in sorted(Path("/sys/class/video4linux").glob("video*")):
         try:
-            if "Creative Kamera" in (d / "name").read_text():
+            if any(k in (d / "name").read_text() for k in ("Orbit Kamera", "Creative Kamera")):
                 return f"/dev/{d.name}"
         except OSError:
             pass
@@ -90,7 +90,7 @@ def list_cameras():
         except (OSError, ValueError):
             continue
         # virtuelle Kameras (unsere und die für OBS) sind keine echten Kameras
-        if "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
+        if "Orbit Kamera" in name or "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
             continue
         out.append({"device": f"/dev/{d.name}", "name": name})
     return out
@@ -151,8 +151,8 @@ class Voice:
             module = f"""
 {{ name = libpipewire-module-filter-chain
   args = {{
-    node.description = "Creative Mikrofon (rauschfrei)"
-    media.name = "Creative Mikrofon (rauschfrei)"
+    node.description = "Orbit Mikrofon (rauschfrei)"
+    media.name = "Orbit Mikrofon (rauschfrei)"
     filter.graph = {{
       nodes = [
         {{ type = ladspa name = deepfilter plugin = "{plugin}" label = deep_filter_mono
@@ -173,8 +173,8 @@ class Voice:
     library.name = aec/libspa-aec-webrtc
     aec.args = {{ webrtc.noise_suppression = true webrtc.gain_control = true webrtc.extended_filter = false }}
     capture.props = {{ node.name = "creative_voice_in" {target} }}
-    source.props = {{ node.name = "{VOICE_NODE}" node.description = "Creative Mikrofon (rauschfrei)" }}
-    sink.props = {{ node.name = "creative_voice_ref" node.description = "Creative Echo-Referenz" }}
+    source.props = {{ node.name = "{VOICE_NODE}" node.description = "Orbit Mikrofon (rauschfrei)" }}
+    sink.props = {{ node.name = "creative_voice_ref" node.description = "Echo-Referenz" }}
   }}
 }}"""
             engine = "WebRTC"
@@ -229,7 +229,7 @@ context.modules = [
 
 # ---- Kamera ---------------------------------------------------------------------------------------
 def _consumers(dev, own_pids):
-    """Wie viele andere Programme haben die Creative Kamera geöffnet?"""
+    """Wie viele andere Programme haben die Orbit Kamera geöffnet?"""
     try:
         target = os.path.realpath(dev)
     except OSError:
@@ -263,7 +263,7 @@ class Matting:
             try:
                 ort.preload_dlls(directory="", msvc=False)
             except Exception as exc:
-                print(f"Creative Broadcast: CUDA-Bibliotheken nicht geladen: {exc}", file=sys.stderr)
+                print(f"Broadcast: CUDA-Bibliotheken nicht geladen: {exc}", file=sys.stderr)
         opts = ort.SessionOptions()
         threads = max(1, min(4, (os.cpu_count() or 2) // 2))
         opts.intra_op_num_threads = threads
@@ -274,7 +274,7 @@ class Matting:
         # Tatsächlich registrierte Provider melden, nicht nur angeforderte.
         self.engine = self.sess.get_providers()[0].replace("ExecutionProvider", "")
         self.outputs = [output.name for output in self.sess.get_outputs()][1:]
-        print(f"Creative Broadcast: KI-Backend {self.engine}", file=sys.stderr)
+        print(f"Broadcast: KI-Backend {self.engine}", file=sys.stderr)
         self.size = (640, 360) if quality == "sparsam" else (1280, 720)
         self.ratio = np.array([0.375 if quality == "sparsam" else 0.25], dtype=np.float32)
         self.rec = [np.zeros((1, 1, 1, 1), dtype=np.float32)] * 4
@@ -447,7 +447,7 @@ class Camera:
                     try:
                         out = upscaler.run(out)
                     except Exception as exc:          # z. B. Grafikspeicher voll → normal weiter
-                        print(f"Creative Broadcast: Upscaling aus ({exc})", file=sys.stderr)
+                        print(f"Broadcast: Upscaling aus ({exc})", file=sys.stderr)
                         upscaler = None
                         STATUS.set(upscale=f"abgeschaltet: {exc.__class__.__name__}")
                     upscale_ms = (time.monotonic() - up_start) * 1000
@@ -523,15 +523,15 @@ class Camera:
 
 # ---- Hauptschleife ---------------------------------------------------------------------------------------
 def selftest():
-    print("Creative Broadcast: DeepFilterNet", "da" if ladspa_plugin() else "FEHLT (Ersatz: WebRTC)")
+    print("Broadcast: DeepFilterNet", "da" if ladspa_plugin() else "FEHLT (Ersatz: WebRTC)")
     try:
         import numpy as np
         import cv2  # noqa: F401
         m = Matting("sparsam")
         a = m.alpha(np.zeros((720, 1280, 3), dtype=np.uint8))
-        print(f"Creative Broadcast: KI-Freistellung ok ({m.engine}, {a.shape[1]}×{a.shape[0]})")
+        print(f"Broadcast: KI-Freistellung ok ({m.engine}, {a.shape[1]}×{a.shape[0]})")
     except Exception as exc:
-        print(f"Creative Broadcast: KI-Freistellung FEHLT ({exc})")
+        print(f"Broadcast: KI-Freistellung FEHLT ({exc})")
     try:
         from . import upscale
         ok, why = upscale.available()
@@ -539,12 +539,12 @@ def selftest():
             import numpy as np
             up = upscale.Upscaler("schnell", providers=None if ok else ["CPUExecutionProvider"])
             y = up.run(np.full((360, 640, 3), 128, dtype=np.uint8))
-            print(f"Creative Broadcast: KI-Upscaling ok ({up.engine}, {y.shape[1]}×{y.shape[0]})"
+            print(f"Broadcast: KI-Upscaling ok ({up.engine}, {y.shape[1]}×{y.shape[0]})"
                   + ("" if ok else f" – im Betrieb {why}"))
         else:
-            print("Creative Broadcast: KI-Upscaling FEHLT (Modell)")
+            print("Broadcast: KI-Upscaling FEHLT (Modell)")
     except Exception as exc:
-        print(f"Creative Broadcast: KI-Upscaling FEHLT ({exc})")
+        print(f"Broadcast: KI-Upscaling FEHLT ({exc})")
     return 0
 
 

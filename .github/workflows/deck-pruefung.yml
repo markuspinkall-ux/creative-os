@@ -1,4 +1,4 @@
-name: Creative Deck prüfen
+name: Deck prüfen
 # Stream-Deck-Dienst mit nachgebautem Gerät, OBS-Protokoll, Tastenkürzel – dazu Fotos vom Editor.
 on:
   push:

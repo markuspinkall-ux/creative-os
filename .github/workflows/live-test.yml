@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Lauf-ID von „Live-ISO mit Creative-Installation“, dessen ISO getestet wird"
+        description: "Lauf-ID von „Live-ISO mit Orbit-Installation“, dessen ISO getestet wird"
         required: true
       variant:
         type: choice

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative Mail – E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP: Gmail, GMX, WEB.DE, T-Online, …).
+"""Mail – E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP: Gmail, GMX, WEB.DE, T-Online, …).
 
 Drei Spalten wie in professionellen Mail-Programmen: Ordner und Labels,
 Nachrichtenliste, Lesebereich. HTML-Mails werden echt dargestellt; Bilder
@@ -667,7 +667,7 @@ class LoginDialog(QDialog):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(10)
         layout.addWidget(QLabel("E-Mail-Konto anmelden", objectName="paneTitle"))
-        layout.addWidget(QLabel("Adresse und Passwort genügen – die Serverdaten trägt Creative Mail selbst ein.",
+        layout.addWidget(QLabel("Adresse und Passwort genügen – die Serverdaten trägt Mail selbst ein.",
                                 objectName="muted"))
         form = QFormLayout()
         form.setSpacing(10)
@@ -1049,7 +1049,7 @@ class MailWindow(QMainWindow):
     # Zustand
     def error(self, exc):
         self.set_loading(False)
-        QMessageBox.warning(self, "Creative Mail", str(exc))
+        QMessageBox.warning(self, "Mail", str(exc))
 
     def set_loading(self, on, text="Wird geladen …"):
         self.loading = on
@@ -1420,7 +1420,7 @@ class MailWindow(QMainWindow):
 
     def sign_out(self):
         if not self.gmail or QMessageBox.question(
-                self, "Abmelden", f"{self.gmail.address} in Creative Mail abmelden?") != QMessageBox.StandardButton.Yes:
+                self, "Abmelden", f"{self.gmail.address} in Mail abmelden?") != QMessageBox.StandardButton.Yes:
             return
         self.settings.remove("account")
         self.gmail.forget()
@@ -1492,7 +1492,7 @@ class MailWindow(QMainWindow):
         assert not login.ok.isEnabled()
         login.grab()
         login.reject()
-        print("Creative Mail: Selbsttest bestanden")
+        print("Mail: Selbsttest bestanden")
 
 
 def main():
@@ -1506,7 +1506,7 @@ def main():
             pass
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setApplicationName("Creative Mail")
     app.setDesktopFileName("creative-mail")
     app.setWindowIcon(QIcon.fromTheme("creative-mail"))

@@ -3,7 +3,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Creative
 
-// Creative Deck: links das Stream Deck mit seinen Tasten, rechts die gewählte Taste.
+// Deck: links das Stream Deck mit seinen Tasten, rechts die gewählte Taste.
 ApplicationWindow {
     id: win
     width: 1240
@@ -11,7 +11,7 @@ ApplicationWindow {
     minimumWidth: 1000
     minimumHeight: 640
     visible: true
-    title: "Creative Deck"
+    title: "Deck"
     color: Theme.ground
 
     readonly property var sel: deck.sel
@@ -82,7 +82,7 @@ ApplicationWindow {
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
-                text: "Creative Deck"
+                text: "Deck"
                 color: Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: 18

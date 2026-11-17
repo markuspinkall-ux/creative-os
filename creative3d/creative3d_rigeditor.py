@@ -1,4 +1,4 @@
-"""Creative 3D – Gelenk-Editor: Ankerpunkte für das Skelett setzen.
+"""3D Studio – Gelenk-Editor: Ankerpunkte für das Skelett setzen.
 
 Zwei Ansichten der Figur (von vorn und von der Seite) als Silhouette.
 Gelenke sind Punkte, die man mit der Maus verschiebt: vorn ändert links/rechts

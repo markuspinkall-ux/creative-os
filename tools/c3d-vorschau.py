@@ -1,4 +1,4 @@
-"""Creative 3D fotografieren (ohne Grafikkarte): Einrichtungsseite für TRELLIS.2.
+"""3D Studio fotografieren (ohne Grafikkarte): Einrichtungsseite für TRELLIS.2.
    QT_QPA_PLATFORM=offscreen python3 tools/c3d-vorschau.py <ausgabe.png> [trellis|trellis2]"""
 import importlib.machinery
 import importlib.util
@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 out = sys.argv_out = None
 app = QApplication.instance() or QApplication([])
-QSettings("Orbit OS", "Creative 3D").setValue("modell", os.environ.get("C3D_MODELL", "trellis2"))
+QSettings("Creative OS", "Creative 3D").setValue("modell", os.environ.get("C3D_MODELL", "trellis2"))
 win = c3d.Creative3D(preview_web=False)
 win.resize(1240, 820)
 win.show()

@@ -1,6 +1,6 @@
 name: Eigene Apps veröffentlichen
-# Baut die Creative Engine als Flatpak und legt den Katalog „Eigene Apps“ in den Branch „flatpak-repo“
-# (abrufbar über raw.githubusercontent.com). Creative Software zeigt ihn unter „Eigene Apps“.
+# Baut die Engine als Flatpak und legt den Katalog „Eigene Apps“ in den Branch „flatpak-repo“
+# (abrufbar über raw.githubusercontent.com). Software zeigt ihn unter „Eigene Apps“.
 # Veröffentlicht wird nur von main; auf claude/**-Branches wird gebaut und eine Probe-Installation gemacht.
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         run: |
           cd bau
           flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse --force-clean \
-            --repo=../repo --default-branch=stable --subject="Creative Engine ${GITHUB_SHA::7}" build org.creativeos.Engine.yml
+            --repo=../repo --default-branch=stable --subject="Engine ${GITHUB_SHA::7}" build org.creativeos.Engine.yml
           cd ..
           flatpak build-update-repo --prune --prune-depth=2 --generate-static-deltas=false \
             --title="Orbit OS – Eigene Apps" repo
@@ -65,14 +65,14 @@ jobs:
           Title=Orbit OS – Eigene Apps
           Url=$URL/
           Homepage=https://github.com/${GITHUB_REPOSITORY}
-          Comment=Programme von Orbit OS, die nicht im System stecken (z. B. Creative Engine)
+          Comment=Programme von Orbit OS, die nicht im System stecken (z. B. Engine)
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           EOR
           cat > repo/org.creativeos.Engine.flatpakref <<EOR
           [Flatpak Ref]
           Name=org.creativeos.Engine
           Branch=stable
-          Title=Creative Engine
+          Title=Engine
           Url=$URL/
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           IsRuntime=false

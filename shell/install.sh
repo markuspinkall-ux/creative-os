@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert die Creative Shell auf einem bestehenden Fedora-System
+# Installiert die Shell auf einem bestehenden Fedora-System
 # (Vorstufe zum späteren RPM-Paket). Mit sudo ausführen.
 set -eu
 cd "$(dirname "$0")"

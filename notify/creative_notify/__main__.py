@@ -1,7 +1,7 @@
 """Orbit OS – Benachrichtigungen (org.freedesktop.Notifications).
 
 Zeigt Meldungen von Programmen (Steam, Discord, Downloads, Updates …) unten rechts
-über der Taskleiste im Creative-Look. Startpunkt: `creative-notifyd`.
+über der Taskleiste im Orbit-Look. Startpunkt: `creative-notifyd`.
 """
 
 import os

@@ -12,5 +12,5 @@ Der Taskmanager von Orbit OS – aufgebaut wie bei Windows.
 - **Details:** alle Prozesse einzeln mit PID, Status, Benutzer, Befehlszeile.
 - **Neuen Task ausführen**, Aktualisierung schnell/normal/langsam/Pause, Entf beendet den markierten Task.
 
-Die gleichen Kacheln wie unter „Leistung“ zeigt die Creative Shell oben rechts auf dem Schreibtisch
+Die gleichen Kacheln wie unter „Leistung“ zeigt die Shell oben rechts auf dem Schreibtisch
 (Rechtsklick auf den Schreibtisch → „Leistungsanzeige ausblenden/einblenden“).

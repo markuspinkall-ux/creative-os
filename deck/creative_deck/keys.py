@@ -92,7 +92,7 @@ class Keyboard:
             | {f"KEY_F{i}" for i in range(1, 25)}
         codes = sorted({getattr(ecodes, n) for n in names if hasattr(ecodes, n)})
         try:
-            self._ui = UInput({ecodes.EV_KEY: codes}, name="Creative Deck")
+            self._ui = UInput({ecodes.EV_KEY: codes}, name="Deck")
         except (OSError, PermissionError) as exc:
             self.error = f"Virtuelle Tastatur nicht verfügbar ({exc})"
             return None

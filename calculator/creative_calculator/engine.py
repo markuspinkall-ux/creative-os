@@ -1,4 +1,4 @@
-"""Rechenwerk des Creative Calculator.
+"""Rechenwerk des Calculator.
 
 Rechnet exakt mit Dezimalzahlen (0,1 + 0,2 = 0,3 – nicht 0,30000000004),
 deutsch mit Komma, Punkt vor Strich, Klammern, Prozent wie bei Windows:

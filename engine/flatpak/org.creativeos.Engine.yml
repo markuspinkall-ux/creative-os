@@ -1,4 +1,4 @@
-# Creative Engine als Flatpak – wird NICHT ins Orbit-OS-Abbild gebaut, sondern über
+# Engine als Flatpak – wird NICHT ins Orbit-OS-Abbild gebaut, sondern über
 # Software → „Eigene Apps“ angeboten (Workflow „Eigene Apps veröffentlichen“).
 # Die Version von KDE-Laufzeit und PySide-Basis setzt der Workflow (@VERSION@).
 id: org.creativeos.Engine
@@ -20,9 +20,9 @@ finish-args:
   - --socket=fallback-x11
   - --socket=pulseaudio         # Ton beim Testspielen
   - --device=all                # 3D-Beschleunigung (Godot) und Gamepads beim Testspielen
-  - --filesystem=home           # Projekte (~/Creative Engine) und Exporte (~/Spiele)
+  - --filesystem=home           # Projekte (~/Engine) und Exporte (~/Spiele)
   - --filesystem=xdg-config/creative-os:ro   # Graphit/Porzellan und Akzentfarbe
-  - --talk-name=org.freedesktop.Flatpak      # Claude (Creative Claude) für KI-Bewegungen, Bereitschaft verhindern
+  - --talk-name=org.freedesktop.Flatpak      # Claude (Claude) für KI-Bewegungen, Bereitschaft verhindern
 modules:
   - name: creative-engine
     buildsystem: simple

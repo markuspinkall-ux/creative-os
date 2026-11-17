@@ -183,7 +183,7 @@ class Viewer(QMainWindow):
         self.resize(1180, 780)
         self.setAcceptDrops(True)
         self.setStyleSheet(T(STYLE))
-        self.settings = QSettings("Orbit OS", APP)
+        self.settings = QSettings("Creative OS", APP)
         self.files, self.index, self.counter = [], -1, 0
         self.pending = None
         self.web_ready = False
@@ -376,7 +376,7 @@ def main():
     files = [a for a in args if not a.startswith("--")]
     flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
     extra = ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
-    if QSettings("Orbit OS", APP).value("software", False, type=bool) or shot:
+    if QSettings("Creative OS", APP).value("software", False, type=bool) or shot:
         os.environ["V3D_SOFTGL"] = "1"
         extra += ["--use-gl=angle", "--use-angle=swiftshader"]
     for flag in extra:

@@ -1,6 +1,6 @@
 """Graphit-Dialoge für die Qt-Widgets-Apps von Orbit OS.
 
-Ersetzt die Standard-Dialoge von Qt durch Dialoge im Creative-Look – mit
+Ersetzt die Standard-Dialoge von Qt durch Dialoge im Orbit-Look – mit
 genau denselben Aufrufen. Eine App braucht dafür nur eine Zeile:
 
     from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox

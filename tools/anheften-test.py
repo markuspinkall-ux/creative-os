@@ -13,8 +13,8 @@ os.environ["XDG_DATA_HOME"] = str(home / ".local/share")
 os.environ["XDG_DATA_DIRS"] = str(home / "share")
 apps_dir = home / "share/applications"
 apps_dir.mkdir(parents=True)
-for did, name in (("creative-files", "Dateien"), ("brave-browser", "Brave"), ("creative-browser", "Creative Browser"),
-                  ("org.kde.konsole", "Konsole"), ("creative-player", "Creative Player"),
+for did, name in (("creative-files", "Dateien"), ("brave-browser", "Brave"), ("creative-browser", "Browser"),
+                  ("org.kde.konsole", "Konsole"), ("creative-player", "Player"),
                   ("creative-claude", "Claude"), ("creative-youtube", "YouTube"), ("creative-twitch", "Twitch")):
     (apps_dir / f"{did}.desktop").write_text(
         f"[Desktop Entry]\nType=Application\nName={name}\nExec=true\nIcon={did}\n")
@@ -35,7 +35,7 @@ m = AppModel(config.load()["pinned"])
 m.reload()
 start = ids(m)
 print("Grundausstattung:", start)
-assert "creative-browser.desktop" in start and "brave-browser.desktop" not in start, "Creative Browser ersetzt Brave nicht"
+assert "creative-browser.desktop" in start and "brave-browser.desktop" not in start, "Browser ersetzt Brave nicht"
 for gone in ("creative-youtube.desktop", "creative-twitch.desktop"):
     assert gone not in start, f"{gone} ist noch in der Taskleiste"
 assert start.index("creative-browser.desktop") == 1, start
@@ -87,7 +87,7 @@ print("Zähler an der Taskleiste: in Ordnung")
 # Startmenü: ausblenden und in der Systemsteuerung wieder einblenden
 m2.hideFromStartMenu("creative-player.desktop")
 assert [r["desktopId"] for r in m2.hidden_apps()] == ["creative-player.desktop"], m2.hidden_apps()
-assert m2.hidden_apps()[0]["name"] == "Creative Player"
+assert m2.hidden_apps()[0]["name"] == "Player"
 shown = m2._shown + [x for e in m2._shown for x in (e.members or [])]
 assert all(e.desktop_id != "creative-player.desktop" for e in shown), "noch im Startmenü"
 m2.showInStartMenu("creative-player.desktop")

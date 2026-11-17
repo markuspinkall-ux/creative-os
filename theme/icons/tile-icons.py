@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Setzt einfache Creative-Strichsymbole in die Graphit-Kachel der App-Symbole.
+"""Setzt einfache Orbit-Strichsymbole in die Graphit-Kachel der App-Symbole.
 
 Die Shell-Symbole (24×24, nur Striche) sehen im Startmenü neben den neueren
 App-Symbolen (Art, Writer, Cut …) nackt aus. Dieses Werkzeug legt sie auf

@@ -22,7 +22,7 @@ Variant=Everything
 [Compose]
 Lorax=creative-os
 STAMP
-# Look: Graphit-Farben, Creative-Logo statt Fedora-Blau (Anaconda lädt
+# Look: Graphit-Farben, Orbit-Logo statt Fedora-Blau (Anaconda lädt
 # /run/install/updates/anaconda-gtk.css mit Vorrang; die Bilder ersetzen die von Fedora)
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ -d "$here/installer" ]; then

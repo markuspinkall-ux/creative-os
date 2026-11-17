@@ -31,7 +31,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Broadcast")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-broadcast")
     app.setWindowIcon(QIcon.fromTheme("creative-broadcast"))
     if "--selftest" not in sys.argv and _raise_running():
@@ -48,7 +48,7 @@ def main():
     if not engine.rootObjects():
         return 1
     if "--selftest" in sys.argv:
-        print("Creative Broadcast: Oberfläche ok")
+        print("Broadcast: Oberfläche ok")
         return 0
     win = engine.rootObjects()[0]
     from PySide6.QtNetwork import QLocalServer

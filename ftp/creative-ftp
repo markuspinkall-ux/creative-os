@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative FTP desktop client."""
+"""FTP desktop client."""
 
 import json
 import os
@@ -89,7 +89,7 @@ class CreativeFTP(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Creative FTP")
+        self.setWindowTitle("FTP")
         self.resize(1200, 780)
         self.setStyleSheet("""
             QWidget { background: #12151b; color: #dce6ff; font-family: Arial; font-size: 13px; }

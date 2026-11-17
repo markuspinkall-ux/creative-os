@@ -34,5 +34,5 @@ def run():
     parsed = S.parse_ai('{"name":"Ente","length":1,"loop":true,"keys":[{"t":0,"Hips":[0,0,12],"bob":0.01},'
                         '{"t":0.5,"Hips":[0,0,-12]}]}')
     assert parsed["tracks"]["Hips"][1][3] == -12
-    print("Creative Engine Selbsttest: OK")
+    print("Engine Selbsttest: OK")
     return 0

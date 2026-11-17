@@ -1,4 +1,4 @@
-"""Erzeugt den Fensterrahmen „Creative Graphit“ (KWin/Aurorae).
+"""Erzeugt den Fensterrahmen „Graphit“ (KWin/Aurorae).
 
 Aufruf: python3 make_aurorae.py <Zielordner>
 Titelleiste im Graphit-Ton, runde obere Ecken, weicher Schatten,
@@ -203,7 +203,7 @@ PaddingRight={P}
 """
 
 META_DESKTOP = """[Desktop Entry]
-Name=Creative Graphit
+Name=Graphit
 Comment=Fensterrahmen von Orbit OS
 X-KDE-PluginInfo-Name=CreativeGraphit
 X-KDE-PluginInfo-Author=Orbit OS
@@ -213,7 +213,7 @@ X-KDE-PluginInfo-License=GPL
 META_JSON = """{
     "KPlugin": {
         "Id": "CreativeGraphit",
-        "Name": "Creative Graphit",
+        "Name": "Graphit",
         "Description": "Fensterrahmen von Orbit OS",
         "Authors": [{ "Name": "Orbit OS" }],
         "License": "GPL",

@@ -1,8 +1,8 @@
 {
     "KPlugin": {
         "Id": "creative-tasks",
-        "Name": "Creative Tasks",
-        "Description": "Meldet der Creative-Taskleiste die offenen Fenster und stellt die Windows-Tastenkürzel bereit.",
+        "Name": "Tasks",
+        "Description": "Meldet der Orbit-Taskleiste die offenen Fenster und stellt die Windows-Tastenkürzel bereit.",
         "Authors": [{ "Name": "Orbit OS" }],
         "License": "GPL-3.0-or-later",
         "Version": "0.1",

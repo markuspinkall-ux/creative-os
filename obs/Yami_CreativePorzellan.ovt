@@ -1,5 +1,5 @@
 @OBSThemeMeta {
-    name: 'Creative Porzellan';
+    name: 'Porzellan';
     id: 'com.obsproject.Yami.CreativePorzellan';
     extends: 'com.obsproject.Yami';
     author: 'Orbit OS';

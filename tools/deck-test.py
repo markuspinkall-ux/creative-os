@@ -1,4 +1,4 @@
-"""Creative Deck ohne echtes Gerät prüfen: Einstellungen, Tastenkürzel, OBS-Protokoll und der
+"""Deck ohne echtes Gerät prüfen: Einstellungen, Tastenkürzel, OBS-Protokoll und der
 Hintergrunddienst mit einem nachgebauten Stream Deck (Seiten, Zurück, Helligkeit, Befehl,
 Ein-/Ausstecken, Neuladen der Einstellungen). Legt ein Foto der Tasten ab.
 
@@ -56,7 +56,7 @@ old["seiten"][0]["tasten"]["1"] = {"text": "Brave", "symbol": "app:brave-browser
 config.save(old)
 k1 = config.load()["seiten"][0]["tasten"]["1"]
 check(k1["aktion"]["app"] == "creative-browser.desktop" and k1["text"] == "Browser"
-      and k1["symbol"] == "app:creative-browser.desktop", "Brave-Taste wird zum Creative Browser")
+      and k1["symbol"] == "app:creative-browser.desktop", "Brave-Taste wird zum Browser")
 config.config_path().write_text("kaputt", encoding="utf-8")
 check(config.load()["seiten"], "kaputte Datei → Grundeinstellung")
 
@@ -238,4 +238,4 @@ check(len(d.decks) == 1, "Wieder einstecken wird erkannt")
 d.close()
 
 print("\n".join("ok  " + w for w in ok))
-print(f"Creative Deck: alle {len(ok)} Prüfungen bestanden")
+print(f"Deck: alle {len(ok)} Prüfungen bestanden")

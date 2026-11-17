@@ -15,7 +15,7 @@ app = QGuiApplication(sys.argv)
 view = QQuickView()
 view.engine().addImportPath(str(ROOT / "shell/creative_shell/qml"))
 shell = QQmlPropertyMap()
-shell.insert("taskTip", {"screen": "DP-1", "text": "Creative Browser", "x": 196.0, "count": 2})
+shell.insert("taskTip", {"screen": "DP-1", "text": "Browser", "x": 196.0, "count": 2})
 view.rootContext().setContextProperty("shell", shell)
 tip = QUrl.fromLocalFile(str(ROOT / "shell/creative_shell/qml/surfaces/TaskTip.qml")).toString()
 qml = f'''

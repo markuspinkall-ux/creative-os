@@ -52,7 +52,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Creative Magazin – Feeds und Artikeltext prüfen
+      - name: Magazin – Feeds und Artikeltext prüfen
         run: python3 -m unittest tests/test_magazin.py
 
       - name: Containerfile – alle kopierten Dateien vorhanden?
@@ -60,18 +60,18 @@ jobs:
           python3 image/check-copy-sources.py image/Containerfile image/Containerfile.apps
           python3 tools/startmenue-check.py
 
-      - name: Creative Cut – Zeitleiste, Projektformat und Export prüfen
+      - name: Cut – Zeitleiste, Projektformat und Export prüfen
         run: python3 -m unittest tests/test_cut.py
 
-      - name: Creative 3D – Netz-Baustein und Skelett prüfen
+      - name: 3D Studio – Netz-Baustein und Skelett prüfen
         run: |
           python3 -m pip install --quiet --user --break-system-packages numpy || true
           python3 -m unittest tests/test_creative3d.py tests/test_creative3d_softview.py
 
-      - name: Creative Art – Pinsel-Import (.abr/.gbr) und Fülleimer prüfen
+      - name: Art – Pinsel-Import (.abr/.gbr) und Fülleimer prüfen
         run: python3 -m unittest tests/test_art_brushes.py
 
-      - name: Creative Mail – Nachrichten, Anhänge und Antworten prüfen
+      - name: Mail – Nachrichten, Anhänge und Antworten prüfen
         run: python3 -m unittest tests/test_mail.py
 
       - name: Update-Center – Fortschritt und Restzeit prüfen
@@ -113,7 +113,7 @@ jobs:
           done < "$RUNNER_TEMP/app-update-paths"
           echo "image=${BASE_TAG%:*}@$digest" >> "$GITHUB_OUTPUT"
 
-      - name: Creative-Apps auf der vorhandenen Systembasis bauen
+      - name: Orbit-Apps auf der vorhandenen Systembasis bauen
         if: steps.base.outputs.image != ''
         env:
           BASE_IMAGE: ${{ steps.base.outputs.image }}
@@ -142,7 +142,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Creative Art, Writer, ChatGPT, Podcast und Magazin im fertigen Abbild prüfen
+      - name: Art, Writer, ChatGPT, Podcast und Magazin im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -151,15 +151,15 @@ jobs:
             "localhost/creative-os:${{ matrix.variant }}-build" -ec '
               XDG_RUNTIME_DIR="$(mktemp -d)"
               export XDG_RUNTIME_DIR HOME="$XDG_RUNTIME_DIR"
-              echo "Starte Creative-Art-Selbsttest"
+              echo "Starte Orbit-Art-Selbsttest"
               /usr/bin/creative-art --selftest
-              echo "Starte Creative-Writer-Selbsttest"
+              echo "Starte Orbit-Writer-Selbsttest"
               /usr/bin/creative-writer --selftest
               echo "Prüfe offizielle ChatGPT-App"
               rpm -q chatgpt
               /usr/bin/creative-claude --selftest
               /usr/bin/creative-software --selftest
-              echo "Starte Creative-Magazin-Selbsttest"
+              echo "Starte Orbit-Magazin-Selbsttest"
               /usr/bin/creative-magazin --selftest
               exec /usr/bin/creative-podcast --selftest
             '; then
@@ -201,7 +201,7 @@ jobs:
           dir="$(mktemp -d)"
           cp shots/*.png "$dir/"
           {
-            echo "# Bildschirmfotos aller Creative-Apps"
+            echo "# Bildschirmfotos aller Orbit-Apps"
             echo
             echo "Build: ${{ github.sha }} · $(date -u '+%Y-%m-%d %H:%M UTC') · automatisch erzeugt, ohne Bildschirm"
             echo

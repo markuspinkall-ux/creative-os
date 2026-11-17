@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert Creative Notes (setzt die Creative Shell voraus – sie liefert die Symbole).
+# Installiert Notes (setzt die Shell voraus – sie liefert die Symbole).
 set -eu
 cd "$(dirname "$0")"
 if [ "$(id -u)" -ne 0 ]; then
@@ -14,4 +14,4 @@ find /usr/lib/creative-notes -name '__pycache__' -prune -exec rm -rf {} +
 install -Dm755 bin/creative-notes /usr/bin/creative-notes
 install -Dm644 creative-notes.desktop /usr/share/applications/creative-notes.desktop
 update-desktop-database -q /usr/share/applications 2>/dev/null || true
-echo "Fertig. „Creative Notes“ steht jetzt im Startmenü."
+echo "Fertig. „Notes“ steht jetzt im Startmenü."

@@ -1,6 +1,6 @@
 name: Notizen-Widget prüfen
 # Modelltest, dann die Shell ohne Bildschirm mit dem Notizen-Widget fotografieren:
-# hineinklicken, tippen, prüfen, ob notizen.json den Text enthält – und Creative Widgets fotografieren.
+# hineinklicken, tippen, prüfen, ob notizen.json den Text enthält – und Widgets fotografieren.
 on:
   push:
     branches: ["claude/**"]
@@ -60,7 +60,7 @@ jobs:
           printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
           run CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/notizen-porzellan.png"
           rm "$H/.config/creative-os/look.conf"
-          # Creative Widgets neben laufender Shell (gleiche D-Bus-Sitzung), damit die Schalter echt sind
+          # Widgets neben laufender Shell (gleiche D-Bus-Sitzung), damit die Schalter echt sind
           cat > /tmp/zusammen.sh <<'SH'
           cd "$GITHUB_WORKSPACE/shell"
           CREATIVE_TEST_BACKGROUND=1 timeout 50 python3 -m creative_shell --dev >/tmp/shell.log 2>&1 &

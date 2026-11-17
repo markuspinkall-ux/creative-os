@@ -1,4 +1,4 @@
-# Creative Shell
+# Shell
 
 Taskleiste, Startmenü und Schnellzugriff von **Orbit OS**, im Graphit-Design.
 

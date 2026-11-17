@@ -4,7 +4,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Shots – wie das Snipping Tool von Windows 11, im Graphit-Look.
+// Shots – wie das Snipping Tool von Windows 11, im Graphit-Look.
 Window {
     id: win
 
@@ -13,7 +13,7 @@ Window {
     minimumWidth: 640
     minimumHeight: 200
     visible: false
-    title: shots.hasImage && shots.savedName ? shots.savedName + " – Creative Shots" : "Creative Shots"
+    title: shots.hasImage && shots.savedName ? shots.savedName + " – Shots" : "Shots"
     color: Theme.surface
 
     // ---- Zeichnen ----------------------------------------------------------------------------
@@ -242,7 +242,7 @@ Window {
                             model: [
                                 { t: "Speichern unter …", a: "saveas" },
                                 { t: "Ordner öffnen", a: "folder" },
-                                { t: "In Creative Pictures öffnen", a: "pictures" }
+                                { t: "In Pictures öffnen", a: "pictures" }
                             ]
                             delegate: Rectangle {
                                 required property var modelData

@@ -1,4 +1,4 @@
-"""Word-Dokumente (.docx) für Creative Writer lesen und schreiben (über python-docx).
+"""Word-Dokumente (.docx) für Writer lesen und schreiben (über python-docx).
 
 Unterstützt: Absätze, Formatvorlagen (Überschriften, Titel, Zitat), Ausrichtung, Einzüge,
 Abstände, Zeilenabstand, Fett/Kursiv/Unterstrichen/Durchgestrichen, Hoch-/Tiefgestellt,

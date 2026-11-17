@@ -1,4 +1,4 @@
-"""Bedienlogik des Creative Calculator: Tasten, Anzeige, Verlauf."""
+"""Bedienlogik des Calculator: Tasten, Anzeige, Verlauf."""
 
 import json
 import os

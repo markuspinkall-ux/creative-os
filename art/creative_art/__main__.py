@@ -1,4 +1,4 @@
-"""Creative Art desktop application."""
+"""Art desktop application."""
 
 import math
 import sys
@@ -29,7 +29,7 @@ except ImportError:
         return value
 
 
-PROJECT = "Creative Art (*.cart)"
+PROJECT = "Art (*.cart)"
 IMAGES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp *.tif *.tiff *.gif)"
 HANDLED_ERRORS = (OSError, ValueError, RuntimeError)
 
@@ -295,7 +295,7 @@ class Window(QMainWindow):
         self.cut_action.setEnabled(has_selection and self.doc.layer.visible)
         self.delete_action.setEnabled(self.cut_action.isEnabled())
         self.crop_action.setEnabled(has_selection)
-        self.setWindowTitle(f"{self.source_name or 'Unbenannt'}[*] – Creative Art")
+        self.setWindowTitle(f"{self.source_name or 'Unbenannt'}[*] – Art")
         self.setWindowModified(self.doc.modified)
         self.update_status()
 
@@ -397,7 +397,7 @@ class Window(QMainWindow):
             self.brush_panel.library.presets.remove(added[0])
         for tool in ("smudge", "bucket", "gradient", "brush"):
             self.select_tool(tool, tool)
-        print("Creative Art: Pinsel-Selbsttest bestanden")
+        print("Art: Pinsel-Selbsttest bestanden")
 
     def update_color(self):
         swatch = QPixmap(18, 18)
@@ -567,7 +567,7 @@ class Window(QMainWindow):
                                  (area.height() - 28) / size.height()))
 
     def error(self, exc):
-        QMessageBox.warning(self, "Creative Art", str(exc))
+        QMessageBox.warning(self, "Art", str(exc))
 
     def confirm_discard(self):
         if not self.doc.modified:

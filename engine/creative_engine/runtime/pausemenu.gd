@@ -1,5 +1,5 @@
 extends Control
-## Pausenmenü für alle Spiele der Creative Engine – im Editor einstellbar (settings.pause):
+## Pausenmenü für alle Spiele der Engine – im Editor einstellbar (settings.pause):
 ##   title, position (mitte/links/rechts), panel (Farbe), accent, text, shade (Abdunkeln 0–1),
 ##   size (Schriftgröße der Knöpfe), image (eigenes Hintergrundbild der Tafel),
 ##   buttons: {weiter, neustart, steuerung, menu} (an/aus), labels: eigene Beschriftungen.

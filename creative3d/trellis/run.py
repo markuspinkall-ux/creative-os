@@ -1,6 +1,6 @@
-"""Creative 3D – Rechenteil im TRELLIS-Container: Bild → texturierte 3D-Figur.
+"""3D Studio – Rechenteil im TRELLIS-Container: Bild → texturierte 3D-Figur.
 
-Meldet sich zeilenweise (wie bisher), damit Creative 3D mitlesen kann:
+Meldet sich zeilenweise (wie bisher), damit 3D Studio mitlesen kann:
   P <prozent> <text>      Fortschritt
   OK <json>               fertig: {"files": {"glb": "name.glb", …}, "input": "eingabe.png", …}
                           (Dateinamen relativ zum Ausgabeordner)

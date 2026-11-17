@@ -1,5 +1,5 @@
 #!/bin/sh
-# Startauswahl (GRUB) im Creative-Design prüfen – in Fedora 44 mit echtem GRUB in QEMU.
+# Startauswahl (GRUB) im Orbit-Design prüfen – in Fedora 44 mit echtem GRUB in QEMU.
 #   sh tools/grub-design-test.sh <ausgabeordner>
 # 1. creative-grub-design gegen ein nachgebautes /boot: Thema kopieren, Block in user.cfg,
 #    zweimal ausführen ändert nichts, „aus“ entfernt alles wieder, fremde Zeilen bleiben.

@@ -1,4 +1,4 @@
-"""Symbole für Creative Writer: schlichte Strich-Icons (24×24), passend zur Graphit-Optik.
+"""Symbole für Writer: schlichte Strich-Icons (24×24), passend zur Graphit-Optik.
 
 icon(name, color) → QIcon. Die Formen sind bewusst einfach gehalten und werden in der
 Textfarbe des Designs gezeichnet (hell auf Graphit, dunkel auf Porzellan).

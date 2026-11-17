@@ -1,4 +1,4 @@
-"""Magnetische Zeitleiste für Creative Cut (wie bei Final Cut).
+"""Magnetische Zeitleiste für Cut (wie bei Final Cut).
 
 Drei Spuren übereinander:
   Titel  – frei verschiebbare Titel-Blöcke

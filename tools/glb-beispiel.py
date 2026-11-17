@@ -1,4 +1,4 @@
-"""Kleine Beispiel-Figur als GLB (Creative-Rakete aus Zylindern und Kegeln) – für Prüfungen der 3D-Ansicht.
+"""Kleine Beispiel-Figur als GLB (Orbit-Rakete aus Zylindern und Kegeln) – für Prüfungen der 3D-Ansicht.
    python3 tools/glb-beispiel.py ausgabe.glb"""
 import json
 import math

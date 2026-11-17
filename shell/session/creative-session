@@ -1,14 +1,14 @@
 #!/bin/sh
 # Startet die Orbit-OS-Sitzung: KWin als Fenstermanager, darauf die
-# Creative Shell (Taskleiste, Startmenü, Schnellzugriff).
+# Shell (Taskleiste, Startmenü, Schnellzugriff).
 export XDG_CURRENT_DESKTOP=Creative:KDE
 export XDG_SESSION_DESKTOP=creative
 # Tastatur: Belegung des Systems übernehmen (localectl), sonst Deutsch
 layout="$(localectl status 2>/dev/null | awk -F': *' '/X11 Layout/ {print $2; exit}')"
 export XKB_DEFAULT_LAYOUT="${layout:-de}"
-# Creative-Voreinstellungen (Windows-Taste, Fensterknöpfe rechts, Tastatur …) nur in dieser Sitzung
+# Orbit-Voreinstellungen (Windows-Taste, Fensterknöpfe rechts, Tastatur …) nur in dieser Sitzung
 export XDG_CONFIG_DIRS="/usr/share/creative-os/xdg:${XDG_CONFIG_DIRS:-/etc/xdg}"
-# Aufgeräumtes Startmenü (nur die nötigsten Apps, deutsche Namen, Creative-Symbole)
+# Aufgeräumtes Startmenü (nur die nötigsten Apps, deutsche Namen, Orbit-Symbole)
 data="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # Flatpak-Apps (aus „Software“) müssen startbar bleiben
 for d in "$HOME/.local/share/flatpak/exports/share" /var/lib/flatpak/exports/share; do

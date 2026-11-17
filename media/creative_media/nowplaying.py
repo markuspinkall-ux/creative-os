@@ -1,4 +1,4 @@
-"""Meldet der Taskleiste, was der Creative Player gerade spielt."""
+"""Meldet der Taskleiste, was der Player gerade spielt."""
 
 import json
 import os

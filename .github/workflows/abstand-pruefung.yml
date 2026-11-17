@@ -1,5 +1,5 @@
 name: Fensterabstand prüfen
-# Creative Abstand in echtem KWin (Fedora 44, virtueller Bildschirm): maximieren → Abstand statt randlos,
+# Abstand in echtem KWin (Fedora 44, virtueller Bildschirm): maximieren → Abstand statt randlos,
 # nochmal maximieren → alte Größe.
 on:
   push:
@@ -12,6 +12,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: KWin mit Creative Abstand
+      - name: KWin mit Abstand
         timeout-minutes: 15
         run: docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/abstand-test.sh

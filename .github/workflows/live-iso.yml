@@ -1,4 +1,4 @@
-name: Live-ISO mit Creative-Installation
+name: Live-ISO mit Orbit-Installation
 
 on:
   workflow_dispatch:

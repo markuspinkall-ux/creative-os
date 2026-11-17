@@ -1,5 +1,5 @@
 name: Taskleiste anheften prüfen
-# Startmenü/Taskleiste › Rechtsklick: anheften, lösen, Reihenfolge, Creative Browser statt Brave.
+# Startmenü/Taskleiste › Rechtsklick: anheften, lösen, Reihenfolge, Browser statt Brave.
 on:
   push:
     branches: ["claude/**"]

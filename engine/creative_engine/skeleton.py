@@ -1,7 +1,7 @@
-"""Figuren für die Creative Engine: GLB lesen, Skelett (Mixamo-Namen aus Creative 3D), Bewegungen
+"""Figuren für die Engine: GLB lesen, Skelett (Mixamo-Namen aus 3D Studio), Bewegungen
 berechnen, als animierte GLB speichern. Ohne Oberfläche, testbar.
 
-Koordinaten wie in Creative 3D: Y oben, die Figur schaut nach +Z, ihre linke Seite liegt bei +X.
+Koordinaten wie in 3D Studio: Y oben, die Figur schaut nach +Z, ihre linke Seite liegt bei +X.
 Bewegungen werden als Winkel (Grad) je Gelenk gespeichert, bezogen auf eine „Grundhaltung“:
 aufrecht stehen, Arme hängen locker neben dem Körper (auch wenn das Modell in T-Pose gebaut ist).
 
@@ -22,7 +22,7 @@ import numpy as np
 
 try:
     import creative3d_rig as R
-except ImportError:  # im Quellbaum liegt Creative 3D nebenan
+except ImportError:  # im Quellbaum liegt 3D Studio nebenan
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "creative3d"))
     import creative3d_rig as R
 
@@ -628,7 +628,7 @@ def _write(path, v, f, colors, nrm, joints, animations):
         m = np.eye(4, dtype=np.float32)
         m[:3, 3] = -joints[name]
         ibm[i] = m.T.reshape(-1)
-    gltf = {"asset": {"version": "2.0", "generator": "Creative Engine"}, "scene": 0,
+    gltf = {"asset": {"version": "2.0", "generator": "Engine"}, "scene": 0,
             "scenes": [{"nodes": [0, first + INDEX["Hips"]]}], "nodes": nodes,
             "materials": [{"name": "Figur", "pbrMetallicRoughness": {
                 "baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0.0, "roughnessFactor": 0.85}}],

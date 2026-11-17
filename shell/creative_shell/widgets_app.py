@@ -1,4 +1,4 @@
-"""Creative Widgets desktop settings and curated widget downloads."""
+"""Widgets desktop settings and curated widget downloads."""
 
 import json
 import sys
@@ -32,7 +32,7 @@ class WidgetWindow(QMainWindow):
 
     def __init__(self, check=False):
         super().__init__()
-        self.setWindowTitle("Creative Widgets")
+        self.setWindowTitle("Widgets")
         self.resize(640, 760)
         self.bus = QDBusInterface(SERVICE, PATH, SERVICE, QDBusConnection.sessionBus())
         self.bus.setTimeout(1200)
@@ -49,7 +49,7 @@ class WidgetWindow(QMainWindow):
         layout = QVBoxLayout(page)
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(10)
-        title = QLabel("Creative Widgets")
+        title = QLabel("Widgets")
         title.setFont(QFont("Sans Serif", 22, QFont.Weight.DemiBold))
         layout.addWidget(title)
         layout.addWidget(QLabel("Desktop-Widgets verwalten und neue Widgets hinzufügen."))
@@ -147,7 +147,7 @@ class WidgetWindow(QMainWindow):
             self.bus.setTimeout(1200)
         reply = self.bus.call(method, *args)
         if reply.type() == QDBusMessage.MessageType.ErrorMessage or not reply.arguments():
-            raise ValueError("Die Creative-Shell ist gerade nicht erreichbar.")
+            raise ValueError("Die Orbit-Shell ist gerade nicht erreichbar.")
         return reply.arguments()[0]
 
     def refresh(self):

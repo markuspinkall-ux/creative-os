@@ -1,4 +1,4 @@
-"""Creative Shots – Bildschirmfotos wie mit dem Windows-11-Snipping-Tool.
+"""Shots – Bildschirmfotos wie mit dem Windows-11-Snipping-Tool.
 
 Ablauf: Bildschirm „einfrieren“ (ganzer Bildschirm wird aufgenommen), darüber
 eine Auswahl-Ebene je Monitor (Rechteck, Fenster, Vollbild, Freihand). Der

@@ -1,5 +1,5 @@
 'use strict';
-// Selbsttest für Creative WhatsApp (CI): creative-whatsapp --creative-selftest=<ordner für Bilder>
+// Selbsttest für WhatsApp (CI): creative-whatsapp --creative-selftest=<ordner für Bilder>
 const fs = require('fs');
 const path = require('path');
 
@@ -51,7 +51,7 @@ async function run(ctx) {
     fs.writeFileSync(path.join(out, 'whatsapp-fenster.png'), (await wc.capturePage()).toPNG());
 
     // Benachrichtigungen: unsere Hülle sitzt in der Seite
-    check(await wc.executeJavaScript('window.Notification.__creative === true'), 'Benachrichtigungen laufen über Creative WhatsApp');
+    check(await wc.executeJavaScript('window.Notification.__creative === true'), 'Benachrichtigungen laufen über WhatsApp');
     check(await wc.executeJavaScript('Notification.permission') === 'granted', 'Benachrichtigungen erlaubt');
     setSettings({ dnd: true });
     await sleep(300);

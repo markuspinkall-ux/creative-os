@@ -1,4 +1,4 @@
-/* Creative Browser – Graphit (dunkel) und Porzellan (hell) */
+/* Browser – Graphit (dunkel) und Porzellan (hell) */
 /* Farben genau wie in Orbit OS (Theme.qml / look.py). Das Design kommt vom Hauptprozess
    (~/.config/creative-os/look.conf) als data-design am <body>, die Akzentfarbe als --accent. */
 :root, body[data-design="graphit"] {

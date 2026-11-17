@@ -48,7 +48,7 @@ ApplicationWindow {
                 for (var i = 0; i < installer.disks.length; i++)
                     if (installer.disks[i].eligible) { win.disk = installer.disks[i].path; break }
             } else if (win.step === 2) {
-                win.fullName = "Creative Test"; win.userName = "tester"
+                win.fullName = "Test"; win.userName = "tester"
                 win.password = "creative-test"; win.password2 = "creative-test"
             } else if (win.step === 3) {
                 win.understood = true

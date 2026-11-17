@@ -1,5 +1,5 @@
 @OBSThemeMeta {
-    name: 'Creative Graphit';
+    name: 'Graphit';
     id: 'com.obsproject.Yami.CreativeGraphit';
     extends: 'com.obsproject.Yami';
     author: 'Orbit OS';

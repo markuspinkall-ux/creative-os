@@ -6,7 +6,7 @@ import ".."
 SettingsPage {
     id: root
 
-    // Eingabefeld im Creative-Stil
+    // Eingabefeld im Orbit-Stil
     component Field: Rectangle {
         id: field
         property alias text: input.text

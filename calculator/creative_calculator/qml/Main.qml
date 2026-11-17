@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Calculator – Rechner im Graphit-Look.
+// Calculator – Rechner im Graphit-Look.
 Window {
     id: win
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Wird beim Start der Orbit-OS-Sitzung ausgeführt (als Benutzer).
 #  1. Graphit-Aussehen für GTK-Programme in die eigenen Einstellungen legen
-#  2. Alte Plasma-Einstellungen entfernen, die das Creative-Aussehen überdecken
+#  2. Alte Plasma-Einstellungen entfernen, die das Orbit-Aussehen überdecken
 #     (Farben, Fensterrahmen). Vorher wird einmalig eine Sicherung angelegt.
 conf="${XDG_CONFIG_HOME:-$HOME/.config}"
 
@@ -24,7 +24,7 @@ if [ -f "$src" ]; then
     done
 fi
 
-# GTK-Einstellungen: von KDE erzeugte (Breeze, hell) durch die Creative-Fassung ersetzen
+# GTK-Einstellungen: von KDE erzeugte (Breeze, hell) durch die Orbit-Fassung ersetzen
 for v in gtk-3.0 gtk-4.0; do
     ini="$conf/$v/settings.ini"
     sys_ini="/usr/share/creative-os/xdg/$v/settings.ini"
@@ -70,7 +70,7 @@ RULES = {
     ),
     "kwinrc": (re.compile(r"^org\.kde\.kdecoration2$"), {}),
     "breezerc": (re.compile(r".*"), {}),
-    # Druck-Taste gehört „Creative Shots“, nicht mehr Spectacle
+    # Druck-Taste gehört „Shots“, nicht mehr Spectacle
     "kglobalshortcutsrc": (re.compile(r"^(services\]\[org\.kde\.spectacle\.desktop|org\.kde\.spectacle\.desktop)$"),
                            {"ksmserver": {"Log Out", "Log Out Without Confirmation"}}),
 }
@@ -134,7 +134,7 @@ VDF
 fi
 
 # Brave ist nicht mehr im System: eigene Standard-Apps, die noch auf Brave zeigen, auf den
-# Creative Browser umstellen (Links, Webseiten, PDFs)
+# Browser umstellen (Links, Webseiten, PDFs)
 mimes="$conf/mimeapps.list"
 if [ -f "$mimes" ] && grep -q 'brave-browser\.desktop\|com\.brave\.Browser\.desktop' "$mimes"; then
     sed -i 's/com\.brave\.Browser\.desktop/creative-browser.desktop/g; s/brave-browser\.desktop/creative-browser.desktop/g' "$mimes"
@@ -167,7 +167,7 @@ if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/nul
     fi
 fi
 
-# Katalog „Eigene Apps“ (z. B. Creative Engine) einmal einrichten – erscheint in „Software“.
+# Katalog „Eigene Apps“ (z. B. Engine) einmal einrichten – erscheint in „Software“.
 # Entfernt der Benutzer ihn später selbst, bleibt er entfernt (Merker-Datei).
 mark="${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/eigene-apps-katalog"
 if [ ! -e "$mark" ] && command -v flatpak >/dev/null 2>&1; then

@@ -1,4 +1,4 @@
-# Creative Calculator
+# Calculator
 
 Der Rechner von Orbit OS im Graphit-Look.
 

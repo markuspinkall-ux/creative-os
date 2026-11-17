@@ -1,7 +1,7 @@
 import QtQuick
 import QtWebEngine
 
-// Die offizielle YouTube-Music-Webseite, eingebettet in den Creative Player.
+// Die offizielle YouTube-Music-Webseite, eingebettet in den Player.
 // Anmeldung (z. B. YouTube Premium) bleibt gespeichert.
 WebEngineView {
     id: web

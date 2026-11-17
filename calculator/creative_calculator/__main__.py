@@ -18,7 +18,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Calculator")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-calculator")
     app.setWindowIcon(QIcon.fromTheme("creative-calculator", QIcon.fromTheme("accessories-calculator")))
 
@@ -29,7 +29,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-calculator: Creative-Design nicht gefunden (Creative Shell installiert?)")
+        print("creative-calculator: Orbit-Design nicht gefunden (Shell installiert?)")
         return 1
 
     calc = Calculator()

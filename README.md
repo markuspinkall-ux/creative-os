@@ -8,11 +8,11 @@ Spiele laufen ab Werk (Steam + Proton fest eingebaut).
 |---|---|
 | Taskleiste, Startmenü, Schnellzugriff, Kalender, Papierkorb, Schreibtisch, Sperrbildschirm | `shell/` |
 | Dateimanager „Dateien“ | `files/` |
-| Creative Player (Musik, Videos, IPTV) | `media/` |
+| Player (Musik, Videos, IPTV) | `media/` |
 | Systemsteuerung (Netzwerk, Bildschirme, Ton, Drucker, Mein Server, Darstellung, Updates, System) | `settings/` |
 | Mein Server (Webseite im Heimnetz) | `server/` |
-| Creative Mail (Gmail im Graphit-Stil) | [`mail/`](mail/) |
-| Startseite des Creative Browsers | `browser/` |
+| Mail (Gmail im Graphit-Stil) | [`mail/`](mail/) |
+| Startseite des Browsers | `browser/` |
 | Willkommens-Assistent | `welcome/` |
 | Aussehen aller Apps (Farben, Fensterrahmen, Symbole, aufgeräumtes Startmenü) | `theme/` |
 | System-Abbild und Installations-ISO | `image/`, `.github/workflows/build.yml` |

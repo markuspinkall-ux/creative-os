@@ -1,4 +1,4 @@
-name: Creative Broadcast prüfen
+name: Broadcast prüfen
 # Kamera-Modi (V4L2), KI-Upscaling (Modell rechnet richtig?) und Fotos der Oberfläche.
 # Fotos landen im Branch „broadcast-fotos“.
 on:

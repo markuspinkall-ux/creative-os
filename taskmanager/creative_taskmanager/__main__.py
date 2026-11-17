@@ -5,7 +5,7 @@ import signal
 import sys
 from pathlib import Path
 
-# Gemeinsame Teile der Creative Shell (Messfühler, Symbole, Design)
+# Gemeinsame Teile der Shell (Messfühler, Symbole, Design)
 for _p in (Path(__file__).resolve().parent.parent.parent / "shell", Path("/usr/lib/creative-shell")):
     if (_p / "creative_shell").is_dir() and str(_p) not in sys.path:
         sys.path.append(str(_p))
@@ -23,7 +23,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Taskmanager")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-taskmanager")
     app.setWindowIcon(QIcon.fromTheme("creative-taskmanager"))
 

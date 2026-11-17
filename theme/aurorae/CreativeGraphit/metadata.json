@@ -1,7 +1,7 @@
 {
     "KPlugin": {
         "Id": "CreativeGraphit",
-        "Name": "Creative Graphit",
+        "Name": "Graphit",
         "Description": "Fensterrahmen von Orbit OS",
         "Authors": [{ "Name": "Orbit OS" }],
         "License": "GPL",

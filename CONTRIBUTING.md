@@ -22,7 +22,7 @@ Textkonsole, Updates sowie Rollback. Syntaxprüfungen ersetzen diesen Test nicht
 
 ### Funktionsupdates und Systembuilds
 
-Änderungen an Creative Art, Writer, Podcast, der Systemsteuerung oder der
+Änderungen an Art, Writer, Podcast, der Systemsteuerung oder der
 Sichtbarkeitsliste des Startmenüs können auf der letzten vollständigen
 Systembasis gebaut werden. Der Workflow prüft alle Änderungen seit dieser
 Basis und fällt bei anderen Dateien auf einen vollständigen Build zurück.

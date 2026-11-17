@@ -8,8 +8,8 @@ Orbit OS ist ein **Fedora-Atomic**-System:
 - **Updates nur als Ganzes:** Ein Update klappt komplett oder gar nicht.
   Es wird im Hintergrund geladen und beim nächsten Neustart aktiv.
 - **Immer ein Rückweg:** Im Bootmenü steht der vorherige Stand bereit.
-- **Fest eingebaut** und nicht entfernbar: Steam (mit Proton), Creative Browser,
-  alle Codecs, GameMode, die Creative Shell – und bei der NVIDIA-Variante
+- **Fest eingebaut** und nicht entfernbar: Steam (mit Proton), Browser,
+  alle Codecs, GameMode, die Shell – und bei der NVIDIA-Variante
   der NVIDIA-Treiber.
 
 ## Bauen (auf Fedora, z. B. in der VM)

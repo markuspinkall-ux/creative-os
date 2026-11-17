@@ -3,11 +3,11 @@ Copyright (c) 2026 Markus Pinkall. Alle Rechte vorbehalten.
 
 1. Eigene Programme und Bestandteile
    Alle von Orbit OS selbst entwickelten Programme und Bestandteile – insbesondere
-   Creative Shell (Taskleiste, Startmenü, Schreibtisch, Ablage), Systemsteuerung,
-   Creative Player, Creative Notes, Creative Calculator, Creative Pictures, Creative Shots,
-   Creative Broadcast, Creative Capture, Creative Iso, Taskmanager, Dateien, Sprachassistent,
+   Shell (Taskleiste, Startmenü, Schreibtisch, Ablage), Systemsteuerung,
+   Player, Notes, Calculator, Pictures, Shots,
+   Broadcast, Capture, Iso, Taskmanager, Dateien, Sprachassistent,
    Willkommens-Assistent, Benachrichtigungen, Datensicherung, Mein Server sowie die
-   Creative-Symbole, Hintergrundbilder, das Graphit-Design und die Bau- und Installations-
+   Orbit-Symbole, Hintergrundbilder, das Graphit-Design und die Bau- und Installations-
    Skripte – sind urheberrechtlich geschützt.
 
    Der Quellcode ist zur Einsicht öffentlich. Ohne vorherige schriftliche Erlaubnis des

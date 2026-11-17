@@ -12,7 +12,7 @@ ApplicationWindow {
     minimumHeight: 460
     visible: true
     color: Theme.ground
-    title: "Creative Podcast"
+    title: "Podcast"
 
     required property QtObject podcasts
     property string section: "discover"
@@ -75,7 +75,7 @@ ApplicationWindow {
 
         RowLayout {
             Layout.fillWidth: true
-            Heading { text: "Creative Podcast"; Layout.fillWidth: true }
+            Heading { text: "Podcast"; Layout.fillWidth: true }
             CButton {
                 text: "Entdecken"
                 primary: window.section === "discover"

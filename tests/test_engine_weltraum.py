@@ -1,4 +1,4 @@
-"""Creative Engine: Weltraum-Shooter und eigene Steuerung (ohne Godot und ohne Oberfläche)."""
+"""Engine: Weltraum-Shooter und eigene Steuerung (ohne Godot und ohne Oberfläche)."""
 import json
 import sys
 from pathlib import Path

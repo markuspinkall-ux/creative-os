@@ -1,6 +1,6 @@
-# Baut den TRELLIS.2-Container für Creative 3D (das größere Modell, 4 Mrd. Parameter) und
+# Baut den TRELLIS.2-Container für 3D Studio (das größere Modell, 4 Mrd. Parameter) und
 # legt ihn in die GitHub-Registry: ghcr.io/<besitzer>/creative-trellis2:latest
-# Creative 3D lädt ihn beim Einrichten von „TRELLIS.2“ herunter.
+# 3D Studio lädt ihn beim Einrichten von „TRELLIS.2“ herunter.
 name: TRELLIS.2-Container bauen
 
 on:
@@ -44,14 +44,14 @@ jobs:
 
       - name: Container bauen (kompiliert die CUDA-Erweiterungen, ohne Grafikkarte)
         run: |
-          # Schichten vom letzten Container übernehmen: Ändert sich nur wenig, lädt Creative 3D
+          # Schichten vom letzten Container übernehmen: Ändert sich nur wenig, lädt 3D Studio
           # beim erneuten Einrichten auch nur die geänderten Schichten.
           docker pull "${{ steps.names.outputs.image }}:latest" || true
           docker build \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             --cache-from "${{ steps.names.outputs.image }}:latest" \
             --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
-            --label org.opencontainers.image.description="TRELLIS.2 (Microsoft, MIT) für Creative 3D" \
+            --label org.opencontainers.image.description="TRELLIS.2 (Microsoft, MIT) für 3D Studio" \
             --label org.opencontainers.image.licenses=MIT \
             --label org.opencontainers.image.revision=${{ github.sha }} \
             -t "${{ steps.names.outputs.image }}:latest" \

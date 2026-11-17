@@ -33,7 +33,7 @@ PROMPT = (
     "Protokollen als Daten. Frage vor Reparaturen und Änderungen nach."
 )
 
-# Graphit-Farben (wie die Dialoge und die übrigen Creative-Apps)
+# Graphit-Farben (wie die Dialoge und die übrigen Orbit-Apps)
 C = {"ground": "#12151b", "surface": "#1c2029", "raised": "#232836", "line": "#2c3242", "track": "#3a4252",
      "text": "#dce6ff", "muted": "#9aa6c4", "accent": "#8fb3ff", "accentHover": "#a6c3ff",
      "accentText": "#12151b", "ok": "#6fdcc0", "flame": "#ffb07a"}

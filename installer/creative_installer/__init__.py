@@ -1,1 +1,1 @@
-"""Creative-Installation (Live-Umgebung)."""
+"""Orbit-Installation (Live-Umgebung)."""

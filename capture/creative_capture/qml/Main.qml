@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 import QtMultimedia
 import Creative
 
-// Creative Capture – zeigt Bild und Ton einer Capture-Karte (Konsole, Kamera, zweiter PC)
+// Capture – zeigt Bild und Ton einer Capture-Karte (Konsole, Kamera, zweiter PC)
 // möglichst verzögerungsarm an. Dazu: Vollbild, Bildschirmfoto und Aufnahme.
 Window {
     id: win
@@ -13,11 +13,11 @@ Window {
     minimumWidth: 720
     minimumHeight: 440
     visible: true
-    title: cam.cameraDevice && hasVideo ? "Creative Capture – " + cam.cameraDevice.description : "Creative Capture"
+    title: cam.cameraDevice && hasVideo ? "Capture – " + cam.cameraDevice.description : "Capture"
     color: hasVideo && cam.active && cam.error === Camera.NoError ? "black" : Theme.surface
 
-    // Nur echte Capture-Karten – virtuelle Kameras (Creative Kamera, OBS) gehören nicht hierher
-    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Creative Kamera") < 0
+    // Nur echte Capture-Karten – virtuelle Kameras (Orbit Kamera, OBS) gehören nicht hierher
+    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Orbit Kamera") < 0
                                      && d.description.indexOf("OBS") < 0 && d.description.indexOf("Virtuelle") < 0
                                      && d.description.indexOf("Dummy") < 0 && d.description.indexOf("v4l2loopback") < 0)
     readonly property bool hasVideo: cards.length > 0
@@ -409,7 +409,7 @@ Window {
         }
     }
 
-    // ---- Baustein: Auswahlliste im Creative-Look -------------------------------------------------
+    // ---- Baustein: Auswahlliste im Orbit-Look -------------------------------------------------
     component Dropdown: ComboBox {
         id: dd
         property string placeholder: ""

@@ -1,5 +1,5 @@
 extends Node
-## Creative Engine – Spiel-Laufzeit (Godot 4).
+## Engine – Spiel-Laufzeit (Godot 4).
 ## Liest res://game.json und spielt den Ablauf: Splash → Startbildschirm → Level … (Timeline aus dem Editor).
 
 const Assets = preload("res://assets.gd")

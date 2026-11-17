@@ -1,4 +1,4 @@
-// Creative Abstand – maximierte Fenster mit kleinem Abstand und runden Ecken.
+// Abstand – maximierte Fenster mit kleinem Abstand und runden Ecken.
 //
 // Ein „echt“ maximiertes Fenster füllt den Bildschirm bis an die Taskleiste, und der Fensterrahmen
 // schaltet die runden Ecken ab. Stattdessen legt dieses Skript das Fenster auf die volle Fläche

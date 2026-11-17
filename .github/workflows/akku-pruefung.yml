@@ -51,7 +51,7 @@ jobs:
             CREATIVE_POWER_SUPPLY=/tmp/kein-akku CREATIVE_SCREENSHOT_DELAY=4000 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
             CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/ohne-akku.png" timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 \
             | grep -iE "error|qml|akku" | grep -v "^$" | tail -15) || true
-          # Creative Widgets: Katalog mit „Akku“
+          # Widgets: Katalog mit „Akku“
           cat > /tmp/zusammen.sh <<'SH'
           cd "$GITHUB_WORKSPACE/shell"
           CREATIVE_TEST_BACKGROUND=1 timeout 50 python3 -m creative_shell --dev >/tmp/shell.log 2>&1 &

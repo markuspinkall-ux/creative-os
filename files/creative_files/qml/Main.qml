@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Dateien – der Dateimanager von Orbit OS.
+// Dateien – der Dateimanager von Orbit OS.
 ApplicationWindow {
     id: win
 
@@ -421,7 +421,7 @@ ApplicationWindow {
     }
 
     NameDialog { id: nameDialog }
-    // Rückfrage aus dem Creative-Modul (gleichnamige eigene Datei gab es früher – sie wurde
+    // Rückfrage aus dem Orbit-Modul (gleichnamige eigene Datei gab es früher – sie wurde
     // vom Modul überdeckt, deshalb tat „Papierkorb leeren“ nichts)
     ConfirmDialog {
         id: confirmDialog

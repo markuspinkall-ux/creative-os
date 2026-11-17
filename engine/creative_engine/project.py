@@ -1,4 +1,4 @@
-"""Projektdaten der Creative Engine (ohne Oberfläche, testbar).
+"""Projektdaten der Engine (ohne Oberfläche, testbar).
 
 Ein Projekt ist ein Ordner mit projekt.json und assets/. Der Ablauf (Timeline) besteht aus
 Schritten: splash, menu, text, level. Level-Daten liegen getrennt unter levels[id].
@@ -382,7 +382,7 @@ def save(folder, project):
 def load(folder):
     data = json.loads((Path(folder) / "projekt.json").read_text(encoding="utf-8"))
     if data.get("version", 0) > VERSION:
-        raise ValueError("Das Projekt stammt aus einer neueren Creative Engine.")
+        raise ValueError("Das Projekt stammt aus einer neueren Engine.")
     data.setdefault("player", {"model": "", "height": 1.6, "speed": 7.0, "jump": 12.0, "lives": 3})
     data.setdefault("settings", {"width": 1280, "height": 720, "fullscreen": False})
     data["player"].setdefault("attacks", [])

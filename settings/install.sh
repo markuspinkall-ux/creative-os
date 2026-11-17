@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installiert die Systemsteuerung (setzt die Creative Shell voraus).
+# Installiert die Systemsteuerung (setzt die Shell voraus).
 set -eu
 cd "$(dirname "$0")"
 

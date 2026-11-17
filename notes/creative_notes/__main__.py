@@ -1,6 +1,6 @@
 """Startpunkt: `creative-notes [Datei …]`.
 
-Läuft Creative Notes schon, öffnen weitere Aufrufe ihre Dateien als neue
+Läuft Notes schon, öffnen weitere Aufrufe ihre Dateien als neue
 Reiter im vorhandenen Fenster (wie bei Notepad++).
 """
 
@@ -84,7 +84,7 @@ def selftest():
     assert w2.restore_session()
     w.show()
     app.processEvents()
-    print("Creative Notes: Selbsttest bestanden")
+    print("Notes: Selbsttest bestanden")
     return 0
 
 
@@ -95,7 +95,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("Creative Notes")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-notes")
     app.setWindowIcon(QIcon.fromTheme("creative-notes"))
     app.setStyle("Fusion")

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative 3D – aus einem Foto eine 3D-Figur machen (TRELLIS von Microsoft, läuft lokal).
+"""3D Studio – aus einem Foto eine 3D-Figur machen (TRELLIS von Microsoft, läuft lokal).
 
 Links das Bild (ziehen und ablegen oder wählen), rechts die drehbare Vorschau,
 darunter Export als GLB, OBJ, STL und PLY. TRELLIS läuft in einem fertig
@@ -302,7 +302,7 @@ class DropLabel(QLabel):
 class Creative3D(QMainWindow):
     def __init__(self, preview_web=True):
         super().__init__()
-        self.setWindowTitle("Creative 3D")
+        self.setWindowTitle("3D Studio")
         self.resize(1240, 780)
         self.setStyleSheet(STYLE)
         self.image = None
@@ -325,7 +325,7 @@ class Creative3D(QMainWindow):
         box.setContentsMargins(18, 14, 18, 14)
         box.setSpacing(12)
         top = QHBoxLayout()
-        top.addWidget(QLabel("Creative 3D", objectName="title"))
+        top.addWidget(QLabel("3D Studio", objectName="title"))
         top.addWidget(QLabel("Foto → 3D-Figur", objectName="muted"))
         top.addStretch()
         self.chip = QLabel(objectName="chip")
@@ -348,7 +348,7 @@ class Creative3D(QMainWindow):
         hint = QLabel("Der Hintergrund wird automatisch entfernt und das Motiv zugeschnitten.", objectName="muted")
         hint.setWordWrap(True)
         lv.addWidget(hint)
-        self.settings = QSettings("Orbit OS", "Creative 3D")
+        self.settings = QSettings("Creative OS", "Creative 3D")
         mrow = QHBoxLayout()
         mrow.addWidget(QLabel("Modell"))
         self.model = QComboBox()
@@ -552,7 +552,7 @@ class Creative3D(QMainWindow):
             self.web_ok = True
             renderer = text[len("ready webgl"):].strip()
             if renderer:
-                print(f"Creative 3D: 3D-Vorschau läuft ({renderer})", file=sys.stderr)
+                print(f"3D Studio: 3D-Vorschau läuft ({renderer})", file=sys.stderr)
         elif text.startswith("nowebgl"):
             self.use_soft("Die Grafikkarte steht der eingebauten Browser-Engine nicht zur Verfügung (kein WebGL).")
         elif text.startswith("error") and not self.web_ok:
@@ -584,7 +584,7 @@ class Creative3D(QMainWindow):
     def web_problem(self, reason):
         """Vorschau hakt – nicht von selbst auf die einfache Vorschau umschalten (das hat genervt),
         sondern Bescheid geben. Wer will, schaltet „Einfache Vorschau“ selbst ein."""
-        print(f"Creative 3D: Vorschau – {reason}", file=sys.stderr)
+        print(f"3D Studio: Vorschau – {reason}", file=sys.stderr)
         if hasattr(self, "status") and not self.simple.isChecked():
             self.status.setText(reason + " Falls die Figur nicht erscheint: oben „Einfache Vorschau“ einschalten.")
 
@@ -597,7 +597,7 @@ class Creative3D(QMainWindow):
                 and self.settings.value("webglSoftware", False, type=bool) is False:
             self.settings.setValue("webglSoftware", True)
             self.settings.sync()
-            print(f"Creative 3D: {reason} – starte die 3D-Vorschau mit Software-WebGL neu", file=sys.stderr)
+            print(f"3D Studio: {reason} – starte die 3D-Vorschau mit Software-WebGL neu", file=sys.stderr)
             QProcess.startDetached(sys.executable, [str(Path(sys.argv[0]).resolve()), *sys.argv[1:]])
             QTimer.singleShot(0, QApplication.quit)
             return
@@ -608,7 +608,7 @@ class Creative3D(QMainWindow):
             self.simple.blockSignals(True)
             self.simple.setChecked(True)
             self.simple.blockSignals(False)
-        print(f"Creative 3D: Ausweich-Vorschau – {reason}", file=sys.stderr)
+        print(f"3D Studio: Ausweich-Vorschau – {reason}", file=sys.stderr)
         self.preview_stack.setCurrentWidget(self.soft)
         if self.result:
             self.show_soft()
@@ -671,7 +671,7 @@ class Creative3D(QMainWindow):
         else:
             self.setup_title.setText("KI einmalig einrichten")
             self.setup_text.setText(
-                "Creative 3D nutzt TRELLIS von Microsoft, eine frei verfügbare KI (MIT-Lizenz), die komplett "
+                "3D Studio nutzt TRELLIS von Microsoft, eine frei verfügbare KI (MIT-Lizenz), die komplett "
                 "auf deiner NVIDIA-Grafikkarte läuft – dein Bild verlässt den Rechner nicht.<br><br>Dafür werden "
                 "einmalig ein fertiger TRELLIS-Container (≈ 14 GB) und die Modelle (≈ 4 GB) geladen, je nach "
                 "Leitung 20–60 Minuten. Das System selbst bleibt unverändert.")
@@ -792,7 +792,7 @@ class Creative3D(QMainWindow):
             self.setup_progress.setValue(100 if ok else self.setup_progress.value())
             gated = "DINOV3_GESPERRT" in self.log.toPlainText()
             self.setup_status.setText(
-                "Fertig – Creative 3D ist bereit." if ok else
+                "Fertig – 3D Studio ist bereit." if ok else
                 "Meta hat den Zugang zu DINOv3 noch nicht freigeschaltet. Sobald die Mail von Hugging Face da ist, "
                 "einfach erneut einrichten – bereits Geladenes bleibt erhalten." if gated else
                 "Einrichtung fehlgeschlagen – Details siehe unten. Erneut versuchen?")
@@ -901,7 +901,7 @@ class Creative3D(QMainWindow):
 
     def closeEvent(self, event):
         if self.proc.state() != QProcess.ProcessState.NotRunning:
-            if QMessageBox.question(self, "Creative 3D", "Es läuft noch etwas. Trotzdem beenden?") \
+            if QMessageBox.question(self, "3D Studio", "Es läuft noch etwas. Trotzdem beenden?") \
                     != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
@@ -916,7 +916,7 @@ def main():
     # Ist das schon einmal nötig gewesen (Einstellung webglSoftware), gleich damit starten.
     flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
     extra = ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
-    if QSettings("Orbit OS", "Creative 3D").value("webglSoftware", False, type=bool):
+    if QSettings("Creative OS", "Creative 3D").value("webglSoftware", False, type=bool):
         os.environ["CREATIVE3D_SOFTGL"] = "1"
         extra += ["--use-gl=angle", "--use-angle=swiftshader"]
     for flag in extra:

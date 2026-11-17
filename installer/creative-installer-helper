@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-"""Root-Teil der Creative-Installation (wird über pkexec gestartet).
+"""Root-Teil der Orbit-Installation (wird über pkexec gestartet).
 
   creative-installer-helper install   – liest die Auswahl als JSON von stdin,
                                          prüft sie, erzeugt die Kickstart-Datei

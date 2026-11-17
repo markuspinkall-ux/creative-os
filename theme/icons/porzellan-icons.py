@@ -2,7 +2,7 @@
 """Baut das Symbol-Design „CreativePorzellan“ aus „Creative“ (Graphit): helle Kachel,
 dunkle Striche, kräftigeres Blau – passend zum hellen Design Porzellan.
 
-  porzellan-icons.py <Creative-Theme-Ordner> <Ziel-Theme-Ordner> [<weitere SVGs …>]
+  porzellan-icons.py <Orbit-Theme-Ordner> <Ziel-Theme-Ordner> [<weitere SVGs …>]
 
 Weitere SVGs (z. B. /usr/share/icons/hicolor/scalable/apps/creative-*.svg) kommen ebenfalls
 umgefärbt ins Ziel – so gewinnen sie dort vor hicolor.
@@ -39,7 +39,7 @@ def main(src, dst, extra):
     shutil.copytree(src, dst)
     index = dst / "index.theme"
     text = index.read_text(encoding="utf-8")
-    text = re.sub(r"^Name=.*$", "Name=Creative Porzellan", text, flags=re.M)
+    text = re.sub(r"^Name=.*$", "Name=Porzellan", text, flags=re.M)
     text = re.sub(r"^Comment=.*$", "Comment=Symbole von Orbit OS im hellen Design", text, flags=re.M)
     text = re.sub(r"^Inherits=.*$", "Inherits=breeze,hicolor", text, flags=re.M)
     index.write_text(text, encoding="utf-8")

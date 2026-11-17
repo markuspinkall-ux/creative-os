@@ -114,7 +114,7 @@ class Runner:
                 url = (a.get("url") or "").strip()
                 if url and "://" not in url:
                     url = "https://" + url
-                # im Creative Browser öffnen (sonst im eingestellten Standardbrowser)
+                # im Browser öffnen (sonst im eingestellten Standardbrowser)
                 opener = ["creative-browser", url] if shutil.which("creative-browser") else ["xdg-open", url]
                 return "" if url and _spawn(opener) else "Keine Adresse"
             if t == "tasten":

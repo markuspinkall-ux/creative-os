@@ -1,7 +1,7 @@
 {
     "KPlugin": {
         "Id": "creative-abstand",
-        "Name": "Creative Abstand",
+        "Name": "Abstand",
         "Description": "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken.",
         "Authors": [{ "Name": "Orbit OS" }],
         "License": "GPL-3.0-or-later",

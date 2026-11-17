@@ -1,4 +1,4 @@
-name: Creative Writer prüfen
+name: Writer prüfen
 # Selbsttest (alle Formate inkl. Word) und Bildschirmfotos vor dem Mergen → Branch „writer-fotos“.
 on:
   push:

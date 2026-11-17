@@ -1,4 +1,4 @@
-"""YouTube Music im Creative Player – über die offizielle Webseite.
+"""YouTube Music im Player – über die offizielle Webseite.
 
 Abgespielt wird ausschließlich im offiziellen YouTube-Music-Player
 (music.youtube.com, eingebettet). Es wird nichts heruntergeladen und keine

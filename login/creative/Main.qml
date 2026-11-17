@@ -135,7 +135,7 @@ Item {
         return words.length ? words[0].charAt(0).toUpperCase() : "?"
     }
     function sessionIndex() {
-        // Nur die Creative-Sitzung anbieten, sonst die zuletzt benutzte
+        // Nur die Orbit-Sitzung anbieten, sonst die zuletzt benutzte
         for (let n = 0; n < sessionModel.rowCount(); n++) {
             const name = sessionModel.data(sessionModel.index(n, 0), Qt.UserRole + 4) || ""   // name
             const file = sessionModel.data(sessionModel.index(n, 0), Qt.UserRole + 2) || ""   // file

@@ -1,4 +1,4 @@
-"""Graphit/Porzellan-Farben und Stylesheet der Creative Engine."""
+"""Graphit/Porzellan-Farben und Stylesheet der Engine."""
 
 import os
 from pathlib import Path

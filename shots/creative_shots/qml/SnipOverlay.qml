@@ -31,7 +31,7 @@ Window {
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     visibility: Window.FullScreen
     color: "black"
-    title: "Creative Shots – Auswahl"
+    title: "Shots – Auswahl"
 
     function windowAt(lx, ly) {
         const px = lx + gx, py = ly + gy

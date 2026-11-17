@@ -33,14 +33,23 @@ DESKTOP_NAMES = {"creative", "kde"}
 NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT = range(
     Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 9)
 
-# Eigene Apps („Creative …“) liegen im Startmenü gesammelt im Ordner „Creative Apps“.
+# Eigene Apps liegen im Startmenü gesammelt im Ordner „Orbit Suite“ (Kennung bleibt gleich,
+# damit Anheften und Ausblenden erhalten bleiben).
 FOLDER_ID = "creative-apps-ordner"
-FOLDER_NAME = "Creative Apps"
+FOLDER_NAME = "Orbit Suite"
 NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop"}   # Browser gehört direkt ins Startmenü
+SUITE = {
+    "creative-art.desktop", "creative-broadcast.desktop", "creative-capture.desktop", "creative-3d.desktop",
+    "creative-cut.desktop", "creative-deck.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
+    "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
+    "creative-shots.desktop", "creative-widgets.desktop", "creative-writer.desktop",
+}
+OLD_PREFIX = "Creative "        # alte Namen (z. B. ältere Engine-Flatpaks) ohne „Creative“ anzeigen
 
 
 def is_creative(entry):
-    return entry.name.startswith("Creative ") and entry.desktop_id not in NOT_IN_FOLDER
+    """Gehört in den Ordner „Orbit Suite“."""
+    return entry.desktop_id not in NOT_IN_FOLDER and (entry.desktop_id in SUITE or getattr(entry, "suite", False))
 
 
 def is_steam_game(entry):
@@ -73,11 +82,14 @@ def _letter(name):
 
 class AppEntry:
     __slots__ = ("desktop_id", "path", "name", "icon", "comment", "keywords", "exec", "terminal", "search", "hidden",
-                 "members")
+                 "members", "suite")
 
     def __init__(self, desktop_id, path, name, icon, comment, keywords, exec_line, terminal):
         self.desktop_id = desktop_id
         self.path = path
+        self.suite = name.startswith(OLD_PREFIX) and len(name) > len(OLD_PREFIX)
+        if self.suite:
+            name = name[len(OLD_PREFIX):]
         self.name = name
         self.icon = icon
         self.comment = comment
@@ -85,7 +97,7 @@ class AppEntry:
         self.exec = exec_line
         self.terminal = terminal
         self.hidden = False   # im Startmenü ausgeblendet, aber startbar (z. B. Taskleiste)
-        self.members = None   # nur beim Ordner „Creative Apps“: die Apps darin
+        self.members = None   # nur beim Ordner „Orbit Suite“: die Apps darin
         self.search = _plain(" ".join([name, comment, keywords, desktop_id]))
 
 
@@ -380,7 +392,7 @@ class AppModel(QAbstractListModel):
 
     @Slot(int, result=bool)
     def launchAt(self, row):
-        """Startet die App – oder öffnet den Ordner „Creative Apps“ (Rückgabe False: Menü bleibt offen)."""
+        """Startet die App – oder öffnet den Ordner „Orbit Suite“ (Rückgabe False: Menü bleibt offen)."""
         if 0 <= row < len(self._shown):
             entry = self._shown[row]
             if entry.members is not None:

@@ -1,4 +1,4 @@
-"""Das Textfeld von Creative Notes: Zeilennummern, Syntaxfarben, Komfort-Tasten."""
+"""Das Textfeld von Notes: Zeilennummern, Syntaxfarben, Komfort-Tasten."""
 
 import re
 

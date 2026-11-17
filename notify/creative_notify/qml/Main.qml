@@ -10,7 +10,7 @@ Window {
     height: Math.max(1, stack.implicitHeight + 16)
     visible: center.items.length > 0
     color: "transparent"
-    title: "Creative Benachrichtigungen"
+    title: "Benachrichtigungen"
 
     LayerShell.Window.scope: "creative-notifications"
     LayerShell.Window.layer: LayerShell.Window.LayerOverlay
@@ -78,7 +78,7 @@ Window {
                             asynchronous: true
                             smooth: true
                         }
-                        // ohne Symbol: Glocke auf Creative-Kachel
+                        // ohne Symbol: Glocke auf Orbit-Kachel
                         Rectangle {
                             visible: !appIcon.known
                             anchors.fill: parent

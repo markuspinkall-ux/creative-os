@@ -533,7 +533,7 @@ Rectangle {
                 Label {
                     Layout.alignment: Qt.AlignHCenter
                     text: root.hasSources ? (root.loading ? "Die Ausgabe wird gedruckt …" : "Noch keine Artikel")
-                                          : "Willkommen bei Creative Magazin"
+                                          : "Willkommen bei Magazin"
                     color: Theme.text
                     font.pixelSize: 26
                     font.bold: true

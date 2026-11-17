@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installiert „Dateien“ auf einem bestehenden Fedora
-# (setzt die Creative Shell voraus – sie liefert das gemeinsame Design).
+# (setzt die Shell voraus – sie liefert das gemeinsame Design).
 set -eu
 cd "$(dirname "$0")"
 

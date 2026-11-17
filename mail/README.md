@@ -1,4 +1,4 @@
-# Creative Mail
+# Mail
 
 E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP):
 
@@ -16,7 +16,7 @@ E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP):
   U ungelesen, F5 aktualisieren, Strg+Eingabe s## Konto anmelden
 
 **E-Mail-Konto anmelden** wählen, Adresse und Passwort eingeben – den Anbieter erkennt
-Creative Mail an der Adresse und trägt die Server selbst ein:
+Mail an der Adresse und trägt die Server selbst ein:
 
 | Anbieter | Hinweis |
 |---|---|
@@ -29,4 +29,4 @@ Creative Mail an der Adresse und trägt die Server selbst ein:
 | Outlook/Hotmail | geht nicht: Microsoft erlaubt seit September 2024 keine Anmeldung mit Passwort mehr |
 
 Das Passwort liegt im System-Schlüsselbund (Secret Service), die Serverdaten in den
-Einstellungen von Creative Mail. Gesendete E-Mails landen im Ordner „Gesendet“ des Postfachs.
+Einstellungen von Mail. Gesendete E-Mails landen im Ordner „Gesendet“ des Postfachs.

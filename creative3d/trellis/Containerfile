@@ -1,6 +1,6 @@
-# Creative 3D – TRELLIS (Microsoft, MIT) fertig kompiliert für NVIDIA-Grafikkarten.
+# 3D Studio – TRELLIS (Microsoft, MIT) fertig kompiliert für NVIDIA-Grafikkarten.
 # Gebaut von GitHub (.github/workflows/trellis.yml) → ghcr.io/<besitzer>/creative-trellis
-# Creative 3D startet es mit:  podman run --device nvidia.com/gpu=all …
+# 3D Studio startet es mit:  podman run --device nvidia.com/gpu=all …
 #
 # Die Modelle (≈ 4 GB) liegen nicht im Abbild, sondern werden beim Einrichten in
 # ~/.local/share/creative-3d/cache geladen (gemountet als /cache).

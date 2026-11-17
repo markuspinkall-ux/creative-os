@@ -1,5 +1,5 @@
 extends RefCounted
-## Klänge der Creative Engine: eigene Dateien (OGG, MP3, WAV) laden und eingebaute Effekte erzeugen.
+## Klänge der Engine: eigene Dateien (OGG, MP3, WAV) laden und eingebaute Effekte erzeugen.
 ## Die eingebauten Effekte werden beim Start aus Formeln berechnet (keine Dateien, keine Lizenzfragen).
 
 const Assets = preload("res://assets.gd")

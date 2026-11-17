@@ -631,7 +631,7 @@ class LookModel(QObject):
         self._wall_anim = bool(cfg.get("wallpaperAnimated", True))
         self._gadgets = {}
         self._read_gadgets(cfg)
-        # Gadgets können auch per Creative Widgets umgeschaltet werden – Stand mitverfolgen
+        # Gadgets können auch per Widgets umgeschaltet werden – Stand mitverfolgen
         cfg_dir = shell_config.config_dir()
         cfg_dir.mkdir(parents=True, exist_ok=True)
         self._cfg_watch = QFileSystemWatcher([str(cfg_dir)], self)
@@ -733,7 +733,7 @@ class LookModel(QObject):
             shell_config.set_value("hiddenStartApps", hidden)
         self.refreshHiddenApps()
 
-    # ---- Widgets (wie in Creative Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
+    # ---- Widgets (wie in Widgets): Stand und Schalter über die laufende Shell (D-Bus) ----
     GADGETS = {"weather": "desktopWidgetWeather", "rss": "desktopWidgetRSS"}
     WIDGETS = ("shelf", "stats", "rss", "weather", "clock", "notes", "twitch", "ki", "viz")
 

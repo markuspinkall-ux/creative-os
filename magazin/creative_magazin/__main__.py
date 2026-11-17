@@ -335,7 +335,7 @@ class Magazine(QObject):
 def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setApplicationName("Creative Magazin")
     app.setDesktopFileName("creative-magazin")
     app.setWindowIcon(QIcon.fromTheme("creative-magazin"))
@@ -385,7 +385,7 @@ def main():
         if problems:
             print(f"Selbsttest: {len(problems)} QML-Warnung(en).", file=sys.stderr)
             return 1
-        print("Creative Magazin: Selbsttest bestanden")
+        print("Magazin: Selbsttest bestanden")
     return result
 
 

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Creative Art
+Name=Art
 GenericName=Bildbearbeitung
 Comment=Bilder zeichnen, retuschieren und mit Transparenz exportieren
 Exec=creative-art %f

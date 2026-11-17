@@ -1,4 +1,4 @@
-"""Creative Pictures – Bilder ansehen wie mit „Fotos“ von Windows 11.
+"""Pictures – Bilder ansehen wie mit „Fotos“ von Windows 11.
 
 Sammlung: alle Bilder aus „Bilder“ (mit Unterordnern), „Downloads“ und
 „Schreibtisch“, nach Monaten gruppiert; Favoriten; Ordner.

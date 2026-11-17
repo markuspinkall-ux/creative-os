@@ -55,7 +55,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Systemsteuerung")
-    app.setOrganizationName("Orbit OS")
+    app.setOrganizationName("Creative OS")
     app.setDesktopFileName("creative-settings")
     app.setWindowIcon(QIcon.fromTheme("creative-settings", QIcon.fromTheme("preferences-system")))
     app.setFont(QFont("Arial", 10))
@@ -63,7 +63,7 @@ def main():
     engine = QQmlApplicationEngine()
     qml_root = next((d / "creative_shell" / "qml" for d in SHELL_DIRS if (d / "creative_shell" / "qml").is_dir()), None)
     if qml_root is None:
-        print("creative-settings: Creative-Design nicht gefunden (Creative Shell installiert?)")
+        print("creative-settings: Orbit-Design nicht gefunden (Shell installiert?)")
         return 1
     engine.addImportPath(str(qml_root))
 

@@ -1,4 +1,4 @@
-"""Creative-Installation: reine Logik ohne Oberfläche (testbar ohne Qt und ohne root).
+"""Orbit-Installation: reine Logik ohne Oberfläche (testbar ohne Qt und ohne root).
 
 - Festplatten aus ``lsblk --json`` aufbereiten (welche dürfen gewählt werden?)
 - Benutzername aus dem vollen Namen vorschlagen
@@ -181,7 +181,7 @@ def kickstart(cfg, password_hash, source_ref=None):
     disk = cfg["disk"].removeprefix("/dev/")
     vc, xl = KEYBOARDS[cfg.get("keyboard", "Deutsch")]
     gecos = cfg["fullName"].strip()
-    return f"""# Orbit OS – automatisch erzeugt von der Creative-Installation
+    return f"""# Orbit OS – automatisch erzeugt von der Orbit-Installation
 lang de_DE.UTF-8
 keyboard --vckeymap={vc} --xlayouts='{xl}'
 timezone {cfg.get("timezone", "Europe/Berlin")} --utc

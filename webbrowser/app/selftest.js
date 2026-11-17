@@ -49,7 +49,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
 
 async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
   const dir = arg('creative-selftest');
-  setTimeout(() => { console.log('Creative Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
+  setTimeout(() => { console.log('Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
   const result = { ok: false, checks: {} };
   const check = (name, cond) => { result.checks[name] = !!cond; };
@@ -262,7 +262,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
   fs.writeFileSync(path.join(dir, 'ergebnis.json'), JSON.stringify(result, null, 2));
   for (const [k, v] of Object.entries(result.checks)) console.log(`${v ? 'ok  ' : 'FEHLER'} ${k}`);
   console.log(JSON.stringify({ video: result.video, online: result.online, error: result.error }, null, 1));
-  console.log(result.ok ? 'Creative Browser: alle Prüfungen bestanden' : 'Creative Browser: Prüfung FEHLGESCHLAGEN');
+  console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
 

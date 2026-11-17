@@ -34,5 +34,5 @@ fi
 install -Dm644 sddm-creative.conf /etc/sddm.conf.d/zz-creative.conf
 systemctl disable plasmalogin.service 2>/dev/null || true
 systemctl enable --force sddm.service
-echo "Fertig. Nach dem nächsten Neustart erscheint der Creative-Anmeldebildschirm."
+echo "Fertig. Nach dem nächsten Neustart erscheint der Orbit-Anmeldebildschirm."
 echo "Zurück zum alten: sudo ./install.sh --zurueck"

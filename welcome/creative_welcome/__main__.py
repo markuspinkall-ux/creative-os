@@ -61,7 +61,7 @@ def main():
     qml_root = next((Path(p) / "creative_shell" / "qml" for p in sys.path
                      if (Path(p) / "creative_shell" / "qml" / "Creative").is_dir()), None)
     if qml_root is None:
-        print("creative-welcome: Creative-Design nicht gefunden")
+        print("creative-welcome: Orbit-Design nicht gefunden")
         return 1
     engine.addImportPath(str(qml_root))
 

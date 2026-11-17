@@ -54,4 +54,4 @@ cat "$SRC/grub-snippet.cfg" >> "$tmp"
 if ! cmp -s "$tmp" "$cfg"; then cat "$tmp" > "$cfg"; fi
 rm -f "$tmp"
 sync
-echo "Startauswahl im Creative-Design eingerichtet ($dir)."
+echo "Startauswahl im Orbit-Design eingerichtet ($dir)."

@@ -1,4 +1,4 @@
-"""Bildschirmfotos von Creative Writer (Menüband-Reiter, Datei-Bereich) – für die Vorschau-Workflows.
+"""Bildschirmfotos von Writer (Menüband-Reiter, Datei-Bereich) – für die Vorschau-Workflows.
 
     QT_QPA_PLATFORM=offscreen python3 tools/writer-vorschau.py ausgabe/ [präfix]
 """

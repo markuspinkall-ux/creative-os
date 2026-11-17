@@ -1,4 +1,4 @@
-# Creative Pictures
+# Pictures
 
 Bildbetrachter von Orbit OS – aufgebaut wie „Fotos“ bei Windows 11, im Graphit-Look.
 
