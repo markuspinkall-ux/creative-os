@@ -24,7 +24,8 @@ function env(who, bootstrap) {
     ORBIT_MESSENGER_DATA: path.join(root, who),
     ORBIT_MESSENGER_SOCKET: path.join(root, `${who}.sock`),
     ORBIT_MESSENGER_BOOTSTRAP: JSON.stringify(bootstrap),
-    ORBIT_MESSENGER_NO_NOTIFY: '1'
+    ORBIT_MESSENGER_NO_NOTIFY: '1',
+    ORBIT_MESSENGER_REFRESH_MS: '2000'
   });
 }
 

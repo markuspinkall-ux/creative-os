@@ -88,6 +88,16 @@ let swarm = null;
 const peers = new Map();        // Schlüssel (hex) -> {conn, key, id, name, buf}
 const joined = new Map();       // Orbit-ID -> Discovery
 let ui = { active: '', focused: false };
+let refreshTimer = null;
+
+function refreshLookups() {
+  for (const [id, d] of joined) {
+    const c = state.contacts[id];
+    if (!c || c.status === 'incoming') continue;
+    if (peerFor(id)) continue;                       // schon verbunden
+    d.refresh({ client: true, server: false }).catch(() => {});
+  }
+}
 
 function topic(id) {
   return hcrypto.hash(b4a.from(`orbit-messenger/v${VERSION}/${id}`));
@@ -111,6 +121,10 @@ async function startSwarm() {
   swarm.join(topic(identity.id), { server: true, client: false });
   // … und die eigenen Kontakte suchen
   for (const id of Object.keys(state.contacts)) watch(id);
+  // Wer noch nicht verbunden ist, wird regelmäßig neu gesucht (neue Anfragen, wartende Nachrichten,
+  // Kontakte, die gerade online gekommen sind)
+  const every = Number(process.env.ORBIT_MESSENGER_REFRESH_MS) || 20000;
+  refreshTimer = setInterval(refreshLookups, every);
   log(`online als ${identity.id} (Schlüssel ${b4a.toString(keyPair.publicKey, 'hex').slice(0, 12)}…)`);
 }
 
@@ -350,6 +364,7 @@ async function command(req) {
       if (c) return snapshot();
       state.contacts[id] = { id, name: id.split('.')[0], key: null, status: 'outgoing', since: Date.now() };
       watch(id);
+      setTimeout(refreshLookups, 3000);
       const p = peerFor(id);
       if (p) send(p, { t: 'request', name: identity.name });
       save(); changed();
@@ -468,6 +483,7 @@ async function main() {
     saveNow();
     server.close();
     try { fs.unlinkSync(SOCK); } catch (_) { /* egal */ }
+    clearInterval(refreshTimer);
     if (swarm) await swarm.destroy().catch(() => {});
     process.exit(0);
   };

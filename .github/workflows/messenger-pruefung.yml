@@ -23,7 +23,7 @@ jobs:
           else
             npm install --no-audit --no-fund --ignore-scripts
             echo "package-lock.json (neu erzeugt) als base64:"
-            base64 -w 0 package-lock.json | fold -w 3000 | sed 's/^/LOCK64:/'
+            base64 -w 0 package-lock.json | fold -w 3000 | sed "s/^/LOCK64:/"; echo
           fi
           node -e "require('hyperswarm'); require('hyperdht/testnet'); console.log('Hyperswarm geladen')"
       - name: Zwei Dienste im Test-Netz
