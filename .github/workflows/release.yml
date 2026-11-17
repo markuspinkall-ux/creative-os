@@ -4,9 +4,15 @@
 name: Freigeben
 on:
   workflow_dispatch:
+    inputs:
+      ohne_starttest:
+        description: "Auch ohne grünen Starttest freigeben (nur im Notfall)"
+        type: boolean
+        default: false
 permissions:
   packages: write
   contents: write
+  actions: read
 concurrency:
   group: creative-os-publish
   cancel-in-progress: false
@@ -17,6 +23,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Schranke – nur Versionen mit bestandenem Starttest
+        if: ${{ !inputs.ohne_starttest }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          repo="${{ github.repository }}"
+          # zuletzt erfolgreich gebaute Test-Version
+          build="$(gh api "repos/$repo/actions/workflows/build.yml/runs?branch=main&status=success&per_page=1" \
+                   --jq '.workflow_runs[0] | "\(.head_sha) \(.updated_at)"')"
+          sha="${build%% *}"
+          [ -n "$sha" ] || { echo "::error::Keine erfolgreich gebaute Test-Version gefunden."; exit 1; }
+          # Starttest (VM bootet bis zum Desktop) für genau diese Version
+          ok="$(gh api "repos/$repo/actions/workflows/boottest.yml/runs?head_sha=$sha&per_page=20" \
+                --jq '[.workflow_runs[] | select(.conclusion=="success")] | length')"
+          echo "Test-Version ${sha:0:7}: bestandene Starttests: $ok"
+          if [ "${ok:-0}" -lt 1 ]; then
+            echo "::error::Starttest für ${sha:0:7} nicht bestanden (oder läuft noch) – keine Freigabe. Im Notfall „Auch ohne grünen Starttest freigeben“ wählen."
+            exit 1
+          fi
       - name: Test-Version → stabil
         run: |
           owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
