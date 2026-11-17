@@ -19,7 +19,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Pictures")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-pictures")
     app.setWindowIcon(QIcon.fromTheme("creative-pictures"))
 

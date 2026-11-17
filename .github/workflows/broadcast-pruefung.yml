@@ -60,7 +60,7 @@ jobs:
           hr = np.full((1080, 1920, 3), 200, np.uint8)
           for i in range(0, 1920, 60):
               cv2.line(hr, (i, 0), (i + 300, 1080), (40, 60, 90), 3)
-          cv2.putText(hr, "Creative OS", (300, 600), cv2.FONT_HERSHEY_SIMPLEX, 8, (20, 20, 20), 18)
+          cv2.putText(hr, "Orbit OS", (300, 600), cv2.FONT_HERSHEY_SIMPLEX, 8, (20, 20, 20), 18)
           lr = cv2.resize(hr, (960, 540), interpolation=cv2.INTER_AREA)
           t = time.monotonic(); y = up.run(lr); ms = (time.monotonic() - t) * 1000
           bic = cv2.resize(lr, (1920, 1080), interpolation=cv2.INTER_CUBIC)

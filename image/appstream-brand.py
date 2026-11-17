@@ -2,7 +2,7 @@
 """Creative-Namen und -Symbole in „Software“ (GNOME Software).
 
 1. Die Programm-Beschreibungen (AppStream) der mitgelieferten Programme, die in
-   Creative OS umbenannt sind, bekommen den Creative-Namen, das Creative-Symbol
+   Orbit OS umbenannt sind, bekommen den Creative-Namen, das Creative-Symbol
    und keine Original-Bildschirmfotos mehr.
 2. Die eigenen Creative-Apps bekommen eigene Beschreibungen, damit sie unter
    „Installiert“ mit Logo erscheinen.
@@ -16,11 +16,11 @@ import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-BASE = "Creative OS"
+BASE = "Orbit OS"
 # AppStream-ID → (Name, Symbol, Kurzbeschreibung)
 REBRAND = {
-    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Creative OS"),
-    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Creative OS"),
+    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
+    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
     "org.kde.spectacle": ("Bildschirmfoto-Dienst", "creative-shots", "Nimmt für Creative Shots im Hintergrund auf"),
     "org.kde.ark": ("Entpacken", "creative-archive", "ZIP- und andere Archive öffnen und entpacken"),
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
@@ -40,7 +40,7 @@ REBRAND = {
 # Eigene Apps: Desktop-Datei → (Name, Symbol, Kurzbeschreibung, Beschreibung, Kategorie)
 OWN = {
     "creative-files": ("Dateien", "creative-files", "Ordner, Laufwerke und USB-Sticks öffnen",
-                       "Der Dateimanager von Creative OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
+                       "Der Dateimanager von Orbit OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
     "creative-player": ("Creative Player", "creative-player", "Musik, Videos, YouTube Music und Fernsehen",
                         "Spielt Musik und Videos ab, zeigt die YouTube-Music-Top-10 mit Suche und Favoriten und deutsches Fernsehen (IPTV).", "AudioVideo"),
     "creative-notes": ("Notes", "creative-notes", "Texte und Code bearbeiten",
@@ -56,7 +56,7 @@ OWN = {
     "creative-broadcast": ("Creative Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
                            "KI-Rauschentfernung (DeepFilterNet) und virtueller Greenscreen (Robust Video Matting) als "
                            "virtuelle Kamera für Discord, Teams, Zoom und OBS.", "AudioVideo"),
-    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Creative OS",
+    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Orbit OS",
                           "Netzwerk, Bildschirme, Ton, Laufwerke, Drucker, Mein Server, Aussehen und Updates.", "Settings"),
 }
 
@@ -101,7 +101,7 @@ def rebrand(comp):
         comp.remove(el)
     d = ET.SubElement(comp, "description")
     ET.SubElement(d, "p").text = summary + "."
-    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Creative OS passt Namen, Aussehen und Bedienung an – "
+    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Orbit OS passt Namen, Aussehen und Bedienung an – "
                                   f"vielen Dank an die Entwicklerinnen und Entwickler von {orig}!")
     for tag in ("developer_name", "developer"):
         for el in comp.findall(tag):

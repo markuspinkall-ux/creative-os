@@ -18,7 +18,7 @@ from .dbus_service import PATH, SERVICE
 NO_MONITOR = {"viz"}
 from .widget_extras import CLOCK_URL, clock_descriptor, read_small
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:

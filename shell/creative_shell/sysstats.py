@@ -315,7 +315,7 @@ def tiles(s, sampler, all_disks=False):
                 "history": list(sampler.hist["mem"]), "color": TILE_COLORS["mem"]})
     disks = s["disks"] if all_disks else [d for d in s["disks"] if d["system"]][:1] or s["disks"][:1]
     for i, d in enumerate(disks):
-        label = "Creative OS" if d["system"] else d["kind"]
+        label = "Orbit OS" if d["system"] else d["kind"]
         out.append({"key": "disk:" + d["name"], "title": f"Datenträger {i}" if all_disks else "Datenträger",
                     "value": _pct(d["busy"]), "sub": f"{label} · {fmt_bytes(d['size'], 0)}",
                     "history": d["history"], "color": TILE_COLORS["disk"]})

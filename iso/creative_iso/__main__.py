@@ -29,7 +29,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Iso")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-iso")
     app.setWindowIcon(QIcon.fromTheme("creative-iso"))
     if "--selftest" not in sys.argv and _raise_running():

@@ -1,4 +1,4 @@
-# Creative OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
+# Orbit OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
 #
 # Das fertige System ist schreibgeschützt und wird nur als Ganzes
 # aktualisiert. Läuft nach einem Update etwas nicht, startet man im
@@ -55,7 +55,7 @@ RUN mkdir -p /var/opt \
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 RUN mkdir -p /etc/skel/Bilder
 
-# Secure Boot: öffentlicher Schlüssel der Creative-OS-Treiber und Signier-Werkzeug
+# Secure Boot: öffentlicher Schlüssel der Orbit-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
 COPY image/secureboot/sign-modules.sh /usr/libexec/creative-sign-modules
 COPY image/secureboot/kernel-devel.sh /usr/libexec/creative-kernel-devel
@@ -214,7 +214,7 @@ COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 
-# Creative OS ist die einzige Sitzung im Anmeldebildschirm
+# Orbit OS ist die einzige Sitzung im Anmeldebildschirm
 RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/libexec/creative-wallet-setup /usr/bin/creative-webapp \
  && rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop
 
@@ -654,7 +654,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
 # 9) Systemeinstellungen
 # ---------------------------------------------------------------------------
 # Name des Systems (ID bleibt "fedora", damit Updates und Paketquellen passen)
-# Überall „Creative OS“ statt Fedora (ID bleibt "fedora", damit Updates und
+# Überall „Orbit OS“ statt Fedora (ID bleibt "fedora", damit Updates und
 # Paketquellen weiter passen – Fedora ist nur noch der Unterbau)
 COPY image/plymouth/watermark.png /usr/share/pixmaps/creative-os-logo.png
 COPY LICENSE /usr/share/licenses/creative-os/LICENSE
@@ -664,11 +664,11 @@ RUN v="$(date +%Y.%m.%d)" \
  && nr="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["nummer"])')" \
  && cn="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["codename"])')" \
  && kurz="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["kurz"])')" \
- && sed -i -e 's/^NAME=.*/NAME="Creative OS"/' \
-           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Creative OS ${nr} · ${cn}\"/" \
+ && sed -i -e 's/^NAME=.*/NAME="Orbit OS"/' \
+           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Orbit OS ${nr} · ${cn}\"/" \
            -e "s/^VERSION=.*/VERSION=\"${nr} · ${cn} (${v})\"/" \
            -e "s/^VERSION_CODENAME=.*/VERSION_CODENAME=${kurz}/" \
-           -e 's/^VARIANT=.*/VARIANT="Creative OS"/' \
+           -e 's/^VARIANT=.*/VARIANT="Orbit OS"/' \
            -e 's/^LOGO=.*/LOGO=creative-os-logo/' \
            -e 's|^HOME_URL=.*|HOME_URL="https://github.com/markuspinkall-ux/creative-os"|' \
            -e 's|^SUPPORT_URL=.*|SUPPORT_URL="https://github.com/markuspinkall-ux/creative-os"|' \

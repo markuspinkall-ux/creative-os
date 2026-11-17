@@ -76,7 +76,7 @@ SettingsPage {
         Repeater {
             model: [
                 { t: "1. Bei Proton anmelden", h: "Ein kostenloses Proton-Konto genügt. Der Knopf öffnet die Download-Seite im Creative Browser." },
-                { t: "2. WireGuard-Konfiguration erstellen", h: "Unter „WireGuard-Konfiguration“: einen Namen eingeben (z. B. „Creative OS“), als Plattform „GNU/Linux“ wählen, dann bei einem Server auf „Erstellen“ und die .conf-Datei herunterladen." },
+                { t: "2. WireGuard-Konfiguration erstellen", h: "Unter „WireGuard-Konfiguration“: einen Namen eingeben (z. B. „Orbit OS“), als Plattform „GNU/Linux“ wählen, dann bei einem Server auf „Erstellen“ und die .conf-Datei herunterladen." },
                 { t: "3. Hier hinzufügen", h: "Oben „Datei wählen …“ – die Datei liegt meist in Downloads. Für weitere Länder einfach weitere Dateien hinzufügen." }
             ]
             delegate: SettingRow {

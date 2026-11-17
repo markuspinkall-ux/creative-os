@@ -95,7 +95,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("Creative Notes")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-notes")
     app.setWindowIcon(QIcon.fromTheme("creative-notes"))
     app.setStyle("Fusion")

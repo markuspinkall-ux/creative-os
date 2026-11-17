@@ -11,7 +11,7 @@ rm -f "$dst"/apps/scalable/*.svg
 cat > "$dst/index.theme" <<'THEME'
 [Icon Theme]
 Name=Creative
-Comment=Symbole von Creative OS
+Comment=Symbole von Orbit OS
 Inherits=breeze-dark,breeze,hicolor
 Directories=apps/scalable
 

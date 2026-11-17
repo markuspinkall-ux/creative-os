@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS graphical session
+Description=Orbit OS graphical session
 Wants=graphical-session.target creative-drive.service
 After=graphical-session.target
 

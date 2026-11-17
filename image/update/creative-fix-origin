@@ -1,5 +1,5 @@
 #!/bin/bash
-# Creative OS: Wurde von einer selbst erstellten ISO (Creative Iso) installiert, zeigt die
+# Orbit OS: Wurde von einer selbst erstellten ISO (Creative Iso) installiert, zeigt die
 # Update-Quelle evtl. auf ein lokales Abbild. Dann auf die Registry umstellen, damit der
 # PC ganz normal Updates bekommt. Ändert nur die Quelle, lädt nichts herunter.
 ref=$(rpm-ostree status --json 2>/dev/null | python3 -c "

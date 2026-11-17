@@ -81,7 +81,7 @@ def main():
         if _send_to_running(msg or {"cmd": "raise"}):
             return 0
     app.setApplicationName("Creative Player")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-player")
     app.setWindowIcon(QIcon.fromTheme("creative-player", QIcon.fromTheme("multimedia-player")))
 

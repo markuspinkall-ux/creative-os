@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# Macht aus dem Creative-OS-Abbild eine Live-Umgebung (nach dem Beispiel von Titanoboa/Bazzite).
+# Macht aus dem Orbit-OS-Abbild eine Live-Umgebung (nach dem Beispiel von Titanoboa/Bazzite).
 set -exo pipefail
 VARIANT="${1:-amd}"
 IMAGE="ghcr.io/markuspinkall-ux/creative-os:${VARIANT}"
@@ -37,7 +37,7 @@ mkdir -p /usr/share/anaconda/pixmaps /etc/anaconda/conf.d
 cp /src/anaconda-look/anaconda-gtk.css /usr/share/anaconda/creative-gtk.css
 cp /src/anaconda-look/pixmaps/*.png /usr/share/anaconda/pixmaps/
 printf '[User Interface]\ncustom_stylesheet = /usr/share/anaconda/creative-gtk.css\n' > /etc/anaconda/conf.d/99-creative-os.conf
-echo "Creative OS release $(. /etc/os-release; echo "$VERSION_ID")" > /etc/system-release
+echo "Orbit OS release $(. /etc/os-release; echo "$VERSION_ID")" > /etc/system-release
 
 # 5) Selbsttest der Installations-Oberfläche
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_RUNTIME_DIR=/tmp HOME=/tmp/live-home timeout 90 /usr/bin/creative-installer --selftest 2>&1

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Creative OS – Secure Boot: Schlüssel der Creative-OS-Treiber freischalten.
+# Orbit OS – Secure Boot: Schlüssel der Orbit-OS-Treiber freischalten.
 #   creative-secureboot status   → JSON: {"secureboot": bool, "enrolled": bool, "pending": bool}
 #   creative-secureboot enroll   → Schlüssel zur Freischaltung vormerken (Passwort: creative)
 CERT=/usr/share/creative-os/secureboot/creative-os-mok.der

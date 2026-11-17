@@ -194,7 +194,7 @@ class Podcasts(QObject):
 def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setApplicationName("Creative Podcast")
     app.setDesktopFileName("creative-podcast")
     app.setWindowIcon(QIcon.fromTheme("creative-podcast"))

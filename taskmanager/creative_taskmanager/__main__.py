@@ -23,7 +23,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Taskmanager")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-taskmanager")
     app.setWindowIcon(QIcon.fromTheme("creative-taskmanager"))
 

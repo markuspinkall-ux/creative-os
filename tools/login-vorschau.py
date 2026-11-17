@@ -32,9 +32,9 @@ class Users(QStandardItemModel):
 class Sessions(QStandardItemModel):
     def __init__(self):
         super().__init__()
-        it = QStandardItem("Creative OS")
+        it = QStandardItem("Orbit OS")
         it.setData("creative.desktop", Qt.UserRole + 2)
-        it.setData("Creative OS", Qt.UserRole + 4)
+        it.setData("Orbit OS", Qt.UserRole + 4)
         self.appendRow(it)
 
     lastIndex = Property(int, lambda self: 0, constant=True)

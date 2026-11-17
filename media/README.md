@@ -1,6 +1,6 @@
 # Creative Player
 
-Musik, Videos und Fernsehen (IPTV) für Creative OS – im Graphit-Look.
+Musik, Videos und Fernsehen (IPTV) für Orbit OS – im Graphit-Look.
 
 - **Musik:** liest den Ordner „Musik“ mit Titel, Künstler, Album und Dauer.
 - **YouTube Music:** die offizielle YouTube-Music-Seite im Player (Charts, Suche, Anmeldung bleibt), Favoriten als Lesezeichen – nichts wird heruntergeladen.

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Fedora-Logos im System durch das Creative-OS-Logo ersetzen (läuft beim Bauen).
+"""Fedora-Logos im System durch das Orbit-OS-Logo ersetzen (läuft beim Bauen).
 
 Fedora bleibt der Unterbau (Paketquellen, Updates), aber abgewandelte Systeme dürfen
 das Fedora-Logo nicht zeigen. Ersetzt werden alle Bilddateien des Pakets fedora-logos

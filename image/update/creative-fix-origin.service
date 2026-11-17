@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS: Update-Quelle prüfen
+Description=Orbit OS: Update-Quelle prüfen
 After=network.target
 ConditionPathExists=/run/ostree-booted
 

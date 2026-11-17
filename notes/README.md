@@ -1,6 +1,6 @@
 # Creative Notes
 
-Der Texteditor von Creative OS – im Graphit-Look, vom Umfang her an Notepad++ angelehnt.
+Der Texteditor von Orbit OS – im Graphit-Look, vom Umfang her an Notepad++ angelehnt.
 
 - **Reiter:** beliebig viele Dateien, verschiebbar, Mittelklick schließt, Doppelklick auf die freie Leiste öffnet einen neuen
 - **Nichts geht verloren:** offene Reiter und ungespeicherte Texte sind beim nächsten Start wieder da (Sicherung alle 15 Sekunden)

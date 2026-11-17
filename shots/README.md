@@ -1,6 +1,6 @@
 # Creative Shots
 
-Bildschirmfotos für Creative OS – aufgebaut wie das Snipping Tool von Windows 11, im Graphit-Look.
+Bildschirmfotos für Orbit OS – aufgebaut wie das Snipping Tool von Windows 11, im Graphit-Look.
 
 - **Druck-Taste** oder **Win + Umschalt + S**: Bildschirm wird eingefroren, oben die Leiste mit
   Rechteck, Fenster, Vollbild und Freihand (Tasten 1–4, Esc bricht ab)

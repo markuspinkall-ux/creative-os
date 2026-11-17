@@ -15,7 +15,7 @@ def main():
     uid = int(os.environ["PKEXEC_UID"])
     name = pwd.getpwuid(uid).pw_name
     if os.geteuid() != 0 or uid < 1000 or not re.fullmatch(r"[a-zA-Z0-9_-]{1,32}", name):
-        raise ValueError("Dieses Creative-OS-Konto kann nicht eingerichtet werden.")
+        raise ValueError("Dieses Orbit-OS-Konto kann nicht eingerichtet werden.")
     subprocess.run(["/usr/bin/systemctl", "start", "mariadb.service"], check=True)
     with pymysql.connect(user="root", unix_socket="/var/lib/mysql/mysql.sock", autocommit=True) as db:
         with db.cursor() as cur:

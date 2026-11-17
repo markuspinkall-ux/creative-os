@@ -391,7 +391,7 @@ class TaskManager(QObject):
         elif key.startswith("disk:"):
             d = next((x for x in s["disks"] if "disk:" + x["name"] == key), None)
             if d:
-                title = f"{tile['title']} ({'Creative OS' if d['system'] else d['kind']})"
+                title = f"{tile['title']} ({'Orbit OS' if d['system'] else d['kind']})"
                 subtitle = d["model"] or d["name"]
                 stats = [("Aktive Zeit", f"{d['busy']:.0f} %"), ("Lesegeschwindigkeit", fmt_rate(d["read"])),
                          ("Schreibgeschwindigkeit", fmt_rate(d["write"]))]

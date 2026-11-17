@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Creative Dateien – der Dateimanager von Creative OS.
+// Creative Dateien – der Dateimanager von Orbit OS.
 ApplicationWindow {
     id: win
 

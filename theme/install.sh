@@ -1,10 +1,10 @@
 #!/bin/sh
-# Installiert das Creative-OS-Aussehen für alle Programme:
+# Installiert das Orbit-OS-Aussehen für alle Programme:
 #  - Fensterrahmen „Creative Graphit“ (KWin)
 #  - Graphit-Farben + Arial für Qt/KDE-Programme (kdeglobals)
 #  - Graphit für GTK-Programme (z. B. Software)
 #  - aufgeräumtes Startmenü mit Creative-Symbolen
-# Alles gilt nur in der Creative-OS-Sitzung; Plasma bleibt unverändert.
+# Alles gilt nur in der Orbit-OS-Sitzung; Plasma bleibt unverändert.
 set -eu
 cd "$(dirname "$0")"
 
@@ -126,7 +126,7 @@ install -Dm755 apps/creative-apps-sync /usr/bin/creative-apps-sync
 creative-apps-sync
 
 echo
-echo "Fertig. Bitte Creative OS einmal neu starten (abmelden und wieder anmelden)."
+echo "Fertig. Bitte Orbit OS einmal neu starten (abmelden und wieder anmelden)."
 
 # GTK-Voreinstellungen auch für neue Benutzer (GSettings)
 if command -v dconf >/dev/null 2>&1; then

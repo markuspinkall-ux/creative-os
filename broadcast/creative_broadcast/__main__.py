@@ -31,7 +31,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Broadcast")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-broadcast")
     app.setWindowIcon(QIcon.fromTheme("creative-broadcast"))
     if "--selftest" not in sys.argv and _raise_running():

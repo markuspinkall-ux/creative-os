@@ -6,5 +6,5 @@
   Creative Browsers (`webbrowser/`).
 - Firefox (falls jemand ihn nachinstalliert): dieselbe Startseite über `firefox-policies.json`.
 
-Brave ist seit November 2026 nicht mehr Teil von Creative OS – der Browser ist der eigene
+Brave ist seit November 2026 nicht mehr Teil von Orbit OS – der Browser ist der eigene
 Creative Browser (Electron, mit H.264, Werbeblocker und Lautstärke-Verstärker).

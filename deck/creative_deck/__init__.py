@@ -1,1 +1,1 @@
-"""Creative Deck – Elgato Stream Deck unter Creative OS (ohne die Elgato-Software)."""
+"""Creative Deck – Elgato Stream Deck unter Orbit OS (ohne die Elgato-Software)."""

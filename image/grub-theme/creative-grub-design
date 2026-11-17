@@ -1,5 +1,5 @@
 #!/bin/sh
-# Creative OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
+# Orbit OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
 #   sudo creative-grub-design        einschalten bzw. aktualisieren (läuft bei jedem Start automatisch)
 #   sudo creative-grub-design aus    wieder das schlichte Textmenü
 # Die Dateien liegen im Abbild unter /usr/share/creative-os/grub-theme und werden nach
@@ -19,7 +19,7 @@ for d in $BOOT_DIRS; do
 done
 [ -n "$dir" ] || { echo "Keine GRUB-Konfiguration mit user.cfg gefunden – nichts zu tun."; exit 0; }
 
-# /boot ist bei Creative OS meist schreibgeschützt eingehängt – kurz freigeben
+# /boot ist bei Orbit OS meist schreibgeschützt eingehängt – kurz freigeben
 ro=""
 if ! touch "$dir/.creative-test" 2>/dev/null; then
     mount -o remount,rw /boot 2>/dev/null && ro=1

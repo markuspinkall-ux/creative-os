@@ -1,4 +1,4 @@
-# KWin-Voreinstellungen, die nur in der Creative-OS-Sitzung gelten
+# KWin-Voreinstellungen, die nur in der Orbit-OS-Sitzung gelten
 # (liegt unter /usr/share/creative-os/xdg und wird von creative-session eingebunden)
 
 [ModifierOnlyShortcuts]

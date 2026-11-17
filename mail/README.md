@@ -1,6 +1,6 @@
 # Creative Mail
 
-E-Mail-Programm für Creative OS im Graphit-Look (IMAP/SMTP):
+E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP):
 
 - drei Spalten: Ordner und eigene Labels mit Ungelesen-Zählern, Nachrichtenliste
   mit Absender-Kürzel, Datum, Vorschau und Stern, Lesebereich

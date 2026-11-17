@@ -7,7 +7,7 @@ SettingsPage {
 
     PageHeader {
         title: "Software & Updates"
-        subtitle: u.version ? "Creative OS " + u.version : ""
+        subtitle: u.version ? "Orbit OS " + u.version : ""
     }
 
     Card {
@@ -141,7 +141,7 @@ SettingsPage {
         visible: (u.rolledBack || "").length > 0
         SettingRow {
             label: "Ein Update wurde automatisch zurückgenommen"
-            hint: "Am " + u.rolledBack + " ist eine neue Version nicht richtig gestartet. Creative OS ist von selbst zur letzten funktionierenden Version zurückgekehrt – deine Daten sind unberührt."
+            hint: "Am " + u.rolledBack + " ist eine neue Version nicht richtig gestartet. Orbit OS ist von selbst zur letzten funktionierenden Version zurückgekehrt – deine Daten sind unberührt."
             last: true
             Item { width: 1; height: 1 }
         }
@@ -198,9 +198,9 @@ SettingsPage {
 
     Card {
         title: "So funktionieren Updates"
-        SettingRow { label: "Automatisch im Hintergrund"; hint: "Creative OS lädt Updates selbst herunter, während du arbeitest."; Item { width: 1; height: 1 } }
+        SettingRow { label: "Automatisch im Hintergrund"; hint: "Orbit OS lädt Updates selbst herunter, während du arbeitest."; Item { width: 1; height: 1 } }
         SettingRow { label: "Aktiv nach dem nächsten Neustart"; hint: "Nichts ändert sich mitten in der Arbeit."; Item { width: 1; height: 1 } }
-        SettingRow { label: "Immer ein Weg zurück"; hint: "Startet eine neue Version nicht richtig, kehrt Creative OS von selbst zur letzten funktionierenden zurück."; Item { width: 1; height: 1 } }
+        SettingRow { label: "Immer ein Weg zurück"; hint: "Startet eine neue Version nicht richtig, kehrt Orbit OS von selbst zur letzten funktionierenden zurück."; Item { width: 1; height: 1 } }
         SettingRow {
             label: "Was ist neu?"
             hint: "Alle Neuerungen jeder freigegebenen Version"
@@ -217,7 +217,7 @@ SettingsPage {
     NeuerungenDialog {
         id: news
         entries: system.changelog
-        version: (system.info.release ? system.info.release.replace("Creative OS ", "") + (u.version ? " (Stand " + u.version + ")" : "") : (u.version || ""))
+        version: (system.info.release ? system.info.release.replace("Orbit OS ", "") + (u.version ? " (Stand " + u.version + ")" : "") : (u.version || ""))
         Component.onCompleted: if (showNews) Qt.callLater(open)
     }
 }

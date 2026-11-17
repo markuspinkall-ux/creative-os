@@ -1,4 +1,4 @@
-"""Graphit-Dialoge für die Qt-Widgets-Apps von Creative OS.
+"""Graphit-Dialoge für die Qt-Widgets-Apps von Orbit OS.
 
 Ersetzt die Standard-Dialoge von Qt durch Dialoge im Creative-Look – mit
 genau denselben Aufrufen. Eine App braucht dafür nur eine Zeile:

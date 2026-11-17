@@ -1,4 +1,4 @@
-// Creative OS – Anmeldebildschirm (SDDM) im Graphit-Look.
+// Orbit OS – Anmeldebildschirm (SDDM) im Graphit-Look.
 // Sieht aus wie der Sperrbildschirm: Uhr, Benutzer, rundes Passwortfeld.
 // Die Anmeldung selbst übernimmt SDDM (Objekt "sddm").
 import QtQuick

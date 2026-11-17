@@ -45,7 +45,7 @@ mkdir -p "$DATA/modelle"
 
 step 1 "Prüfe die Grafikkarte …"
 command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 \
-    || fail "Creative 3D braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Creative OS."
+    || fail "Creative 3D braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Orbit OS."
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1 | sed 's/^/Grafikkarte: /'
 mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
 [ "${mem:-0}" -lt 11000 ] 2>/dev/null && echo "Hinweis: Unter 12 GB Grafikspeicher kann TRELLIS zu wenig Speicher haben."
@@ -61,7 +61,7 @@ podman_ok() {
 }
 
 step 2 "Prüfe den Container-Zugriff auf die Grafikkarte …"
-command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Creative OS aktualisieren."
+command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Orbit OS aktualisieren."
 podman_ok
 # Platz: Container ≈ 14 GB gepackt + ≈ 18 GB entpackt, Modelle ≈ 4 GB
 store="$HOME/.local/share/containers"
@@ -71,7 +71,7 @@ if podman image exists "$IMAGE" 2>/dev/null; then need=$((MODEL_GB + 2)); else n
 [ "${free_gb:-0}" -lt "$need" ] && fail "Zu wenig Speicherplatz: frei sind ${free_gb} GB, gebraucht werden etwa ${need} GB. Bitte Platz schaffen (z. B. Papierkorb leeren) und erneut versuchen."
 echo "Freier Speicher: ${free_gb} GB"
 if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
-    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Creative OS aktualisieren und neu starten."
+    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Orbit OS aktualisieren und neu starten."
 fi
 
 step 3 "Lade den $NAME-Container (≈ 14–18 GB, das dauert eine Weile) …"

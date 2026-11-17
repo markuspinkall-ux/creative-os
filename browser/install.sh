@@ -1,5 +1,5 @@
 #!/bin/sh
-# Startseite des Creative Browsers installieren (Brave ist nicht mehr Teil von Creative OS).
+# Startseite des Creative Browsers installieren (Brave ist nicht mehr Teil von Orbit OS).
 # (Für Firefox, falls installiert, dieselbe Startseite.)
 set -eu
 cd "$(dirname "$0")"

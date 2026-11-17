@@ -1,5 +1,5 @@
 #!/bin/sh
-# Anmeldebildschirm im Graphit-Look (SDDM) – meldet direkt in Creative OS an.
+# Anmeldebildschirm im Graphit-Look (SDDM) – meldet direkt in Orbit OS an.
 #   sudo ./install.sh          installieren und als Anmeldebildschirm einschalten
 #   sudo ./install.sh --test   nur ansehen (Fenster, ohne etwas umzustellen)
 #   sudo ./install.sh --zurueck  wieder den vorherigen Anmeldebildschirm nutzen

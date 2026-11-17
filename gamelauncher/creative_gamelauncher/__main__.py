@@ -84,7 +84,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Game Launcher")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-gamelauncher")
     app.setWindowIcon(QIcon.fromTheme("creative-gamelauncher", QIcon.fromTheme("input-gaming")))
 

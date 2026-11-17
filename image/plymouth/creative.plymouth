@@ -1,6 +1,6 @@
 [Plymouth Theme]
-Name=Creative OS
-Description=Startbildschirm von Creative OS (Graphit)
+Name=Orbit OS
+Description=Startbildschirm von Orbit OS (Graphit)
 ModuleName=two-step
 
 [two-step]
@@ -14,7 +14,7 @@ TitleVerticalAlignment=.382
 HorizontalAlignment=.5
 VerticalAlignment=.74
 WatermarkHorizontalAlignment=.5
-WatermarkVerticalAlignment=.45
+WatermarkVerticalAlignment=.5
 Transition=none
 TransitionDuration=0.0
 BackgroundStartColor=0x12151b
@@ -46,7 +46,7 @@ SubTitle=Bitte den PC nicht ausschalten.
 SuppressMessages=true
 ProgressBarShowPercentComplete=true
 UseProgressBar=true
-Title=Creative OS wird aktualisiert …
+Title=Orbit OS wird aktualisiert …
 SubTitle=Bitte den PC nicht ausschalten.
 
 [firmware-upgrade]

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox  # noqa: F811
 except ImportError:
     pass
@@ -18,7 +18,7 @@ except ImportError:
 from . import brushes as B
 from .brushengine import preview, selection_tip
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import themed as T
 except ImportError:
     def T(value):

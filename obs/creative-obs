@@ -1,14 +1,14 @@
 #!/bin/sh
 # OBS Studio unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen
 # (z. B. globale Tastenkürzel, einzelne Fenster aufnehmen ohne Nachfrage).
-# Beim ersten Start bekommt OBS den Graphit-Look von Creative OS.
+# Beim ersten Start bekommt OBS den Graphit-Look von Orbit OS.
 cfg="${XDG_CONFIG_HOME:-$HOME/.config}/obs-studio"
 if [ ! -e "$cfg/user.ini" ] && [ ! -e "$cfg/global.ini" ]; then
     mkdir -p "$cfg"
     printf '[Appearance]\nTheme=com.obsproject.Yami.CreativeGraphit\n' > "$cfg/user.ini"  # wird unten ans Design angepasst
     printf '[General]\nLanguage=de-DE\n' > "$cfg/global.ini"
 fi
-# OBS-Design passend zu Creative OS (Graphit/Porzellan) – nur solange eines unserer Themes gewählt ist
+# OBS-Design passend zu Orbit OS (Graphit/Porzellan) – nur solange eines unserer Themes gewählt ist
 look="${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/look.conf"
 want=com.obsproject.Yami.CreativeGraphit
 grep -qs '^design=porzellan' "$look" && want=com.obsproject.Yami.CreativePorzellan

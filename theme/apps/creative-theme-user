@@ -1,5 +1,5 @@
 #!/bin/sh
-# Wird beim Start der Creative-OS-Sitzung ausgeführt (als Benutzer).
+# Wird beim Start der Orbit-OS-Sitzung ausgeführt (als Benutzer).
 #  1. Graphit-Aussehen für GTK-Programme in die eigenen Einstellungen legen
 #  2. Alte Plasma-Einstellungen entfernen, die das Creative-Aussehen überdecken
 #     (Farben, Fensterrahmen). Vorher wird einmalig eine Sicherung angelegt.
@@ -11,7 +11,7 @@ design=$(sed -n 's/^design=//p' "$conf/creative-os/look.conf" 2>/dev/null | head
 src=/usr/share/creative-os/gtk/gtk.css
 [ "$design" = porzellan ] && [ -f /usr/share/creative-os/gtk/gtk-light.css ] && src=/usr/share/creative-os/gtk/gtk-light.css
 if [ -f "$src" ]; then
-    marker="/* Creative OS – "
+    marker="/* Orbit OS – "
     for v in gtk-3.0 gtk-4.0; do
         dst="$conf/$v/gtk.css"
         # Eigene Datei des Benutzers bleibt – nur unsere oder die von KDE

@@ -20,7 +20,7 @@ install -Dm644 creative-files.desktop /usr/share/applications/creative-files.des
 install -Dm644 creative-files.svg /usr/share/icons/hicolor/scalable/apps/creative-files.svg
 gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 
-# In der Creative-OS-Sitzung öffnen Ordner immer mit „Dateien“
+# In der Orbit-OS-Sitzung öffnen Ordner immer mit „Dateien“
 target=/usr/share/creative-os/xdg/creative-mimeapps.list
 mkdir -p "$(dirname "$target")"
 [ -f "$target" ] || echo "[Default Applications]" > "$target"

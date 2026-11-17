@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Systemsteuerung von Creative OS
+// Systemsteuerung von Orbit OS
 ApplicationWindow {
     id: win
     width: 1240

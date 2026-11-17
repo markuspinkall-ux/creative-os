@@ -34,7 +34,7 @@ def clock_descriptor(raw):
     if not isinstance(data, dict) or data != {
         "id": "analog-clock", "version": 1, "face": "graphit"
     }:
-        raise ValueError("Dieses Widget-Paket wird von Creative OS nicht unterstützt.")
+        raise ValueError("Dieses Widget-Paket wird von Orbit OS nicht unterstützt.")
     return data
 
 

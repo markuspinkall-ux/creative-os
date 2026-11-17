@@ -18,7 +18,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Calculator")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-calculator")
     app.setWindowIcon(QIcon.fromTheme("creative-calculator", QIcon.fromTheme("accessories-calculator")))
 

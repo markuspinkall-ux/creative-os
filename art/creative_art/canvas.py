@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QWidget
 
 from .brushengine import BrushLibrary, Stroke, bucket_fill, gradient_fill
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import themed as T
 except ImportError:
     def T(value):

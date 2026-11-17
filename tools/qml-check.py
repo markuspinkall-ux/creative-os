@@ -1,4 +1,4 @@
-"""Prüft, ob alle QML-Dateien von Creative OS fehlerfrei geladen werden können
+"""Prüft, ob alle QML-Dateien von Orbit OS fehlerfrei geladen werden können
 (Syntax, Importe, Komponenten) – ohne das Abbild zu bauen.
 
     QT_QPA_PLATFORM=offscreen python3 tools/qml-check.py

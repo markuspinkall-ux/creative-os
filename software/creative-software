@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Creative OS software center backed by Flatpak."""
+"""Orbit OS software center backed by Flatpak."""
 
 import gzip
 import os
@@ -18,12 +18,12 @@ from PySide6.QtWidgets import (
     QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -258,7 +258,7 @@ class Store(QWidget):
         banner = QVBoxLayout(hero)
         banner.setContentsMargins(20, 14, 20, 14)
         banner.setSpacing(3)
-        banner.addWidget(QLabel("CREATIVE OS  /  APP-KATALOG", objectName="eyebrow"))
+        banner.addWidget(QLabel("ORBIT OS  /  APP-KATALOG", objectName="eyebrow"))
         banner.addWidget(QLabel("Software", objectName="headline"))
         banner.addWidget(QLabel("Entdecke Apps für Arbeit, Kreativität und Unterhaltung.", objectName="muted"))
         layout.addWidget(hero)

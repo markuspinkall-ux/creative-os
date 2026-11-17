@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Räumt das Startmenü von Creative OS auf.
+"""Räumt das Startmenü von Orbit OS auf.
 
 Nur die nötigsten Apps sind sichtbar – mit deutschen, einfachen Namen und
 Symbolen im Creative-Stil. Alles andere wird im Startmenü ausgeblendet
@@ -7,7 +7,7 @@ Symbolen im Creative-Stil. Alles andere wird im Startmenü ausgeblendet
 
 Die Änderungen landen als „Schatten-Kopien“ in
 /usr/share/creative-os/data/applications und gelten nur in der
-Creative-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
+Orbit-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
 Später nachinstallierte Apps (Software, Flathub) erscheinen ganz normal.
 
 Aufruf (als root): creative-apps-sync [Zielordner]

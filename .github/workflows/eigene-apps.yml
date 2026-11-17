@@ -56,16 +56,16 @@ jobs:
             --repo=../repo --default-branch=stable --subject="Creative Engine ${GITHUB_SHA::7}" build org.creativeos.Engine.yml
           cd ..
           flatpak build-update-repo --prune --prune-depth=2 --generate-static-deltas=false \
-            --title="Creative OS – Eigene Apps" repo
+            --title="Orbit OS – Eigene Apps" repo
           du -sh repo
       - name: Katalog-Datei
         run: |
           cat > repo/creative-eigene-apps.flatpakrepo <<EOR
           [Flatpak Repo]
-          Title=Creative OS – Eigene Apps
+          Title=Orbit OS – Eigene Apps
           Url=$URL/
           Homepage=https://github.com/${GITHUB_REPOSITORY}
-          Comment=Programme von Creative OS, die nicht im System stecken (z. B. Creative Engine)
+          Comment=Programme von Orbit OS, die nicht im System stecken (z. B. Creative Engine)
           RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
           EOR
           cat > repo/org.creativeos.Engine.flatpakref <<EOR

@@ -27,7 +27,7 @@ STYLE = '''    // BEGIN CREATIVE LOCKSCREEN STYLE
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 28
-        text: "Creative OS · gesperrt"
+        text: "Orbit OS · gesperrt"
         color: creativeLight ? "#46506a" : "#bac6df"
         font.family: "Arial"
         font.pixelSize: 13

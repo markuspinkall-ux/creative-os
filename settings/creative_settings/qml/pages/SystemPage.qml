@@ -201,10 +201,10 @@ SettingsPage {
         onConfirmed: if (account) system.deleteAccount(account.uid, account.name)
     }
 
-    // ---- Danke: worauf Creative OS aufbaut --------------------------------------------------
+    // ---- Danke: worauf Orbit OS aufbaut --------------------------------------------------
     Card {
-        title: "Über Creative OS"
-        subtitle: "Creative OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
+        title: "Über Orbit OS"
+        subtitle: "Orbit OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
         Repeater {
             id: credits
             model: [
@@ -239,7 +239,7 @@ SettingsPage {
     Card {
         title: "Quellcode und Lizenzen"
         SettingRow {
-            label: "Eigene Programme von Creative OS"
+            label: "Eigene Programme von Orbit OS"
             hint: "© 2026 Markus Pinkall – alle Rechte vorbehalten. Der Quellcode ist auf GitHub einsehbar, darf aber ohne Erlaubnis nicht übernommen werden."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }

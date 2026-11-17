@@ -198,7 +198,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Capture")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-capture")
     app.setWindowIcon(QIcon.fromTheme("creative-capture"))
     if "--selftest" not in sys.argv and _raise_running():

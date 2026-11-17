@@ -1,7 +1,7 @@
 'use strict';
 // Creative WhatsApp – eigene App um das offizielle WhatsApp Web.
 // Innen läuft web.whatsapp.com (kein nachgebautes Protokoll, also kein Sperr-Risiko für die Nummer),
-// drumherum Creative OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
+// drumherum Orbit OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
 // zum Chat, Hintergrundbetrieb mit Tray-Symbol, Start mit dem PC, Nicht-stören-Zeiten,
 // Rechtschreibprüfung und Dateien per Ziehen.
 // Start: creative-whatsapp [--hidden]   (wird über main.js mit --whatsapp geladen)
@@ -76,7 +76,7 @@ function inQuietTimes(s, now = new Date()) {
 }
 const isQuiet = () => settings.dnd || inQuietTimes(settings);
 
-// ---- Design von Creative OS --------------------------------------------------------------------
+// ---- Design von Orbit OS --------------------------------------------------------------------
 const lookFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'creative-os', 'look.conf');
 const ACCENTS = { blau: ['#8fb3ff', '#3d6fe0'], gruen: ['#6fdcc0', '#1f9e7f'], orange: ['#ffb07a', '#d9773a'], lila: ['#c3a6ff', '#7c4ddb'] };
 function readLook() {

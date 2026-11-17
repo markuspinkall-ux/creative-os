@@ -18,14 +18,14 @@ from PySide6.QtWidgets import (
     QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QSplitter,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
 
 from ftp_session import Session, UnknownHostKey, safe_name
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:

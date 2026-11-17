@@ -79,21 +79,21 @@ workspace.windowActivated.connect(push);
 // ---- Windows-Tastenkürzel --------------------------------------------------
 // (Die Windows-Taste allein öffnet das Startmenü – das ist in kwinrc unter
 //  ModifierOnlyShortcuts eingetragen. Win+Pfeile und Alt+Tab bringt KWin mit.)
-registerShortcut("Creative Dateien", "Creative OS: Dateien öffnen", "Meta+E",
+registerShortcut("Creative Dateien", "Orbit OS: Dateien öffnen", "Meta+E",
                  function () { call("launchRole", "files"); });
-registerShortcut("Creative Einstellungen", "Creative OS: Einstellungen öffnen", "Meta+I",
+registerShortcut("Creative Einstellungen", "Orbit OS: Einstellungen öffnen", "Meta+I",
                  function () { call("openSettings"); });
-registerShortcut("Creative Sperren", "Creative OS: Bildschirm sperren", "Meta+L",
+registerShortcut("Creative Sperren", "Orbit OS: Bildschirm sperren", "Meta+L",
                  function () { call("lock"); });
-registerShortcut("Creative Bildschirmfoto", "Creative OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
+registerShortcut("Creative Bildschirmfoto", "Orbit OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
                  function () { call("screenshot"); });
-registerShortcut("Creative Druck", "Creative OS: Bildschirmfoto (Druck-Taste)", "Print",
+registerShortcut("Creative Druck", "Orbit OS: Bildschirmfoto (Druck-Taste)", "Print",
                  function () { call("screenshot"); });
-registerShortcut("Creative Aufgaben-Manager", "Creative OS: Taskmanager", "Ctrl+Shift+Escape",
+registerShortcut("Creative Aufgaben-Manager", "Orbit OS: Taskmanager", "Ctrl+Shift+Escape",
                  function () { call("taskManager"); });
-registerShortcut("Creative Taskmanager Strg-Alt-Entf", "Creative OS: Taskmanager (Strg+Alt+Entf)", "Ctrl+Alt+Del",
+registerShortcut("Creative Taskmanager Strg-Alt-Entf", "Orbit OS: Taskmanager (Strg+Alt+Entf)", "Ctrl+Alt+Del",
                  function () { call("taskManager"); });
-registerShortcut("Creative Desktop", "Creative OS: Desktop anzeigen", "Meta+D",
+registerShortcut("Creative Desktop", "Orbit OS: Desktop anzeigen", "Meta+D",
                  function () { workspace.showingDesktop = !workspace.showingDesktop; });
 
 push();

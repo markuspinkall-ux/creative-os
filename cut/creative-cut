@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QListWidget, QMainWindow, QMessageBox, QProgressBar, QPushButton,
     QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox
 except ImportError:
     pass
@@ -36,7 +36,7 @@ from cut_project import (
 )
 from cut_timeline import CACHE, TimelineView
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:

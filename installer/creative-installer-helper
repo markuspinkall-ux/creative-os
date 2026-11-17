@@ -113,7 +113,7 @@ def install(cfg):
     if shutil.which("setenforce"):
         subprocess.run(["setenforce", "0"], capture_output=True)
     env = dict(os.environ)
-    env.update({"ANACONDA_PRODUCTNAME": "Creative OS", "ANACONDA_ISFINAL": "true",
+    env.update({"ANACONDA_PRODUCTNAME": "Orbit OS", "ANACONDA_ISFINAL": "true",
                 "PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8"})
     try:
         ver = open("/etc/os-release").read()
@@ -136,7 +136,7 @@ def run_anaconda(env, bound):
     state = {"pct": 1, "text": "Installation wird vorbereitet", "copy_since": None}
 
     def creep():
-        # Während Creative OS kopiert wird, meldet Anaconda lange nichts – langsam weiterzählen,
+        # Während Orbit OS kopiert wird, meldet Anaconda lange nichts – langsam weiterzählen,
         # damit man sieht, dass es läuft (nie über 72 %).
         while proc.poll() is None:
             time.sleep(6)

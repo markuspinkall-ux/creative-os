@@ -1,4 +1,4 @@
-"""Creative OS – Benachrichtigungen (org.freedesktop.Notifications).
+"""Orbit OS – Benachrichtigungen (org.freedesktop.Notifications).
 
 Zeigt Meldungen von Programmen (Steam, Discord, Downloads, Updates …) unten rechts
 über der Taskleiste im Creative-Look. Startpunkt: `creative-notifyd`.
@@ -136,7 +136,7 @@ def start_dbus(center):
 
         @dbus.service.method("org.freedesktop.Notifications", in_signature="", out_signature="ssss")
         def GetServerInformation(self):
-            return ("Creative OS", "Creative OS", "1.0", "1.2")
+            return ("Orbit OS", "Orbit OS", "1.0", "1.2")
 
         @dbus.service.signal("org.freedesktop.Notifications", signature="uu")
         def NotificationClosed(self, nid, reason):

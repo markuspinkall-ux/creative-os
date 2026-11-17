@@ -24,7 +24,7 @@ jobs:
       - name: Formatieren und Umbenennen auf einer eigenen Testplatte
         run: bash tests/drives_integration.sh
   creative-os:
-    name: Laufwerke in Creative OS
+    name: Laufwerke in Orbit OS
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -39,12 +39,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq qemu-system-x86 qemu-utils ovmf netpbm socat
           sudo chmod 666 /dev/kvm
-      - name: Creative OS aus dem Testkanal vorbereiten
+      - name: Orbit OS aus dem Testkanal vorbereiten
         run: bash tools/boottest.sh build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.actor }}
-      - name: Creative OS starten und Laufwerkskorrektur testen
+      - name: Orbit OS starten und Laufwerkskorrektur testen
         run: |
           # Bestehenden Starttest nutzen; VM für den anschließenden Test weiterlaufen lassen.
           sed '/^kill "$(cat "$W\/qemu.pid")"/d' tools/boottest.sh > /tmp/creative-starttest.sh

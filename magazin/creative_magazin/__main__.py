@@ -335,7 +335,7 @@ class Magazine(QObject):
 def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setApplicationName("Creative Magazin")
     app.setDesktopFileName("creative-magazin")
     app.setWindowIcon(QIcon.fromTheme("creative-magazin"))

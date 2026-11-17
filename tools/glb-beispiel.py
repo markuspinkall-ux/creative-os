@@ -98,7 +98,7 @@ def main(out):
                       "material": len(materials) - 1})
     while len(blob) % 4:
         blob.append(0)
-    gltf = {"asset": {"version": "2.0", "generator": "Creative OS"}, "scene": 0,
+    gltf = {"asset": {"version": "2.0", "generator": "Orbit OS"}, "scene": 0,
             "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": "Rakete"}],
             "meshes": [{"primitives": prims}], "materials": materials, "accessors": accessors,
             "bufferViews": views, "buffers": [{"byteLength": len(blob)}]}

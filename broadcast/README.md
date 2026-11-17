@@ -1,6 +1,6 @@
 # Creative Broadcast
 
-Rauschfreies Mikrofon und virtueller Greenscreen für Creative OS – sparsam im Verbrauch.
+Rauschfreies Mikrofon und virtueller Greenscreen für Orbit OS – sparsam im Verbrauch.
 
 - **Mikrofon:** DeepFilterNet (KI-Rauschentfernung, CPU) als PipeWire-Filter → neue Eingabe
   „Creative Mikrofon (rauschfrei)“, wird beim Einschalten automatisch Standard. Stärke einstellbar.

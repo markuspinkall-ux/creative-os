@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Creative OS: weitere Platten automatisch verbinden.
+"""Orbit OS: weitere Platten automatisch verbinden.
 
 Läuft in der Sitzung. Verbindet beim Anmelden – und immer, wenn eine Platte
 angesteckt wird – jede Partition mit einem Dateisystem, die noch nicht

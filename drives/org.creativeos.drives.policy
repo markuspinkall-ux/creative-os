@@ -2,7 +2,7 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Creative OS</vendor>
+  <vendor>Orbit OS</vendor>
   <action id="org.creativeos.drives.manage">
     <description>Laufwerke einrichten</description>
     <message>Zum Einrichten oder Verbinden eines Laufwerks wird dein Passwort benötigt.</message>

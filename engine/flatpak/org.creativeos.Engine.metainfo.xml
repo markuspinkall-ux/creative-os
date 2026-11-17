@@ -12,7 +12,7 @@
   </description>
   <launchable type="desktop-id">org.creativeos.Engine.desktop</launchable>
   <url type="homepage">https://github.com/markuspinkall-ux/creative-os</url>
-  <developer id="org.creativeos"><name>Creative OS</name></developer>
+  <developer id="org.creativeos"><name>Orbit OS</name></developer>
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="0.1.0" date="2026-11-12"/>

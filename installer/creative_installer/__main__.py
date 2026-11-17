@@ -225,7 +225,7 @@ def main():
     demo = "--demo" in sys.argv or "--selftest" in sys.argv
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
-    app.setApplicationName("Creative OS installieren")
+    app.setApplicationName("Orbit OS installieren")
     app.setDesktopFileName("creative-installer")
     app.setWindowIcon(QIcon.fromTheme("creative-installer"))
     app.setFont(QFont("Arial", 10))

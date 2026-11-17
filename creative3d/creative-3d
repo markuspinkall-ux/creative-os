@@ -23,12 +23,12 @@ from PySide6.QtWidgets import (
     QLineEdit, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout,
     QWidget,
 )
-try:  # Graphit-Dialoge von Creative OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox
 except ImportError:
     pass
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Creative OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -98,7 +98,7 @@ def token_file():
 
 
 def run_override(model="trellis"):
-    """Neuere Fassung des Rechenteils aus Creative OS in den Container legen – so kommen
+    """Neuere Fassung des Rechenteils aus Orbit OS in den Container legen – so kommen
     Verbesserungen (z. B. „Sehr hoch“) mit dem System-Update, ohne den 14-GB-Container neu zu laden."""
     newer = LIB / "trellis-run.py"
     if not newer.is_file():
@@ -348,7 +348,7 @@ class Creative3D(QMainWindow):
         hint = QLabel("Der Hintergrund wird automatisch entfernt und das Motiv zugeschnitten.", objectName="muted")
         hint.setWordWrap(True)
         lv.addWidget(hint)
-        self.settings = QSettings("Creative OS", "Creative 3D")
+        self.settings = QSettings("Orbit OS", "Creative 3D")
         mrow = QHBoxLayout()
         mrow.addWidget(QLabel("Modell"))
         self.model = QComboBox()
@@ -916,7 +916,7 @@ def main():
     # Ist das schon einmal nötig gewesen (Einstellung webglSoftware), gleich damit starten.
     flags = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
     extra = ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
-    if QSettings("Creative OS", "Creative 3D").value("webglSoftware", False, type=bool):
+    if QSettings("Orbit OS", "Creative 3D").value("webglSoftware", False, type=bool):
         os.environ["CREATIVE3D_SOFTGL"] = "1"
         extra += ["--use-gl=angle", "--use-angle=swiftshader"]
     for flag in extra:

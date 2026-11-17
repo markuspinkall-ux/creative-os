@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 import Qt.labs.folderlistmodel
 import Creative
 
-// Datei- und Ordnerauswahl im Creative-OS-Stil (statt der Standard-Dialoge von Qt).
+// Datei- und Ordnerauswahl im Orbit-OS-Stil (statt der Standard-Dialoge von Qt).
 //   mode: "open"   Datei öffnen         → accepted(Datei-URL)
 //         "save"   Speichern unter      → accepted(Datei-URL), mit Dateiname und Überschreiben-Rückfrage
 //         "folder" Ordner wählen        → accepted(Ordner-URL)

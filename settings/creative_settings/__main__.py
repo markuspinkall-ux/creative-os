@@ -55,7 +55,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Systemsteuerung")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-settings")
     app.setWindowIcon(QIcon.fromTheme("creative-settings", QIcon.fromTheme("preferences-system")))
     app.setFont(QFont("Arial", 10))

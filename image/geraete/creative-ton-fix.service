@@ -1,5 +1,5 @@
 [Unit]
-Description=Creative OS – Lautsprecher-Korrekturen für bekannte Laptops
+Description=Orbit OS – Lautsprecher-Korrekturen für bekannte Laptops
 # Läuft im normalen Start (nach dem Einhängen der Laufwerke) und schreibt nur auf passenden Geräten
 # /etc/modprobe.d/creative-ton-fix.conf – die Korrektur wirkt ab dem nächsten Start.
 # NICHT vor systemd-udev-trigger ordnen: die Laufwerke warten auf udev, das ergab eine

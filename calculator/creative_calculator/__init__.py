@@ -1,2 +1,2 @@
-"""Creative Calculator – der Rechner von Creative OS."""
+"""Creative Calculator – der Rechner von Orbit OS."""
 __version__ = "1.0.0"

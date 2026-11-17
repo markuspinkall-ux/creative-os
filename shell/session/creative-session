@@ -1,5 +1,5 @@
 #!/bin/sh
-# Startet die Creative-OS-Sitzung: KWin als Fenstermanager, darauf die
+# Startet die Orbit-OS-Sitzung: KWin als Fenstermanager, darauf die
 # Creative Shell (Taskleiste, Startmenü, Schnellzugriff).
 export XDG_CURRENT_DESKTOP=Creative:KDE
 export XDG_SESSION_DESKTOP=creative

@@ -53,7 +53,7 @@ def main():
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Dateien")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-files")
     app.setWindowIcon(QIcon.fromTheme("creative-files", QIcon.fromTheme("system-file-manager")))
     app.setFont(QFont("Arial", 10))

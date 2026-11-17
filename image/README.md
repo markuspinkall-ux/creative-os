@@ -1,6 +1,6 @@
-# Creative OS – System-Abbild
+# Orbit OS – System-Abbild
 
-Creative OS ist ein **Fedora-Atomic**-System:
+Orbit OS ist ein **Fedora-Atomic**-System:
 
 - **Schreibgeschützt:** Systemdateien lassen sich nicht versehentlich ändern
   oder löschen. Deine eigenen Dateien, Einstellungen und Apps liegen

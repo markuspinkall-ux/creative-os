@@ -2,11 +2,11 @@
     name: 'Creative Graphit';
     id: 'com.obsproject.Yami.CreativeGraphit';
     extends: 'com.obsproject.Yami';
-    author: 'Creative OS';
+    author: 'Orbit OS';
     dark: 'true';
 }
 
-/* Graphit-Farben von Creative OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
+/* Graphit-Farben von Orbit OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
 @OBSThemeVars {
     --grey1: #4a5468;
     --grey2: #3f4859;

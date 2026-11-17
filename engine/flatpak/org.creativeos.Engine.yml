@@ -1,4 +1,4 @@
-# Creative Engine als Flatpak – wird NICHT ins Creative-OS-Abbild gebaut, sondern über
+# Creative Engine als Flatpak – wird NICHT ins Orbit-OS-Abbild gebaut, sondern über
 # Software → „Eigene Apps“ angeboten (Workflow „Eigene Apps veröffentlichen“).
 # Die Version von KDE-Laufzeit und PySide-Basis setzt der Workflow (@VERSION@).
 id: org.creativeos.Engine

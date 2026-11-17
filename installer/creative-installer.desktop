@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Creative OS installieren
-Comment=Creative OS fest auf diesem PC einrichten
+Name=Orbit OS installieren
+Comment=Orbit OS fest auf diesem PC einrichten
 Exec=creative-installer
 Icon=creative-installer
 Terminal=false

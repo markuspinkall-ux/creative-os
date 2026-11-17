@@ -1,8 +1,8 @@
-# Baut Creative OS automatisch auf GitHub (kostenlos für öffentliche Projekte):
+# Baut Orbit OS automatisch auf GitHub (kostenlos für öffentliche Projekte):
 #  - bei jeder Änderung und jede Nacht → neues System-Abbild in der GitHub-Registry
 #    (installierte PCs holen sich daraus ihre Updates)
 #  - ISO-Dateien entstehen separat im Workflow „Installations-ISO erstellen“.
-name: Creative OS bauen
+name: Orbit OS bauen
 
 on:
   push:
@@ -210,7 +210,7 @@ jobs:
           } > "$dir/README.md"
           cd "$dir"
           git init -q -b bildschirmfotos
-          git config user.name "Creative OS Build"
+          git config user.name "Orbit OS Build"
           git config user.email "build@creative-os.invalid"
           git add -A
           git commit -q -m "Bildschirmfotos ${{ github.sha }}"

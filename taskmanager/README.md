@@ -1,6 +1,6 @@
 # Taskmanager
 
-Der Taskmanager von Creative OS – aufgebaut wie bei Windows.
+Der Taskmanager von Orbit OS – aufgebaut wie bei Windows.
 
 - **Prozesse:** Apps (Programme mit Fenster, samt aller Unterprozesse), Hintergrundprozesse, Systemprozesse;
   CPU, Arbeitsspeicher und Datenträger mit „Wärme“-Färbung, Sortieren per Klick auf die Spalte, Suche.

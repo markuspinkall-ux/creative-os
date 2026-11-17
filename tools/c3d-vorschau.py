@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 out = sys.argv_out = None
 app = QApplication.instance() or QApplication([])
-QSettings("Creative OS", "Creative 3D").setValue("modell", os.environ.get("C3D_MODELL", "trellis2"))
+QSettings("Orbit OS", "Creative 3D").setValue("modell", os.environ.get("C3D_MODELL", "trellis2"))
 win = c3d.Creative3D(preview_web=False)
 win.resize(1240, 820)
 win.show()

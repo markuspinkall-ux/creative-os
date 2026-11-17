@@ -53,7 +53,7 @@ def run_editor(args):
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("Creative Deck")
-    app.setOrganizationName("Creative OS")
+    app.setOrganizationName("Orbit OS")
     app.setDesktopFileName("creative-deck")
     app.setWindowIcon(QIcon.fromTheme("creative-deck"))
 
