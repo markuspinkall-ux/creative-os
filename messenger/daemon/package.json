@@ -1,0 +1,17 @@
+{
+  "name": "orbit-messenger",
+  "version": "1.0.0",
+  "description": "Orbit OS Messenger – direkter Austausch zwischen Orbit-OS-Rechnern (Hyperswarm), mit Warteschlange",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "main": "index.js",
+  "bin": {
+    "orbit-messenger": "index.js"
+  },
+  "dependencies": {
+    "b4a": "^1.6.7",
+    "hypercore-crypto": "^3.4.2",
+    "hyperdht": "^6.20.0",
+    "hyperswarm": "^4.11.0"
+  }
+}

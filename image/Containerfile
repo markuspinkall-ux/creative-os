@@ -343,6 +343,18 @@ RUN chmod 755 /usr/bin/creative-browser /usr/bin/creative-whatsapp \
  && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
     || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT"
 
+# Messenger: gehört zum System (nur im Tray, kein Startmenü-Eintrag). Direkte Verbindungen über
+# Hyperswarm (MIT), Abhängigkeiten genau in den Versionen aus package-lock.json
+COPY messenger/daemon /usr/lib/orbit-messenger
+COPY --chmod=755 messenger/bin/orbit-messenger /usr/bin/orbit-messenger
+COPY --chmod=755 messenger/bin/orbit-messenger-window /usr/bin/orbit-messenger-window
+COPY messenger/orbit-messenger.desktop /usr/share/applications/orbit-messenger.desktop
+COPY messenger/orbit-messenger.svg /usr/share/icons/hicolor/scalable/apps/orbit-messenger.svg
+RUN cd /usr/lib/orbit-messenger \
+ && HOME=/tmp/npm-home npm ci --omit=dev --no-audit --no-fund --ignore-scripts --cache /tmp/npm-cache \
+ && rm -rf /tmp/npm-cache /tmp/npm-home \
+ && node -e "require('/usr/lib/orbit-messenger/node_modules/hyperswarm'); console.log('Messenger: Hyperswarm ok')"
+
 # Deck: Elgato Stream Deck ohne Elgato-Software (Bibliothek python-elgato-streamdeck, MIT)
 RUN dnf install -y --skip-unavailable hidapi python3-evdev python3-pillow python3-pip wl-clipboard pipewire-utils && dnf clean all \
  && (python3 -c "import StreamDeck" 2>/dev/null \

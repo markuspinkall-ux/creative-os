@@ -295,6 +295,7 @@ SettingsPage {
                 { t: "KI-Helfer", d: "Für Wissensfragen schickt er deine Suchbegriffe an die deutsche Wikipedia (Wikimedia Foundation, USA). Die Modelle lädt er einmalig von Hugging Face." },
                 { t: "Browser", d: "Der Werbeblocker lädt seine Filterlisten von Ghostery. Was du aufrufst, sehen nur die jeweiligen Webseiten und deine gewählte Suchmaschine." },
                 { t: "Widgets und Apps, nur bei Nutzung", d: "Wetter: Open-Meteo (der eingegebene Ort). Twitch-Status: decapi.me. Podcast-Suche: Apple (iTunes-Suche). Game Launcher: Steam (Spielbilder). Magazin: die Seiten, deren Feeds du abonnierst. Mein Server: ident.me und icanhazip.com für deine öffentliche IP, DuckDNS falls eingerichtet." },
+                { t: "Messenger", d: "Nachrichten gehen direkt und verschlüsselt von Rechner zu Rechner, ohne Server dazwischen, und liegen nur auf euren beiden Rechnern. Um sich zu finden, melden sich die Rechner in einem verteilten Netz (HyperDHT) mit einem Schlüssel an; dabei sehen andere Teilnehmer und eure Kontakte die IP-Adresse." },
                 { t: "Web-Apps und Konten", d: "WhatsApp, Claude, ChatGPT, Mail, YouTube Music, Proton VPN, Steam und Discord: Es gelten die Datenschutzerklärungen der jeweiligen Anbieter." },
                 { t: "Verantwortlich und Beschwerden", d: "Für Orbit OS selbst: siehe Impressum. Für die genannten Dienste sind deren Anbieter verantwortlich. Beschwerden: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Ansbach." }
             ]
