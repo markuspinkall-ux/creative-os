@@ -1,0 +1,29 @@
+name: Tabellen-Ansicht prüfen
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [tabellen/**, tools/tabellen-beispiel.py, tests/test_tabellen.py, .github/workflows/tabellen-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt und openpyxl
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation fonts-dejavu-core
+          pip install -q PySide6 openpyxl pytest
+      - name: Lesen und Formate
+        run: python3 -m pytest -q tests/test_tabellen.py
+      - name: Fenster (Selbsttest und Fotos)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONPATH: tabellen
+        run: |
+          python3 tools/tabellen-beispiel.py beispiel.xlsx
+          python3 -m orbit_tabellen beispiel.xlsx --selftest
+          mkdir -p fotos
+          timeout 60 python3 -m orbit_tabellen beispiel.xlsx --screenshot=fotos/tabellen.png --auswahl
+          timeout 60 python3 -m orbit_tabellen --screenshot=fotos/leer.png
+          for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
