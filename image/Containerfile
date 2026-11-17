@@ -670,13 +670,17 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
  && cp /tmp/creative-plymouth/background-tile.png /usr/share/plymouth/themes/creative/background-tile.png \
  && rm -rf /tmp/creative-plymouth \
  && plymouth-set-default-theme creative \
+ && printf 'ShowDelay=0\nDeviceTimeout=8\nUseSimpledrm=1\n' >> /etc/plymouth/plymouthd.conf \
+ && grep -q '^Theme=creative' /etc/plymouth/plymouthd.conf && grep -q '^UseSimpledrm=1' /etc/plymouth/plymouthd.conf \
  && KVER="$(ls /usr/lib/modules | sort -V | tail -n1)" \
  && dracut --no-hostonly --kver "$KVER" --reproducible --zstd --add ostree -f "/usr/lib/modules/$KVER/initramfs.img" \
  && chmod 0600 "/usr/lib/modules/$KVER/initramfs.img" \
  && (lsinitrd "/usr/lib/modules/$KVER/initramfs.img" 2>/dev/null | grep -q "plymouth/themes/creative/background-tile.png" \
      && echo "Startbildschirm: Graphit-Thema in der Startdatei" || echo "STARTBILDSCHIRM: THEMA FEHLT IN DER STARTDATEI") \
+ && (lsinitrd -f etc/plymouth/plymouthd.conf "/usr/lib/modules/$KVER/initramfs.img" 2>/dev/null | grep -q "^UseSimpledrm=1" \
+     && echo "Startbildschirm: sofort sichtbar (simpledrm)" || echo "STARTBILDSCHIRM: UseSimpledrm FEHLT IN DER STARTDATEI") \
  && mkdir -p /usr/lib/bootc/kargs.d \
- && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
+ && printf 'kargs = ["rhgb", "quiet", "splash", "loglevel=3", "rd.udev.log_level=3", "rd.systemd.show_status=false", "systemd.show_status=false", "plymouth.use-simpledrm"]\n' > /usr/lib/bootc/kargs.d/10-creative-splash.toml
 
 # ---------------------------------------------------------------------------
 # 9) Systemeinstellungen
