@@ -61,11 +61,12 @@ class SheetModel(QAbstractTableModel):
         self.zoom = zoom
         self._fonts = {}
 
+    # wie in Excel: hinter den Daten noch leere Zeilen und Spalten
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else max(self.sheet.rows, 1)
+        return 0 if parent.isValid() else self.sheet.rows + 40
 
     def columnCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else max(self.sheet.cols, 1)
+        return 0 if parent.isValid() else max(self.sheet.cols + 8, 12)
 
     def cell(self, r, c):
         return self.sheet.cells.get((r, c))
@@ -261,6 +262,7 @@ class Viewer(QMainWindow):
             self.addAction(a)
         self.table.hide()
         self._find_pos = None
+        QTimer.singleShot(0, lambda: (self.table if self.book else root).setFocus())
 
     # ---- Datei --------------------------------------------------------------------------------
     def choose(self):
@@ -300,6 +302,7 @@ class Viewer(QMainWindow):
         self.table.show()
         self.tabs.setCurrentIndex(book.active)
         self.show_sheet(book.active)
+        self.table.setFocus()
         return True
 
     def show_sheet(self, i):
@@ -365,7 +368,7 @@ class Viewer(QMainWindow):
         sh = self.model.sheet
         size = f"{sh.rows} Zeilen × {sh.cols} Spalten" + (" (gekürzt)" if sh.truncated else "")
         if len(nums) > 1:
-            fmt = lambda v: xlsxdata.format_value(round(v, 6), "General")
+            fmt = lambda v: xlsxdata.format_value(v, "#,##0.00")
             self.status.setText(f"Summe: {fmt(sum(nums))}   Mittelwert: {fmt(sum(nums) / len(nums))}   Anzahl: {count}")
         elif count > 1:
             self.status.setText(f"Anzahl: {count}")

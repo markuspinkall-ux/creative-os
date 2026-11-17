@@ -342,6 +342,15 @@ def _read_sheet(ws, ws_formula, theme):
                 cell.link = c.hyperlink.target or ""
             sh.cells[key] = cell
 
+    # Zeilen ohne feste Höhe wachsen mit der größten Schrift (wie Excel)
+    tallest = {}
+    for (r, _c), cell in sh.cells.items():
+        if cell.size > 11.5:
+            tallest[r] = max(tallest.get(r, 0), cell.size)
+    for r, size in tallest.items():
+        if r not in sh.heights:
+            sh.heights[r] = int(round(size * 4 / 3 * 1.35 + 4))
+
     for rng in ws.merged_cells.ranges:
         r0, c0 = rng.min_row - 1, rng.min_col - 1
         if r0 < rows and c0 < cols:
