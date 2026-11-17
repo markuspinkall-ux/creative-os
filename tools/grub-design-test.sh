@@ -94,8 +94,8 @@ PY
 # ---- 3. Dasselbe mit UEFI (wie auf echten PCs): Auflösung der Firmware, Grafikmenü ---------
 ls -l /usr/share/edk2/ovmf/ | head -30
 OVMF=""; VARS=""
-for f in /usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2:/usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 \
-         /usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd; do
+for f in /usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd \
+         /usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2:/usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2; do
     c="${f%%:*}"; v="${f#*:}"
     [ -f "$c" ] && [ -f "$v" ] && { OVMF="$c"; VARS="$v"; break; }
 done
@@ -107,10 +107,11 @@ rm -f "$W/qmp.sock"
 qemu-system-x86_64 -m 1024 -machine q35,smm=off -cdrom "$W/test.iso" -vga std -display none \
     -drive if=pflash,format=$fmt,unit=0,readonly=on,file="$OVMF" \
     -drive if=pflash,format=$fmt,unit=1,file="$W/vars.$fmt" \
-    -serial file:"$W/serial.log" -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" \
+    -debugcon file:"$W/ovmf.log" -global isa-debugcon.iobase=0x402 -serial file:"$W/serial.log" -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid" \
     || { echo "FEHLER: QEMU (UEFI) startet nicht"; exit 1; }
 sleep 60
 foto "$OUT/grub-startauswahl-uefi.png"
+echo "--- OVMF ---"; tail -c 1500 "$W/ovmf.log" 2>/dev/null || true; echo "--- serielle Ausgabe (UEFI) ---"; tail -c 2000 "$W/serial.log" 2>/dev/null || true; echo
 kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
 python3 - "$OUT/grub-startauswahl-uefi.png" <<'PY'
 import sys
@@ -119,7 +120,6 @@ im = Image.open(sys.argv[1]).convert("RGB")
 w, h = im.size
 px = im.load()
 colors = {px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}
-if len(colors) <= 200: print(open(sys.argv[1].replace("grub-startauswahl-uefi.png","")+"../serial.log","rb").read()[-3000:] if False else "")
 assert len(colors) > 200, f"UEFI: kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
 print(f"UEFI-Grafikmenü: {w}x{h}, {len(colors)} Farben")
 PY
