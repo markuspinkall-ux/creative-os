@@ -430,6 +430,10 @@ def make_web_view():
 
         def show_mail(self, mail, allow_remote=False):
             self.guard.allow_remote = allow_remote
+            # Die Mail wird als lokale Datei geladen: ohne diese Freigabe blockiert Chromium
+            # Bilder aus dem Netz, auch wenn der Wächter sie durchlässt.
+            self.page().settings().setAttribute(
+                QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, bool(allow_remote))
             body = mail.get("html") or plain_to_html(mail.get("text", ""))
             for cid, (kind, data) in mail.get("inline", {}).items():
                 import base64
@@ -1020,6 +1024,10 @@ class MailWindow(QMainWindow):
         load_images = QPushButton(icon("image", C["text"], 16), " Bilder laden")
         load_images.clicked.connect(self.load_images)
         b.addWidget(load_images)
+        always = QPushButton("Immer von diesem Absender")
+        always.setToolTip("Bilder in E-Mails von diesem Absender künftig sofort zeigen")
+        always.clicked.connect(self.always_load_images)
+        b.addWidget(always)
         r.addWidget(self.banner)
         self.attach_row = QHBoxLayout()
         self.attach_row.setSpacing(6)
@@ -1246,6 +1254,8 @@ class MailWindow(QMainWindow):
         starred = "STARRED" in mail.get("labels", [])
         self.tool_buttons["star"].setIcon(icon("star", C["star"] if starred else C["text"], 19,
                                                C["star"] if starred else "none"))
+        if address and address.lower() in self.trusted_senders():
+            self.allow_remote = True
         remote = bool(mail.get("html")) and bool(REMOTE_IMG.search(mail["html"]))
         self.banner.setVisible(remote and not self.allow_remote)
         self.fill_attachments(mail.get("attachments", []))
@@ -1258,6 +1268,23 @@ class MailWindow(QMainWindow):
             return mail.get("date", "")
         t = time.localtime(stamp)
         return f"{t.tm_mday}. {MONTHS[t.tm_mon - 1]} {t.tm_year}, {time.strftime('%H:%M', t)}"
+
+    def trusted_senders(self):
+        try:
+            data = json.loads(self.settings.value("bilder_absender", "[]") or "[]")
+            return {str(a).lower() for a in data} if isinstance(data, list) else set()
+        except (TypeError, ValueError):
+            return set()
+
+    def always_load_images(self):
+        if not self.current:
+            return
+        address = parseaddr(self.current.get("from", ""))[1].lower()
+        if address:
+            senders = self.trusted_senders() | {address}
+            self.settings.setValue("bilder_absender", json.dumps(sorted(senders)))
+            self.statusBar().showMessage(f"Bilder von {address} werden künftig sofort gezeigt.", 5000)
+        self.load_images()
 
     def load_images(self):
         if self.current:
