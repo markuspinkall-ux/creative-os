@@ -1,0 +1,14 @@
+name: Orbit TV Streams prüfen
+on:
+  push:
+    branches: ["claude/orbit-tv"]
+    paths: [orbit-tv/tools/**, .github/workflows/orbit-tv-streams.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 orbit-tv/tools/streams-pruefen.py orbit-tv/tools/kandidaten.json /tmp/lebend.json
+      - run: echo "LEBEND64:$(base64 -w0 /tmp/lebend.json)"

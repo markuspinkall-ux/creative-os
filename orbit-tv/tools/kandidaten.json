@@ -1,0 +1,1177 @@
+[
+ {
+  "name": "ALEX-BERLIN",
+  "url": "http://alex-stream.rosebud-media.de:1935/live/alexlivetv.smil/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "BADEN TV",
+  "url": "http://badentv-stream2.siebnich.info/rtplive/vlc.sdp/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "CH: BTV",
+  "url": "http://rtmp.infomaniak.ch/livecast/telebielinguech/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "CH: LA TELE",
+  "url": "http://rtmp.infomaniak.ch/livecast/latele/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "CH: Leman Bleu",
+  "url": "http://rtmp.infomaniak.ch/livecast/naxoo/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "CH: Tele Basel",
+  "url": "http://xapp510394368c1000199.f.l.z.lb.core-cdn.net/10096xtelebase/ios_500/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "CH: TELEBARN",
+  "url": "http://rtmp.infomaniak.ch/livecast/barntele/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "CH: TVM3",
+  "url": "http://rtmp.infomaniak.ch/livecast/tvm3/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "DELUXE MUSIC TV",
+  "url": "http://flash.cdn.deluxemusic.tv/deluxemusic.tv-live/web_850.stream/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "DRESDEN FERNSEHEN",
+  "url": "http://video07.kanal8.de/dresdenfernsehenlive/myStream.sdp/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "FILSTALWELLE",
+  "url": "http://62.113.210.27/filstalwelle-live/livestream/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "LEIPZIG TV",
+  "url": "http://video61.kanal8.de/leipzigfernsehenlive/myStream.sdp/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "LUXEMBOURG RTL",
+  "url": "http://wowza01.newmedia.lu/channel1/live/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "muenchen tv 1000kb/s",
+  "url": "http://muenchentv.iptv-playoutcenter.de:1935/muenchentv/muenchentv.stream_1/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "muenchen tv 300kb/s",
+  "url": "http://muenchentv.iptv-playoutcenter.de:1935/muenchentv/muenchentv.stream_3/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "muenchen tv 500kb/s",
+  "url": "http://muenchentv.iptv-playoutcenter.de:1935/muenchentv/muenchentv.stream_2/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "NDR HD",
+  "url": "http://ndr_fs-lh.akamaihd.net/i/ndrfs_nds@119224/master.m3u8",
+  "radio": false
+ },
+ {
+  "name": "NRW TV",
+  "url": "http://streaming001.broadcast.tneg.de/nrwtv/nrwtv/nrwlive.stream/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "OK DESSAU",
+  "url": "http://62.113.210.250/medienasa-live/ok-dessau_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "OK MAGDEBURG",
+  "url": "http://62.113.210.250/medienasa-live/ok-magdeburg_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "OK SALZWEDEL",
+  "url": "http://62.113.210.250/medienasa-live/ok-salzwedel_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "OK STENDAL",
+  "url": "http://62.113.210.250/medienasa-live/ok-stendal_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "OK WERNIGERODE",
+  "url": "http://62.113.210.250/medienasa-live/ok-wernigerode_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "OKTO TV",
+  "url": "http://atwse.lbs.atusmedia.cc:1935/oktolive/okto-low.stream/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "RAN 1",
+  "url": "http://62.113.210.250/medienasa-live/mp4:ran1_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "Ran Europa League HQ",
+  "url": "http://ran02de-live.hls.adaptive.level3.net/sevenone/ran02de/wifi2000.m3u8",
+  "radio": false
+ },
+ {
+  "name": "RBW",
+  "url": "http://62.113.210.250/medienasa-live/rbw_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "RFH TV",
+  "url": "http://62.113.210.250/medienasa-live/RFH_high/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "ROUGE TV",
+  "url": "http://rtmp.infomaniak.ch/livecast/rougetv/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "SDF",
+  "url": "http://videocdn.sdf.bz.it/hls-live/livepkgr/_definst_/liveevent/livestream.m3u8",
+  "radio": false
+ },
+ {
+  "name": "SUD TIROL TV",
+  "url": "http://77.72.196.214:8554/live/mp4:SuedtirolTV/hasbahca.m3u8?bitrate=800",
+  "radio": false
+ },
+ {
+  "name": "TV AKTUELL",
+  "url": "http://tvaktuellr.iptv-playoutcenter.de:1935/tvaktuellr/tvaktuellr.stream_3/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "TV OBERFRANKEN 1",
+  "url": "http://tvoberfranken.iptv-playoutcenter.de:1935/tvoberfranken/tvoberfranken_1/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "TV OBERFRANKEN 2",
+  "url": "http://tvoberfranken.iptv-playoutcenter.de:1935/tvoberfranken/tvoberfranken_2/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "TVA OSTBAYERN",
+  "url": "http://tvaktuellr.iptv-playoutcenter.de:1935/tvaktuellr/tvaktuellr.stream_1/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "RBW",
+  "url": "http://62.113.210.250/medienasa-live/rbw_high/hasbahca.m3u8",
+  "radio": false
+ },
+ {
+  "name": "ZDF",
+  "url": "http://pebbles112-lh.akamaihd.net/i/zdf_1@97483/index_200_av-p.m3u8?sd=6&b=0-1000&rebase=on",
+  "radio": false
+ },
+ {
+  "name": "Deutsche Well",
+  "url": "http://www.metafilegenerator.de/DWelle/tv-europa/wmv/tv_mb_h.asx",
+  "radio": false
+ },
+ {
+  "name": "kanal",
+  "url": "http://www.vm-deutschland.de/vaccount/_kanal1/videos/zeitnah_aktuell.wmv",
+  "radio": false
+ },
+ {
+  "name": "NDR Fernsehen (Mecklenburg-Vorpommern",
+  "url": "http://www.ndr.de/resources/metadaten/ndr_fs_mv_hi_wmv.asx",
+  "radio": false
+ },
+ {
+  "name": "NDR Fernsehen Niedersachse",
+  "url": "http://www.ndr.de/resources/metadaten/ndr_fs_nds_hi_wmv.asx",
+  "radio": false
+ },
+ {
+  "name": "NDR Fernsehen Schleswig-Holstei",
+  "url": "http://www.ndr.de/resources/metadaten/ndr_fs_sh_hi_wmv.asx",
+  "radio": false
+ },
+ {
+  "name": "NDR_Hambur",
+  "url": "http://www.ndr.de/resources/metadaten/ndr_fs_hh_hi_wmv.asx",
+  "radio": false
+ },
+ {
+  "name": "Noa",
+  "url": "http://www.noa4.tv/stream/video/noa4-stream-mid.asx",
+  "radio": false
+ },
+ {
+  "name": "noa4 Hambur",
+  "url": "http://wt-wm1.wtnet.de/noa4hh-stream-hi?MSWMExt=.asx",
+  "radio": false
+ },
+ {
+  "name": "noa4 Nordersted",
+  "url": "http://wt-wm1.wtnet.de/noa4-stream-hi?MSWMExt=.asx",
+  "radio": false
+ },
+ {
+  "name": "OK t",
+  "url": "http://217.151.151.58/okt",
+  "radio": false
+ },
+ {
+  "name": "OK5",
+  "url": "http://iptv.ok54.de/stream.asx",
+  "radio": false
+ },
+ {
+  "name": "Phoenix (432x240",
+  "url": "http://wstreaming.zdf.de/encoder/phoenix_h.asx",
+  "radio": false
+ },
+ {
+  "name": "Phoenix (688x384",
+  "url": "http://wstreaming.zdf.de/encoder/phoenix_vh.asx",
+  "radio": false
+ },
+ {
+  "name": "SDF = Mein Fernsehen in Südtiro",
+  "url": "http://videocdn.sdf.bz.it/hls-live/livepkgr/_definst_/liveevent/livestream.m3u",
+  "radio": false
+ },
+ {
+  "name": "WDR German",
+  "url": "http://wdr_ios_fs-i.akamaihd.net/hls/live/200964/1/playlist1x.m3u",
+  "radio": false
+ },
+ {
+  "name": "WDR T",
+  "url": "http://www.wdr.de/wdrlive/media/wdr-fernsehen_web-m.asx",
+  "radio": false
+ },
+ {
+  "name": "103.7 UnserDing",
+  "url": "http://streaming01.sr-online.de/unserding_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "1LIVE",
+  "url": "http://www.wdr.de/wdrlive/media/einslive.m3u",
+  "radio": true
+ },
+ {
+  "name": "1LIVE diggi",
+  "url": "http://www.wdr.de/wdrlive/media/einslivedigi.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern",
+  "url": "http://www.antenne.de/webradio/antenne-aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern",
+  "url": "http://www.antenne.de/webradio/antenne-surround.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern",
+  "url": "http://www.antenne.de/webradio/antenne.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern 80er Kulthits",
+  "url": "http://www.antenne.de/webradio/channels/80er-kulthits.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern 80er Kulthits",
+  "url": "http://www.antenne.de/webradio/channels/80er-kulthits.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Black Beatz",
+  "url": "http://www.antenne.de/webradio/channels/black-beatz.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Black Beatz",
+  "url": "http://www.antenne.de/webradio/channels/black-beatz.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Chillout",
+  "url": "http://www.antenne.de/webradio/channels/chillout.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Chillout",
+  "url": "http://www.antenne.de/webradio/channels/chillout.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Classic Rock Live",
+  "url": "http://www.antenne.de/webradio/channels/classic-rock-live.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Classic Rock Live",
+  "url": "http://www.antenne.de/webradio/channels/classic-rock-live-surround.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Classic Rock Live",
+  "url": "http://www.antenne.de/webradio/channels/classic-rock-live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Das Antenne Bayern 'Event' Radio (",
+  "url": "http://www.antenne.de/webradio/channels/event.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Die jungen Wilden",
+  "url": "http://www.antenne.de/webradio/channels/die-jungen-wilden.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Die jungen Wilden",
+  "url": "http://www.antenne.de/webradio/channels/die-jungen-wilden.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Hits fur Kids",
+  "url": "http://www.antenne.de/webradio/channels/hits-fuer-kids.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Hits fur Kids",
+  "url": "http://www.antenne.de/webradio/channels/hits-fuer-kids.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Kino Hits",
+  "url": "http://www.antenne.de/webradio/channels/kino-hits.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Kino Hits",
+  "url": "http://www.antenne.de/webradio/channels/kino-hits.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Lovesongs",
+  "url": "http://www.antenne.de/webradio/channels/lovesongs.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Lovesongs",
+  "url": "http://www.antenne.de/webradio/channels/lovesongs.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Oldies but Goldies",
+  "url": "http://www.antenne.de/webradio/channels/oldies-but-goldies.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Oldies but Goldies",
+  "url": "http://www.antenne.de/webradio/channels/oldies-but-goldies.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Partyschlager",
+  "url": "http://www.antenne.de/webradio/channels/das-schlager-karussell.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Partyschlager",
+  "url": "http://www.antenne.de/webradio/channels/das-schlager-karussell.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Top 40",
+  "url": "http://www.antenne.de/webradio/channels/top-40.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Top 40",
+  "url": "http://www.antenne.de/webradio/channels/top-40.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Brandenburg",
+  "url": "http://www.antennebrandenburg.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "B5 aktuel",
+  "url": "http://streams.br-online.de/b5aktuell_2.asx",
+  "radio": true
+ },
+ {
+  "name": "B5 plu",
+  "url": "http://streams.br-online.de/b5plus_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Bayern",
+  "url": "http://streams.br-online.de/bayern1_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Bayern",
+  "url": "http://streams.br-online.de/bayern2_2.asx",
+  "radio": true
+ },
+ {
+  "name": "BAYERN",
+  "url": "http://streams.br-online.de/bayern3_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Bayern plu",
+  "url": "http://streams.br-online.de/bayernplus_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Bayern Plus",
+  "url": "http://streams.br-online.de/bayernmobil_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR B5 aktuell",
+  "url": "http://streams.br-online.de/b5aktuell_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR B5 aktuell",
+  "url": "http://streams.br-online.de/b5aktuell_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR B5 plus",
+  "url": "http://streams.br-online.de/b5plus_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR B5 plus",
+  "url": "http://streams.br-online.de/b5plus_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 1",
+  "url": "http://streams.br-online.de/bayern1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 1",
+  "url": "http://streams.br-online.de/bayern1_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 2",
+  "url": "http://streams.br-online.de/bayern2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 2",
+  "url": "http://streams.br-online.de/bayern2_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 3",
+  "url": "http://streams.br-online.de/bayern3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern 3",
+  "url": "http://streams.br-online.de/bayern3_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern plus",
+  "url": "http://streams.br-online.de/bayernplus_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Bayern plus",
+  "url": "http://streams.br-online.de/bayernplus_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR BR-Klassik",
+  "url": "http://streams.br-online.de/br-klassik_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR BR-Klassik",
+  "url": "http://streams.br-online.de/br-klassik_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR Klassik",
+  "url": "http://streams.br-online.de/bayern4klassik_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR on3-radio",
+  "url": "http://streams.br-online.de/jugend-radio_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR on3-radio",
+  "url": "http://streams.br-online.de/jugend-radio_1.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR-KLASSI",
+  "url": "http://streams.br-online.de/br-klassik_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Bremen Eins",
+  "url": "http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w48",
+  "radio": true
+ },
+ {
+  "name": "Bremen Vier",
+  "url": "http://www.radiobremen.de/stream/live/bremenvier.m3u",
+  "radio": true
+ },
+ {
+  "name": "CrossChannel.d",
+  "url": "http://c14000-l.i.core.cdn.streamfarm.net/3095crosschannel_dsl.mp3",
+  "radio": false
+ },
+ {
+  "name": "DASDING",
+  "url": "http://mp3-live.dasding.de/dasding_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "DASDING Lautstark",
+  "url": "http://mp3-live.dasding.de/dasdingraka01_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "DASDING Plattenleger",
+  "url": "http://mp3-live.dasding.de/dasdingraka03_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "DASDING Sprechstunde",
+  "url": "http://mp3-live.dasding.de/dasdingraka02_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutsche Welle",
+  "url": "http://c13010-ls.i.core.cdn.streamfarm.net/dwworldlive-live/13010dwrde64.mp3",
+  "radio": true
+ },
+ {
+  "name": "Deutsche Welle",
+  "url": "http://c13010-ls.i.core.cdn.streamfarm.net/dwworldlive-live/13010dwrde32.ogg",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk",
+  "url": "http://www.dradio.de/streaming/dlf.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dlf_m_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dlf_s_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandradio Kultur",
+  "url": "http://www.dradio.de/streaming/dkultur.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandradio Kultur",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dkultur_m_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandradio Kultur",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dkultur_s_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "Dokumente und Debatte",
+  "url": "http://www.dradio.de/streaming/dplus.m3u",
+  "radio": true
+ },
+ {
+  "name": "DRadio Wissen",
+  "url": "http://www.dradio.de/streaming/dradiowissen.m3u",
+  "radio": true
+ },
+ {
+  "name": "DRadio Wissen",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dwissen_m_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "DRadio Wissen",
+  "url": "http://dradio.ic.llnwd.net/stream/dradio_dwissen_s_a.ogg",
+  "radio": true
+ },
+ {
+  "name": "ERF Plus Radi",
+  "url": "http://c14000-l.i.core.cdn.streamfarm.net/14000cina/live/3212erf_96/live_de_96.mp3",
+  "radio": false
+ },
+ {
+  "name": "ERF Pop Radi",
+  "url": "http://c14000-l.i.core.cdn.streamfarm.net/14000cina/live/2908erfpop/live_de_96.mp3",
+  "radio": false
+ },
+ {
+  "name": "FM4",
+  "url": "http://mp3stream1.apasf.apa.at:8000",
+  "radio": true
+ },
+ {
+  "name": "Fritz",
+  "url": "http://www.fritz.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Funkhaus Europa",
+  "url": "http://www.wdr.de/wdrlive/media/fhe.m3u",
+  "radio": true
+ },
+ {
+  "name": "Hitradio Südtiro",
+  "url": "http://www.radiosuedtirol.eu/radio_suedtirol.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr-iNFO",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hrinfo_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr1",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr2 Kultur",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr3",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr4",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr4_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Inforadio",
+  "url": "http://www.inforadio.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "KIRAKA",
+  "url": "http://www.wdr.de/wdrlive/media/kiraka.m3u",
+  "radio": true
+ },
+ {
+  "name": "KölnRadyosuNET",
+  "url": "http://www.wdr.de/wdrlive/media/koelnradyosunet.m3u",
+  "radio": true
+ },
+ {
+  "name": "Kulturradio",
+  "url": "http://www.kulturradio.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "MagicStar Hore",
+  "url": "http://streamserver.smartcast.de:8100",
+  "radio": false
+ },
+ {
+  "name": "Mallorca 95.8 Das Inselradi",
+  "url": "http://stream.live-inselradio.com:8000",
+  "radio": false
+ },
+ {
+  "name": "MDR 1 Radio Sachsen",
+  "url": "http://avw.mdr.de/livestreams/mdr1_radio_sachsen_live_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR 1 Radio Thüringen",
+  "url": "http://avw.mdr.de/livestreams/mdr1_radio_thueringen_live_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR FIGARO",
+  "url": "http://avw.mdr.de/livestreams/mdr_figaro_live_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR FIGARO - Classic in Concert",
+  "url": "http://avw.mdr.de/livestreams/mdr_figaro_classic_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR FIGARO - Figarino",
+  "url": "http://avw.mdr.de/livestreams/mdr_figaro_figarino_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR FIGARO - Folk in Concert",
+  "url": "http://avw.mdr.de/livestreams/mdr_figaro_folk_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR INFO",
+  "url": "http://avw.mdr.de/livestreams/mdr_info_live_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR JUMP",
+  "url": "http://www.jumpradio.de/static/webchannel/jump_live_channel_high.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR JUMP Piraten Channel",
+  "url": "http://www.jumpradio.de/static/webchannel/jump_piraten_channel_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR JUMP Rock Channel",
+  "url": "http://www.jumpradio.de/static/webchannel/jump_rock_channel_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR JUMP Trend Channel",
+  "url": "http://www.jumpradio.de/static/webchannel/jump_trend_channel_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR KLASSIK",
+  "url": "http://avw.mdr.de/livestreams/mdr_klassik_live_128.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Black Channel",
+  "url": "http://www.sputnik.de/m3u/black.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Club Channel",
+  "url": "http://www.sputnik.de/m3u/club.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Insomnia Channel",
+  "url": "http://www.sputnik.de/m3u/insomnia.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Makossa Channel",
+  "url": "http://www.sputnik.de/m3u/makossa.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK OnAir Channel",
+  "url": "http://www.sputnik.de/m3u/live.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Popkult Channel",
+  "url": "http://www.sputnik.de/m3u/popkult.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Rock Channel",
+  "url": "http://www.sputnik.de/m3u/rock.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "MDR SPUTNIK Soundcheck Channel",
+  "url": "http://www.sputnik.de/m3u/soundcheck.hi.m3u",
+  "radio": true
+ },
+ {
+  "name": "N-JOY",
+  "url": "http://ndrstream.ic.llnwd.net/stream/ndrstream_n-joy_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Abstrait",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop25_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Flavor Mix",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop7_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Frech & Freunde",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop27_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY IN THE MIX",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop28_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Soundfiles HipHop",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop6_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Soundfiles Rock",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop5_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "N-JOY Top 40",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop8_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Easy Sounds",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop23_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Rock",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop21_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Soul",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop22_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Soundcheck Live",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop15_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Soundcheck Milestones",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop16_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Soundcheck Musikszene Deutschland",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop17_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR 2 Soundcheck Neue Musik",
+  "url": "http://ndr.ic.llnwd.net/stream/ndr_ndrloop18_hi_mp",
+  "radio": true
+ },
+ {
+  "name": "NDR_Inf",
+  "url": "http://www.ndr.de/resources/metadaten/audio/m3u/ndrinfo.m3u",
+  "radio": false
+ },
+ {
+  "name": "NetRadioForum",
+  "url": "http://www.wdr.de/wdrlive/media/netradioforum.m3u",
+  "radio": true
+ },
+ {
+  "name": "Nordwestradio",
+  "url": "http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w50a.m3u",
+  "radio": true
+ },
+ {
+  "name": "Ö1",
+  "url": "http://mp3stream3.apasf.apa.at:8000",
+  "radio": true
+ },
+ {
+  "name": "Ö1 Campus",
+  "url": "http://mp3stream4.apasf.apa.at:8000",
+  "radio": true
+ },
+ {
+  "name": "Ö1 Inforadio",
+  "url": "http://194.232.200.155:8000",
+  "radio": true
+ },
+ {
+  "name": "on3-radi",
+  "url": "http://streams.br-online.de/jugend-radio_2.asx",
+  "radio": true
+ },
+ {
+  "name": "Radio B13",
+  "url": "http://icecast.ipax.at:8010/k001436-1.mp3",
+  "radio": true
+ },
+ {
+  "name": "Radio Hombur",
+  "url": "http://stream.telvi.de:8000/radio_homburg.xsp",
+  "radio": true
+ },
+ {
+  "name": "Radio Oberösterreich",
+  "url": "http://orfradio.liwest.at:80/liveHQ",
+  "radio": true
+ },
+ {
+  "name": "Radio Ramasur",
+  "url": "http://62.27.87.79:8000/ps-ramasuri/livestream.mp3",
+  "radio": true
+ },
+ {
+  "name": "Radio Sunshin",
+  "url": "http://62.75.144.133:8000",
+  "radio": true
+ },
+ {
+  "name": "Radio Wien",
+  "url": "http://mp3stream2.apasf.apa.at:8000",
+  "radio": true
+ },
+ {
+  "name": "radioBerlin 88,8",
+  "url": "http://www.radioberlin.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Radioeins",
+  "url": "http://www.radioeins.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Rai Bozen",
+  "url": "http://radiobzlive.rai.it/RAIBZ_Livestream",
+  "radio": true
+ },
+ {
+  "name": "Rock Antenne",
+  "url": "http://www.rockantenne.de/webradio/rockantenne-aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Rock Antenne",
+  "url": "http://www.rockantenne.de/webradio/rockantenne.m3u",
+  "radio": true
+ },
+ {
+  "name": "Schwarz",
+  "url": "http://streaming02.sr-online.de/unserding-schwarz.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 1 Europawelle",
+  "url": "http://streaming01.sr-online.de/sr1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 1-Klassiker",
+  "url": "http://streaming02.sr-online.de/sr1klassiker.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 1-Lounge",
+  "url": "http://streaming02.sr-online.de/sr1lounge.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 2 KulturRadio",
+  "url": "http://streaming01.sr-online.de/sr2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 2-OffBeat",
+  "url": "http://streaming02.sr-online.de/sr2offbeat.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3 Saarlandwelle",
+  "url": "http://streaming01.sr-online.de/sr3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3-OldieWelt",
+  "url": "http://streaming02.sr-online.de/sr3oldiewelt.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3-SchlagerWelt",
+  "url": "http://streaming02.sr-online.de/sr3schlagerwelt.m3u",
+  "radio": true
+ },
+ {
+  "name": "Südtirol 1",
+  "url": "http://str2.creacast.com:80/sudtirol1",
+  "radio": true
+ },
+ {
+  "name": "Swiss Mountain Holiday Radi",
+  "url": "http://s9.pop-stream.de:9600/;stream.mp3",
+  "radio": false
+ },
+ {
+  "name": "SWR cont.ra",
+  "url": "http://mp3-live.swr.de/contra_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR1 Baden-Württemberg",
+  "url": "http://mp3-live.swr.de/swr1bw_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR1 Rheinland-Pfalz",
+  "url": "http://mp3-live.swr.de/swr1rp_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR2",
+  "url": "http://mp3-live.swr.de/swr2_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR3",
+  "url": "http://mp3-live.swr3.de/swr3_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR4 Baden-Württemberg",
+  "url": "http://mp3-live.swr.de/swr4bw_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "SWR4 Rheinland-Pfalz",
+  "url": "http://mp3-live.swr.de/swr4rp_m.m3u",
+  "radio": true
+ },
+ {
+  "name": "The House Sound of The Hagu",
+  "url": "http://91.196.170.90:8000",
+  "radio": false
+ },
+ {
+  "name": "WDR 2 Aachen und Region",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_aachen.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Bergisches Land",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_wuppertal.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Münsterland",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_muenster.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Ostwestfalen-Lippe",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_bielefeld.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Radio",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2.asx",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Rhein und Ruhr",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_essen_duesseldorf.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Rheinland",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Ruhrgebiet",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_dortmund.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Südwestfalen",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_siegen.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR3",
+  "url": "http://www.wdr.de/wdrlive/media/wdr3.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR4",
+  "url": "http://www.wdr.de/wdrlive/media/wdr4.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR5",
+  "url": "http://www.wdr.de/wdrlive/media/wdr5.m3u",
+  "radio": true
+ },
+ {
+  "name": "YOU FM",
+  "url": "http://metafiles.gl-systemhaus.de/hr/youfm_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "YOU FM BLACK Musicstream",
+  "url": "http://metafiles.gl-systemhaus.de/hr/youfm_black.m3u",
+  "radio": true
+ },
+ {
+  "name": "YOU FM CLUB Musicstream",
+  "url": "http://metafiles.gl-systemhaus.de/hr/youfm_club.m3u",
+  "radio": true
+ },
+ {
+  "name": "YOU FM ROCK Musicstream",
+  "url": "http://metafiles.gl-systemhaus.de/hr/youfm_rock.m3u",
+  "radio": true
+ },
+ {
+  "name": "Zeiglers wunderbare Welt des Pop",
+  "url": "http://80.252.104.101:8000/zeiglerswwdp.m3u",
+  "radio": true
+ },
+ {
+  "name": "ZUKUNFT",
+  "url": "http://streaming02.sr-online.de/unserding-zukunft.m3u",
+  "radio": true
+ }
+]
