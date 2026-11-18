@@ -353,7 +353,6 @@ Item {
                                 deckTray.open()
                         }
                     }
-                    ToolTip.delay: 600
                     Accessible.role: Accessible.Button
                     Accessible.name: deckTray.tooltip
                 }
