@@ -79,7 +79,7 @@
 
     <LinearLayout
         android:id="@+id/panel"
-        android:layout_width="460dp"
+        android:layout_width="400dp"
         android:layout_height="match_parent"
         android:background="@color/panel"
         android:orientation="vertical"

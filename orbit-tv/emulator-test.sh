@@ -2,6 +2,7 @@
 # Läuft im Android-TV-Emulator (CI): installieren, starten, Fotos machen.
 set -x
 mkdir -p fotos
+adb shell wm density 320 && sleep 3
 adb install -r OrbitTV.apk
 adb shell am start -n de.orbitos.tv/.MainActivity
 sleep 12
