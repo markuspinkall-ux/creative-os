@@ -4,7 +4,8 @@
     "titel": "Aufgeräumtes Startmenü: Deck, Broadcast und Shots",
     "neu": [
       "Deck sitzt jetzt im Tray neben Broadcast: Ein Klick öffnet den Editor fürs Stream Deck, ein grüner Punkt zeigt, dass ein Gerät verbunden ist. Der Gerätedienst startet wie bisher automatisch mit der Anmeldung",
-      "Tabellen-Ansicht: Drucken mit Vorschau (Strg+P) – im Hoch- oder Querformat, ganzes Blatt oder nur die Auswahl, alle Spalten auf eine Seitenbreite, Gitternetzlinien und fixierte Kopfzeilen auf jeder Seite. Auch als PDF speichern. Querformat aus der Excel-Datei wird übernommen"
+      "Tabellen-Ansicht: Drucken mit Vorschau (Strg+P) – im Hoch- oder Querformat, ganzes Blatt oder nur die Auswahl, alle Spalten auf eine Seitenbreite, Gitternetzlinien und fixierte Kopfzeilen auf jeder Seite. Auch als PDF speichern. Querformat aus der Excel-Datei wird übernommen",
+      "Orbit TV (Fire-TV-App, separat zum Installieren): Das Erste, ZDF, Dritte und weitere öffentlich-rechtliche Sender direkt, 54 Radiosender, eigene M3U-Liste ladbar. Joyn- und RTL+-Sender laufen im offiziellen Web-Player mit deinem Konto, wahlweise über die offizielle App"
     ],
     "verbessert": [
       "Broadcast, Deck und Shots stehen nicht mehr im Startmenü: Broadcast und Deck öffnest du über den Tray, Shots über die Druck-Taste. Als Programm für eine Stream-Deck-Taste lassen sie sich weiterhin auswählen",
