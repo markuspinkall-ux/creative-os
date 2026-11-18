@@ -1,0 +1,212 @@
+[
+ {
+  "id": "das_erste",
+  "name": "Das Erste",
+  "group": "ARD",
+  "url": "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master.m3u8",
+  "color": "#001A4B"
+ },
+ {
+  "id": "zdf",
+  "name": "ZDF",
+  "group": "ZDF",
+  "url": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/high/master.m3u8",
+  "color": "#FA7D19"
+ },
+ {
+  "id": "arte",
+  "name": "arte",
+  "group": "ARD",
+  "url": "https://artesimulcast.akamaized.net/hls/live/2030993/artelive_de/index.m3u8",
+  "color": "#fa481c"
+ },
+ {
+  "id": "dreisat",
+  "name": "3sat",
+  "group": "ZDF",
+  "url": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/high/master.m3u8",
+  "color": "#E40A22"
+ },
+ {
+  "id": "phoenix",
+  "name": "phoenix",
+  "group": "ARD",
+  "url": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/high/master.m3u8",
+  "color": "#00687C"
+ },
+ {
+  "id": "kika",
+  "name": "KiKA",
+  "group": "ARD",
+  "url": "https://kikageohls.akamaized.net/hls/live/2022693/livetvkika_de/master.m3u8",
+  "color": "#015B63"
+ },
+ {
+  "id": "zdf_neo",
+  "name": "ZDFneo",
+  "group": "ZDF",
+  "url": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/high/master.m3u8",
+  "color": "#D1195C"
+ },
+ {
+  "id": "zdf_info",
+  "name": "ZDFinfo",
+  "group": "ZDF",
+  "url": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/high/master.m3u8",
+  "color": "#FA7D19"
+ },
+ {
+  "id": "one",
+  "name": "ONE",
+  "group": "ARD",
+  "url": "https://mcdn.one.ard.de/ardone/hls/master.m3u8",
+  "color": "#D6004F"
+ },
+ {
+  "id": "tagesschau24",
+  "name": "tagesschau24",
+  "group": "ARD",
+  "url": "http://tagesschau-lh.akamaihd.net/i/tagesschau_1@119231/master.m3u8",
+  "color": "#001A4B"
+ },
+ {
+  "id": "ard_alpha",
+  "name": "ARD-alpha",
+  "group": "ARD",
+  "url": "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master.m3u8",
+  "color": "#262626"
+ },
+ {
+  "id": "br_nord",
+  "name": "BR Nord",
+  "group": "Dritte",
+  "url": "https://mcdn.br.de/br/fs/bfs_nord/hls/de/master.m3u8",
+  "color": "#0079C1"
+ },
+ {
+  "id": "br_sued",
+  "name": "BR Süd",
+  "group": "Dritte",
+  "url": "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master.m3u8",
+  "color": "#0079C1"
+ },
+ {
+  "id": "hr",
+  "name": "HR",
+  "group": "Dritte",
+  "url": "https://hrhls.akamaized.net/hls/live/2024525/hrhls/index.m3u8",
+  "color": "#007396"
+ },
+ {
+  "id": "mdr_sachsen",
+  "name": "MDR Sachsen",
+  "group": "Dritte",
+  "url": "https://mdrtvsnhls.akamaized.net/hls/live/2016928/mdrtvsn/master.m3u8",
+  "color": "#0063AF"
+ },
+ {
+  "id": "mdr_sachsen_anhalt",
+  "name": "MDR Sachsen-Anhalt",
+  "group": "Dritte",
+  "url": "https://mdrtvsahls.akamaized.net/hls/live/2016879/mdrtvsa/master.m3u8",
+  "color": "#0063AF"
+ },
+ {
+  "id": "mdr_thueringen",
+  "name": "MDR Thüringen",
+  "group": "Dritte",
+  "url": "https://mdrtvthhls.akamaized.net/hls/live/2016880/mdrtvth/master.m3u8",
+  "color": "#0063AF"
+ },
+ {
+  "id": "ndr_hh",
+  "name": "NDR Hamburg",
+  "group": "Dritte",
+  "url": "https://ndrfs-lh.akamaihd.net/i/ndrfs_hh@430231/master.m3u8",
+  "color": "#173E7D"
+ },
+ {
+  "id": "ndr_mv",
+  "name": "NDR Mecklenburg-Vorpommern",
+  "group": "Dritte",
+  "url": "https://ndrfs-lh.akamaihd.net/i/ndrfs_mv@430232/master.m3u8",
+  "color": "#173E7D"
+ },
+ {
+  "id": "ndr_nds",
+  "name": "NDR Niedersachsen",
+  "group": "Dritte",
+  "url": "https://ndrfs-lh.akamaihd.net/i/ndrfs_nds@430233/master.m3u8",
+  "color": "#173E7D"
+ },
+ {
+  "id": "ndr_sh",
+  "name": "NDR Schleswig-Holstein",
+  "group": "Dritte",
+  "url": "https://ndrfs-lh.akamaihd.net/i/ndrfs_sh@430234/master.m3u8",
+  "color": "#173E7D"
+ },
+ {
+  "id": "rbb_berlin",
+  "name": "rbb Fernsehen Berlin",
+  "group": "Dritte",
+  "url": "https://rbb-hls-berlin.akamaized.net/hls/live/2017824/rbb_berlin/index.m3u8",
+  "color": "#E31818"
+ },
+ {
+  "id": "rbb_brandenburg",
+  "name": "rbb Fernsehen Brandenburg",
+  "group": "Dritte",
+  "url": "https://rbb-hls-brandenburg.akamaized.net/hls/live/2017825/rbb_brandenburg/index.m3u8",
+  "color": "#E31818"
+ },
+ {
+  "id": "rb",
+  "name": "Radio Bremen",
+  "group": "Dritte",
+  "url": "https://rbhlslive.akamaized.net/hls/live/2020435/rbfs/master.m3u8",
+  "color": "#CC030C"
+ },
+ {
+  "id": "sr",
+  "name": "SR",
+  "group": "Dritte",
+  "url": "https://srfs.akamaized.net/hls/live/689649/srfsgeo/master.m3u8",
+  "color": "#007796"
+ },
+ {
+  "id": "swr_bw",
+  "name": "SWR Baden-Württemberg",
+  "group": "Dritte",
+  "url": "https://swrbwhls-i.akamaihd.net/hls/live/667638/swrbwd/master.m3u8",
+  "color": "#1D0B40"
+ },
+ {
+  "id": "swr_rp",
+  "name": "SWR Rheinland-Pfalz",
+  "group": "Dritte",
+  "url": "https://swrrphls-i.akamaihd.net/hls/live/667639/swrrpd/master.m3u8",
+  "color": "#1D0B40"
+ },
+ {
+  "id": "wdr",
+  "name": "WDR",
+  "group": "Dritte",
+  "url": "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master.m3u8",
+  "color": "#00375A"
+ },
+ {
+  "id": "parlamentsfernsehen_1",
+  "name": "Bundestag 1",
+  "group": "ARD",
+  "url": "https://cldf-hlsgw.r53.cdn.tv1.eu/1000153copo/hk1.m3u8",
+  "color": "#444444"
+ },
+ {
+  "id": "parlamentsfernsehen_2",
+  "name": "Bundestag 2",
+  "group": "ARD",
+  "url": "https://cldf-hlsgw.r53.cdn.tv1.eu/1000153copo/hk2.m3u8",
+  "color": "#444444"
+ }
+]
