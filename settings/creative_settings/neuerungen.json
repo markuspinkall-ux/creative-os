@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-18",
+    "titel": "Capture hält den PC wach",
+    "neu": [],
+    "verbessert": [
+      "Capture: Solange das Fenster offen ist, geht der PC nicht in den Standby, der Bildschirm dunkelt nicht ab und sperrt nicht – praktisch beim Zocken über die Capture-Karte",
+      "Capture: Die passende Tonquelle wird jetzt auch bei eingebauten PCIe-Capture-Karten (z. B. Elgato 4K60 Pro, AVerMedia Live Gamer 4K) automatisch gefunden – nicht mehr nur bei USB-Karten"
+    ]
+  },
+  {
     "datum": "2026-11-17",
     "titel": "Aus Creative OS wird Orbit OS – und: Start hängt nicht mehr am Bootlogo",
     "neu": [

@@ -28,6 +28,31 @@ class AudioRoutingTests(unittest.TestCase):
             self.assertEqual(routing.usb_parent(video), str(usb))
             self.assertEqual(routing.usb_parent(audio), str(usb))
 
+    def test_pcie_card_video_and_audio_on_same_slot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            slot = Path(tmp) / 'pci0000:00' / '0000:00:1c.0'
+            video = slot / '0000:03:00.0' / 'video4linux' / 'video0'
+            audio = slot / '0000:03:00.1' / 'sound' / 'card2'
+            gpu_audio = Path(tmp) / 'pci0000:00' / '0000:01:00.1' / 'sound' / 'card1'
+            for d in (video, audio, gpu_audio):
+                d.mkdir(parents=True)
+            for d in (slot / '0000:03:00.0', slot / '0000:03:00.1', Path(tmp) / 'pci0000:00' / '0000:01:00.1', slot):
+                (d / 'vendor').write_text('0x1cd7')
+            self.assertEqual(routing.device_key(video), 'pci:0000:03:00')
+            self.assertEqual(routing.device_key(audio), routing.device_key(video))
+            self.assertNotEqual(routing.device_key(gpu_audio), routing.device_key(video))
+
+    def test_usb_wins_over_pci_controller(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ctrl = Path(tmp) / '0000:00:14.0'
+            usb = ctrl / 'usb1' / '1-2'
+            video = usb / '1-2:1.0' / 'video4linux' / 'video2'
+            video.mkdir(parents=True)
+            (ctrl / 'vendor').write_text('0x8086')
+            (usb / 'idVendor').write_text('07ca')
+            (usb / 'idProduct').write_text('0337')
+            self.assertEqual(routing.device_key(video), str(usb))
+
     def test_selects_same_usb_device_instead_of_camera(self):
         sources = [{'name': 'camera', 'properties': {'physical': '/usb/camera'}},
                    {'name': 'capture', 'properties': {'physical': '/usb/capture'}}]
