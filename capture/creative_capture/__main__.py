@@ -218,6 +218,9 @@ def main():
         print("Capture: Selbsttest bestanden")
         return 0
     win = engine.rootObjects()[0]
+    from .wach import WachHalten
+    wach = WachHalten().start()                 # solange Capture offen ist: kein Standby
+    app.aboutToQuit.connect(wach.stop)
     from PySide6.QtNetwork import QLocalServer
     server = QLocalServer()
     QLocalServer.removeServer(SERVER)
