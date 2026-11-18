@@ -253,7 +253,7 @@ def dialog(parent, sheet, titel, auswahl=None):
     root.setContentsMargins(0, 0, 0, 0)
     root.setSpacing(0)
     preview = QPrintPreviewWidget(printer)
-    preview.setStyleSheet("background: #12151b;")
+    preview.setStyleSheet("QGraphicsView { background: #12151b; border: 0; }")
     root.addWidget(preview, 1)
 
     side = QFrame(objectName="bar")
