@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 const {
-  app, BaseWindow, WebContentsView, ipcMain, session, protocol, net, clipboard, shell, nativeTheme,
+  app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, session, protocol, net, clipboard, shell, nativeTheme,
 } = require('electron');
 const { Store, ENGINES } = require('./store');
 const { AdBlock } = require('./adblock');
@@ -257,8 +257,25 @@ function prepareSession(ses, isPrivate) {
     });
     const w = windowOf(wc);
     if (w) w.send('download-started', d.name);
+    // Leeres Hilfsfenster (Download aus einer Web-App) wieder schließen
+    const popup = wc && BrowserWindow.fromWebContents(wc);
+    if (popup && ![...windows].some((x) => x.win === popup) && /^(about:blank)?$/.test(wc.getURL())) {
+      setTimeout(() => { if (!popup.isDestroyed()) popup.close(); }, 800);
+    }
     broadcast();
   });
+}
+
+function siteOf(u) {
+  try {
+    const h = new URL(u).hostname;
+    return h.split('.').slice(-2).join('.');
+  } catch (_) { return ''; }
+}
+
+function sameSite(a, b) {
+  const x = siteOf(a);
+  return !!x && x === siteOf(b);
 }
 
 function originOf(u) {
@@ -436,8 +453,19 @@ class Win {
         return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 520, height: 680 } };
       }
       if (details.disposition === 'other' || details.disposition === 'save-to-disk') return { action: 'deny' };
-      if (tab.win.appMode) {          // Web-App: Links öffnen im normalen Browser
-        openInBrowser(details.url);
+      if (tab.win.appMode) {
+        // Web-App (Claude, WhatsApp …): Dateien aus der App bleiben in der App. Blob-/Data-Adressen
+        // gibt es nur in dieser Sitzung – im normalen Browser wären sie leer, der Download-Knopf
+        // „reagierte nicht“. Adressen derselben Seite (z. B. claude.ai/api/…/download) brauchen die
+        // Anmeldung der App: kleines App-Fenster; wird daraus ein Download, schließt es sich wieder.
+        if (/^(blob|data):/i.test(details.url)) {
+          wc.downloadURL(details.url);
+          return { action: 'deny' };
+        }
+        if (sameSite(details.url, wc.getURL())) {
+          return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 900, height: 700 } };
+        }
+        openInBrowser(details.url);     // fremde Links öffnen im normalen Browser
         return { action: 'deny' };
       }
       const background = details.disposition === 'background-tab';
