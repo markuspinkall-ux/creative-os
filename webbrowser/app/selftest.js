@@ -278,13 +278,31 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       check('Download per Link in neuem Fenster', names.some((n) => n.startsWith('probe-fenster')));
       check('Download per Blob', names.some((n) => n.startsWith('probe-blob')));
     }
+    // Web-App (wie Claude): Datei per window.open(blob:) muss in der App heruntergeladen werden
+    {
+      const page = path.join(dir, 'webapp-download.html');
+      fs.writeFileSync(page, `<!doctype html><body><button id="d4">Datei</button>
+        <script>document.getElementById('d4').onclick = () => {
+          window.open(URL.createObjectURL(new Blob(['vier'], { type: 'application/gzip' })), '_blank'); };</script>`);
+      const vorher = downloads.length;
+      const appWin = new Win({ urls: [require('url').pathToFileURL(page).href], appMode: true });
+      await waitLoad(appWin.ui.webContents);
+      await sleep(800);
+      if (appWin.active) await waitLoad(appWin.active.wc);
+      await sleep(500);
+      if (appWin.active) await within(appWin.active.wc.executeJavaScript(`document.getElementById('d4').click()`, true), 3000, null);
+      await sleep(3000);
+      result.appDownloads = downloads.slice(0, downloads.length - vorher).map((d) => d.name);
+      check('Download aus einer Web-App (blob, neues Fenster)', downloads.length > vorher);
+      try { appWin.win.close(); } catch (_) { /* egal */ }
+    }
     result.ok = Object.values(result.checks).every(Boolean);
   } catch (e) {
     result.error = String(e && e.stack || e);
   }
   fs.writeFileSync(path.join(dir, 'ergebnis.json'), JSON.stringify(result, null, 2));
   for (const [k, v] of Object.entries(result.checks)) console.log(`${v ? 'ok  ' : 'FEHLER'} ${k}`);
-  console.log(JSON.stringify({ video: result.video, online: result.online, downloads: result.downloads, error: result.error }, null, 1));
+  console.log(JSON.stringify({ video: result.video, online: result.online, downloads: result.downloads, appDownloads: result.appDownloads, error: result.error }, null, 1));
   console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
