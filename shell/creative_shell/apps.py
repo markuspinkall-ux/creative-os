@@ -39,11 +39,13 @@ FOLDER_ID = "creative-apps-ordner"
 FOLDER_NAME = "Orbit Suite"
 NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop"}   # Browser gehört direkt ins Startmenü
 SUITE = {
-    "creative-art.desktop", "creative-broadcast.desktop", "creative-capture.desktop", "creative-3d.desktop",
-    "creative-cut.desktop", "creative-deck.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
+    "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
+    "creative-cut.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
-    "creative-shots.desktop", "creative-widgets.desktop", "creative-writer.desktop",
+    "creative-widgets.desktop", "creative-writer.desktop",
 }
+# Broadcast, Deck und Shots stehen nicht im Startmenü (NoDisplay): Broadcast und Deck leben im
+# Tray, Shots startet mit der Druck-Taste.
 OLD_PREFIX = "Creative "        # alte Namen (z. B. ältere Engine-Flatpaks) ohne „Creative“ anzeigen
 
 

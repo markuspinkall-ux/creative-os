@@ -319,6 +319,45 @@ Item {
                     Accessible.name: broadcast.tooltip
                 }
 
+                // Deck: öffnet den Stream-Deck-Editor; Punkt = Gerät verbunden
+                Rectangle {
+                    id: deckBtn
+                    visible: deckTray.available
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30
+                    height: 30
+                    radius: 8
+                    color: deckMouse.containsMouse ? Theme.hover : "transparent"
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        name: "deck"
+                        size: 17
+                        opacity: deckTray.connected ? 1 : 0.8
+                    }
+                    Rectangle {
+                        visible: deckTray.connected
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 3
+                        width: 6; height: 6; radius: 3
+                        color: Theme.ok
+                    }
+                    MouseArea {
+                        id: deckMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            shell.closePopups()
+                            if (!tasks.focusApp("creative-deck.desktop"))
+                                deckTray.open()
+                        }
+                    }
+                    ToolTip.delay: 600
+                    Accessible.role: Accessible.Button
+                    Accessible.name: deckTray.tooltip
+                }
+
                 // Papierkorb: Klick öffnet ihn, Rechtsklick zeigt „Leeren“
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter

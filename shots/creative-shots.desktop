@@ -10,6 +10,8 @@ Terminal=false
 Categories=Utility;Graphics;
 StartupWMClass=creative-shots
 Actions=Snip;Screen;
+NoDisplay=true
+X-Orbit-Tray=true
 
 [Desktop Action Snip]
 Name=Bereich aufnehmen

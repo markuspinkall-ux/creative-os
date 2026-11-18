@@ -9,3 +9,5 @@ Icon=creative-deck
 Terminal=false
 Categories=Utility;AudioVideo;
 StartupWMClass=creative-deck
+NoDisplay=true
+X-Orbit-Tray=true

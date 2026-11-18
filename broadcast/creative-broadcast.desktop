@@ -9,3 +9,5 @@ Icon=creative-broadcast
 Terminal=false
 Categories=AudioVideo;Video;Audio;
 StartupWMClass=creative-broadcast
+NoDisplay=true
+X-Orbit-Tray=true

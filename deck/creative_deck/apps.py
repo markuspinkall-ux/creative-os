@@ -63,7 +63,9 @@ def installed():
                 continue
             seen.add(p.name)
             e = _parse(p) or {}
-            if e.get("Type", "Application") != "Application" or e.get("NoDisplay") == "true" \
+            # Tray-Apps (Broadcast, Shots, Messenger …) sind nur im Startmenü versteckt – fürs Deck wählbar
+            hidden = e.get("NoDisplay") == "true" and e.get("X-Orbit-Tray") != "true"
+            if e.get("Type", "Application") != "Application" or hidden \
                     or e.get("Hidden") == "true" or not e.get("Exec"):
                 continue
             apps.append({"id": p.name, "name": e.get("Name[de]") or e.get("Name") or p.stem,

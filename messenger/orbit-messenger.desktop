@@ -8,3 +8,4 @@ Terminal=false
 NoDisplay=true
 StartupWMClass=orbit-messenger
 Categories=Network;InstantMessaging;
+X-Orbit-Tray=true
