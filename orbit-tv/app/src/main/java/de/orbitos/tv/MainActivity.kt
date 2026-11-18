@@ -106,7 +106,23 @@ class MainActivity : Activity() {
             }
         }.start()
 
-        if (savedInstanceState == null) ui.postDelayed({ showPanel() }, 600)
+        if (savedInstanceState == null) ui.postDelayed({ showPanel(); handleIntent(intent) }, 600)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** Direktwahl per Intent (z. B. adb: --es gruppe Radio / --es sender sat1). */
+    private fun handleIntent(intent: android.content.Intent?) {
+        intent ?: return
+        intent.getStringExtra("gruppe")?.let { g ->
+            val i = store.groups().indexOf(g)
+            if (i >= 0) { groupIndex = i; showPanel(focusId = null) }
+        }
+        intent.getStringExtra("sender")?.let { id -> store.byId(id)?.let { select(it) } }
+        intent.removeExtra("gruppe"); intent.removeExtra("sender")
     }
 
     override fun onStart() {
