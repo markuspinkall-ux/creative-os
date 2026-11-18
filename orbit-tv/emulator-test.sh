@@ -17,5 +17,19 @@ adb exec-out screencap -p > fotos/tv-4-optionen.png
 adb shell input keyevent KEYCODE_BACK; sleep 1
 adb shell input keyevent KEYCODE_BACK; sleep 2
 adb exec-out screencap -p > fotos/tv-5-sender.png
+# Radio-Gruppe
+adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 2
+for i in 1 2 3 4 5 6 7; do adb shell input keyevent KEYCODE_DPAD_RIGHT; sleep 1; done
+adb exec-out screencap -p > fotos/tv-6-radio.png
+adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 8
+adb exec-out screencap -p > fotos/tv-7-radio-laeuft.png
+# Joyn im Web-Player
+adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 2
+for i in 1 2; do adb shell input keyevent KEYCODE_DPAD_LEFT; sleep 1; done
+adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 15
+adb exec-out screencap -p > fotos/tv-8-joyn-web.png
+adb shell input keyevent KEYCODE_DPAD_RIGHT; adb shell input keyevent KEYCODE_DPAD_RIGHT; sleep 1
+adb exec-out screencap -p > fotos/tv-9-zeiger.png
+adb shell input keyevent KEYCODE_BACK; sleep 1; adb shell input keyevent KEYCODE_BACK; sleep 2
 adb logcat -d -s AndroidRuntime:E ExoPlayerImplInternal:E MediaCodecVideoRenderer:E > fotos/log.txt || true
 adb shell pidof de.orbitos.tv && echo "App läuft noch" || echo "APP ABGESTÜRZT"

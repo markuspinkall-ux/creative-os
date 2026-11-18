@@ -21,6 +21,7 @@ import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MainActivity : Activity() {
     private lateinit var store: ChannelStore
     private lateinit var player: ExoPlayer
@@ -60,7 +61,13 @@ class MainActivity : Activity() {
         info = findViewById(R.id.info)
         message = findViewById(R.id.message)
 
-        player = ExoPlayer.Builder(this).build()
+        // Weiterleitungen von http auf https erlauben (viele Radio- und Senderadressen leiten um)
+        val http = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent("OrbitTV/1.0 (Fire TV)")
+        val sources = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+            androidx.media3.datasource.DefaultDataSource.Factory(this, http))
+        player = ExoPlayer.Builder(this).setMediaSourceFactory(sources).build()
         playerView.player = player
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -91,6 +98,9 @@ class MainActivity : Activity() {
         // Stream-Adressen aktualisieren; ändert sich die des laufenden Senders, neu starten
         Thread {
             val before = current?.url
+            store.m3uUrl.takeIf { it.isNotBlank() }?.let { url ->
+                store.fetchM3u(url)?.let { (text, list) -> ui.post { store.applyM3u(url, text, list) } }
+            }
             if (store.refreshStreams()) {
                 ui.post { current?.let { if (it.url != before) play(it) } }
             }
@@ -121,12 +131,19 @@ class MainActivity : Activity() {
     private fun play(ch: Channel) {
         current = ch
         store.lastChannel = ch.id
-        val item = MediaItem.Builder().setUri(ch.url).setMimeType(MimeTypes.APPLICATION_M3U8).build()
-        player.setMediaItem(item)
-        player.prepare()
-        player.playWhenReady = true
         showInfo(ch)
         adapter.notifyDataSetChanged()
+        Thread {
+            val url = ChannelStore.resolvePlaylist(ch.url)
+            ui.post {
+                if (current?.id != ch.id) return@post
+                val builder = MediaItem.Builder().setUri(url)
+                if (url.contains(".m3u8", ignoreCase = true)) builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+                player.setMediaItem(builder.build())
+                player.prepare()
+                player.playWhenReady = true
+            }
+        }.start()
     }
 
     /** Sender wählen: öffentlich-rechtliche laufen hier, Joyn/RTL+ in der offiziellen App. */
@@ -136,6 +153,13 @@ class MainActivity : Activity() {
             retried = false
             play(ch)
             hidePanel()
+            return
+        }
+        if (!usesApp(ch.kind)) {
+            startActivity(android.content.Intent(this, WebPlayerActivity::class.java)
+                .putExtra(WebPlayerActivity.EXTRA_URL, partner.webUrl)
+                .putExtra(WebPlayerActivity.EXTRA_KIND, if (ch.kind == Kind.RTL) "rtl" else "joyn"))
+            Toast.makeText(this, "${partner.name}: ${ch.name} in der Senderliste wählen", Toast.LENGTH_LONG).show()
             return
         }
         if (Partners.open(this, partner)) {
@@ -174,7 +198,7 @@ class MainActivity : Activity() {
         now.text = ""
         info.visibility = View.VISIBLE
         ui.removeCallbacks(hideInfo)
-        ui.postDelayed(hideInfo, 5000)
+        if (ch.radio) now.text = "Radio" else ui.postDelayed(hideInfo, 5000)   // bei Radio bleibt die Anzeige stehen
         Thread {
             val text = store.nowPlaying(ch)
             ui.post { if (current?.id == ch.id && text != null) now.text = "Jetzt: $text" }
@@ -193,7 +217,7 @@ class MainActivity : Activity() {
         setColor(color)
     }
 
-    private fun group() = ChannelStore.GROUPS[groupIndex]
+    private fun group() = store.groups().let { it[groupIndex.coerceIn(0, it.size - 1)] }
 
     private fun showPanel(focusId: String? = current?.id) {
         shown = store.list(group())
@@ -223,13 +247,20 @@ class MainActivity : Activity() {
     }
 
     private fun changeGroup(delta: Int) {
-        groupIndex = (groupIndex + delta + ChannelStore.GROUPS.size) % ChannelStore.GROUPS.size
+        val n = store.groups().size
+        groupIndex = (groupIndex + delta + n) % n
         showPanel(focusId = null)
         if (shown.isEmpty()) {
             showMessage(if (group() == ChannelStore.GROUP_FAV) "Noch keine Favoriten.\nAuf einem Sender ☰ drücken → Favorit."
             else "Hier ist kein Sender.", 2500)
         }
     }
+
+    private fun usesApp(kind: Kind) =
+        getSharedPreferences("orbit_tv", MODE_PRIVATE).getBoolean("app_" + kind.name, false)
+
+    private fun setUsesApp(kind: Kind, app: Boolean) =
+        getSharedPreferences("orbit_tv", MODE_PRIVATE).edit().putBoolean("app_" + kind.name, app).apply()
 
     private fun options(ch: Channel) {
         val fav = ch.id in store.favorites
@@ -240,7 +271,10 @@ class MainActivity : Activity() {
             "▼ Nach unten schieben",
             if (hidden) "Wieder einblenden" else "Ausblenden",
             "Reihenfolge zurücksetzen",
-        )
+            if (store.m3uUrl.isBlank()) "Eigene M3U-Liste laden …" else "Eigene M3U-Liste ändern …",
+        ) + (Partners.of(ch.kind)?.let { p ->
+            arrayOf(if (usesApp(ch.kind)) "${p.name}: im Web-Player in Orbit TV öffnen" else "${p.name}: lieber die ${p.name}-App öffnen")
+        } ?: emptyArray())
         AlertDialog.Builder(this, R.style.OrbitTV_Dialog)
             .setTitle(ch.name)
             .setItems(items) { _, which ->
@@ -250,10 +284,46 @@ class MainActivity : Activity() {
                     2 -> store.move(ch, +1, group())
                     3 -> store.toggleHidden(ch)
                     4 -> store.resetOrder()
+                    5 -> { m3uDialog(); return@setItems }
+                    6 -> setUsesApp(ch.kind, !usesApp(ch.kind))
                 }
                 showPanel(focusId = ch.id)
             }
             .show()
+    }
+
+    /** Adresse einer M3U-Liste eingeben; die Sender erscheinen als eigene Gruppen. */
+    private fun m3uDialog() {
+        val input = android.widget.EditText(this).apply {
+            setText(store.m3uUrl.ifBlank { "https://" })
+            setSingleLine()
+            inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
+            setTextColor(getColor(R.color.text))
+        }
+        val b = AlertDialog.Builder(this, R.style.OrbitTV_Dialog)
+            .setTitle("Eigene M3U-Liste")
+            .setMessage("Adresse der Liste eingeben. Die Sender kommen in eigene Gruppen und werden bei jedem Start neu geladen.")
+            .setView(input)
+            .setPositiveButton("Laden") { _, _ ->
+                val url = input.text.toString().trim()
+                showMessage("Liste wird geladen …", 15000)
+                Thread {
+                    val got = store.fetchM3u(url)
+                    ui.post {
+                        got?.let { (text, list) -> store.applyM3u(url, text, list) }
+                        val n = got?.second?.size
+                        showMessage(when (n) {
+                            null -> "Liste nicht erreichbar."
+                            0 -> "In der Liste sind keine abspielbaren Sender (nur http/https)."
+                            else -> "$n Sender aus der Liste geladen."
+                        }, 4000)
+                        if (panel.visibility == View.VISIBLE) showPanel()
+                    }
+                }.start()
+            }
+            .setNegativeButton("Abbrechen", null)
+        if (store.m3uUrl.isNotBlank()) b.setNeutralButton("Liste entfernen") { _, _ -> store.removeM3u(); showPanel() }
+        b.show()
     }
 
     // ---- Fernbedienung ------------------------------------------------------------------------

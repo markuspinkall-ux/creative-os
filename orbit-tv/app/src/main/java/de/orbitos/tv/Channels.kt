@@ -17,6 +17,7 @@ data class Channel(
     val kind: Kind,
     var url: String,
     val color: Int,
+    val radio: Boolean = false,
 )
 
 /**
@@ -26,7 +27,7 @@ data class Channel(
  */
 class ChannelStore(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("orbit_tv", Context.MODE_PRIVATE)
-    private val all: List<Channel> = load()
+    private val all: MutableList<Channel> = (load() + loadExtra() + parseM3u(prefs.getString("m3u_inhalt", "") ?: "")).toMutableList()
 
     val favorites: MutableSet<String> = prefs.getStringSet("favoriten", emptySet())!!.toMutableSet()
     val hidden: MutableSet<String> = prefs.getStringSet("ausgeblendet", emptySet())!!.toMutableSet()
@@ -56,6 +57,54 @@ class ChannelStore(private val context: Context) {
     }
 
     fun byId(id: String?): Channel? = all.firstOrNull { it.id == id }
+
+    /** Zusätzliche frei empfangbare Sender (Regionalfernsehen, Radio), in CI auf Erreichbarkeit geprüft. */
+    private fun loadExtra(): List<Channel> {
+        val text = runCatching { context.assets.open("extra.json").bufferedReader(Charsets.UTF_8).use { it.readText() } }
+            .getOrNull() ?: return emptyList()
+        val arr = JSONArray(text)
+        return (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            val radio = o.optBoolean("radio")
+            Channel("extra:" + o.getString("url").hashCode(), o.getString("name"), if (radio) "Radio" else "Regional",
+                Kind.STREAM, o.getString("url"), if (radio) 0xFF3B4A6B.toInt() else 0xFF2E5E4E.toInt(), radio)
+        }
+    }
+
+    /** Alle Gruppen: feste, dann die aus Zusatzsendern und eigener M3U-Liste, „Ausgeblendet“ zuletzt. */
+    fun groups(): List<String> {
+        val fixed = GROUPS.filter { it != GROUP_HIDDEN }
+        val extra = all.map { it.group }.distinct().filter { it !in fixed }
+        return fixed + extra + GROUP_HIDDEN
+    }
+
+    var m3uUrl: String
+        get() = prefs.getString("m3u_url", "") ?: ""
+        private set(v) { prefs.edit().putString("m3u_url", v).apply() }
+
+    /** Eigene M3U-Liste holen (im Hintergrund aufrufen): Text und Sender, oder null bei Fehler. */
+    fun fetchM3u(url: String): Pair<String, List<Channel>>? {
+        val text = httpGet(url) ?: return null
+        return text to parseM3u(text)
+    }
+
+    /** Geholte Liste übernehmen (auf dem UI-Thread aufrufen). */
+    fun applyM3u(url: String, text: String, list: List<Channel>) {
+        if (list.isEmpty()) return
+        all.removeAll { it.id.startsWith("m3u:") }
+        all.addAll(list)
+        order.removeAll { it.startsWith("m3u:") }
+        order.addAll(list.map { it.id })
+        m3uUrl = url
+        prefs.edit().putString("m3u_inhalt", text).putString("reihenfolge", order.joinToString(",")).apply()
+    }
+
+    fun removeM3u() {
+        all.removeAll { it.id.startsWith("m3u:") }
+        order.removeAll { it.startsWith("m3u:") }
+        m3uUrl = ""
+        prefs.edit().remove("m3u_inhalt").putString("reihenfolge", order.joinToString(",")).apply()
+    }
 
     /** Sender in deiner Reihenfolge; ausgeblendete nur in der Gruppe „Ausgeblendet“. */
     fun list(group: String): List<Channel> {
@@ -130,6 +179,34 @@ class ChannelStore(private val context: Context) {
     }
 
     companion object {
+        /** #EXTINF-Zeilen lesen: Name nach dem Komma, group-title als Gruppe. Nur http(s)-Adressen. */
+        fun parseM3u(text: String): List<Channel> {
+            val out = mutableListOf<Channel>()
+            var name: String? = null
+            var group: String? = null
+            for (raw in text.lines()) {
+                val line = raw.trim()
+                when {
+                    line.startsWith("#EXTINF", ignoreCase = true) -> {
+                        name = line.substringAfter(",", "").trim().ifBlank { null }
+                        group = Regex("group-title=\"([^\"]*)\"").find(line)?.groupValues?.get(1)?.ifBlank { null }
+                    }
+                    line.isEmpty() || line.startsWith("#") -> {}
+                    else -> {
+                        if (line.startsWith("http://", true) || line.startsWith("https://", true)) {
+                            val n = name ?: line.substringAfterLast("/").take(40)
+                            val radio = Regex("\\.(mp3|aac|ogg)(\\?|$)", RegexOption.IGNORE_CASE).containsMatchIn(line)
+                            out += Channel("m3u:" + line.hashCode(), n, group ?: "Eigene Liste", Kind.STREAM, line,
+                                0xFF4A4F63.toInt(), radio)
+                        }
+                        name = null
+                        group = null
+                    }
+                }
+            }
+            return out.distinctBy { it.id }
+        }
+
         const val GROUP_ALL = "Alle"
         const val GROUP_FAV = "Favoriten"
         const val GROUP_HIDDEN = "Ausgeblendet"
@@ -137,15 +214,41 @@ class ChannelStore(private val context: Context) {
         private const val ZAPP_API = "https://api.zapp.mediathekview.de/v1"
 
         fun httpGet(url: String): String? = runCatching {
-            val c = URL(url).openConnection() as HttpURLConnection
-            c.connectTimeout = 6000
-            c.readTimeout = 6000
-            c.setRequestProperty("User-Agent", "OrbitTV/1.0 (Fire TV)")
-            try {
-                if (c.responseCode != 200) null else c.inputStream.bufferedReader().use { it.readText() }
-            } finally {
-                c.disconnect()
+            var target = url
+            var result: String? = null
+            for (hop in 0 until 5) {                     // Weiterleitungen auch von http nach https folgen
+                val c = URL(target).openConnection() as HttpURLConnection
+                c.connectTimeout = 6000
+                c.readTimeout = 6000
+                c.instanceFollowRedirects = false
+                c.setRequestProperty("User-Agent", "OrbitTV/1.0 (Fire TV)")
+                try {
+                    val code = c.responseCode
+                    if (code in 300..399) {
+                        target = URL(URL(target), c.getHeaderField("Location") ?: break).toString()
+                        continue
+                    }
+                    if (code == 200) result = c.inputStream.bufferedReader().use { r ->
+                        val buf = CharArray(512 * 1024)
+                        val n = r.read(buf)
+                        if (n > 0) String(buf, 0, n) else ""
+                    }
+                } finally {
+                    c.disconnect()
+                }
+                break
             }
+            result
         }.getOrNull()
+
+        private val PLAYLIST = Regex("\\.(m3u|pls|asx)(\\?|$)", RegexOption.IGNORE_CASE)
+
+        /** Radio-Playlists (.m3u/.pls/.asx, nicht HLS) auf die eigentliche Stream-Adresse auflösen. */
+        fun resolvePlaylist(url: String): String {
+            if (!PLAYLIST.containsMatchIn(url)) return url
+            val text = httpGet(url) ?: return url
+            if (text.contains("#EXT-X-")) return url
+            return Regex("https?://[^\\s\"'<>]+").find(text)?.value ?: url
+        }
     }
 }

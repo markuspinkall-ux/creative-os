@@ -10,7 +10,7 @@ import android.net.Uri
  * offizielle App – angemeldet bist du dort mit deinem eigenen Konto.
  */
 object Partners {
-    data class Partner(val name: String, val packages: List<String>, val labels: List<Regex>, val liveUrl: String, val store: String)
+    data class Partner(val name: String, val packages: List<String>, val labels: List<Regex>, val liveUrl: String, val store: String, val webUrl: String)
 
     val JOYN = Partner(
         name = "Joyn",
@@ -18,6 +18,7 @@ object Partners {
         labels = listOf(Regex("^joyn", RegexOption.IGNORE_CASE)),
         liveUrl = "https://www.joyn.de/play/live-tv",
         store = "Joyn",
+        webUrl = "https://www.joyn.de/play/live-tv",
     )
     val RTL = Partner(
         name = "RTL+",
@@ -25,6 +26,7 @@ object Partners {
         labels = listOf(Regex("^rtl\\s*\\+", RegexOption.IGNORE_CASE), Regex("^rtl\\s*plus", RegexOption.IGNORE_CASE)),
         liveUrl = "https://plus.rtl.de/video-tv/live-tv",
         store = "RTL+",
+        webUrl = "https://plus.rtl.de/video-tv/live-tv",
     )
 
     fun of(kind: Kind): Partner? = when (kind) {

@@ -1,0 +1,272 @@
+[
+ {
+  "name": "UnserDing",
+  "url": "http://streaming01.sr-online.de/unserding_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "1LIVE",
+  "url": "http://www.wdr.de/wdrlive/media/einslive.m3u",
+  "radio": true
+ },
+ {
+  "name": "1LIVE diggi",
+  "url": "http://www.wdr.de/wdrlive/media/einslivedigi.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern",
+  "url": "http://www.antenne.de/webradio/antenne-aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern 80er Kulthits",
+  "url": "http://www.antenne.de/webradio/channels/80er-kulthits.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Black Beatz",
+  "url": "http://www.antenne.de/webradio/channels/black-beatz.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Chillout",
+  "url": "http://www.antenne.de/webradio/channels/chillout.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Classic Rock Live",
+  "url": "http://www.antenne.de/webradio/channels/classic-rock-live.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Event",
+  "url": "http://www.antenne.de/webradio/channels/event.m3u",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Hits für Kids",
+  "url": "http://www.antenne.de/webradio/channels/hits-fuer-kids.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Lovesongs",
+  "url": "http://www.antenne.de/webradio/channels/lovesongs.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Oldies but Goldies",
+  "url": "http://www.antenne.de/webradio/channels/oldies-but-goldies.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Partyschlager",
+  "url": "http://www.antenne.de/webradio/channels/das-schlager-karussell.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Bayern Top 40",
+  "url": "http://www.antenne.de/webradio/channels/top-40.aac.pls",
+  "radio": true
+ },
+ {
+  "name": "Antenne Brandenburg",
+  "url": "http://www.antennebrandenburg.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR24",
+  "url": "http://streams.br-online.de/b5aktuell_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Bayern 1",
+  "url": "http://streams.br-online.de/bayern1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Bayern 2",
+  "url": "http://streams.br-online.de/bayern2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Bayern 3",
+  "url": "http://streams.br-online.de/bayern3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "BR-Klassik",
+  "url": "http://streams.br-online.de/br-klassik_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk",
+  "url": "http://www.dradio.de/streaming/dlf.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk Kultur",
+  "url": "http://www.dradio.de/streaming/dkultur.m3u",
+  "radio": true
+ },
+ {
+  "name": "Deutschlandfunk Nova",
+  "url": "http://www.dradio.de/streaming/dradiowissen.m3u",
+  "radio": true
+ },
+ {
+  "name": "Fritz (rbb)",
+  "url": "http://www.fritz.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr-iNFO",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hrinfo_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr1",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr2 Kultur",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr3",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "hr4",
+  "url": "http://metafiles.gl-systemhaus.de/hr/hr4_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "Inforadio",
+  "url": "http://www.inforadio.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "rbbKultur",
+  "url": "http://www.kulturradio.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "NDR Info",
+  "url": "http://www.ndr.de/resources/metadaten/audio/m3u/ndrinfo.m3u",
+  "radio": true
+ },
+ {
+  "name": "radioBerlin 88,8",
+  "url": "http://www.radioberlin.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Radioeins",
+  "url": "http://www.radioeins.de/live.m3u",
+  "radio": true
+ },
+ {
+  "name": "Rai Bozen",
+  "url": "http://radiobzlive.rai.it/RAIBZ_Livestream",
+  "radio": true
+ },
+ {
+  "name": "Rock Antenne",
+  "url": "http://www.rockantenne.de/webradio/rockantenne-aac.pls",
+  "radio": true
+ },
+ {
+  "name": "SR 1 Europawelle",
+  "url": "http://streaming01.sr-online.de/sr1_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 1-Klassiker",
+  "url": "http://streaming02.sr-online.de/sr1klassiker.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 2 KulturRadio",
+  "url": "http://streaming01.sr-online.de/sr2_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3 Saarlandwelle",
+  "url": "http://streaming01.sr-online.de/sr3_2.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3-OldieWelt",
+  "url": "http://streaming02.sr-online.de/sr3oldiewelt.m3u",
+  "radio": true
+ },
+ {
+  "name": "SR 3-SchlagerWelt",
+  "url": "http://streaming02.sr-online.de/sr3schlagerwelt.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Aachen und Region",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_aachen.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Bergisches Land",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_wuppertal.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Münsterland",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_muenster.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Ostwestfalen-Lippe",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_bielefeld.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Rhein und Ruhr",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_essen_duesseldorf.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Rheinland",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Ruhrgebiet",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_dortmund.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR 2 Südwestfalen",
+  "url": "http://www.wdr.de/wdrlive/media/wdr2_siegen.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR3",
+  "url": "http://www.wdr.de/wdrlive/media/wdr3.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR4",
+  "url": "http://www.wdr.de/wdrlive/media/wdr4.m3u",
+  "radio": true
+ },
+ {
+  "name": "WDR5",
+  "url": "http://www.wdr.de/wdrlive/media/wdr5.m3u",
+  "radio": true
+ },
+ {
+  "name": "YOU FM",
+  "url": "http://metafiles.gl-systemhaus.de/hr/youfm_2.m3u",
+  "radio": true
+ }
+]
