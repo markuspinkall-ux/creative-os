@@ -878,7 +878,7 @@ if (!single) {
     setLook(readLook());
     watchLook();
     app.userAgentFallback = cleanUserAgent(app.userAgentFallback);
-    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }); return; }
+    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads }); return; }
     if (APP_URL) { new Win({ urls: [APP_URL], appMode: true }); return; }
     const urls = process.argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     if (process.argv.includes('--privat')) { new Win({ isPrivate: true, urls }); return; }

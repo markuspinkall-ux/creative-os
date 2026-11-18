@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
+async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads = [] }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -255,13 +255,36 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
         await shot(win, dir, `4-${name}`);
       }
     }
+    // Downloads: so wie Webseiten Dateien anbieten (Link mit download, neues Fenster, Blob)
+    {
+      const html = `<!doctype html><body>
+        <a id="d1" download="probe-link.txt" href="data:text/plain,eins">Link</a>
+        <a id="d2" download="probe-fenster.txt" target="_blank" href="data:text/plain,zwei">Fenster</a>
+        <button id="d3">Blob</button>
+        <script>document.getElementById('d3').onclick = () => { const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob(['drei'], { type: 'text/plain' })); a.download = 'probe-blob.txt';
+          a.target = '_blank'; document.body.appendChild(a); a.click(); };</script>`;
+      const t = win.addTab('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      await waitLoad(t.wc);
+      await sleep(500);
+      for (const id of ['d1', 'd2', 'd3']) {
+        await within(t.wc.executeJavaScript(`document.getElementById('${id}').click()`, true), 3000, null);
+        await sleep(1500);
+      }
+      await sleep(2000);
+      const names = downloads.map((d) => d.name);
+      result.downloads = names;
+      check('Download per Link', names.some((n) => n.startsWith('probe-link')));
+      check('Download per Link in neuem Fenster', names.some((n) => n.startsWith('probe-fenster')));
+      check('Download per Blob', names.some((n) => n.startsWith('probe-blob')));
+    }
     result.ok = Object.values(result.checks).every(Boolean);
   } catch (e) {
     result.error = String(e && e.stack || e);
   }
   fs.writeFileSync(path.join(dir, 'ergebnis.json'), JSON.stringify(result, null, 2));
   for (const [k, v] of Object.entries(result.checks)) console.log(`${v ? 'ok  ' : 'FEHLER'} ${k}`);
-  console.log(JSON.stringify({ video: result.video, online: result.online, error: result.error }, null, 1));
+  console.log(JSON.stringify({ video: result.video, online: result.online, downloads: result.downloads, error: result.error }, null, 1));
   console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
