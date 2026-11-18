@@ -1,0 +1,21 @@
+name: Mail-Bilder prüfen
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [mail/**, tools/mail-bilder-test.py, .github/workflows/mail-bilder-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt installieren
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libasound2t64 fonts-liberation
+          pip install -q PySide6
+      - name: Bilder gesperrt / erlaubt
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: "--no-sandbox --disable-gpu"
+        run: timeout 120 python3 tools/mail-bilder-test.py
