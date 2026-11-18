@@ -15,7 +15,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           QTWEBENGINE_CHROMIUM_FLAGS: "--no-sandbox --disable-gpu"
         run: |
-          export HOME=$(mktemp -d)
+          export PYTHONUSERBASE="$HOME/.local"; export HOME=$(mktemp -d)
           sh tools/lb-test/installieren.sh
           ORBIT_LB_FOTO=/tmp/a.png timeout 60 python3 $HOME/.local/share/orbit-loesungsbuch/loesungsbuch.py
           mkdir -p $HOME/.config/creative-os; printf '[Look]\ndesign=porzellan\n' > $HOME/.config/creative-os/look.conf
