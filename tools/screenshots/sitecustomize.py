@@ -143,6 +143,11 @@ def _install():
         except ImportError:
             pass
         images = [image for image in images if not image.isNull()]
+        if images and os.environ.get("CREATIVE_SCREENSHOT_ALL"):
+            # alle Fenster einzeln (z. B. die Taskleiste) – Name-1.png, Name-2.png …
+            base = TARGET[:-4] if TARGET.endswith(".png") else TARGET
+            for i, image in enumerate(images, start=1):
+                image.save(f"{base}-{i}.png")
         if images:
             biggest = max(images, key=lambda image: image.width() * image.height())
             if biggest.save(TARGET):

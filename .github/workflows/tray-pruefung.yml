@@ -34,11 +34,20 @@ jobs:
           echo '{"desktopStats": false}' > "$H/.config/creative-os/shell.json"
           foto() {
             (cd "$GITHUB_WORKSPACE/shell" && env PATH="$B:$PATH" XDG_RUNTIME_DIR="$R" CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" \
-              HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_DELAY=4000 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+              HOME="$H" XDG_CONFIG_HOME="$H/.config" CREATIVE_SCREENSHOT_ALL=1 CREATIVE_SCREENSHOT_DELAY=4000 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
               CREATIVE_SCREENSHOT="$1" timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -iE "error|qml|deck" | tail -15) || true
           }
           foto "$GITHUB_WORKSPACE/fotos/tray-graphit.png"
           printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
           foto "$GITHUB_WORKSPACE/fotos/tray-porzellan.png"
           ls -la fotos
-          for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
+          # nur die Taskleiste (breit und niedrig) behalten
+          python3 - <<'PY'
+          import glob, os
+          from PySide6.QtGui import QImage
+          for f in sorted(glob.glob("fotos/*-[0-9]*.png")):
+              im = QImage(f)
+              if not (im.width() > 3 * im.height() and im.height() < 120):
+                  os.remove(f)
+          PY
+          for f in fotos/*-[0-9]*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
