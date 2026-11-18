@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lösungsbuch Ocarina of Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* VOICE: ruhiges Abenteuer-Notizbuch, das man beim Spielen neben sich liegen hat
+   IDEA: ein Wanderpfad durch die Welt – jedes Kapitel ein Wegstein, der aufleuchtet
+   PICTURE: der Pfad mit 14 Wegsteinen (Kind / Erwachsen), Fortschritt leuchtet golden
+   COLOUR and TYPE: tiefes Waldgrün, Moos, Gold als Akzent; Marcellus für Titel, Source Sans 3
+   LAYOUT: Kopf mit Reitern, darunter Pfad, dann Kapitel als aufklappbare Checklisten */
+:root{color-scheme:light dark;
+ --bg:light-dark(#f3f5ee,#0d1f19);--panel:light-dark(#ffffff,#13291f);--panel2:light-dark(#e7ede0,#1a3428);
+ --ink:light-dark(#14231c,#e6efe6);--muted:light-dark(#4d6157,#9fb7a8);--line:light-dark(#d3ddcf,#244536);
+ --gold:light-dark(#9a6b00,#e8bf55);--goldsoft:light-dark(#f6e7bd,#3a3216);--blue:light-dark(#2453c7,#7fa7ff);--warn:light-dark(#9b2c1f,#ff9b85)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Source Sans 3",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Marcellus,Georgia,serif;font-weight:400;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,4.4vw,46px)}h2{font-size:26px}h3{font-size:20px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(4vw,16px)}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding-block:14px}
+.top h1{font-size:24px;flex:1 1 260px}.top h1 small{display:block;font:600 13px "Source Sans 3",sans-serif;color:var(--muted)}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav a{color:var(--muted);text-decoration:none;padding:10px 14px;border-radius:12px;font-weight:600;min-height:44px;display:inline-flex;align-items:center}
+nav a[aria-current]{background:var(--goldsoft);color:var(--ink)}
+select{font:600 16px "Source Sans 3",sans-serif;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:44px;max-width:100%}
+input[type=search]{font:16px inherit;font-family:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:44px;width:min(260px,100%)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hero{padding-block:28px 8px;display:grid;gap:14px}
+.hero p{margin:0;color:var(--muted);max-width:62ch}
+.fig{position:relative;height:clamp(190px,24vw,250px);background:radial-gradient(120% 140% at 10% 0%,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.meter{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;color:var(--muted)}
+.meter b{font:400 34px Marcellus,serif;color:var(--gold)}
+.bar{height:8px;background:var(--panel2);border-radius:8px;overflow:hidden;flex:1 1 200px}.bar i{display:block;height:100%;background:var(--gold);border-radius:8px;transition:width .4s}
+section[hidden]{display:none}
+.list{display:grid;gap:12px;padding-block:18px 60px}
+details.ch{background:var(--panel);border:1px solid var(--line);border-radius:18px}
+details.ch summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 18px;min-height:64px}
+details.ch summary::-webkit-details-marker{display:none}
+.num{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);font:400 18px Marcellus,serif;color:var(--muted)}
+.done .num{background:var(--gold);color:var(--bg)}
+.sub{color:var(--muted);font-size:14px}
+.cnt{font-weight:700;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.body{padding:0 18px 18px 76px;display:grid;gap:6px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:8px 10px;border-radius:10px;cursor:pointer}
+.step:hover{background:var(--panel2)}
+.step input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--gold)}
+.step.ok span{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.tip{border-left:3px solid var(--gold);background:var(--goldsoft);padding:10px 14px;border-radius:0 12px 12px 0;margin-top:6px}
+.tip.r{border-left-color:var(--blue);background:light-dark(#e6edff,#16243f)}
+.tip b{display:block;font-family:Marcellus,serif;font-weight:400;font-size:17px}
+.gain{color:var(--muted);font-size:14px;margin-top:2px}
+.age{display:inline-block;font-size:13px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--panel2);color:var(--muted);margin-left:6px;vertical-align:2px}
+.grid{display:grid;align-items:start;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px;padding-block:18px 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:grid;gap:8px;align-content:start}
+.notes{display:flex;gap:6px;flex-wrap:wrap}
+.n{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:#e9b52a;color:#2a1c00}
+.n.a{background:#3d6fe0;color:#fff}
+.seg{display:inline-flex;background:var(--panel2);border-radius:12px;padding:4px;gap:4px}
+.seg button{font:600 15px "Source Sans 3",sans-serif;color:var(--muted);background:none;border:0;border-radius:9px;padding:8px 14px;min-height:40px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--ink)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding-top:22px}
+.ctr{display:flex;align-items:center;gap:10px}
+.ctr button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:22px;cursor:pointer}
+.ctr output{font:400 30px Marcellus,serif;min-width:3.4em;text-align:center;font-variant-numeric:tabular-nums}
+ul.plain{margin:0;padding-left:18px;color:var(--muted)}ul.plain li{margin:2px 0}
+.empty{color:var(--muted);padding:30px 0}
+.kfig{height:auto;aspect-ratio:16/10;min-height:340px;background:var(--panel)}
+.kweg{display:grid;gap:8px;padding:18px 0 60px;margin:0;list-style:none;counter-reset:k}
+.kweg li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;counter-increment:k}
+.kweg li::before{content:counter(k);width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:14px}
+@media(max-width:600px){.kfig{aspect-ratio:3/4}}
+.note{color:var(--muted);font-size:13px;padding-bottom:30px}
+mark{background:var(--goldsoft);color:inherit;border-radius:4px}
+@media(max-width:600px){header{position:static}.body{padding-left:18px}.top h1{font-size:21px}nav a{padding:10px 11px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap top">
+ <h1>Lösungsbuch<small>The Legend of Zelda: Ocarina of Time · Remake für Nintendo Switch 2</small></h1>
+ <nav aria-label="Bereiche">
+  <a href="#weg" data-v="weg">Lösungsweg</a><a href="#lieder" data-v="lieder">Lieder</a>
+  <a href="#karten" data-v="karten">Karten</a><a href="#bosse" data-v="bosse">Endgegner</a><a href="#sammeln" data-v="sammeln">Sammeln</a>
+ </nav>
+ <input type="search" id="q" placeholder="Suchen, z. B. Enterhaken" aria-label="Im Lösungsbuch suchen">
+</div></header>
+
+<main class="wrap">
+<section id="v-weg">
+ <div class="hero">
+  <div class="fig" id="pfad" role="img" aria-label="Pfad durch die 14 Kapitel"></div>
+  <div class="meter"><b id="pct">0 %</b><span id="pctTxt">geschafft</span><div class="bar"><i id="pctBar" style="width:0"></i></div></div>
+ </div>
+ <div class="list" id="kapitel"></div>
+</section>
+
+<section id="v-lieder" hidden>
+ <div class="row"><h2>Die 13 Lieder</h2>
+  </div>
+ <p class="sub" style="margin:10px 0 0">Tasten in der Standard-Belegung. Du kannst die Melodie auch ins Mikrofon der Switch 2 summen – die Tonhöhe muss nicht genau stimmen.</p>
+ <div class="grid" id="lieder"></div>
+</section>
+
+<section id="v-karten" hidden>
+ <div class="row"><h2 id="kTitel">Karten</h2><select id="kWahl" aria-label="Karte wählen"></select></div>
+ <p class="sub" style="margin:8px 0 14px">Eigene, vereinfachte Wegskizzen – nicht maßstabsgetreu, ohne jeden Nebenraum. Folge den Nummern. Für die Übersichtskarten: ausgegraut sind Orte, die in diesem Abschnitt keine Rolle spielen.</p>
+ <div class="fig kfig" id="karte" role="img" aria-label="Wegskizze des Dungeons"></div>
+ <ol class="kweg" id="kWeg"></ol>
+</section>
+
+<section id="v-bosse" hidden>
+ <div class="row"><h2>Endgegner</h2></div>
+ <div class="grid" id="bosse"></div>
+</section>
+
+<section id="v-sammeln" hidden>
+ <div class="row"><h2>Sammeln</h2></div>
+ <div class="grid" id="sammeln"></div>
+ <p class="note">Fortschritt und Zähler werden auf diesem PC gespeichert. Einzelne deutsche Namen können im Spiel leicht anders lauten.</p>
+</section>
+</main>
+
+<script>
+{
+const K = [
+ {t:"Kokiri-Dorf",a:"Kind",s:[
+  "Navi weckt Link. Im Dorf Rubine sammeln (Gras, Steine, Felder am Trainingsplatz) – genug für den Dekuschild.",
+  "Im Kokiri-Laden den Dekuschild kaufen.",
+  "Kokiri-Schwert: am Trainingsplatz durch das kleine Loch in der Felswand kriechen, dem rollenden Felsen ausweichen, Truhe öffnen.",
+  "Schild und Schwert ausrüsten – jetzt lässt Mido dich zum Deku-Baum durch."],
+  g:"Kokiri-Schwert, Dekuschild"},
+ {t:"Im Inneren des Deku-Baums",a:"Kind",s:[
+  "An den Ranken nach oben klettern; in der Truhe auf einer oberen Ebene liegt die Feenschleuder.",
+  "Von ganz oben auf das Spinnennetz am Boden springen, um es zu durchbrechen.",
+  "Unten: Fackel am Dekustab anzünden und damit das nächste Netz verbrennen.",
+  "Vor dem Endgegner die drei Deku-Ranas in der Reihenfolge 2 – 3 – 1 treffen (Nüsse zurückschlagen).",
+  "Netz am Boden mit dem Dekustab anzünden und hinunter zu Gohma."],
+  b:"Königin Gohma",tip:"Solange sie ihr Auge mit den zwei Armen auf dem Kopf abschirmt, ist sie unverwundbar. Wenn das Auge rot leuchtet und frei ist, mit der Feenschleuder hineinschießen, dann mit dem Schwert zuschlagen. Kleine Eier sofort zerstören.",
+  g:"Herzcontainer, Kokiri-Smaragd"},
+ {t:"Hinaus in die Welt",a:"Kind",s:[
+  "Auf der Brücke aus dem Dorf schenkt dir Salia die Feen-Okarina.",
+  "Hylianische Steppe: der Uhu erklärt den Weg. Direkt Richtung Norden zum Marktplatz – vor Sonnenuntergang, sonst ist die Zugbrücke oben.",
+  "Optional: Lon Lon-Farm im Süden der Steppe – Malon bringt dir tagsüber Eponas Lied bei (Okarina vorher ziehen und mit ihr sprechen).",
+  "Am Schloss Hyrule gibt dir Malon das seltsame Ei. Warten, bis es morgens schlüpft – das Huhn weckt Talon."],
+  g:"Feen-Okarina, Huhn"},
+ {t:"Schloss Hyrule",a:"Kind",s:[
+  "Mit dem Huhn den schlafenden Talon neben dem Schloss wecken.",
+  "Die Milchkisten an die Mauer schieben, über sie auf den Vorsprung klettern, in den Graben springen und durch den Abfluss kriechen.",
+  "Im Schlossgarten an den Wachen vorbeischleichen (Sichtfelder beachten).",
+  "Zelda treffen – du bekommst Zeldas Brief.",
+  "Beim Verlassen bringt dir Impa Zeldas Wiegenlied bei."],
+  g:"Zeldas Brief, Zeldas Wiegenlied"},
+ {t:"Kakariko und Salias Lied",a:"Kind",s:[
+  "In Kakariko der Wache am Tor zum Todesberg Zeldas Brief zeigen.",
+  "Zurück in die Verlorenen Wälder: der Musik folgen bis zum Heiligen Hain.",
+  "Durch das kleine Labyrinth mit den Wölfen; Salia sitzt auf dem Baumstumpf und lehrt dich Salias Lied.",
+  "Optional: Friedhof Kakariko – Zeldas Wiegenlied am Grab mit dem Triforce-Zeichen spielen, im Königsgrab lernst du die Hymne der Sonne."],
+  g:"Salias Lied"},
+ {t:"Goronia und Dodongos Höhle",a:"Kind",s:[
+  "Den Todesberg hinauf nach Goronia. In der untersten Ebene den Saal von Darunia betreten (Zeldas Wiegenlied an der Tür).",
+  "Darunia Salias Lied vorspielen – er tanzt und schenkt dir das Goronen-Armband.",
+  "Damit Donnerblumen pflücken und vor die Höhle am Todesberg werfen, um den Felsen zu sprengen.",
+  "In Dodongos Höhle bekommst du die Bombentasche. Augen der großen Dodongo-Statue mit Bomben zum Leuchten bringen."],
+  b:"König Dodongo",tip:"Wenn er Luft holt, eine Bombe in sein Maul werfen. Nach der Explosion mit dem Schwert zuschlagen. Vor seiner Rollattacke zur Seite gehen.",
+  g:"Bombentasche, Herzcontainer, Goronen-Opal"},
+ {t:"Zoras Reich und Jabu-Jabu",a:"Kind",s:[
+  "Den Felsen am Zora-Fluss in der Steppe sprengen, den Fluss hinauf bis zum Wasserfall.",
+  "Am Wasserfall Zeldas Wiegenlied spielen – der Weg nach Zoras Reich öffnet sich.",
+  "Rutos Brief liegt in einer Flasche am Grund des Hylia-Sees (vom Reich aus durch den Tunnel tauchen; Silberne Schuppe aus dem Tauchspiel hilft).",
+  "König Zora den Brief zeigen; er rückt zur Seite. In Zoras Quelle einen Fisch (in einer Flasche) an Lord Jabu-Jabu geben.",
+  "Im Bauch Prinzessin Ruto tragen und mitnehmen; den Bumerang findest du in einer Truhe."],
+  b:"Barinade",tip:"Zuerst mit dem Bumerang die drei Halteranken an der Decke kappen, dann die Quallen abwerfen. Wenn sie betäubt ist, zuschlagen.",
+  g:"Bumerang, Herzcontainer, Zora-Saphir"},
+ {t:"Die Zitadelle der Zeit",a:"Kind",s:[
+  "Mit allen drei Steinen zurück zum Schloss: Zelda flieht und wirft die Okarina der Zeit in den Burggraben.",
+  "Okarina aus dem Wasser holen – du lernst die Hymne der Zeit.",
+  "In der Zitadelle der Zeit die drei Steine auf den Altar legen und die Hymne der Zeit spielen.",
+  "Das Master-Schwert ziehen – Link erwacht sieben Jahre später."],
+  g:"Okarina der Zeit, Hymne der Zeit, Master-Schwert"},
+ {t:"Waldtempel",a:"Erwachsen",s:[
+  "Kakariko: auf dem Friedhof das Wettrennen gegen den Geist des Totengräbers Boris gewinnen – Enterhaken.",
+  "Optional, aber empfohlen: auf der Lon Lon-Farm Epona im Rennen gegen Basil gewinnen.",
+  "Heiliger Hain: Sheik lehrt dich das Menuett des Waldes. Mit dem Enterhaken auf den Ast zum Tempel.",
+  "Die erste Tür ist abgeschlossen – der kleine Schlüssel liegt gleich im ersten Raum.",
+  "Im Tempel die vier Geister-Schwestern jagen – jede hält eine Flamme. Den Feen-Bogen gibt es nach dem Kampf gegen zwei Stalfos.",
+  "Augenschalter sind vergittert und reagieren nur auf Pfeile. Ist einer eingefroren: auftauen und danach noch einmal treffen.",
+  "Meg (lila Geist): die echte erkennst du erst an der lila statt grünen Fackelflamme, dann daran, dass nur ihre Fackel brennt, zuletzt daran, dass nur sie die Augen offen hat.",
+  "Zuletzt die verdrehten Gänge drehen (Zielscheibe mit dem Bogen) und den Aufzug in der Mitte nehmen."],
+  b:"Phantom-Ganon",tip:"Phase 1: Pfeil auf das echte Phantom, wenn es aus einem Bild herausreitet. Phase 2: Energiekugeln mit dem Schwert zurückschlagen, bis er getroffen ist.",
+  g:"Feen-Bogen, Herzcontainer, Wald-Medaillon (Salia)"},
+ {t:"Feuertempel",a:"Erwachsen",s:[
+  "Nach dem Waldtempel lehrt Sheik dir in der Zitadelle die Kantate des Lichts.",
+  "Goronia: den rollenden Goronen-Jungen mit einer Bombe stoppen – er schenkt dir die Goronen-Rüstung. Pflicht: ohne sie verliert Link im Krater und im Tempel schnell Herzen.",
+  "In Darunias Saal hinten durch zum Todeskrater; Sheik lehrt dir den Bolero des Feuers.",
+  "Im Tempel die gefangenen Goronen befreien. Den Stahlhammer gibt es oben nach der Feuerwand-Strecke."],
+  b:"Volvagia",tip:"Der Drache taucht aus den Lavalöchern auf: mit dem Stahlhammer auf den Kopf schlagen, dann mit dem Schwert nachsetzen. Fallenden Steinen ausweichen.",
+  g:"Goronen-Rüstung, Stahlhammer, Herzcontainer, Feuer-Medaillon (Darunia)"},
+ {t:"Eishöhle und Wassertempel",a:"Erwachsen",s:[
+  "Zoras Reich ist zugefroren. Hinter König Zora weiter zu Zoras Quelle und über die Eisbrücke vom Altar zur Eishöhle. Dort Blaues Feuer in eine Flasche füllen.",
+  "Ganz hinten in der Eishöhle: Eisenstiefel; Sheik lehrt dir die Serenade des Wassers.",
+  "König Zora mit Blauem Feuer auftauen – er gibt dir die Zora-Rüstung.",
+  "Eisenstiefel im Ausrüstungsmenü aufs Steuerkreuz (unten) legen – dann wechselst du sie ohne Menü.",
+  "Wassertempel im Hylia-See: mit Zeldas Wiegenlied an den Triforce-Zeichen den Wasserstand ändern (unten, Mitte, oben). Leuchtende Wandmarkierungen zeigen den Weg zu den Schaltern.",
+  "Schwarzer Link: greift sofort an und kontert Stiche. Nimm den Stahlhammer – Dins Feuerinferno betäubt ihn nur kurz. Danach gibt es den Fanghaken.",
+  "Nach Morpha taut Zoras Reich wieder auf."],
+  b:"Morpha",tip:"Den Kern mit dem Fanghaken aus der Wassersäule ziehen und schnell zuschlagen. In den Ecken bleiben, damit dich die Tentakel nicht packen.",
+  g:"Eisenstiefel, Zora-Rüstung, Fanghaken, Wasser-Medaillon (Ruto)"},
+ {t:"Brunnen und Schattentempel",a:"Beide",s:[
+  "Als Erwachsener in der Windmühle von Kakariko: der Leierkastenmann lehrt dir die Hymne des Sturms.",
+  "Zurück als Kind: die Hymne des Sturms in der Windmühle spielen – der Brunnen läuft leer. Unten wartet das Auge der Wahrheit (eine Brille). Die Grabhand taucht auf, wenn du alle Hände im Raum zerstörst.",
+  "Als Kind die Große Fee hinter dem Schloss Hyrule besuchen (Felsen sprengen) – Dins Feuerinferno.",
+  "Als Erwachsener in Kakariko lehrt dich Sheik die Nocturne des Schattens.",
+  "Am Friedhof mit Dins Feuerinferno die Fackeln vor dem Schattentempel entzünden. Im Tempel: Gleitstiefel."],
+  b:"Bongo Bongo",tip:"Auge der Wahrheit einschalten. Beide Hände mit Pfeilen oder dem Enterhaken betäuben, dann Pfeil ins Auge und zuschlagen.",
+  g:"Auge der Wahrheit, Dins Feuerinferno, Gleitstiefel, Schatten-Medaillon (Impa)"},
+ {t:"Geistertempel",a:"Beide",s:[
+  "Gerudotal: die Brücke ist kaputt – mit Epona darüberspringen oder den Fanghaken nehmen.",
+  "Gerudo-Festung: die vier gefangenen Zimmerleute befreien. Du bekommst den Gerudo-Pass.",
+  "Optional: die Gerudo-Arena am Weg zum Bogenschießplatz kostet 30 Rubine.",
+  "Durch die Wüste: den Fähnchen folgen, später mit dem Auge der Wahrheit dem Geist hinterher.",
+  "Wüstenkoloss: Sheik lehrt dir das Requiem des Geistes. Zurück in die Kindzeit und mit dem Requiem hinreisen.",
+  "Als Kind die Kinder-Seite des Tempels lösen – Krafthandschuhe. Als Erwachsener: Spiegelschild."],
+  b:"Twinrova",tip:"Mit dem Spiegelschild dreimal den Zauber einer Schwester auffangen und auf die andere lenken. Danach als Fusion: gleiche Elemente sammeln und zurückschleudern.",
+  g:"Krafthandschuhe, Spiegelschild, Geister-Medaillon (Naboru)"},
+ {t:"Ganons Schloss",a:"Erwachsen",s:[
+  "Mit allen sechs Medaillons in die Zitadelle: Zelda gibt dir die Lichtpfeile.",
+  "Vor Ganons Schloss erschaffen die Weisen die Regenbogenbrücke.",
+  "Im Schloss die sechs Prüfungen lösen (Wald, Feuer, Wasser, Schatten, Geist, Licht), damit die Barriere fällt.",
+  "Den Turm hinaufsteigen – oben wartet Ganondorf.",
+  "Flucht: Zelda hält die Gegner auf, draußen mit dem Enterhaken über die Lücke."],
+  b:"Ganondorf und Ganon",tip:"Ganondorf: Energiekugeln zurückschlagen oder Lichtpfeil, dann zuschlagen. Ganon: Zelda wirft dir das Master-Schwert zu. An ihm vorbei rollen und auf den Schwanz zielen.",
+  g:"Abspann"}
+];
+
+const L = [
+ ["Zeldas Wiegenlied","◀▲▶◀▲▶","Impa, Schloss Hyrule (Kind)","Öffnet Wege mit Triforce-Zeichen"],
+ ["Eponas Lied","▲◀▶▲◀▶","Malon, Lon Lon-Farm (Kind)","Ruft Epona"],
+ ["Salias Lied","▼▶◀▼▶◀","Salia, Heiliger Hain (Kind)","Darunia, Gespräche mit Salia"],
+ ["Hymne der Sonne","▶▼▲▶▼▲","Königsgrab, Friedhof Kakariko (Kind)","Tag ↔ Nacht, lähmt Untote"],
+ ["Hymne der Zeit","▶A▼▶A▼","Zelda am Burggraben (Kind)","Zitadelle der Zeit, blaue Blöcke"],
+ ["Hymne des Sturms","A▼▲A▼▲","Leierkastenmann, Windmühle (Erwachsen)","Brunnen leeren, Regen"],
+ ["Menuett des Waldes","A▲◀▶◀▶","Sheik, Heiliger Hain","Teleport: Heiliger Hain"],
+ ["Bolero des Feuers","▼A▼A▶▼▶▼","Sheik, Todeskrater","Teleport: Todeskrater"],
+ ["Serenade des Wassers","A▼▶▶◀","Sheik, Eishöhle","Teleport: Hylia-See"],
+ ["Nocturne des Schattens","◀▶▶A◀▶▼","Sheik, Kakariko","Teleport: Friedhof Kakariko"],
+ ["Requiem des Geistes","A▼A▶▼A","Sheik, Wüstenkoloss","Teleport: Wüstenkoloss"],
+ ["Kantate des Lichts","▲▶▲▶◀▲","Sheik, Zitadelle der Zeit","Teleport: Zitadelle der Zeit"],
+ ["Vogelscheuchen-Lied","","Vogelscheuche am Hylia-See","Eigene 8-Noten-Melodie: als Kind vorspielen, als Erwachsener wiederholen – ruft Pierre"]
+];
+const DS = {"A":"L","▼":"R","▶":"A","◀":"Y","▲":"X"};
+
+const HY = {
+ kokiri:{x:.86,y:.76,t:"Kokiri-Dorf",k:"Kokiri"}, waelder:{x:.68,y:.84,t:"Verlorene Wälder",k:"Wälder"}, hain:{x:.52,y:.93,t:"Heiliger Hain",k:"Hain"},
+ steppe:{x:.5,y:.5,t:"Hylianische Steppe",k:"Steppe"}, lonlon:{x:.42,y:.66,t:"Lon Lon-Farm",k:"Lon Lon"}, markt:{x:.47,y:.2,t:"Marktplatz & Schloss",k:"Markt"},
+ zitadelle:{x:.3,y:.06,t:"Zitadelle der Zeit",k:"Zitadelle"}, kakariko:{x:.74,y:.28,t:"Kakariko",k:"Kakariko"}, todesberg:{x:.72,y:.07,t:"Todesberg & Goronia",k:"Todesberg"},
+ fluss:{x:.86,y:.5,t:"Zora-Fluss",k:"Zora-Fluss"}, zoras:{x:.95,y:.34,t:"Zoras Reich",k:"Zoras Reich"}, quelle:{x:.94,y:.09,t:"Zoras Quelle",k:"Zoras Quelle"},
+ see:{x:.28,y:.88,t:"Hylia-See",k:"Hylia-See"}, tal:{x:.14,y:.58,t:"Gerudotal",k:"Gerudotal"}, festung:{x:.1,y:.4,t:"Gerudo-Festung",k:"Festung"},
+ koloss:{x:.09,y:.16,t:"Wüstenkoloss",k:"Koloss"}};
+const hy = ids => Object.entries(HY).map(([id,r])=>({id,...r,aus:!ids.includes(id)}));
+const M = [
+ {n:"Hyrule als Kind",frei:1,raeume:hy(["kokiri","steppe","lonlon","markt","kakariko","waelder","hain","todesberg","fluss","zoras","see","quelle","zitadelle"]),
+  weg:[["kokiri","steppe","Nach dem Deku-Baum aus dem Dorf hinaus in die Steppe (Salia gibt dir die Okarina)."],
+   ["steppe","markt","Nach Norden zum Marktplatz und zum Schloss – Zelda treffen, Wiegenlied lernen."],
+   ["markt","kakariko","Nach Osten nach Kakariko, der Wache Zeldas Brief zeigen."],
+   ["kakariko","hain","Zurück durch die Steppe in die Verlorenen Wälder bis zum Heiligen Hain: Salias Lied."],
+   ["hain","todesberg","Durch die Wälder nach Goronia (oder über Kakariko den Todesberg hinauf): Dodongos Höhle."],
+   ["todesberg","fluss","Hinunter in die Steppe und den Zora-Fluss hinauf."],
+   ["fluss","zoras","Am Wasserfall Zeldas Wiegenlied spielen: Zoras Reich."],
+   ["zoras","see","Durch den Unterwassertunnel zum Hylia-See: Rutos Brief aus dem Wasser holen."],
+   ["see","quelle","Zurück zu König Zora und weiter zu Zoras Quelle: Jabu-Jabu."],
+   ["quelle","zitadelle","Mit allen drei Steinen zum Marktplatz – Hymne der Zeit – in die Zitadelle der Zeit."]]},
+ {n:"Hyrule als Erwachsener",frei:1,raeume:hy(["zitadelle","kakariko","hain","todesberg","zoras","quelle","see","tal","festung","koloss","markt","steppe","lonlon","waelder"]),
+  weg:[["zitadelle","kakariko","Aus der Zitadelle nach Kakariko: auf dem Friedhof den Enterhaken holen."],
+   ["kakariko","hain","In den Heiligen Hain: Menuett des Waldes, dann der Waldtempel."],
+   ["hain","todesberg","Nach Goronia und in den Todeskrater: Feuertempel."],
+   ["todesberg","quelle","Durch das gefrorene Zoras Reich zu Zoras Quelle: Eishöhle."],
+   ["quelle","see","Zum Hylia-See: Wassertempel."],
+   ["see","kakariko","Zurück nach Kakariko: Brunnen (als Kind) und Schattentempel."],
+   ["kakariko","tal","Quer durch die Steppe nach Westen ins Gerudotal."],
+   ["tal","festung","Gerudo-Festung: die vier Zimmerleute befreien."],
+   ["festung","koloss","Durch die Wüste zum Wüstenkoloss: Geistertempel."],
+   ["koloss","zitadelle","Mit allen Medaillons zurück zur Zitadelle – dann Ganons Schloss."]]},
+ {n:"Deku-Baum",ebenen:["3. Stock","2. Stock","Erdgeschoss","Keller","Tiefer Keller"],
+  raeume:[
+   {id:"halle",e:2,x:.5,w:.42,t:"Große Halle",u:"Netz im Boden"},
+   {id:"um2",e:1,x:.5,w:.42,t:"Umgang",u:"über die Ranken"},
+   {id:"schleuder",e:1,x:.87,w:.2,t:"Deku-Rana",u:"Feenschleuder"},
+   {id:"um3",e:0,x:.5,w:.42,t:"Oberer Umgang",u:"Sprung ins Netz"},
+   {id:"land",e:3,x:.2,w:.22,t:"Landung",u:"im Wasser"},
+   {id:"fackel",e:3,x:.52,w:.22,t:"Fackel",u:"Dekustab anzünden"},
+   {id:"block",e:3,x:.84,w:.22,t:"Block-Raum",u:"Block schieben"},
+   {id:"ranas",e:4,x:.78,w:.26,t:"Drei Deku-Ranas",u:"2 – 3 – 1"},
+   {id:"boss",e:4,x:.32,w:.26,t:"Gohma",boss:1}],
+  weg:[["halle","um2","An den Ranken der Wand nach oben klettern."],
+   ["um2","schleuder","Durch die Tür: Deku-Rana besiegen, in der Truhe liegt die Feenschleuder."],
+   ["schleuder","um3","Zurück auf den Umgang und weiter nach oben zum 3. Stock."],
+   ["um3","land",{via:.02},"Vom Rand mitten auf das Netz springen – es reißt, du landest unten im Wasser."],
+   ["land","fackel","An der Fackel einen Dekustab anzünden und das Netz an der Wand verbrennen."],
+   ["fackel","block","Im nächsten Raum den Block schieben und über ihn weiter."],
+   ["block","ranas","Mit brennendem Dekustab das Netz im Boden verbrennen und hinunterspringen."],
+   ["ranas","boss","Die drei Deku-Ranas in der Reihenfolge 2 – 3 – 1 treffen. Die Tür zu Gohma öffnet sich."]]},
+ {n:"Dodongos Höhle",ebenen:["Obergeschoss","Erdgeschoss","Unten"],
+  raeume:[
+   {id:"ein",e:1,x:.12,w:.18,t:"Eingang",u:"Felsen sprengen"},
+   {id:"halle",e:1,x:.42,w:.26,t:"Große Halle",u:"Bombenblumen"},
+   {id:"ost",e:1,x:.8,w:.26,t:"Ostflügel",u:"Echsen besiegen"},
+   {id:"treppe",e:0,x:.82,w:.24,t:"Treppenraum",u:"nach oben"},
+   {id:"tasche",e:0,x:.5,w:.24,t:"Bombentasche",u:"Truhe"},
+   {id:"bruecke",e:0,x:.16,w:.24,t:"Brücke",u:"über dem Schädel"},
+   {id:"schaedel",e:2,x:.2,w:.26,t:"Dodongo-Schädel",u:"Bomben in die Augen"},
+   {id:"boss",e:2,x:.7,w:.26,t:"König Dodongo",boss:1}],
+  weg:[["ein","halle","Am Eingang die Wand mit einer Bombenblume sprengen, weiter in die große Halle."],
+   ["halle","ost","Mit Bombenblumen brüchige Wände öffnen und in den Ostflügel; dort die Echsen besiegen."],
+   ["ost","treppe","Die Treppe nach oben freilegen (Bombenblume) und hinauf."],
+   ["treppe","tasche","Oben nach einem weiteren Echsen-Kampf die Bombentasche aus der Truhe holen."],
+   ["tasche","bruecke","Zur Brücke über dem großen Dodongo-Schädel."],
+   ["bruecke","schaedel",{via:.005},"Von der Brücke Bomben in beide Augen des Schädels werfen – das Maul öffnet sich."],
+   ["schaedel","boss","Durch das Maul hinein, ein Loch im Boden sprengen und hinunter zu König Dodongo."]]},
+ {n:"Jabu-Jabus Bauch",ebenen:["Oben","Unten"],
+  raeume:[
+   {id:"ein",e:0,x:.1,w:.17,t:"Eingang"},
+   {id:"ruto",e:0,x:.36,w:.22,t:"Ruto",u:"fällt ins Loch"},
+   {id:"unten",e:1,x:.36,w:.22,t:"Unterer Raum",u:"Ruto tragen"},
+   {id:"bum",e:1,x:.64,w:.22,t:"Bumerang",u:"Truhe nach Kampf"},
+   {id:"tent",e:0,x:.64,w:.22,t:"Drei Tentakel",u:"mit dem Bumerang"},
+   {id:"boss",e:0,x:.9,w:.17,t:"Barinade",boss:1}],
+  weg:[["ein","ruto","Hinein zu Prinzessin Ruto – sie springt durch ein Loch nach unten."],
+   ["ruto","unten","Hinterher: unten Ruto hochheben, sie bleibt bei dir, solange du sie trägst."],
+   ["unten","bum","Weiter mit Ruto: im Raum mit den Gegnern bekommst du den Bumerang."],
+   ["bum","tent","Wieder nach oben und die drei Tentakel mit dem Bumerang besiegen."],
+   ["tent","boss","Ruto auf die Plattform setzen, der Weg zu Barinade öffnet sich."]]},
+ {n:"Waldtempel",ebenen:["Obergeschoss","Erdgeschoss","Keller"],
+  raeume:[
+   {id:"vor",e:1,x:.1,w:.16,t:"Vorraum",u:"Schlüssel"},
+   {id:"halle",e:1,x:.38,w:.24,t:"Haupthalle",u:"vier Flammen"},
+   {id:"hoefe",e:1,x:.7,w:.24,t:"West- und Osthof",u:"Enterhaken"},
+   {id:"bogen",e:0,x:.86,w:.22,t:"Zwei Stalfos",u:"Feen-Bogen"},
+   {id:"bilder",e:0,x:.55,w:.24,t:"Gemälde-Geister",u:"Jo und Beth"},
+   {id:"gang",e:0,x:.22,w:.24,t:"Verdrehter Gang",u:"Zielscheibe treffen"},
+   {id:"amy",e:2,x:.24,w:.22,t:"Block-Rätsel",u:"Amy (grün)"},
+   {id:"meg",e:2,x:.55,w:.22,t:"Meg (lila)",u:"echte erkennen"},
+   {id:"boss",e:2,x:.86,w:.22,t:"Phantom-Ganon",boss:1}],
+  weg:[["vor","halle","Den Schlüssel im ersten Raum nehmen, die Tür öffnen – die Geister fliehen mit den Flammen."],
+   ["halle","hoefe","Durch West- und Osthof (Enterhaken an Ranken, Wasser im Brunnen)."],
+   ["hoefe","bogen","Oben die zwei Stalfos besiegen – Feen-Bogen."],
+   ["bogen","bilder","Mit dem Bogen auf die Gemälde schießen: Jo und Beth stellen."],
+   ["bilder","gang","Im verdrehten Gang die Zielscheibe treffen, damit er sich gerade dreht."],
+   ["gang","amy",{via:.005},"Unten das Block-Rätsel lösen und Amy besiegen."],
+   ["amy","meg","Zurück in die Haupthalle: Meg erscheint, die echte an ihrer Fackel erkennen."],
+   ["meg","boss","Der Aufzug fährt hinab – die Wände drehen, bis die Tür zu Phantom-Ganon frei ist."]]},
+ {n:"Feuertempel",ebenen:["Oberste Etage","Obere Etagen","Erdgeschoss"],
+  raeume:[
+   {id:"ein",e:2,x:.12,w:.18,t:"Eingang"},
+   {id:"lava",e:2,x:.42,w:.26,t:"Lavasaal",u:"Goronen befreien"},
+   {id:"bosstuer",e:2,x:.82,w:.24,t:"Tür zum Boss",u:"Boss-Schlüssel"},
+   {id:"gaenge",e:1,x:.42,w:.28,t:"Gänge und Feuerwand",u:"Goronen befreien"},
+   {id:"tanz",e:1,x:.82,w:.24,t:"Flammentänzer",u:"Mini-Boss"},
+   {id:"hammer",e:0,x:.5,w:.24,t:"Stahlhammer",u:"Truhe"},
+   {id:"saeule",e:0,x:.86,w:.2,t:"Schalter",u:"mit dem Hammer"}],
+  weg:[["ein","lava","In den Lavasaal, über die Brücken und die ersten Goronen befreien."],
+   ["lava","gaenge","Nach oben: Gänge mit Feuerwand, weitere Goronen in den Zellen."],
+   ["gaenge","tanz","Den Flammentänzer besiegen."],
+   ["tanz","hammer","Ganz oben liegt der Stahlhammer."],
+   ["hammer","saeule","Mit dem Hammer den rostigen Schalter und die Pfeiler bearbeiten, um zurück nach unten zu kommen."],
+   ["saeule","bosstuer",{via:.995},"Mit dem Boss-Schlüssel durch die große Tür zu Volvagia."]]},
+ {n:"Wassertempel",ebenen:["Wasser oben","Wasser Mitte","Wasser unten"],
+  raeume:[
+   {id:"ein",e:0,x:.12,w:.2,t:"Eingang",u:"Eisenstiefel"},
+   {id:"ruto",e:0,x:.4,w:.2,t:"Ruto",u:"zeigt den Weg"},
+   {id:"tri1",e:2,x:.12,w:.2,t:"Triforce-Zeichen",u:"Wasser ganz ab"},
+   {id:"schl",e:2,x:.45,w:.22,t:"Schlüssel",u:"unten"},
+   {id:"mitte",e:1,x:.45,w:.22,t:"Turm in der Mitte",u:"Wasser halb"},
+   {id:"link",e:1,x:.7,w:.2,t:"Schwarzer Link",u:"danach Fanghaken"},
+   {id:"bosskey",e:1,x:.9,w:.16,t:"Strudel",u:"Boss-Schlüssel"},
+   {id:"boss",e:0,x:.9,w:.16,t:"Morpha",boss:1}],
+  weg:[["ein","ruto","Mit Eisenstiefeln hinab, Ruto zeigt dir den Weg nach oben."],
+   ["ruto","tri1","Am ersten Triforce-Zeichen Zeldas Wiegenlied: das Wasser sinkt ganz ab."],
+   ["tri1","schl","Auf der unteren Ebene die Schlüssel holen."],
+   ["schl","mitte","Im Turm in der Mitte das Wasser auf halbe Höhe stellen."],
+   ["mitte","link","Über die mittlere Ebene zum Raum mit dem Schwarzen Link – danach der Fanghaken."],
+   ["link","bosskey","Mit dem Fanghaken durch die Strudel-Gänge zum Boss-Schlüssel."],
+   ["bosskey","boss","Wasser wieder ganz hoch und nach oben zu Morpha."]]},
+ {n:"Brunnen (als Kind)",ebenen:["Erdgeschoss","Keller"],
+  raeume:[
+   {id:"ein",e:0,x:.12,w:.2,t:"Einstieg",u:"Brunnen leer"},
+   {id:"gaenge",e:0,x:.45,w:.28,t:"Unsichtbare Gänge",u:"falsche Wände"},
+   {id:"loch",e:0,x:.82,w:.22,t:"Loch im Boden"},
+   {id:"hand",e:1,x:.7,w:.26,t:"Grabhand",u:"alle Hände zerstören"},
+   {id:"auge",e:1,x:.3,w:.26,t:"Auge der Wahrheit",u:"Truhe"}],
+  weg:[["ein","gaenge","Nach der Hymne des Sturms hinein. Viele Wände sind nur Täuschung – vorsichtig vortasten."],
+   ["gaenge","loch","Zum Loch, das nach unten führt."],
+   ["loch","hand","Unten die Grabhand: alle Hände zerstören, dann taucht sie auf."],
+   ["hand","auge","Nach dem Kampf das Auge der Wahrheit aus der Truhe nehmen."]]},
+ {n:"Schattentempel",ebenen:["Oben","Mitte","Unten"],
+  raeume:[
+   {id:"ein",e:0,x:.12,w:.2,t:"Eingang",u:"Auge der Wahrheit"},
+   {id:"grabhand",e:0,x:.45,w:.26,t:"Grabhand",u:"Gleitstiefel"},
+   {id:"abgrund",e:1,x:.45,w:.28,t:"Abgrund",u:"mit Gleitstiefeln"},
+   {id:"klingen",e:1,x:.82,w:.24,t:"Sensen und Fallen"},
+   {id:"schiff",e:2,x:.8,w:.24,t:"Geisterschiff",u:"Wiegenlied spielen"},
+   {id:"boss",e:2,x:.3,w:.26,t:"Bongo Bongo",boss:1}],
+  weg:[["ein","grabhand","Mit dem Auge der Wahrheit den richtigen Schädel finden und weiter hinab zur Grabhand: Gleitstiefel."],
+   ["grabhand","abgrund","Mit den Gleitstiefeln über den Abgrund schweben."],
+   ["abgrund","klingen","Durch die Räume mit Sensen, Fallen und unsichtbaren Wänden."],
+   ["klingen","schiff","Am Geisterschiff Zeldas Wiegenlied spielen und mitfahren."],
+   ["schiff","boss","Vom Schiff zur Boss-Tür und hinunter auf die Trommel: Bongo Bongo."]]},
+ {n:"Geistertempel",ebenen:["Oben","Mitte","Eingang"],
+  raeume:[
+   {id:"ein",e:2,x:.5,w:.26,t:"Eingangshalle",u:"zwei Seitentreppen"},
+   {id:"kind",e:2,x:.12,w:.2,t:"Kind-Seite",u:"Krafthandschuhe"},
+   {id:"erw",e:1,x:.86,w:.2,t:"Erwachsenen-Seite",u:"Silberblöcke"},
+   {id:"statue",e:1,x:.5,w:.26,t:"Große Statue",u:"Spiegel und Licht"},
+   {id:"spiegel",e:0,x:.86,w:.2,t:"Spiegelschild",u:"Statuenhand"},
+   {id:"eisen",e:0,x:.5,w:.24,t:"Eisenprotz",u:"Naboru"},
+   {id:"boss",e:0,x:.12,w:.2,t:"Twinrova",boss:1}],
+  weg:[["ein","kind","Als Kind durch den kleinen Gang links: am Ende die Krafthandschuhe."],
+   ["kind","erw","Als Erwachsener mit den Krafthandschuhen die Silberblöcke rechts verschieben."],
+   ["erw","spiegel","Im Raum der Statuenhand den Spiegelschild holen."],
+   ["spiegel","statue","An der großen Statue mit dem Spiegelschild Licht auf die Sonnen-Symbole lenken."],
+   ["statue","eisen","Oben den Eisenprotz besiegen – Naboru wird entführt."],
+   ["eisen","boss","Durch die Tür hinauf zu Twinrova."]]},
+ {n:"Ganons Schloss",ebenen:["Turm","Prüfungen","Eingang"],
+  raeume:[
+   {id:"ein",e:2,x:.5,w:.26,t:"Eingangshalle",u:"Barriere"},
+   {id:"p1",e:1,x:.1,w:.11,t:"Wald"},{id:"p2",e:1,x:.26,w:.11,t:"Wasser"},{id:"p3",e:1,x:.42,w:.11,t:"Schatten"},
+   {id:"p4",e:1,x:.58,w:.11,t:"Feuer"},{id:"p5",e:1,x:.74,w:.11,t:"Licht"},{id:"p6",e:1,x:.9,w:.11,t:"Geist"},
+   {id:"turm",e:0,x:.74,w:.26,t:"Turm hinauf",u:"Etage für Etage"},
+   {id:"boss",e:0,x:.3,w:.26,t:"Ganondorf",boss:1}],
+  weg:[["ein","p1","Die sechs Prüfungen nacheinander lösen – jede bricht einen Teil der Barriere."],
+   ["p1","p2","Wasser-Prüfung."],["p2","p3","Schatten-Prüfung."],["p3","p4","Feuer-Prüfung."],["p4","p5","Licht-Prüfung."],["p5","p6","Geist-Prüfung."],
+   ["p6","turm",{via:.995},"Die Barriere fällt: den Turm Etage für Etage hinauf."],
+   ["turm","boss","Ganz oben wartet Ganondorf – danach Flucht und Kampf gegen Ganon."]]}
+];
+
+const S = [
+ {k:"remake",t:"Gut zu wissen",max:0,txt:"",li:["Sprungknopf, Sprint, freie Kamera","Fäden der Zeit: die Ziel-Liste zeigt, was als Nächstes dran ist; Feen-Gedanken geben Tipps","Gegenstände ohne Pause wechseln, Stiefel aufs Steuerkreuz","Silberjuwelen in Rätselräumen einsammeln – sie fliegen ins Türschloss","Geldbörsen fassen 200 / 500 / 1000 Rubine","Masken auch als Erwachsener; Maske der Wahrheit zeigt Gedanken","Halle der Gefallenen: Bosse noch mal bekämpfen (über Betten), freigeschaltet durch den Uhu","Tag und Nacht dauern länger, Betten stellen die Zeit um"]},
+ {k:"herz",t:"Herzteile",max:36,txt:"Vier Herzteile ergeben einen Herzcontainer. Dazu 8 Container von Endgegnern – am Ende 20 Herzen."},
+ {k:"skull",t:"Goldene Skulltulas",max:100,txt:"Belohnungen im Skulltula-Haus in Kakariko:",li:["10 – größere Geldbörse","20 – Echo-Juwel (zeigt Skulltulas in der Nähe)","30 – noch größere Geldbörse","40 – Krabbelminen","50 – Herzteil","100 – Großer Rubin, beliebig oft"],note:"Die genaue Gesamtzahl ist noch nicht offiziell bestätigt."},
+ {k:"flasche",t:"Flaschen",max:4,txt:"Lon Lon-Farm (Talons Hühner-Spiel), Kakariko (Anjus Hühner einfangen), Rutos Brief, Irrlicht-Händler am Eingang zum Marktplatz (zehn große Irrlichter, als Erwachsener)."},
+ {k:"feen",t:"Große Feen",max:6,txt:"Die Großen Feen wollen eine Spende, die jedes Mal steigt.",li:["Todesberg-Gipfel – Magieleiste","Schloss Hyrule – Dins Feuerinferno","Zoras Quelle – Farores Donnersturm","Wüstenkoloss – Nayrus Umarmung","Todeskrater – doppelte Magie","Vor Ganons Schloss – doppelte Verteidigung"]}
+];
+
+const $ = s => document.querySelector(s);
+const store = {get(k,d){try{const v=localStorage.getItem("loesung:"+k);return v===null?d:JSON.parse(v)}catch{return d}},
+               set(k,v){try{localStorage.setItem("loesung:"+k,JSON.stringify(v))}catch{}}};
+let done = store.get("done",{}), counts = store.get("counts",{}), keys = store.get("keys2","3ds"), open = store.get("open",0);
+const esc = t => t.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hl = (t,q) => q ? esc(t).replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>") : esc(t);
+
+function chapterDone(i){return K[i].s.every((_,j)=>done[i+"."+j])}
+function renderPfad(){
+ const el=$("#pfad"),W=el.clientWidth,H=el.clientHeight,n=K.length,pad=Math.min(48,W*.06);
+ const pts=K.map((_,i)=>{const x=pad+(W-2*pad)*i/(n-1);const y=H*.52+Math.sin(i*.9)*H*.2;return [x,y]});
+ const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+ const split=pad+(W-2*pad)*7.5/(n-1), small=W<520, r=small?8:12;
+ let s=`<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+  <rect x="${split}" y="0" width="${W-split}" height="${H}" fill="var(--panel2)" opacity=".55"/>
+  <text x="${pad}" y="26" fill="var(--muted)" font-size="14" font-weight="700">Kind</text>
+  <text x="${split+12}" y="26" fill="var(--muted)" font-size="14" font-weight="700">Erwachsen</text>
+  <path d="${d}" fill="none" stroke="var(--line)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+ let last=-1;K.forEach((_,i)=>{if(chapterDone(i))last=i});
+ if(last>=0){const dd=pts.slice(0,last+1).map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  s+=`<path d="${dd}" fill="none" stroke="var(--gold)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`}
+ pts.forEach((p,i)=>{const ok=chapterDone(i),cur=i===open;
+  s+=`<g style="cursor:pointer" data-go="${i}"><circle cx="${p[0]}" cy="${p[1]+3}" r="${r+2}" fill="#000" opacity=".18"/>
+   <circle cx="${p[0]}" cy="${p[1]}" r="${r+(cur?3:0)}" fill="${ok?"var(--gold)":"var(--panel)"}" stroke="${cur||ok?"var(--gold)":"var(--line)"}" stroke-width="3"/>
+   ${small?"":`<text x="${p[0]}" y="${p[1]+5}" text-anchor="middle" font-size="13" font-weight="700" fill="${ok?"var(--bg)":"var(--muted)"}">${i+1}</text>`}</g>`});
+ if(!small&&K[open]){const p=pts[open],left=p[0]>W*.7;
+  s+=`<text x="${p[0]+(left?-1:1)*(r+12)}" y="${p[1]-r-12}" text-anchor="${left?"end":"start"}" fill="var(--ink)" font-family="Marcellus,serif" font-size="18">${esc(K[open].t)}</text>`}
+ el.innerHTML=s+"</svg>";
+ el.querySelectorAll("[data-go]").forEach(g=>g.addEventListener("click",()=>{openChapter(+g.dataset.go,true)}));
+}
+function progress(){
+ const all=K.reduce((a,c)=>a+c.s.length,0),got=Object.values(done).filter(Boolean).length,p=Math.round(100*got/all);
+ $("#pct").textContent=p+" %";$("#pctTxt").textContent=`${got} von ${all} Schritten erledigt`;$("#pctBar").style.width=p+"%";
+}
+function renderKapitel(){
+ const q=$("#q").value.trim().toLowerCase();
+ const html=K.map((c,i)=>{
+  const steps=c.s.map((t,j)=>({t,j})).filter(x=>!q||x.t.toLowerCase().includes(q)||c.t.toLowerCase().includes(q)||(c.g||"").toLowerCase().includes(q)||(c.tip||"").toLowerCase().includes(q)||(c.b||"").toLowerCase().includes(q));
+  if(q&&!steps.length)return "";
+  const n=c.s.filter((_,j)=>done[i+"."+j]).length;
+  return `<details class="ch${n===c.s.length?" done":""}" data-i="${i}"${q||i===open?" open":""}>
+   <summary><span class="num">${i+1}</span><span><h3>${hl(c.t,q)}<span class="age">${c.a}</span></h3>${c.b?`<div class="sub">Endgegner: ${hl(c.b,q)}</div>`:""}</span><span class="cnt">${n}/${c.s.length}</span></summary>
+   <div class="body">${steps.map(x=>`<label class="step${done[i+"."+x.j]?" ok":""}"><input type="checkbox" data-k="${i}.${x.j}"${done[i+"."+x.j]?" checked":""}><span>${hl(x.t,q)}</span></label>`).join("")}
+   ${c.tip?`<div class="tip"><b>${esc(c.b)}</b>${hl(c.tip,q)}</div>`:""}
+   ${c.g?`<div class="gain">Belohnung: ${hl(c.g,q)}</div>`:""}</div></details>`}).join("");
+ $("#kapitel").innerHTML=html||`<p class="empty">Nichts gefunden für „${esc(q)}“.</p>`;
+}
+function openChapter(i,scroll){
+ open=i;store.set("open",i);
+ document.querySelectorAll("details.ch").forEach(d=>{d.open=+d.dataset.i===i||!!$("#q").value.trim()});
+ renderPfad();
+ if(scroll){const d=document.querySelector(`details.ch[data-i="${i}"]`);d&&d.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}
+}
+function renderLieder(){
+ const q=$("#q").value.trim().toLowerCase();
+ const list=L.filter(l=>!q||l.join(" ").toLowerCase().includes(q));
+ $("#lieder").innerHTML=list.map(([n,notes,wo,wozu])=>`<div class="card"><h3>${hl(n,q)}</h3>
+  ${notes?`<div class="notes" aria-label="Noten">${[...notes].map(x=>`<span class="n${x==="A"?" a":""}">${DS[x]}</span>`).join("")}</div>`:`<div class="sub">Eigene Melodie</div>`}
+  <div class="sub">Gelernt: ${hl(wo,q)}</div><div>${hl(wozu,q)}</div></div>`).join("")||`<p class="empty">Kein Lied gefunden.</p>`;
+}
+function renderBosse(){
+ const q=$("#q").value.trim().toLowerCase();
+ $("#bosse").innerHTML=K.map((c,i)=>({c,i})).filter(x=>x.c.b&&(!q||(x.c.b+x.c.tip+x.c.t).toLowerCase().includes(q)))
+  .map(({c,i})=>`<div class="card"><h3>${hl(c.b,q)}</h3><div class="sub">Kapitel ${i+1}: ${esc(c.t)}</div><div>${hl(c.tip,q)}</div><div class="gain">Belohnung: ${esc(c.g)}</div></div>`).join("")
+  ||`<p class="empty">Kein Endgegner gefunden.</p>`;
+}
+function renderSammeln(){
+ $("#sammeln").innerHTML=S.map(x=>{const v=counts[x.k]||0;if(!x.max)return `<div class="card"><h3>${x.t}</h3><ul class="plain">${x.li.map(l=>`<li>${l}</li>`).join("")}</ul></div>`;return `<div class="card"><h3>${x.t}</h3>
+  <div class="ctr"><button data-c="${x.k}" data-d="-1" aria-label="${x.t} weniger">−</button><output>${v}/${x.max}</output><button data-c="${x.k}" data-d="1" aria-label="${x.t} mehr">+</button></div>
+  <div class="bar"><i style="width:${100*v/x.max}%"></i></div>
+  ${x.txt?`<div class="sub">${x.txt}</div>`:""}${x.li?`<ul class="plain">${x.li.map(l=>`<li>${l}</li>`).join("")}</ul>`:""}${x.note?`<div class="sub">${x.note}</div>`:""}</div>`}).join("");
+}
+function render(){renderKapitel();renderLieder();renderBosse();progress();renderPfad()}
+
+let karte=Math.min(store.get("karte",0),M.length-1);
+function renderKarte(){
+ const m=M[karte],el=$("#karte"),W=el.clientWidth,H=el.clientHeight;if(!W||!H)return;
+ const small=W<560,frei=!!m.frei,n=frei?1:m.ebenen.length,top=8,bandH=(H-top*2)/n,lab=(small||frei)?0:116;
+ const X=x=>lab+16+(W-lab-32)*x;
+ const pos={};m.raeume.forEach(r=>{
+  if(frei){const w=small?74:Math.min(150,W*.2),h=small?30:38;pos[r.id]={cx:Math.max(w/2+4,Math.min(W-w/2-4,r.x*W)),cy:Math.max(h/2+4,Math.min(H-h/2-4,r.y*H)),w,h}}
+  else pos[r.id]={cx:X(r.x),cy:top+bandH*(r.e+.5),w:(W-lab-32)*r.w,h:Math.min(bandH*.62,64)}});
+ let s=`<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><marker id="pf" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--gold)"/></marker></defs>`;
+ if(!frei)m.ebenen.forEach((e,i)=>{const y=top+bandH*i;
+  s+=`<rect x="0" y="${y}" width="${W}" height="${bandH}" fill="${i%2?"var(--panel2)":"transparent"}" opacity=".6"/>`;
+  if(lab)s+=`<text x="14" y="${y+bandH/2+5}" fill="var(--muted)" font-size="13" font-weight="700">${e}</text>`});
+ const badge=(x,y,i)=>`<circle cx="${x}" cy="${y}" r="12" fill="var(--gold)"/><text x="${x}" y="${y+4.5}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--bg)">${i+1}</text>`;
+ const line=d=>`<path d="${d}" fill="none" stroke="var(--gold)" stroke-width="3" stroke-dasharray="7 5" stroke-linejoin="round" marker-end="url(#pf)"/>`;
+ let edges="";
+ m.weg.forEach((w,i)=>{const [a,b]=w,A=pos[a],B=pos[b],opt=typeof w[2]==="object"?w[2]:{};
+  if(opt.via!==undefined&&!frei){const r=opt.via>.5,vx=r?W-10:Math.max(10,lab+2),ax=A.cx+(r?A.w/2:-A.w/2),bx=B.cx+(r?B.w/2:-B.w/2);
+   edges+=line(`M${ax} ${A.cy} H${vx} V${B.cy} H${bx+(r?2:-2)}`)+badge(vx,(A.cy+B.cy)/2,i);return}
+  if(frei){const dx=B.cx-A.cx,dy=B.cy-A.cy,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+   const cut=r=>Math.min(Math.abs(r.w/2/(ux||1e-9)),Math.abs(r.h/2/(uy||1e-9)))+4;
+   const ax=A.cx+ux*cut(A),ay=A.cy+uy*cut(A),bx=B.cx-ux*cut(B),by=B.cy-uy*cut(B);
+   const bend=(i%2?1:-1)*Math.min(90,L*.28),mx=(ax+bx)/2-uy*bend,my=(ay+by)/2+ux*bend;
+   edges+=line(`M${ax} ${ay} Q${mx} ${my} ${bx} ${by}`)+badge((ax+2*mx+bx)/4,(ay+2*my+by)/4,i);return}
+  const same=Math.abs(B.cy-A.cy)<2,ax=A.cx+(same?(B.cx>A.cx?A.w/2:-A.w/2):0),ay=A.cy+(same?0:(B.cy>A.cy?A.h/2:-A.h/2));
+  const bx=B.cx-(same?(B.cx>A.cx?B.w/2:-B.w/2):0),by=B.cy-(same?0:(B.cy>A.cy?B.h/2:-B.h/2));
+  const mx=(ax+bx)/2+(same?0:(i%2?14:-14)),my=(ay+by)/2+(same?(i%2?10:-10):0);
+  edges+=line(`M${ax} ${ay} Q${mx} ${my} ${bx} ${by}`)+badge((ax+2*mx+bx)/4,(ay+2*my+by)/4,i)});
+ if(frei)s+=edges;
+ m.raeume.forEach(r=>{const p=pos[r.id];
+  s+=`<g opacity="${r.aus?.45:1}"><rect x="${p.cx-p.w/2}" y="${p.cy-p.h/2+3}" width="${p.w}" height="${p.h}" rx="12" fill="#000" opacity=".12"/>
+  <rect x="${p.cx-p.w/2}" y="${p.cy-p.h/2}" width="${p.w}" height="${p.h}" rx="12" fill="${r.boss?"var(--goldsoft)":"var(--panel)"}" stroke="${r.boss?"var(--gold)":"var(--line)"}" stroke-width="2"/>
+  <text x="${p.cx}" y="${p.cy+(r.u&&!small?-3:5)}" text-anchor="middle" fill="var(--ink)" font-size="${small?10.5:13.5}" font-weight="700">${esc(small&&r.k?r.k:r.t)}</text>
+  ${r.u&&!small?`<text x="${p.cx}" y="${p.cy+15}" text-anchor="middle" fill="var(--muted)" font-size="12">${esc(r.u)}</text>`:""}</g>`});
+ if(!frei)s+=edges;
+ el.innerHTML=s+"</svg>";
+ $("#kTitel").textContent=m.n;
+ $("#kWeg").innerHTML=m.weg.map(w=>`<li><span>${esc(w[w.length-1])}</span></li>`).join("");
+}
+function renderKartenWahl(){
+ $("#kWahl").innerHTML=M.map((m,i)=>`<option value="${i}"${i===karte?" selected":""}>${esc(m.n)}</option>`).join("");
+}
+$("#kWahl").addEventListener("change",e=>{karte=+e.target.value;store.set("karte",karte);renderKarte()});
+new ResizeObserver(renderKarte).observe($("#karte"));
+function route(){
+ const v=["weg","lieder","karten","bosse","sammeln"].includes(location.hash.slice(1))?location.hash.slice(1):"weg";
+ document.querySelectorAll("main>section").forEach(s=>s.hidden=s.id!=="v-"+v);
+ document.querySelectorAll("nav a").forEach(a=>a.toggleAttribute("aria-current",a.dataset.v===v));
+ if(v==="weg")renderPfad();if(v==="karten")renderKarte();
+}
+$("#kapitel").addEventListener("change",e=>{
+ const k=e.target.dataset.k;if(!k)return;done[k]=e.target.checked;store.set("done",done);
+ e.target.closest(".step").classList.toggle("ok",e.target.checked);
+ const i=+k.split(".")[0],d=e.target.closest("details"),n=K[i].s.filter((_,j)=>done[i+"."+j]).length;
+ d.querySelector(".cnt").textContent=n+"/"+K[i].s.length;d.classList.toggle("done",n===K[i].s.length);
+ progress();renderPfad();
+});
+$("#kapitel").addEventListener("toggle",e=>{if(e.target.open&&!$("#q").value.trim()&&+e.target.dataset.i!==open){open=+e.target.dataset.i;store.set("open",open);renderPfad()}},true);
+$("#sammeln").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const x=S.find(s=>s.k===b.dataset.c);
+ counts[x.k]=Math.max(0,Math.min(x.max,(counts[x.k]||0)+ +b.dataset.d));store.set("counts",counts);renderSammeln()});
+$("#q").addEventListener("input",()=>{renderKapitel();renderLieder();renderBosse()});
+addEventListener("hashchange",route);
+new ResizeObserver(renderPfad).observe($("#pfad"));
+render();renderSammeln();renderKartenWahl();route();
+}
+</script>
+</body>
+</html>
