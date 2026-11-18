@@ -41,4 +41,4 @@ jobs:
           printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
           foto "$GITHUB_WORKSPACE/fotos/tray-porzellan.png"
           ls -la fotos
-          for f in fotos/*.png; do echo "PNG64:$(basename "$f"):$(base64 -w0 "$f")"; done
+          for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
