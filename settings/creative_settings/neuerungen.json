@@ -1,5 +1,12 @@
 [
   {
+    "datum": "2026-11-18",
+    "titel": "Tabellen-Ansicht druckt",
+    "neu": [
+      "Tabellen-Ansicht: Drucken mit Vorschau (Strg+P) – im Hoch- oder Querformat, ganzes Blatt oder nur die Auswahl, alle Spalten auf eine Seitenbreite, Gitternetzlinien und fixierte Kopfzeilen auf jeder Seite. Auch als PDF speichern. Querformat aus der Excel-Datei wird übernommen"
+    ]
+  },
+  {
     "datum": "2026-11-17",
     "titel": "Aus Creative OS wird Orbit OS – und: Start hängt nicht mehr am Bootlogo",
     "neu": [

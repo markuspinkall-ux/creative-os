@@ -41,6 +41,12 @@ QPushButton#primary {{ background: {ACCENT}; color: {ACCENT_TEXT}; font-weight: 
 QTabBar::tab {{ background: transparent; color: {MUTED}; padding: 7px 16px; margin: 6px 2px; border-radius: 8px; }}
 QTabBar::tab:selected {{ background: rgba(143,179,255,0.18); color: {TEXT}; font-weight: bold; }}
 QTabBar::tab:hover:!selected {{ background: rgba(220,230,255,0.06); }}
+QPushButton#seg {{ padding: 7px 8px; }}
+QPushButton#seg:checked {{ background: rgba(143,179,255,0.22); color: {TEXT}; font-weight: bold; }}
+QCheckBox {{ spacing: 8px; }}
+QCheckBox::indicator {{ width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(220,230,255,0.3); background: {RAISED}; }}
+QCheckBox::indicator:checked {{ background: {ACCENT}; border: 1px solid {ACCENT}; }}
+QDialog {{ background: {GROUND}; }}
 QSlider::groove:horizontal {{ height: 4px; background: rgba(220,230,255,0.15); border-radius: 2px; }}
 QSlider::handle:horizontal {{ background: {ACCENT}; width: 14px; height: 14px; margin: -5px 0; border-radius: 7px; }}
 QTableView {{ background: #ffffff; color: #000000; gridline-color: #d9dde5; border: 0;
@@ -185,6 +191,11 @@ class Viewer(QMainWindow):
         btn_copy.setToolTip("Markierte Zellen kopieren (Strg+C)")
         btn_copy.clicked.connect(self.copy)
         top.addWidget(btn_copy)
+        self.btn_print = QPushButton("Drucken …")
+        self.btn_print.setToolTip("Drucken oder als PDF speichern – Hoch- oder Querformat (Strg+P)")
+        self.btn_print.clicked.connect(self.print_dialog)
+        self.btn_print.setEnabled(False)
+        top.addWidget(self.btn_print)
         btn_open = QPushButton("Öffnen …", objectName="primary")
         btn_open.clicked.connect(self.choose)
         top.addWidget(btn_open)
@@ -255,7 +266,7 @@ class Viewer(QMainWindow):
         for seq, fn in ((QKeySequence.StandardKey.Copy, self.copy), (QKeySequence.StandardKey.Find, self.search.setFocus),
                         (QKeySequence.StandardKey.Open, self.choose), (QKeySequence.StandardKey.ZoomIn, lambda: self.slider.setValue(self.slider.value() + 10)),
                         (QKeySequence.StandardKey.ZoomOut, lambda: self.slider.setValue(self.slider.value() - 10)),
-                        (QKeySequence("F3"), self.find_next), (QKeySequence("Ctrl+0"), lambda: self.slider.setValue(100))):
+                        (QKeySequence("F3"), self.find_next), (QKeySequence.StandardKey.Print, self.print_dialog), (QKeySequence("Ctrl+0"), lambda: self.slider.setValue(100))):
             a = QAction(self)
             a.setShortcut(seq)
             a.triggered.connect(fn)
@@ -300,6 +311,7 @@ class Viewer(QMainWindow):
         self.tabs.blockSignals(False)
         self.empty.hide()
         self.table.show()
+        self.btn_print.setEnabled(True)
         self.tabs.setCurrentIndex(book.active)
         self.show_sheet(book.active)
         self.table.setFocus()
@@ -394,6 +406,25 @@ class Viewer(QMainWindow):
         QGuiApplication.clipboard().setText("\n".join(lines))
         self.status.setText(f"{len(chosen)} Zelle{'n' if len(chosen) > 1 else ''} kopiert")
 
+    def selected_range(self):
+        """Auswahl als Druckbereich – nur wenn mehr als eine Zelle markiert ist."""
+        idxs = self.table.selectedIndexes() if self.model else []
+        if len(idxs) < 2:
+            return None
+        from .druck import Bereich
+        rows = [i.row() for i in idxs]
+        cols = [i.column() for i in idxs]
+        return Bereich(min(rows), max(rows), min(cols), max(cols))
+
+    def print_dialog(self):
+        if not self.model:
+            return None
+        from . import druck
+        dlg = druck.dialog(self, self.model.sheet, Path(self.book.path).name, self.selected_range())
+        dlg.open()
+        self._print_dlg = dlg
+        return dlg
+
     def find_next(self):
         text = self.search.text().strip().lower()
         if not text or not self.model:
@@ -445,6 +476,18 @@ def main(argv=None):
             win.open(a)
             break
     shot = next((a.split("=", 1)[1] for a in argv if a.startswith("--screenshot=")), "")
+    blatt = next((a.split("=", 1)[1] for a in argv if a.startswith("--blatt=")), "")
+    if blatt and win.book:
+        names = [sh.name for sh in win.book.sheets]
+        if blatt in names:
+            win.tabs.setCurrentIndex(names.index(blatt))
+    pdf = next((a.split("=", 1)[1] for a in argv if a.startswith("--pdf=")), "")
+    if pdf and win.model:
+        from . import druck
+        quer = True if "--quer" in argv else (False if "--hoch" in argv else None)
+        n = druck.pdf_speichern(pdf, win.model.sheet, Path(win.book.path).name, quer)
+        print(f"Tabellen-Ansicht: {n} Seite(n) nach {pdf}")
+        return 0 if n else 1
     if "--selftest" in argv:
         ok = win.book is not None and win.model is not None and win.model.rowCount() > 0
         print("Tabellen-Ansicht: Selbsttest", "bestanden" if ok else "FEHLGESCHLAGEN")
@@ -459,6 +502,12 @@ def main(argv=None):
                 win.table.setCurrentIndex(win.model.index(3, 3))
                 win.table.selectionModel().select(sel, QItemSelectionModel.SelectionFlag.Select)
                 win.selection_changed()
+            if "--drucken" in argv:
+                dlg = win.print_dialog()
+                if "--quer" in argv:
+                    dlg._orient.button(1).click()
+                QTimer.singleShot(1500, lambda: (dlg.grab().save(shot), app.quit()))
+                return
             QTimer.singleShot(400, lambda: (win.grab().save(shot), app.quit()))
         QTimer.singleShot(800, grab)
     return app.exec()

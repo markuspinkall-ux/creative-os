@@ -20,7 +20,7 @@ def book(tmp_path_factory):
 
 
 def test_blaetter_und_groesse(book):
-    assert [s.name for s in book.sheets] == ["Haushalt 2026", "Spiele"]
+    assert [s.name for s in book.sheets] == ["Haushalt 2026", "Spiele", "Inventar"]
     sh = book.sheets[0]
     assert (sh.rows, sh.cols) == (15, 5) and sh.freeze == (3, 0)
     assert (0, 0, 1, 5) in sh.merged and (13, 1, 2, 4) in sh.merged
@@ -61,3 +61,7 @@ def test_nur_per_doppelklick():
     assert "NoDisplay=true" in desk and "spreadsheetml.sheet" in desk and "Exec=orbit-tabellen %f" in desk
     cf = (ROOT / "image" / "Containerfile").read_text(encoding="utf-8")
     assert "python3-openpyxl" in cf and "=orbit-tabellen.desktop/' >> \"$f\"" in cf
+
+
+def test_querformat_aus_datei(book):
+    assert book.sheets[2].landscape and not book.sheets[0].landscape

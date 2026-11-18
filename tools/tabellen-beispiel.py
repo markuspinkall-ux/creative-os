@@ -51,4 +51,22 @@ ws2 = wb.create_sheet("Spiele")
 ws2.append(["Titel", "Plattform", "Gespielt", "Bewertung"])
 for row in [("Hollow Knight", "PC", True, 9.5), ("Hades II", "PC", False, None), ("Zelda TotK", "Switch", True, 10)]:
     ws2.append(list(row))
+# Breite Liste im Querformat über mehrere Seiten (Druckprüfung)
+ws3 = wb.create_sheet("Inventar")
+ws3.page_setup.orientation = "landscape"
+cols = ["Nr.", "Artikel", "Kategorie", "Lagerort", "Menge", "Einheit", "Einkauf", "Verkauf", "Lieferant", "Bemerkung"]
+for i, h in enumerate(cols, start=1):
+    c = ws3.cell(1, i, h)
+    c.font = Font(bold=True, color="FFFFFF")
+    c.fill = PatternFill("solid", fgColor="4472C4")
+for n in range(1, 81):
+    ws3.append([n, f"Artikel {n:03d}", ["Kabel", "Werkzeug", "Büro", "Technik"][n % 4], f"Regal {1 + n % 7}",
+                (n * 37) % 120, "Stück", round(2.5 + n * 1.17, 2), round(4.9 + n * 1.83, 2),
+                ["Conrad", "Reichelt", "Amazon", "Würth"][n % 4], "Nachbestellen" if n % 9 == 0 else ""])
+for col, w in zip("ABCDEFGHIJ", (6, 18, 14, 12, 9, 9, 11, 11, 14, 22)):
+    ws3.column_dimensions[col].width = w
+for r in range(2, 82):
+    for col in "GH":
+        ws3[f"{col}{r}"].number_format = '#,##0.00 "€"'
+ws3.freeze_panes = "A2"
 wb.save(sys.argv[1] if len(sys.argv) > 1 else "beispiel.xlsx")
