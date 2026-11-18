@@ -1,0 +1,24 @@
+name: Loesungsbuch-App pruefen (Notizzweig)
+on:
+  push:
+    branches: ["claude/mail-gegenprobe"]
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libasound2t64 fonts-liberation
+          pip install -q PySide6
+      - env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: "--no-sandbox --disable-gpu"
+        run: |
+          export HOME=$(mktemp -d)
+          sh tools/lb-test/installieren.sh
+          ORBIT_LB_FOTO=/tmp/a.png timeout 60 python3 $HOME/.local/share/orbit-loesungsbuch/loesungsbuch.py
+          mkdir -p $HOME/.config/creative-os; printf '[Look]\ndesign=porzellan\n' > $HOME/.config/creative-os/look.conf
+          ORBIT_LB_FOTO=/tmp/b.png timeout 60 python3 $HOME/.local/share/orbit-loesungsbuch/loesungsbuch.py
+          ls -la $HOME/.local/share/orbit-loesungsbuch/daten || true
+          for f in a b; do base64 -w 0 /tmp/$f.png | fold -w 3000 | sed "s/^/PNG64:lb-$f:/"; echo; done
