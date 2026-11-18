@@ -27,7 +27,7 @@ def dunkel():
 def main():
     from PySide6.QtCore import QUrl
     from PySide6.QtGui import QColor, QIcon
-    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineScript
+    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtWidgets import QApplication
 
@@ -43,20 +43,15 @@ def main():
     profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.DiskHttpCache)
 
     thema = "dark" if dunkel() else "light"
-    script = QWebEngineScript()
-    script.setName("orbit-thema")
-    script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
-    script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
-    script.setSourceCode(f"document.documentElement.dataset.theme = '{thema}';")
-    profile.scripts().insert(script)
-
     page = QWebEnginePage(profile)
     page.setBackgroundColor(QColor("#0d1f19" if thema == "dark" else "#f3f5ee"))
     view = QWebEngineView()
     view.setPage(page)
     view.setWindowTitle(NAME)
     view.resize(1280, 880)
-    view.load(QUrl.fromLocalFile(str(HERE / "index.html")))
+    url = QUrl.fromLocalFile(str(HERE / "index.html"))
+    url.setQuery(f"thema={thema}")              # Orbit-Design an die Seite weitergeben
+    view.load(url)
     view.show()
     foto = os.environ.get("ORBIT_LB_FOTO")      # nur zum Prüfen: Fenster fotografieren und beenden
     if foto:
