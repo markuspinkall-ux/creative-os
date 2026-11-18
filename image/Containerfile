@@ -727,6 +727,7 @@ RUN chmod 755 /usr/libexec/creative-quiet-boot && systemctl enable creative-quie
 COPY image/netinstall/grub-theme/background.png image/netinstall/grub-theme/logo.png image/netinstall/grub-theme/select_*.png /usr/share/creative-os/grub-theme/
 COPY image/grub-theme/theme.txt image/grub-theme/grub-snippet.cfg /usr/share/creative-os/grub-theme/
 COPY image/grub-theme/creative-grub-design /usr/bin/creative-grub-design
+COPY image/grub-theme/creative-grub-menue /usr/bin/creative-grub-menue
 RUN dnf install -y --setopt=install_weak_deps=False grub2-tools-extra liberation-sans-fonts fontconfig \
  && d=/usr/share/creative-os/grub-theme \
  && sans=$(fc-match -f '%{file}' 'Liberation Sans:style=Regular') && bold=$(fc-match -f '%{file}' 'Liberation Sans:style=Bold') \
@@ -734,7 +735,7 @@ RUN dnf install -y --setopt=install_weak_deps=False grub2-tools-extra liberation
  && for n in 18 20; do grub2-mkfont -r "$ranges" -s "$n" -o "$d/sans-$n.pf2" "$sans"; done \
  && for n in 20 36; do grub2-mkfont -r "$ranges" -s "$n" -o "$d/bold-$n.pf2" "$bold"; done \
  && (cd "$d" && cat theme.txt grub-snippet.cfg *.png *.pf2 | sha256sum | cut -c1-16 > version) \
- && chmod 755 /usr/bin/creative-grub-design && chmod -R a+rX "$d" \
+ && chmod 755 /usr/bin/creative-grub-design /usr/bin/creative-grub-menue && chmod -R a+rX "$d" \
  && dnf clean all
 COPY image/polkit/50-creative-updates.rules /usr/share/polkit-1/rules.d/50-creative-updates.rules
 COPY image/polkit/50-creative-drives.rules /usr/share/polkit-1/rules.d/50-creative-drives.rules

@@ -51,10 +51,28 @@ cmp "$BOOT/user.cfg" "$W/user.an" || { echo "FEHLER: auto nach „an“ anders";
 grep -q "            set gfxmode=auto$" "$BOOT/user.cfg" || { echo "FEHLER: Auflösung nicht von der Firmware"; exit 1; }
 echo "Skript: ok (an, zweimal, aus, aus bleibt beim Start aus, wieder an)"
 
+# Startauswahl verstecken / zeigen
+export CREATIVE_GRUB_ZEIGEN="$W/etc/startauswahl-zeigen"
+sh image/grub-theme/creative-grub-menue
+grep -q "set timeout_style=hidden" "$BOOT/user.cfg" || { echo "FEHLER: Startauswahl nicht versteckt"; exit 1; }
+cp "$BOOT/user.cfg" "$W/user.versteckt"
+sh image/grub-theme/creative-grub-menue auto
+cmp "$BOOT/user.cfg" "$W/user.versteckt" || { echo "FEHLER: auto schreibt doppelt"; exit 1; }
+[ "$(grep -c "BEGIN orbit-os startauswahl" "$BOOT/user.cfg")" = 1 ] || { echo "FEHLER: Block doppelt"; exit 1; }
+sh image/grub-theme/creative-grub-menue zeigen
+! grep -q "orbit-os startauswahl" "$BOOT/user.cfg" || { echo "FEHLER: zeigen entfernt den Block nicht"; exit 1; }
+sh image/grub-theme/creative-grub-menue auto
+! grep -q "orbit-os startauswahl" "$BOOT/user.cfg" || { echo "FEHLER: Start versteckt trotz „zeigen“"; exit 1; }
+cp "$BOOT/user.cfg" "$W/user.mit-menue"
+sh image/grub-theme/creative-grub-menue
+[ ! -e "$CREATIVE_GRUB_ZEIGEN" ] || { echo "FEHLER: verstecken hebt „zeigen“ nicht auf"; exit 1; }
+echo "Startauswahl-Skript: ok (verstecken, auto, zeigen bleibt, wieder verstecken)"
+
 # ---- 2. Echter GRUB in QEMU ------------------------------------------------------------------
 ISO="$W/iso"
 mkdir -p "$ISO/boot/grub"
-cp -r "$BOOT/themes" "$BOOT/user.cfg" "$ISO/boot/grub/"
+cp -r "$BOOT/themes" "$ISO/boot/grub/"
+cp "$W/user.mit-menue" "$ISO/boot/grub/user.cfg"
 cat > "$ISO/boot/grub/grub.cfg" <<'CFG'
 set timeout=30
 set default=0
@@ -91,6 +109,46 @@ colors = {px[x, y] for x in range(0, w, 7) for y in range(0, h, 7)}
 assert len(colors) > 200, f"kein Grafikmenü ({len(colors)} Farben, {w}x{h})"
 print(f"Grafikmenü: {w}x{h}, {len(colors)} Farben")
 PY
+# ---- 2b. Versteckte Startauswahl: ohne Taste kein Menü, mit Esc erscheint es -------------------
+cp "$W/user.versteckt" "$ISO/boot/grub/user.cfg"
+grub2-mkrescue -o "$W/test2.iso" "$ISO" >/dev/null 2>&1
+rm -f "$W/qmp.sock"
+qemu-system-x86_64 -m 512 -cdrom "$W/test2.iso" -vga std -display none -boot menu=off \
+    -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid"
+sleep 25
+foto "$OUT/startauswahl-versteckt.png"
+kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
+echo "Versteckt: Foto gemacht"
+sleep 1; rm -f "$W/qmp.sock"
+qemu-system-x86_64 -m 512 -cdrom "$W/test2.iso" -vga std -display none -boot menu=off \
+    -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid"
+sleep 1
+for i in $(seq 1 40); do
+    echo '{"execute":"qmp_capabilities"}{"execute":"human-monitor-command","arguments":{"command-line":"sendkey esc"}}' \
+        | socat - UNIX-CONNECT:"$W/qmp.sock" >/dev/null 2>&1 || true
+    sleep 0.5
+done
+sleep 3
+foto "$OUT/startauswahl-esc.png"
+kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
+# Vergleich mit dem normalen Menü-Foto: mit Esc fast gleich, versteckt deutlich anders
+python3 - "$OUT/grub-startauswahl.png" "$OUT/startauswahl-versteckt.png" "$OUT/startauswahl-esc.png" <<'PY'
+import sys
+from PIL import Image, ImageChops
+menue, versteckt, esc = (Image.open(f).convert("RGB") for f in sys.argv[1:4])
+def anteil(a, b):
+    if a.size != b.size:
+        return 1.0
+    d = ImageChops.difference(a, b).convert("L").point(lambda v: 255 if v > 40 else 0)
+    return sum(d.histogram()[255:]) / (a.size[0] * a.size[1])
+dv, de = anteil(menue, versteckt), anteil(menue, esc)
+print(f"Abweichung vom Menü: versteckt {dv:.1%}, mit Esc {de:.1%}")
+assert dv > 0.01, "versteckt sieht aus wie das Menü – Startauswahl wird trotzdem gezeigt"
+assert de < dv / 2, "Esc öffnet die Startauswahl nicht"
+PY
+echo "Startauswahl: versteckt ohne Taste, mit Esc sichtbar"
+sleep 1; rm -f "$W/qmp.sock"
+
 # ---- 3. Dasselbe mit UEFI (wie auf echten PCs): Auflösung der Firmware, Grafikmenü ---------
 OVMF=""; VARS=""
 for f in /usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd \

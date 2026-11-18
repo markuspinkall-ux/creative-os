@@ -55,5 +55,7 @@ for dir in /boot/grub2 /boot/efi/EFI/fedora; do
         [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true
     fi
 done
+# Startauswahl nur auf Esc (sudo creative-grub-menue zeigen schaltet sie wieder dauerhaft ein)
+[ -x /usr/bin/creative-grub-menue ] && /usr/bin/creative-grub-menue auto >/dev/null 2>&1 || true
 # Startauswahl im Orbit-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
 [ -x /usr/bin/creative-grub-design ] && /usr/bin/creative-grub-design auto >/dev/null 2>&1 || true

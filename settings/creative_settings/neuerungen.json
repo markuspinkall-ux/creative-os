@@ -9,7 +9,8 @@
     "verbessert": [
       "Broadcast, Deck und Shots stehen nicht mehr im Startmenü: Broadcast und Deck öffnest du über den Tray, Shots über die Druck-Taste. Als Programm für eine Stream-Deck-Taste lassen sie sich weiterhin auswählen",
       "Capture: Solange das Fenster offen ist, geht der PC nicht in den Standby, der Bildschirm dunkelt nicht ab und sperrt nicht – praktisch beim Zocken über die Capture-Karte",
-      "Capture: Die passende Tonquelle wird jetzt auch bei eingebauten PCIe-Capture-Karten (z. B. Elgato 4K60 Pro, AVerMedia Live Gamer 4K) automatisch gefunden – nicht mehr nur bei USB-Karten"
+      "Capture: Die passende Tonquelle wird jetzt auch bei eingebauten PCIe-Capture-Karten (z. B. Elgato 4K60 Pro, AVerMedia Live Gamer 4K) automatisch gefunden – nicht mehr nur bei USB-Karten",
+      "Startauswahl versteckt: Nach dem Mainboard-Logo geht es direkt zur Rakete. Die Auswahl der Systemversionen öffnest du mit Esc direkt nach dem Mainboard-Logo. Ging ein Update-Start schief, erscheint sie von selbst. Dauerhaft wieder anzeigen: sudo creative-grub-menue zeigen"
     ]
   },
   {

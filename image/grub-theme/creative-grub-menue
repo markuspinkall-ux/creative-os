@@ -1,0 +1,63 @@
+#!/bin/sh
+# Orbit OS: Startauswahl (GRUB) verstecken – sie erscheint nur, wenn man beim Start Esc drückt,
+# oder von selbst, wenn ein Update-Start schiefging (greenboot zählt dann herunter).
+#   sudo creative-grub-menue           verstecken (Standard, läuft bei jedem Start)
+#   sudo creative-grub-menue zeigen    bei jedem Start wieder anzeigen (bleibt so, auch nach Updates)
+#   creative-grub-menue auto           beim Start: verstecken, außer „zeigen“ wurde gewählt
+set -eu
+BOOT_DIRS="${CREATIVE_BOOT_DIRS:-/boot/grub2 /boot/efi/EFI/fedora}"   # nur für Tests anders
+ZEIGEN_MARKE="${CREATIVE_GRUB_ZEIGEN:-/etc/creative-os/startauswahl-zeigen}"
+mode="${1:-verstecken}"
+if [ "$mode" = "auto" ]; then
+    [ -e "$ZEIGEN_MARKE" ] && exit 0
+    mode="verstecken"
+fi
+BEGIN="### BEGIN orbit-os startauswahl"
+END="### END orbit-os startauswahl"
+WARTEN="${CREATIVE_GRUB_WARTEN:-2}"     # Sekunden, in denen Esc die Auswahl öffnet
+
+[ "$(id -u)" = 0 ] || [ -n "${CREATIVE_BOOT_DIRS:-}" ] || { echo "Bitte mit sudo ausführen."; exit 1; }
+
+dir=""
+for d in $BOOT_DIRS; do
+    if [ -f "$d/grub.cfg" ] && grep -q "user.cfg" "$d/grub.cfg"; then dir="$d"; break; fi
+done
+[ -n "$dir" ] || { echo "Keine GRUB-Konfiguration mit user.cfg gefunden – nichts zu tun."; exit 0; }
+
+ro=""
+if ! touch "$dir/.creative-test" 2>/dev/null; then
+    mount -o remount,rw /boot 2>/dev/null && ro=1
+fi
+rm -f "$dir/.creative-test"
+fertig() { [ -n "$ro" ] && mount -o remount,ro /boot 2>/dev/null || true; }
+trap fertig EXIT
+
+cfg="$dir/user.cfg"
+touch "$cfg"
+tmp="$(mktemp)"
+awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$cfg" > "$tmp"
+
+if [ "$mode" = "zeigen" ]; then
+    mkdir -p "$(dirname "$ZEIGEN_MARKE")" && echo "mit creative-grub-menue zeigen eingeschaltet" > "$ZEIGEN_MARKE" || true
+    msg="Startauswahl erscheint wieder bei jedem Start."
+else
+    rm -f "$ZEIGEN_MARKE"
+    cat >> "$tmp" <<CFG
+$BEGIN
+# Startauswahl nur auf Esc. Ging ein Update-Start schief (greenboot-Zähler läuft ab),
+# erscheint sie von selbst, damit man die vorherige Version wählen kann.
+if [ -n "\${boot_counter}" ] && [ "\${boot_counter}" -lt 2 ]; then
+    set timeout_style=menu
+    set timeout=10
+else
+    set timeout_style=hidden
+    set timeout=$WARTEN
+fi
+$END
+CFG
+    msg="Startauswahl versteckt – beim Start Esc drücken, um sie zu öffnen."
+fi
+if ! cmp -s "$tmp" "$cfg"; then cat "$tmp" > "$cfg"; fi
+rm -f "$tmp"
+sync
+echo "$msg"
