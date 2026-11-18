@@ -212,6 +212,7 @@ class Sheet:
     images: int = 0
     charts: int = 0
     state: str = "visible"
+    landscape: bool = False                         # Seiteneinrichtung der Datei: Querformat
 
 
 @dataclass
@@ -265,6 +266,10 @@ def load(path):
 
 def _read_sheet(ws, ws_formula, theme):
     sh = Sheet(name=ws.title, state=getattr(ws, "sheet_state", "visible") or "visible")
+    try:
+        sh.landscape = (ws.page_setup.orientation or "").lower() == "landscape"
+    except AttributeError:
+        pass
     rows, cols = ws.max_row or 0, ws.max_column or 0
     if rows == 1 and cols == 1 and ws.cell(1, 1).value is None:
         rows = cols = 0

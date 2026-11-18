@@ -2,7 +2,7 @@ name: Tabellen-Ansicht prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [tabellen/**, tools/tabellen-beispiel.py, tests/test_tabellen.py, .github/workflows/tabellen-pruefung.yml]
+    paths: [tabellen/**, tools/tabellen-beispiel.py, tests/test_tabellen.py, tests/test_tabellen_druck.py, .github/workflows/tabellen-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:
@@ -12,10 +12,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Qt und openpyxl
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation fonts-dejavu-core
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation fonts-dejavu-core poppler-utils libcups2
           pip install -q PySide6 openpyxl pytest
       - name: Lesen und Formate
-        run: python3 -m pytest -q tests/test_tabellen.py
+        run: python3 -m pytest -q tests/test_tabellen.py tests/test_tabellen_druck.py
       - name: Fenster (Selbsttest und Fotos)
         env:
           QT_QPA_PLATFORM: offscreen
@@ -26,4 +26,12 @@ jobs:
           mkdir -p fotos
           timeout 60 python3 -m orbit_tabellen beispiel.xlsx --screenshot=fotos/tabellen.png --auswahl
           timeout 60 python3 -m orbit_tabellen --screenshot=fotos/leer.png
+          # Drucken: Dialog in beiden Ausrichtungen, PDFs → PNG
+          timeout 60 python3 -m orbit_tabellen beispiel.xlsx --screenshot=fotos/druck-hoch.png --drucken
+          timeout 60 python3 -m orbit_tabellen beispiel.xlsx --screenshot=fotos/druck-quer.png --drucken --quer --blatt=Inventar
+          timeout 60 python3 -m orbit_tabellen beispiel.xlsx --pdf=hoch.pdf --hoch --blatt=Inventar
+          timeout 60 python3 -m orbit_tabellen beispiel.xlsx --pdf=quer.pdf --quer --blatt=Inventar
+          pdfinfo hoch.pdf | grep -E "Pages|Page size"; pdfinfo quer.pdf | grep -E "Pages|Page size"
+          pdftoppm -png -r 50 -f 1 -l 1 hoch.pdf fotos/pdf-hoch
+          pdftoppm -png -r 50 -f 1 -l 1 quer.pdf fotos/pdf-quer
           for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
