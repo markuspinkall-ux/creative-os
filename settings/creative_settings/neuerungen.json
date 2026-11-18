@@ -13,7 +13,8 @@
       "Startauswahl versteckt: Nach dem Mainboard-Logo geht es direkt zur Rakete. Die Auswahl der Systemversionen öffnest du mit Esc direkt nach dem Mainboard-Logo. Ging ein Update-Start schief, erscheint sie von selbst. Dauerhaft wieder anzeigen: sudo creative-grub-menue zeigen"
     ],
     "behoben": [
-      "Mail: „Bilder laden“ zeigt Bilder aus dem Internet jetzt wirklich an – vorher blieben sie trotz Erlaubnis leer. Neu: „Immer von diesem Absender“ merkt sich vertrauenswürdige Absender"
+      "Mail: „Bilder laden“ zeigt Bilder aus dem Internet jetzt wirklich an – vorher blieben sie trotz Erlaubnis leer. Neu: „Immer von diesem Absender“ merkt sich vertrauenswürdige Absender",
+      "Web-Apps (Claude, WhatsApp …): Download-Knöpfe funktionieren wieder. Dateien, die eine Web-App per neuem Fenster anbietet, landen jetzt direkt im Download-Ordner, statt im normalen Browser ins Leere zu laufen"
     ]
   },
   {

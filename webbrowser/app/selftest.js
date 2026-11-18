@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock }) {
+async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads = [] }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -255,13 +255,54 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
         await shot(win, dir, `4-${name}`);
       }
     }
+    // Downloads: so wie Webseiten Dateien anbieten (Link mit download, neues Fenster, Blob)
+    {
+      const html = `<!doctype html><body>
+        <a id="d1" download="probe-link.txt" href="data:text/plain,eins">Link</a>
+        <a id="d2" download="probe-fenster.txt" target="_blank" href="data:text/plain,zwei">Fenster</a>
+        <button id="d3">Blob</button>
+        <script>document.getElementById('d3').onclick = () => { const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob(['drei'], { type: 'text/plain' })); a.download = 'probe-blob.txt';
+          a.target = '_blank'; document.body.appendChild(a); a.click(); };</script>`;
+      const t = win.addTab('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      await waitLoad(t.wc);
+      await sleep(500);
+      for (const id of ['d1', 'd2', 'd3']) {
+        await within(t.wc.executeJavaScript(`document.getElementById('${id}').click()`, true), 3000, null);
+        await sleep(1500);
+      }
+      await sleep(2000);
+      const names = downloads.map((d) => d.name);
+      result.downloads = names;
+      check('Download per Link', names.some((n) => n.startsWith('probe-link')));
+      check('Download per Link in neuem Fenster', names.some((n) => n.startsWith('probe-fenster')));
+      check('Download per Blob', names.some((n) => n.startsWith('probe-blob')));
+    }
+    // Web-App (wie Claude): Datei per window.open(blob:) muss in der App heruntergeladen werden
+    {
+      const page = path.join(dir, 'webapp-download.html');
+      fs.writeFileSync(page, `<!doctype html><body><button id="d4">Datei</button>
+        <script>document.getElementById('d4').onclick = () => {
+          window.open(URL.createObjectURL(new Blob(['vier'], { type: 'application/gzip' })), '_blank'); };</script>`);
+      const vorher = downloads.length;
+      const appWin = new Win({ urls: [require('url').pathToFileURL(page).href], appMode: true });
+      await waitLoad(appWin.ui.webContents);
+      await sleep(800);
+      if (appWin.active) await waitLoad(appWin.active.wc);
+      await sleep(500);
+      if (appWin.active) await within(appWin.active.wc.executeJavaScript(`document.getElementById('d4').click()`, true), 3000, null);
+      await sleep(3000);
+      result.appDownloads = downloads.slice(0, downloads.length - vorher).map((d) => d.name);
+      check('Download aus einer Web-App (blob, neues Fenster)', downloads.length > vorher);
+      try { appWin.win.close(); } catch (_) { /* egal */ }
+    }
     result.ok = Object.values(result.checks).every(Boolean);
   } catch (e) {
     result.error = String(e && e.stack || e);
   }
   fs.writeFileSync(path.join(dir, 'ergebnis.json'), JSON.stringify(result, null, 2));
   for (const [k, v] of Object.entries(result.checks)) console.log(`${v ? 'ok  ' : 'FEHLER'} ${k}`);
-  console.log(JSON.stringify({ video: result.video, online: result.online, error: result.error }, null, 1));
+  console.log(JSON.stringify({ video: result.video, online: result.online, downloads: result.downloads, appDownloads: result.appDownloads, error: result.error }, null, 1));
   console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
