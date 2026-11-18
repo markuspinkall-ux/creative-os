@@ -43,6 +43,7 @@ from .visualizer import Visualizer
 from .loginsound import play_login_sound
 from .nowplaying import NowPlaying
 from .broadcasttray import BroadcastTray
+from .decktray import DeckTray
 from .shelf import ShelfModel
 from .messenger import MessengerModel
 
@@ -555,6 +556,7 @@ def main():
         "visualizer": Visualizer(),
         "nowplaying": NowPlaying(),
         "broadcast": BroadcastTray(),
+        "deckTray": DeckTray(),
         "shelf": ShelfModel(apps),
         "messenger": MessengerModel(),
     }
