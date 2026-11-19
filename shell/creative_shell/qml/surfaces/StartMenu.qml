@@ -25,7 +25,7 @@ Item {
 
     Keys.onEscapePressed: root.back()
 
-    // Esc: erst aus dem Ordner „Gibeon Suite“ zurück, dann Menü schließen
+    // Esc: erst aus dem Ordner „Gibeon OS Suite“ zurück, dann Menü schließen
     function back() {
         if (apps.folder !== "") {
             apps.closeFolder()
@@ -217,7 +217,7 @@ Item {
                 color: rowMouse.pressed ? Theme.pressed
                        : ((rowMouse.containsMouse || ListView.isCurrentItem) ? Theme.hover : "transparent")
 
-                // Ordner „Gibeon Suite“: kleine Vorschau der Apps darin
+                // Ordner „Gibeon OS Suite“: kleine Vorschau der Apps darin
                 Rectangle {
                     visible: row.isFolder
                     x: 10
