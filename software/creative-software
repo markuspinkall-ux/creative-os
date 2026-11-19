@@ -529,6 +529,7 @@ class AppTile(Clickable):
     def __init__(self, store, app):
         super().__init__(lambda: store.details(app))
         self.store, self.app = store, app
+        self.width_ = self.W
         self.setFixedSize(self.W, self.H)
         self.button = QPushButton(self)
         self.button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -547,8 +548,17 @@ class AppTile(Clickable):
             QPushButton:disabled { color:#8590a6; background:#262b39; border-color:#343b4d; }"""))
         self.button.setEnabled(self.store.can(verb, self.app))
         self.button.adjustSize()
-        self.button.move(self.W - self.button.width() - 10, self.SHOT + 14)
+        self.place_button()
         self.update()
+
+    def set_width(self, width):
+        if width != self.width_:
+            self.width_ = width
+            self.setFixedSize(width, self.H)
+            self.place_button()
+
+    def place_button(self):
+        self.button.move(self.width_ - self.button.width() - 12, self.SHOT + 16)
 
     def act(self):
         self.store.apply(self.verb, self.app)
@@ -566,21 +576,20 @@ class AppTile(Clickable):
         draw_icon(p, icon, self.app)
         text_w = self.button.x() - icon.right() - 18
         font = QFont(self.font())
-        font.setPixelSize(14)
+        font.setPixelSize(15)
         font.setBold(True)
         p.setFont(font)
         p.setPen(color("#eaf0ff"))
-        p.drawText(QRectF(icon.right() + 10, icon.y(), text_w, 19), Qt.AlignmentFlag.AlignLeft,
+        p.drawText(QRectF(icon.right() + 10, icon.y(), text_w, icon.height()),
+                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    p.fontMetrics().elidedText(self.app["name"], Qt.TextElideMode.ElideRight, int(text_w)))
+        # Kurzbeschreibung über die ganze Breite unter Symbol und Name
         font.setBold(False)
         font.setPixelSize(12)
         p.setFont(font)
         p.setPen(color("#aab4cb"))
-        p.drawText(QRectF(icon.right() + 10, icon.y() + 19, text_w, 17), Qt.AlignmentFlag.AlignLeft,
-                   p.fontMetrics().elidedText(self.app["summary"], Qt.TextElideMode.ElideRight, int(text_w)))
-        # zweite Zeile Kurztext unter dem Symbol
-        p.drawText(QRectF(r.x() + 12, icon.bottom() + 6, r.width() - 24, 17), Qt.AlignmentFlag.AlignLeft,
-                   p.fontMetrics().elidedText(self.app["category"], Qt.TextElideMode.ElideRight, int(r.width() - 24)))
+        p.drawText(QRectF(r.x() + 12, icon.bottom() + 7, r.width() - 24, 17), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["summary"], Qt.TextElideMode.ElideRight, int(r.width() - 24)))
         p.setPen(color("#8fb3ff") if self.hover else color("#2a303d"))
         p.drawPath(path)
 
@@ -667,11 +676,17 @@ class TileGrid(QScrollArea):
         width = self.viewport().width()
         return max(1, (width + 16) // (AppTile.W + 16))
 
+    def tile_width(self):
+        cols = self.column_count()
+        return max(AppTile.W, (self.viewport().width() - 16 * (cols - 1)) // cols)
+
     def add_more(self):
         self.columns = self.column_count()
+        width = self.tile_width()
         start = len(self.tiles)
         for app in self.apps[start:start + self.BATCH]:
             tile = AppTile(self.store, app)
+            tile.set_width(width)
             index = len(self.tiles)
             self.grid.addWidget(tile, index // self.columns, index % self.columns)
             self.tiles.append(tile)
@@ -683,6 +698,9 @@ class TileGrid(QScrollArea):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        width = self.tile_width()
+        for tile in self.tiles:
+            tile.set_width(width)
         if self.column_count() != self.columns and self.tiles:
             self.columns = self.column_count()
             for index, tile in enumerate(self.tiles):
@@ -1084,7 +1102,7 @@ class Store(QWidget):
             name, glyph, base, sub, _ = CATEGORY[view[1]]
             apps = [a for a in self.catalog_apps() if a["category"] == name]
             apps.sort(key=lambda a: (a["id"] not in POPULAR, POPULAR.index(a["id"]) if a["id"] in POPULAR else 0,
-                                     a["thumb"] is None, a["name"].casefold()))
+                                     a["thumb"] is None, not a["name"][:1].isalpha(), a["name"].casefold()))
             return apps, "KATEGORIE", name, f"{sub} · {len(apps)} Apps", base, "In dieser Kategorie ist noch nichts im Katalog."
         if view[0] == "search":
             query = view[2]
