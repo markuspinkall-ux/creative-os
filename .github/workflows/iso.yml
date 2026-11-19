@@ -139,3 +139,15 @@ jobs:
           - **creative-os-amd-netinstall** – für AMD- oder Intel-Grafik (und für VirtualBox)
           - **creative-os-nvidia-netinstall** – für NVIDIA-Grafikkarten"
 
+      - name: Feste Download-Adressen der Webseite aktualisieren (Release „installer“)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Die Webseite verlinkt immer …/releases/download/installer/creative-os-<variante>.iso
+          for v in amd nvidia; do cp "creative-os-$v-netinstall-$DATE.iso" "creative-os-$v.iso"; done
+          gh release upload installer creative-os-amd.iso creative-os-nvidia.iso --clobber --repo "${{ github.repository }}"
+          gh release edit installer --repo "${{ github.repository }}" \
+            --title "Gibeon OS – Installation (immer aktuell)" \
+            --notes "Immer die neueste kleine Installations-ISO (Stand ${DATE}). Während der Installation wird Gibeon OS aus dem Internet geladen.
+          - **creative-os-amd.iso** – für AMD- oder Intel-Grafik (und für VirtualBox)
+          - **creative-os-nvidia.iso** – für NVIDIA-Grafikkarten"
