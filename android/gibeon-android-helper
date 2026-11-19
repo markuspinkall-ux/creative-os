@@ -1,0 +1,175 @@
+#!/bin/bash
+# Android-Apps – Hilfsprogramm mit Administratorrechten (über pkexec).
+#
+#   einrichten <google|frei>   Android (Waydroid) herunterladen und einrichten
+#                              google = mit Google Play Store, frei = ohne Google-Apps
+#   grafik                     Grafik neu einstellen (z. B. nach Wechsel der Grafikkarte)
+#   gsf                        Google-Geräte-ID auslesen (für die Anmeldung bei Google)
+#   entfernen <uid>            Android samt allen Android-Apps und -Daten entfernen
+#   cancel                     laufendes Einrichten abbrechen
+#
+# Fortschritt für die Oberfläche: „@@ <prozent> <text>“, Ergebnis „@@ok <text>“,
+# Fehler „@@fehler <text>“. Alles andere ist Protokoll.
+#
+# Die Android-Abbilder (LineageOS, optional mit Google-Apps) lädt Waydroid selbst von
+# seinem offiziellen Server – Gibeon OS liefert keine Google-Apps mit.
+set -u
+PIDFILE=/run/gibeon-android.pid
+LIB=/var/lib/waydroid
+CFG=$LIB/waydroid.cfg
+
+say()  { echo "@@ $1 $2"; }
+fail() { echo "@@fehler $1"; rm -f "$PIDFILE"; exit 1; }
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "@@fehler Bitte über Android-Apps starten."
+    exit 1
+fi
+command -v waydroid >/dev/null || fail "Waydroid fehlt in diesem System – bitte Gibeon OS aktualisieren."
+
+if [ "${1:-}" = "cancel" ]; then
+    if [ -f "$PIDFILE" ]; then
+        pid=$(cat "$PIDFILE")
+        pkill -TERM -P "$pid" 2>/dev/null
+        kill -TERM "$pid" 2>/dev/null
+        echo "abgebrochen"
+    fi
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------------------
+# Grafik: Intel/AMD → mit Beschleunigung. Nur NVIDIA → Software-Darstellung
+# (Waydroid kann den NVIDIA-Treiber nicht nutzen; ohne diese Einstellung bliebe das Bild schwarz).
+render_node() {
+    local r drv
+    for r in /sys/class/drm/renderD*; do
+        [ -e "$r/device/driver" ] || continue
+        drv=$(basename "$(readlink -f "$r/device/driver")")
+        case "$drv" in
+            i915|xe|amdgpu|radeon|virtio-pci|virtio_gpu) echo "/dev/dri/$(basename "$r")"; return 0 ;;
+        esac
+    done
+    return 1
+}
+
+grafik() {
+    [ -f "$CFG" ] || fail "Android ist noch nicht eingerichtet."
+    local node mode
+    if node=$(render_node); then mode=hw; else mode=sw; node=""; fi
+    python3 - "$CFG" "$mode" "$node" <<'PY' || fail "Die Grafik-Einstellung konnte nicht gespeichert werden."
+import configparser, sys
+path, mode, node = sys.argv[1:4]
+cfg = configparser.ConfigParser(interpolation=None)
+cfg.optionxform = str
+cfg.read(path)
+for s in ("waydroid", "properties"):
+    if not cfg.has_section(s):
+        cfg.add_section(s)
+# Android-Apps als eigene Fenster statt in einem großen Android-Bildschirm
+cfg["properties"]["persist.waydroid.multi_windows"] = "true"
+if mode == "hw":
+    cfg["waydroid"]["drm_device"] = node
+    for k in ("ro.hardware.gralloc", "ro.hardware.egl"):
+        cfg.remove_option("properties", k)
+else:
+    cfg.remove_option("waydroid", "drm_device")
+    cfg["properties"]["ro.hardware.gralloc"] = "default"
+    cfg["properties"]["ro.hardware.egl"] = "swiftshader"
+with open(path, "w") as f:
+    cfg.write(f)
+PY
+    waydroid upgrade -o >/dev/null 2>&1 || true
+    if [ "$mode" = hw ]; then echo "Grafik: mit Beschleunigung ($node)"; else echo "Grafik: Software-Darstellung (nur NVIDIA gefunden)"; fi
+}
+
+# Internet für Android: Fedoras Firewall lässt die Android-Netzwerkbrücke sonst nicht durch.
+firewall_auf() {
+    command -v firewall-cmd >/dev/null || return 0
+    firewall-cmd --permanent --zone=trusted --add-interface=waydroid0 >/dev/null 2>&1
+    firewall-cmd --zone=trusted --add-interface=waydroid0 >/dev/null 2>&1
+    return 0
+}
+firewall_zu() {
+    command -v firewall-cmd >/dev/null || return 0
+    firewall-cmd --permanent --zone=trusted --remove-interface=waydroid0 >/dev/null 2>&1
+    firewall-cmd --zone=trusted --remove-interface=waydroid0 >/dev/null 2>&1
+    return 0
+}
+
+# ---------------------------------------------------------------------------------------
+einrichten() {
+    local art="$1" typ
+    case "$art" in
+        google) typ=GAPPS ;;
+        frei)   typ=VANILLA ;;
+        *) fail "Unbekannte Auswahl: $art" ;;
+    esac
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        fail "Android wird schon eingerichtet."
+    fi
+    echo $$ > "$PIDFILE"
+    trap 'echo "@@fehler Abgebrochen."; rm -f "$PIDFILE"; exit 130' TERM INT
+
+    [ -e /dev/binder ] || [ -d /dev/binderfs ] || modprobe binder_linux 2>/dev/null \
+        || grep -q binder /proc/filesystems || fail "Dem Kernel fehlt die Android-Unterstützung (binder)."
+    local free
+    free=$(df -BG --output=avail /var 2>/dev/null | tail -1 | tr -dc '0-9')
+    [ "${free:-0}" -ge 4 ] || fail "Zu wenig Speicher: Android braucht etwa 4 GB frei (frei: ${free:-0} GB)."
+
+    say 2 "Bereite vor …"
+    systemctl stop waydroid-container.service >/dev/null 2>&1
+    say 5 "Lade Android herunter …"
+    # -f: auch eine frühere, abgebrochene Einrichtung sauber ersetzen
+    waydroid init -f -s "$typ" 2>&1 \
+        || fail "Android konnte nicht heruntergeladen werden – Internetverbindung prüfen und nochmal versuchen."
+    [ -f "$LIB/images/system.img" ] || [ -f /etc/waydroid-extra/images/system.img ] \
+        || fail "Das Android-Abbild fehlt nach dem Herunterladen."
+
+    say 92 "Stelle die Grafik ein …"
+    grafik
+    say 95 "Schalte Internet für Android frei …"
+    firewall_auf
+    say 97 "Starte den Android-Dienst …"
+    systemctl enable --now waydroid-container.service >/dev/null 2>&1 \
+        || fail "Der Android-Dienst ließ sich nicht starten."
+    rm -f "$PIDFILE"
+    say 100 "Fertig"
+    echo "@@ok $art"
+}
+
+# Google-Geräte-ID (GSF) – damit meldet man das Gerät auf google.com/android/uncertified an.
+gsf() {
+    local out id
+    out=$(printf '%s\n' 'ANDROID_RUNTIME_ROOT=/apex/com.android.runtime ANDROID_DATA=/data ANDROID_TZDATA_ROOT=/apex/com.android.tzdata ANDROID_I18N_ROOT=/apex/com.android.i18n sqlite3 /data/data/com.google.android.gsf/databases/gservices.db "select value from main where name = \"android_id\";"' \
+          | timeout 30 waydroid shell 2>&1)
+    echo "$out"
+    id=$(printf '%s\n' "$out" | tr -d '\r' | grep -Eo '^[0-9]{10,25}$' | head -1)
+    [ -n "$id" ] || fail "Die Google-Dienste sind noch nicht bereit. Öffne einmal den Play Store, warte eine Minute und versuch es dann nochmal."
+    echo "@@ok $id"
+}
+
+entfernen() {
+    local uid="$1" home
+    say 10 "Beende Android …"
+    systemctl disable --now waydroid-container.service >/dev/null 2>&1
+    pkill -f "waydroid session" 2>/dev/null
+    say 40 "Entferne Android …"
+    rm -rf "$LIB"
+    firewall_zu
+    home=$(getent passwd "$uid" | cut -d: -f6)
+    if [ -n "$home" ] && [ -d "$home" ]; then
+        say 70 "Entferne Android-Apps und -Daten …"
+        rm -rf "$home/.local/share/waydroid"
+        rm -f "$home"/.local/share/applications/waydroid.*.desktop
+    fi
+    say 100 "Fertig"
+    echo "@@ok entfernt"
+}
+
+case "${1:-}" in
+    einrichten) einrichten "${2:-google}" ;;
+    grafik)     grafik; echo "@@ok grafik" ;;
+    gsf)        gsf ;;
+    entfernen)  [[ "${2:-}" =~ ^[0-9]+$ ]] || fail "Benutzer fehlt."; entfernen "$2" ;;
+    *) fail "Unbekannter Befehl." ;;
+esac

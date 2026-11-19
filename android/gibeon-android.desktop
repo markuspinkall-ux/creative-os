@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Android-Apps
+GenericName=Android-Apps auf dem PC
+Comment=Android-Apps und den Google Play Store auf Gibeon OS nutzen (mit Waydroid)
+Keywords=Android;Apps;Play Store;Google Play;APK;Waydroid;Handy;Smartphone;
+Exec=gibeon-android
+Icon=gibeon-android
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=gibeon-android
+Actions=store;
+
+[Desktop Action store]
+Name=Play Store öffnen
+Exec=gibeon-android --store
