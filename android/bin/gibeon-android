@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/usr/lib/gibeon-android${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m gibeon_android "$@"

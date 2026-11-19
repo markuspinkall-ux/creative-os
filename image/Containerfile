@@ -467,6 +467,17 @@ RUN chmod 755 /usr/bin/creative-iso /usr/libexec/creative-iso-helper /usr/share/
  && (command -v podman >/dev/null && echo "Iso: podman da" || echo "CREATIVE-ISO: PODMAN FEHLT") \
  && mkdir -p /usr/share/creative-os && if [ "$NVIDIA" = "1" ]; then echo nvidia; else echo amd; fi > /usr/share/creative-os/variant
 
+# Android-Apps – Android-Apps und Google Play Store über Waydroid (Android im Container).
+# Die Android-Abbilder lädt erst der Nutzer beim Einrichten; Google-Apps werden nicht mitgeliefert.
+RUN dnf install -y waydroid && dnf clean all \
+ && (command -v waydroid >/dev/null && echo "Android-Apps: Waydroid da" || echo "ANDROID-APPS: WAYDROID FEHLT")
+COPY android/gibeon_android /usr/lib/gibeon-android/gibeon_android
+COPY --chmod=755 android/bin/gibeon-android /usr/bin/gibeon-android
+COPY --chmod=755 android/gibeon-android-helper /usr/libexec/gibeon-android-helper
+COPY android/org.creativeos.android.policy /usr/share/polkit-1/actions/org.creativeos.android.policy
+COPY android/gibeon-android.desktop /usr/share/applications/gibeon-android.desktop
+COPY android/gibeon-android.svg /usr/share/icons/hicolor/scalable/apps/gibeon-android.svg
+
 # OBS Studio (Original, Qt) – läuft unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen.
 # Look: Graphit-Variante des OBS-Designs „Yami“; eigene virtuelle Kamera „OBS Virtuelle Kamera“ (/dev/video43)
 RUN dnf install -y --skip-unavailable obs-studio && dnf clean all \
@@ -797,6 +808,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-settings/creative_settings/qml/pages/UpdatesPage.qml \
         /usr/lib/creative-settings/creative_settings/qml/pages/BackupPage.qml \
         /usr/lib/creative-iso/creative_iso/qml/Main.qml \
+        /usr/lib/gibeon-android/gibeon_android/qml/Main.qml \
         /usr/lib/creative-capture/creative_capture/qml/Main.qml \
         /usr/lib/creative-notify/creative_notify/qml/Main.qml \
         /usr/lib/creative-welcome/creative_welcome/qml/Main.qml \
@@ -847,6 +859,9 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/cap-home timeout 60
 # Iso: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/iso-home timeout 60 /usr/bin/creative-iso --selftest \
     || echo "ISO-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/iso-home
+# Android-Apps: Oberfläche lädt?
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/and-home timeout 60 /usr/bin/gibeon-android --selftest \
+    || echo "ANDROID-APPS-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/and-home
 # Notes kurz ohne Bildschirm durchtesten
 RUN QT_QPA_PLATFORM=offscreen HOME=/tmp/notes-home python3 -c "import sys; sys.path.insert(0, '/usr/lib/creative-notes'); sys.argv=['creative-notes','--selftest']; from creative_notes.__main__ import main; sys.exit(main())" \
     || echo "NOTES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/notes-home
