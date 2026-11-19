@@ -43,10 +43,10 @@ SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
     "creative-cut.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
-    "creative-widgets.desktop", "creative-writer.desktop",
+    "creative-writer.desktop",
 }
-# Broadcast, Deck und Shots stehen nicht im Startmenü (NoDisplay): Broadcast und Deck leben im
-# Tray, Shots startet mit der Druck-Taste.
+# Broadcast, Deck, Shots und Widgets stehen nicht im Startmenü (NoDisplay): Broadcast und Deck leben
+# im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den Schreibtisch.
 OLD_PREFIX = "Creative "        # alte Namen (z. B. ältere Engine-Flatpaks) ohne „Creative“ anzeigen
 
 
