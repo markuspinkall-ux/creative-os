@@ -1,5 +1,5 @@
 [Unit]
-Description=Orbit OS: Update-Quelle prüfen
+Description=Gibeon OS: Update-Quelle prüfen
 After=network.target
 ConditionPathExists=/run/ostree-booted
 

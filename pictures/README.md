@@ -1,6 +1,6 @@
 # Pictures
 
-Bildbetrachter von Orbit OS – aufgebaut wie „Fotos“ bei Windows 11, im Graphit-Look.
+Bildbetrachter von Gibeon OS – aufgebaut wie „Fotos“ bei Windows 11, im Graphit-Look.
 
 - **Sammlung:** alle Bilder aus Bilder (mit Unterordnern), Downloads und Schreibtisch, nach Monaten; Favoriten; Ordner
 - **Ansicht:** Zoom (Mausrad, Doppelklick, Regler), Verschieben, Pfeile und Filmstreifen zum Blättern

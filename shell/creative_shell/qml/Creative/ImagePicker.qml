@@ -2,7 +2,7 @@ import QtCore
 import QtQuick
 import Creative
 
-// Bildauswahl im Orbit-OS-Stil: FilePicker mit Bildfiltern, startet im Ordner „Bilder“.
+// Bildauswahl im Gibeon-OS-Stil: FilePicker mit Bildfiltern, startet im Ordner „Bilder“.
 FilePicker {
     title: "Bild wählen"
     acceptText: "Auswählen"

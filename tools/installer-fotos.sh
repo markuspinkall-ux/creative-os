@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fotografiert die Orbit-OS-Installation (läuft auf GitHub):
+# Fotografiert die Gibeon-OS-Installation (läuft auf GitHub):
 #   build  – kleine Installations-ISOs bauen (zum Umschauen und vollautomatisch)
 #   run    – beide in QEMU starten und regelmäßig Bildschirmfotos machen
 # Ergebnis: installer-fotos/*.png (+ uebersicht.png)

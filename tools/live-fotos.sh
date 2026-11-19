@@ -1,6 +1,6 @@
 #!/bin/bash
 # Testet die große Live-ISO in einer virtuellen Maschine (läuft auf GitHub):
-#   Start → Live-Desktop mit Orbit-Installation → automatischer Durchlauf (Datenträger CRTEST)
+#   Start → Live-Desktop mit Gibeon-Installation → automatischer Durchlauf (Datenträger CRTEST)
 #   → echte Installation auf eine leere virtuelle Platte → Neustart von der Platte.
 # Aufruf: live-fotos.sh <iso>     Ergebnis: live-fotos/*.png (+ uebersicht.png)
 set -u

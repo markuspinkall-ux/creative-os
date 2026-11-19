@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-"""Passwortspeicher (KWallet) ohne Nachfragen: Orbit OS gibt der Standard-Brieftasche
+"""Passwortspeicher (KWallet) ohne Nachfragen: Gibeon OS gibt der Standard-Brieftasche
 „kdewallet“ ein leeres Passwort und öffnet sie bei jeder Anmeldung selbst.
 
 So meldet sich der Passwortspeicher nie mehr mit einem Fenster, und Programme, die ihn

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Orbit OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
+# Gibeon OS: Startauswahl (GRUB) im Graphit-Look ein- oder ausschalten.
 #   sudo creative-grub-design        einschalten bzw. aktualisieren
 #   sudo creative-grub-design aus    wieder das schlichte Textmenü (bleibt aus, auch nach Updates)
 #   creative-grub-design auto        beim Start: nur aktualisieren, wenn nicht ausgeschaltet
@@ -25,7 +25,7 @@ for d in $BOOT_DIRS; do
 done
 [ -n "$dir" ] || { echo "Keine GRUB-Konfiguration mit user.cfg gefunden – nichts zu tun."; exit 0; }
 
-# /boot ist bei Orbit OS meist schreibgeschützt eingehängt – kurz freigeben
+# /boot ist bei Gibeon OS meist schreibgeschützt eingehängt – kurz freigeben
 ro=""
 if ! touch "$dir/.creative-test" 2>/dev/null; then
     mount -o remount,rw /boot 2>/dev/null && ro=1
@@ -62,4 +62,4 @@ cat "$SRC/grub-snippet.cfg" >> "$tmp"
 if ! cmp -s "$tmp" "$cfg"; then cat "$tmp" > "$cfg"; fi
 rm -f "$tmp"
 sync
-echo "Startauswahl im Orbit-Design eingerichtet ($dir)."
+echo "Startauswahl im Gibeon-Design eingerichtet ($dir)."

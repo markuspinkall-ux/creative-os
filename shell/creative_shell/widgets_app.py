@@ -18,7 +18,7 @@ from .dbus_service import PATH, SERVICE
 NO_MONITOR = {"viz"}
 from .widget_extras import CLOCK_URL, clock_descriptor, read_small
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -147,7 +147,7 @@ class WidgetWindow(QMainWindow):
             self.bus.setTimeout(1200)
         reply = self.bus.call(method, *args)
         if reply.type() == QDBusMessage.MessageType.ErrorMessage or not reply.arguments():
-            raise ValueError("Die Orbit-Shell ist gerade nicht erreichbar.")
+            raise ValueError("Die Gibeon-Shell ist gerade nicht erreichbar.")
         return reply.arguments()[0]
 
     def refresh(self):

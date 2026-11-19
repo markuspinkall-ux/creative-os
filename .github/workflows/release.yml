@@ -1,6 +1,6 @@
 # Freigeben: Die zuletzt gebaute Test-Version wird zur stabilen Version.
 # Alle PCs auf dem stabilen Kanal bekommen sie dann als Update.
-# Dazu entsteht eine Seite „Orbit OS <Datum>“ mit allen Neuerungen seit der letzten Freigabe.
+# Dazu entsteht eine Seite „Gibeon OS <Datum>“ mit allen Neuerungen seit der letzten Freigabe.
 name: Freigeben
 on:
   workflow_dispatch:
@@ -61,7 +61,7 @@ jobs:
           prev="$(git tag --list 'version-*' --sort=-creatordate | head -n1)"
           range="${prev:+$prev..}HEAD"
           {
-            echo "## Neu in Orbit OS ${name} (${date})"
+            echo "## Neu in Gibeon OS ${name} (${date})"
             echo
             git log --no-merges --pretty='%s' $range \
               | grep -v '^Werkzeug\|^Probe\|^wip\|^Bauen für' \
@@ -70,4 +70,4 @@ jobs:
             echo "Update: Systemsteuerung › Software & Updates › Nach Updates suchen."
           } > notes.md
           git tag "$tag" && git push origin "$tag"
-          gh release create "$tag" --title "Orbit OS ${name} (${date})" --notes-file notes.md --repo "${{ github.repository }}"
+          gh release create "$tag" --title "Gibeon OS ${name} (${date})" --notes-file notes.md --repo "${{ github.repository }}"

@@ -1,4 +1,4 @@
-# Orbit OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
+# Gibeon OS – System-Abbild auf Basis von Fedora Atomic (KDE/KWin)
 #
 # Das fertige System ist schreibgeschützt und wird nur als Ganzes
 # aktualisiert. Läuft nach einem Update etwas nicht, startet man im
@@ -55,7 +55,7 @@ RUN mkdir -p /var/opt \
 COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
 RUN mkdir -p /etc/skel/Bilder
 
-# Secure Boot: öffentlicher Schlüssel der Orbit-OS-Treiber und Signier-Werkzeug
+# Secure Boot: öffentlicher Schlüssel der Gibeon-OS-Treiber und Signier-Werkzeug
 COPY image/secureboot/creative-os-mok.der /usr/share/creative-os/secureboot/creative-os-mok.der
 COPY image/secureboot/sign-modules.sh /usr/libexec/creative-sign-modules
 COPY image/secureboot/kernel-devel.sh /usr/libexec/creative-kernel-devel
@@ -218,7 +218,7 @@ COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor
 COPY shell/creative_shell/qml/Creative/icons/chatgpt.svg /usr/share/icons/hicolor/scalable/apps/creative-chatgpt.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 
-# Orbit OS ist die einzige Sitzung im Anmeldebildschirm
+# Gibeon OS ist die einzige Sitzung im Anmeldebildschirm
 RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/libexec/creative-wallet-setup /usr/bin/creative-webapp \
  && rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop
 
@@ -387,7 +387,7 @@ RUN chmod 755 /usr/bin/creative-pictures /usr/bin/creative-shots \
 
 # ---------------------------------------------------------------------------
 # 8a6) Broadcast – rauschfreies Mikrofon (DeepFilterNet) und virtueller
-#      Greenscreen (Robust Video Matting → virtuelle Kamera „Orbit Kamera“)
+#      Greenscreen (Robust Video Matting → virtuelle Kamera „Gibeon Kamera“)
 # ---------------------------------------------------------------------------
 # Virtuelle Kamera: Kernelmodul v4l2loopback (RPM Fusion), beim Bauen erzeugt
 RUN --mount=type=secret,id=mokkey KVER="$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' kernel-core | tail -n1)" \
@@ -444,7 +444,7 @@ COPY image/bluetooth/creative-bluetooth.conf /usr/lib/modprobe.d/creative-blueto
 COPY image/bluetooth/50-creative-bluetooth.rules /usr/lib/udev/rules.d/50-creative-bluetooth.rules
 COPY image/bluetooth/bluez-anpassen.py /tmp/bluez-anpassen.py
 RUN python3 /tmp/bluez-anpassen.py /etc/bluetooth/main.conf && rm -f /tmp/bluez-anpassen.py
-# Benachrichtigungen (org.freedesktop.Notifications) im Orbit-Look
+# Benachrichtigungen (org.freedesktop.Notifications) im Gibeon-Look
 RUN dnf install -y --skip-unavailable python3-dbus && dnf clean all
 COPY notify/creative_notify /usr/lib/creative-notify/creative_notify
 COPY notify/bin/creative-notifyd /usr/bin/creative-notifyd
@@ -621,17 +621,17 @@ RUN for f in /etc/xdg/mimeapps.list /usr/share/creative-os/xdg/creative-mimeapps
         done; \
     done
 
-# Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Orbit-Symbole, Startmenü
+# Aussehen: Fensterrahmen, Graphit-Farben (Qt/KDE + GTK), Gibeon-Symbole, Startmenü
 COPY theme /tmp/creative-theme
 RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creative/icons \
         sh /tmp/creative-theme/install.sh \
  && rm -rf /tmp/creative-theme
-# Engine (Flatpak aus „Eigene Apps“): Symbol aus dem Orbit-Design hat Vorrang
+# Engine (Flatpak aus „Eigene Apps“): Symbol aus dem Gibeon-Design hat Vorrang
 COPY engine/flatpak/org.creativeos.Engine.svg /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg
 RUN sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
         /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg \
         > /usr/share/icons/CreativePorzellan/apps/scalable/org.creativeos.Engine.svg
-# OBS Studio: Symbol im Orbit-Stil (wie alle Apps) – ersetzt das Original überall
+# OBS Studio: Symbol im Gibeon-Stil (wie alle Apps) – ersetzt das Original überall
 # (Startmenü, Taskleiste, Tray, Titelleiste), auch bei der Flatpak-Version von OBS
 COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.svg
 RUN for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
@@ -659,7 +659,7 @@ RUN (systemctl disable plasmalogin.service 2>/dev/null || true) \
  && systemctl enable --force sddm.service
 
 # ---------------------------------------------------------------------------
-# 8d) Start- und Ausschaltbildschirm mit Orbit-Logo statt Fedora
+# 8d) Start- und Ausschaltbildschirm mit Gibeon-Logo statt Fedora
 #     (Plymouth-Thema; die Startdatei initramfs wird dafür neu erzeugt)
 # ---------------------------------------------------------------------------
 COPY image/plymouth /tmp/creative-plymouth
@@ -686,7 +686,7 @@ RUN dnf install -y --skip-unavailable plymouth-plugin-two-step plymouth-theme-sp
 # 9) Systemeinstellungen
 # ---------------------------------------------------------------------------
 # Name des Systems (ID bleibt "fedora", damit Updates und Paketquellen passen)
-# Überall „Orbit OS“ statt Fedora (ID bleibt "fedora", damit Updates und
+# Überall „Gibeon OS“ statt Fedora (ID bleibt "fedora", damit Updates und
 # Paketquellen weiter passen – Fedora ist nur noch der Unterbau)
 COPY image/plymouth/watermark.png /usr/share/pixmaps/creative-os-logo.png
 COPY LICENSE /usr/share/licenses/creative-os/LICENSE
@@ -696,11 +696,11 @@ RUN v="$(date +%Y.%m.%d)" \
  && nr="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["nummer"])')" \
  && cn="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["codename"])')" \
  && kurz="$(python3 -c 'import json;print(json.load(open("/usr/share/creative-os/version.json"))["kurz"])')" \
- && sed -i -e 's/^NAME=.*/NAME="Orbit OS"/' \
-           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Orbit OS ${nr} · ${cn}\"/" \
+ && sed -i -e 's/^NAME=.*/NAME="Gibeon OS"/' \
+           -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"Gibeon OS ${nr} · ${cn}\"/" \
            -e "s/^VERSION=.*/VERSION=\"${nr} · ${cn} (${v})\"/" \
            -e "s/^VERSION_CODENAME=.*/VERSION_CODENAME=${kurz}/" \
-           -e 's/^VARIANT=.*/VARIANT="Orbit OS"/' \
+           -e 's/^VARIANT=.*/VARIANT="Gibeon OS"/' \
            -e 's/^LOGO=.*/LOGO=creative-os-logo/' \
            -e 's|^HOME_URL=.*|HOME_URL="https://github.com/markuspinkall-ux/creative-os"|' \
            -e 's|^SUPPORT_URL=.*|SUPPORT_URL="https://github.com/markuspinkall-ux/creative-os"|' \
@@ -711,7 +711,7 @@ RUN v="$(date +%Y.%m.%d)" \
  && (grep -q '^DEFAULT_HOSTNAME=' /usr/lib/os-release \
        && sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="creative-os"/' /usr/lib/os-release \
        || echo 'DEFAULT_HOSTNAME="creative-os"' >> /usr/lib/os-release)
-# Fedora-Logos überall durch das Orbit-Logo ersetzen (Fedora bleibt nur der Unterbau)
+# Fedora-Logos überall durch das Gibeon-Logo ersetzen (Fedora bleibt nur der Unterbau)
 COPY image/debrand.py /tmp/debrand.py
 RUN python3 /tmp/debrand.py /usr/share/pixmaps/creative-os-logo.png \
  && rm -f /tmp/debrand.py /usr/share/kf6/searchproviders/fedora.desktop \
@@ -767,7 +767,7 @@ RUN sed -i 's/^#\?AutomaticUpdatePolicy=.*/AutomaticUpdatePolicy=stage/' /etc/rp
 # das KDE-Abmelden sollen diese Tasten nicht mehr belegen
 RUN f=/usr/share/applications/org.kde.spectacle.desktop; [ -f "$f" ] && sed -i '/^X-KDE-Shortcuts/d' "$f" || true
 
-# „Software“ zeigt die Orbit-Namen und -Logos (auch unter „Installiert“)
+# „Software“ zeigt die Gibeon-Namen und -Logos (auch unter „Installiert“)
 COPY image/appstream-brand.py /tmp/appstream-brand.py
 RUN python3 /tmp/appstream-brand.py && rm -f /tmp/appstream-brand.py \
  && (command -v appstreamcli >/dev/null && appstreamcli refresh-cache --force >/dev/null 2>&1 || true)

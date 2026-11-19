@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Writer – Textverarbeitung für Orbit OS im Stil von Word, im Graphit-Look.
+"""Writer – Textverarbeitung für Gibeon OS im Stil von Word, im Graphit-Look.
 
 Menüband (Start, Einfügen, Layout, Überprüfen, Ansicht) und Datei-Bereich, echte Seiten
 mit Rändern, Zoom, Formatvorlagen, Navigationsbereich, Rechtschreibprüfung,
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy,
     QSlider, QSpinBox, QStackedWidget, QTextEdit, QToolButton, QVBoxLayout, QWidget, QWidgetAction,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox  # noqa: F811
 except ImportError:
     pass

@@ -22,7 +22,7 @@ def key():
 
 PRIV, PUB = key(), key()
 PROTON = f"""[Interface]
-# Key for Orbit OS
+# Key for Gibeon OS
 # Bouncing = 3
 # NetShield = 1
 # Moderate NAT = off

@@ -37,7 +37,7 @@ def glyph_names():
 
 
 def _theme_pixmap(name, edge):
-    """App-Symbol wie im Startmenü (Orbit-Symbole zuerst) – None, wenn es keins gibt
+    """App-Symbol wie im Startmenü (Gibeon-Symbole zuerst) – None, wenn es keins gibt
     (statt eines weißen Platzhalters)."""
     try:
         from creative_shell import icons

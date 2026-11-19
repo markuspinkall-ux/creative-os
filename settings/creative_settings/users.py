@@ -119,7 +119,7 @@ class UsersModel(QObject):
         if self._busy:
             return
         if not Path(HELPER).exists():
-            self._finish(False, "Die Kontenverwaltung fehlt – bitte Orbit OS aktualisieren.")
+            self._finish(False, "Die Kontenverwaltung fehlt – bitte Gibeon OS aktualisieren.")
             return
         self._busy = True
         self._message = ""

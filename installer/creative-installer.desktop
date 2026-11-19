@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Orbit OS installieren
-Comment=Orbit OS fest auf diesem PC einrichten
+Name=Gibeon OS installieren
+Comment=Gibeon OS fest auf diesem PC einrichten
 Exec=creative-installer
 Icon=creative-installer
 Terminal=false

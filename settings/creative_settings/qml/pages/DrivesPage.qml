@@ -23,7 +23,7 @@ SettingsPage {
             id: dcard
             readonly property var d: modelData
             title: d.kind + " · " + d.size
-            subtitle: (d.model ? d.model + " · " : "") + (d.system ? "Hier läuft Orbit OS – geschützt" : (d.removable ? "Wechseldatenträger" : d.device))
+            subtitle: (d.model ? d.model + " · " : "") + (d.system ? "Hier läuft Gibeon OS – geschützt" : (d.removable ? "Wechseldatenträger" : d.device))
 
             // Zustand
             SettingRow {
@@ -166,7 +166,7 @@ SettingsPage {
                 spacing: 6
                 Repeater {
                     model: [
-                        { k: "ext4", t: "Nur Orbit OS (ext4)", h: "Am schnellsten – ideal für Spiele und interne Platten" },
+                        { k: "ext4", t: "Nur Gibeon OS (ext4)", h: "Am schnellsten – ideal für Spiele und interne Platten" },
                         { k: "exfat", t: "Überall lesbar (exFAT)", h: "Windows, Mac, Fernseher – ideal für USB-Sticks" },
                         { k: "ntfs", t: "Windows (NTFS)", h: "Für Platten, die oft an Windows-PCs hängen" }
                     ]

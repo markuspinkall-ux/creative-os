@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Orbit OS
-Comment=Der Orbit-Desktop (Graphit)
+Name=Gibeon OS
+Comment=Der Gibeon-Desktop (Graphit)
 Exec=/usr/bin/creative-session
 DesktopNames=Creative;KDE

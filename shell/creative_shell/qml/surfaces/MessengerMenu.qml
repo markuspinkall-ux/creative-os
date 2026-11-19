@@ -111,7 +111,7 @@ Item {
                 Text {
                     visible: messenger.ready && root.recent.length === 0 && messenger.requests.length === 0
                     width: parent.width; wrapMode: Text.WordWrap
-                    text: "Noch keine Chats. Öffne den Messenger und füge jemanden über seine Orbit-ID hinzu."
+                    text: "Noch keine Chats. Öffne den Messenger und füge jemanden über seine Gibeon-ID hinzu."
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
                 }
 

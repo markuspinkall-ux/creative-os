@@ -2,8 +2,8 @@
     "KPlugin": {
         "Id": "CreativeGraphit",
         "Name": "Graphit",
-        "Description": "Fensterrahmen von Orbit OS",
-        "Authors": [{ "Name": "Orbit OS" }],
+        "Description": "Fensterrahmen von Gibeon OS",
+        "Authors": [{ "Name": "Gibeon OS" }],
         "License": "GPL",
         "Version": "1.0"
     }

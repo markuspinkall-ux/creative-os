@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sorgt dafür, dass beim Starten und Herunterfahren nur das Orbit-Logo zu
+# Sorgt dafür, dass beim Starten und Herunterfahren nur das Gibeon-Logo zu
 # sehen ist – keine Textmeldungen. Wirkt ab dem nächsten Neustart.
 # Die Textkonsole bleibt für Anmeldung und Fehlerdiagnose lesbar.
 set -eu
@@ -27,7 +27,7 @@ case "$(hostnamectl hostname 2>/dev/null || hostname)" in
 esac
 # Startmenü von GRUB nur bei Problemen zeigen (wie bei Windows)
 command -v grub2-editenv >/dev/null 2>&1 && grub2-editenv - set menu_auto_hide=1 || true
-# GRUB-Meldung „Booting `Orbit OS …`“ unsichtbar: Schrift schwarz auf schwarz.
+# GRUB-Meldung „Booting `Gibeon OS …`“ unsichtbar: Schrift schwarz auf schwarz.
 # Fedora/bootupd lädt user.cfg (bzw. console.cfg) aus dem GRUB-Ordner automatisch.
 marker="# creative-os: GRUB-Textmeldungen unsichtbar"
 for dir in /boot/grub2 /boot/efi/EFI/fedora; do
@@ -40,7 +40,7 @@ for dir in /boot/grub2 /boot/efi/EFI/fedora; do
         continue
     fi
     if ! grep -qF "$marker" "$target" 2>/dev/null; then
-        # /boot ist bei Orbit OS meist schreibgeschützt eingehängt – kurz freigeben
+        # /boot ist bei Gibeon OS meist schreibgeschützt eingehängt – kurz freigeben
         ro=""
         if ! touch "$dir/.creative-test" 2>/dev/null; then
             mount -o remount,rw /boot 2>/dev/null && ro=1
@@ -57,5 +57,5 @@ for dir in /boot/grub2 /boot/efi/EFI/fedora; do
 done
 # Startauswahl nur auf Esc (sudo creative-grub-menue zeigen schaltet sie wieder dauerhaft ein)
 [ -x /usr/bin/creative-grub-menue ] && /usr/bin/creative-grub-menue auto >/dev/null 2>&1 || true
-# Startauswahl im Orbit-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
+# Startauswahl im Gibeon-Design (Thema nach /boot kopieren, Block in user.cfg) – bei Fehlern egal
 [ -x /usr/bin/creative-grub-design ] && /usr/bin/creative-grub-design auto >/dev/null 2>&1 || true

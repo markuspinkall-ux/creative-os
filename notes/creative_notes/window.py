@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
@@ -1395,7 +1395,7 @@ class NotesWindow(QMainWindow):
     def show_about(self):
         from . import __version__
         QMessageBox.about(self, "Über Notes",
-                          f"<b>Notes {__version__}</b><br>Der Texteditor von Orbit OS.<br><br>"
+                          f"<b>Notes {__version__}</b><br>Der Texteditor von Gibeon OS.<br><br>"
                           "Reiter, Syntaxfarben für viele Sprachen, Suchen und Ersetzen<br>"
                           "(auch mit regulären Ausdrücken) – und nichts geht verloren:<br>"
                           "ungespeicherte Texte sind beim nächsten Start wieder da.")

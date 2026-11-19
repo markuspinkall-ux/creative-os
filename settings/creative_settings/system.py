@@ -32,10 +32,10 @@ def os_name():
 
 
 def release_info():
-    """Versionsnummer und Codename von Orbit OS, z. B. „Orbit OS 2 · Vivid Venus“."""
+    """Versionsnummer und Codename von Gibeon OS, z. B. „Gibeon OS 2 · Vivid Venus“."""
     try:
         data = json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
-        return f"Orbit OS {data['nummer']} · {data['codename']}"
+        return f"Gibeon OS {data['nummer']} · {data['codename']}"
     except (OSError, ValueError, KeyError):
         return ""
 
@@ -111,7 +111,7 @@ IMPRESSUM = Path(__file__).with_name("impressum.json")
 
 
 def load_impressum(path=IMPRESSUM):
-    """Impressum (Anbieterkennzeichnung) für „Über Orbit OS“: {name, anschrift, email, web}."""
+    """Impressum (Anbieterkennzeichnung) für „Über Gibeon OS“: {name, anschrift, email, web}."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -298,7 +298,7 @@ class SystemModel(QObject):
         elif staged:
             self._set_upd(state="reboot", text="Ein Update ist bereit. Es wird beim nächsten Neustart aktiv.")
         else:
-            self._set_upd(state="current", text="Orbit OS ist auf dem neuesten Stand.")
+            self._set_upd(state="current", text="Gibeon OS ist auf dem neuesten Stand.")
 
     @Slot()
     def checkUpdates(self):
@@ -310,7 +310,7 @@ class SystemModel(QObject):
         def done(code, out, err):
             self._upd["busy"] = False
             if code == 77 or "No updates available" in out:
-                self._set_upd(state="current", text="Orbit OS ist auf dem neuesten Stand.")
+                self._set_upd(state="current", text="Gibeon OS ist auf dem neuesten Stand.")
             elif code == 0:
                 self._set_upd(state="available", text="Ein Update ist verfügbar.")
             else:

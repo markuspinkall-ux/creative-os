@@ -92,13 +92,13 @@ net() {
                 curl -fsSL -o /tmp/netinst.iso "$base/$name"
                 iso=/tmp/netinst.iso
             fi
-            echo "@@ 70 Orbit-OS-Installer wird eingebaut …"
+            echo "@@ 70 Gibeon-OS-Installer wird eingebaut …"
             bash /src/brand-iso.sh "$iso" /out/creative.ks /out/creative.iso \
               || mkksiso --ks /out/creative.ks "$iso" /out/creative.iso
         ' 2>&1
     [ -f "$WORK/out/creative.iso" ] || fail "Die ISO wurde nicht erzeugt – Details im Protokoll."
     local suffix=""; [ "$channel" = "test" ] && suffix="-test"
-    finish "$WORK/out/creative.iso" "$outdir" "$uid" "Orbit-OS-${variant}${suffix}-netinstall-$(date +%Y%m%d).iso"
+    finish "$WORK/out/creative.iso" "$outdir" "$uid" "Gibeon-OS-${variant}${suffix}-netinstall-$(date +%Y%m%d).iso"
     cleanup
 }
 

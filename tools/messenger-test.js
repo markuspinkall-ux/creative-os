@@ -60,12 +60,12 @@ async function main() {
 
   const sa = cmd('a', bs, { cmd: 'setup', name: 'Markus' });
   const sb = cmd('b', bs, { cmd: 'setup', name: 'Jonas Ärger' });
-  check('Orbit-ID aus dem Namen + 4 Ziffern', /^markus\.orbitos\d{4}$/.test(sa.me.id) && /^jonasaerger\.orbitos\d{4}$/.test(sb.me.id));
+  check('Gibeon-ID aus dem Namen + 4 Ziffern', /^markus\.gibeonos\d{4}$/.test(sa.me.id) && /^jonasaerger\.gibeonos\d{4}$/.test(sb.me.id));
   console.log(`  A = ${sa.me.id}, B = ${sb.me.id}`);
 
   let err = '';
   try { cmd('a', bs, { cmd: 'add', id: 'keine-id' }); } catch (e) { err = String(e.stdout); }
-  check('Falsche ID wird abgelehnt', err.includes('keine Orbit-ID'));
+  check('Falsche ID wird abgelehnt', err.includes('keine Gibeon-ID'));
 
   cmd('a', bs, { cmd: 'add', id: sb.me.id });
   check('B bekommt die Anfrage', await until('Anfrage', () =>

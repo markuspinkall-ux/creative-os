@@ -48,4 +48,4 @@ if getent group i2c >/dev/null 2>&1 && [ -n "${SUDO_USER:-}" ]; then
 fi
 
 echo
-echo "Fertig. Abmelden und im Anmeldebildschirm die Sitzung „Orbit OS“ wählen."
+echo "Fertig. Abmelden und im Anmeldebildschirm die Sitzung „Gibeon OS“ wählen."

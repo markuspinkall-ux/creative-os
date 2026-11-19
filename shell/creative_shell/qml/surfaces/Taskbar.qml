@@ -188,7 +188,7 @@ Item {
                 anchors.centerIn: parent
                 spacing: 14
 
-                // Tray-Symbole anderer Programme (Steam, Discord …) im Orbit-Look
+                // Tray-Symbole anderer Programme (Steam, Discord …) im Gibeon-Look
                 Repeater {
                     model: trayApps.items
                     delegate: Rectangle {
@@ -294,7 +294,7 @@ Item {
                         size: 17
                         opacity: broadcast.active ? 1 : 0.8
                     }
-                    // Punkt: eine App benutzt gerade die Orbit Kamera
+                    // Punkt: eine App benutzt gerade die Gibeon Kamera
                     Rectangle {
                         visible: broadcast.cameraInUse
                         anchors.right: parent.right

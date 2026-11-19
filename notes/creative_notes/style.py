@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import themed as T
 except ImportError:
     def T(value):

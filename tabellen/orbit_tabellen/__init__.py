@@ -1,1 +1,1 @@
-"""Tabellen-Ansicht: Excel-Dateien ansehen (Orbit OS)."""
+"""Tabellen-Ansicht: Excel-Dateien ansehen (Gibeon OS)."""

@@ -100,7 +100,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
     check('Lautsprecher nur bei Ton', audioIcons <= 1);
 
     // Adressleiste: Suche vs. Adresse
-    store.visit('https://www.twitch.tv/creativeos', 'Orbit OS – Twitch');
+    store.visit('https://www.twitch.tv/creativeos', 'Gibeon OS – Twitch');
     const sug = store.suggest('twi');
     check('Vorschläge aus dem Verlauf', sug.length > 0 && sug[0].url.includes('twitch'));
 
@@ -130,7 +130,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       await sleep(500);
     }
 
-    // Beide Designs wie in Orbit OS (Graphit ist Standard)
+    // Beide Designs wie in Gibeon OS (Graphit ist Standard)
     win.activate(win.tabs[0]);
     win.command('navigate', 'creative://start/');
     await sleep(1200);

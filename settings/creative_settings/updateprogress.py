@@ -1,4 +1,4 @@
-"""Fortschritt und Restzeit beim Laden eines Orbit-OS-Updates.
+"""Fortschritt und Restzeit beim Laden eines Gibeon-OS-Updates.
 
 rpm-ostree meldet nur grob, was es tut:
     ostree chunk layers needed: 52 (2.4 GB)

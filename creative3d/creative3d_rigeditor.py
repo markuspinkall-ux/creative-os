@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButt
 
 import creative3d_rig as R
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import themed as T
 except ImportError:
     def T(value):

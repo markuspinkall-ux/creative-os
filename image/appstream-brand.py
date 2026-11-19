@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-"""Orbit-Namen und -Symbole in „Software“ (GNOME Software).
+"""Gibeon-Namen und -Symbole in „Software“ (GNOME Software).
 
 1. Die Programm-Beschreibungen (AppStream) der mitgelieferten Programme, die in
-   Orbit OS umbenannt sind, bekommen den Orbit-Namen, das Orbit-Symbol
+   Gibeon OS umbenannt sind, bekommen den Gibeon-Namen, das Gibeon-Symbol
    und keine Original-Bildschirmfotos mehr.
-2. Die eigenen Orbit-Apps bekommen eigene Beschreibungen, damit sie unter
+2. Die eigenen Gibeon-Apps bekommen eigene Beschreibungen, damit sie unter
    „Installiert“ mit Logo erscheinen.
 
 Läuft beim Bauen des Abbilds (als root).
@@ -16,11 +16,11 @@ import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-BASE = "Orbit OS"
+BASE = "Gibeon OS"
 # AppStream-ID → (Name, Symbol, Kurzbeschreibung)
 REBRAND = {
-    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
-    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Orbit OS"),
+    "org.kde.konsole": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Gibeon OS"),
+    "org.gnome.Ptyxis": ("Terminal", "creative-terminal", "Befehle eingeben – das Terminal von Gibeon OS"),
     "org.kde.spectacle": ("Bildschirmfoto-Dienst", "creative-shots", "Nimmt für Shots im Hintergrund auf"),
     "org.kde.ark": ("Entpacken", "creative-archive", "ZIP- und andere Archive öffnen und entpacken"),
     "org.gnome.DiskUtility": ("Laufwerke (Erweitert)", "creative-drive", "Festplatten, SSDs und USB-Sticks für Fortgeschrittene"),
@@ -40,7 +40,7 @@ REBRAND = {
 # Eigene Apps: Desktop-Datei → (Name, Symbol, Kurzbeschreibung, Beschreibung, Kategorie)
 OWN = {
     "creative-files": ("Dateien", "creative-files", "Ordner, Laufwerke und USB-Sticks öffnen",
-                       "Der Dateimanager von Orbit OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
+                       "Der Dateimanager von Gibeon OS: Dieser PC, Schnellzugriff, Papierkorb, Laufwerke und USB-Sticks.", "System"),
     "creative-player": ("Player", "creative-player", "Musik, Videos, YouTube Music und Fernsehen",
                         "Spielt Musik und Videos ab, zeigt die YouTube-Music-Top-10 mit Suche und Favoriten und deutsches Fernsehen (IPTV).", "AudioVideo"),
     "creative-notes": ("Notes", "creative-notes", "Texte und Code bearbeiten",
@@ -56,7 +56,7 @@ OWN = {
     "creative-broadcast": ("Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
                            "KI-Rauschentfernung (DeepFilterNet) und virtueller Greenscreen (Robust Video Matting) als "
                            "virtuelle Kamera für Discord, Teams, Zoom und OBS.", "AudioVideo"),
-    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Orbit OS",
+    "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Gibeon OS",
                           "Netzwerk, Bildschirme, Ton, Laufwerke, Drucker, Mein Server, Aussehen und Updates.", "Settings"),
 }
 
@@ -101,7 +101,7 @@ def rebrand(comp):
         comp.remove(el)
     d = ET.SubElement(comp, "description")
     ET.SubElement(d, "p").text = summary + "."
-    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Orbit OS passt Namen, Aussehen und Bedienung an – "
+    ET.SubElement(d, "p").text = (f"Grundlage ist {based}. Gibeon OS passt Namen, Aussehen und Bedienung an – "
                                   f"vielen Dank an die Entwicklerinnen und Entwickler von {orig}!")
     for tag in ("developer_name", "developer"):
         for el in comp.findall(tag):
@@ -163,7 +163,7 @@ def main():
                 except OSError as exc:
                     print(f"übersprungen: {f} ({exc})", file=sys.stderr)
     own_metainfo(Path("/usr/share/metainfo"))
-    print(f"Software: {total} Einträge auf Orbit-Namen umgestellt, {len(OWN)} eigene Apps eingetragen.")
+    print(f"Software: {total} Einträge auf Gibeon-Namen umgestellt, {len(OWN)} eigene Apps eingetragen.")
 
 
 if __name__ == "__main__":

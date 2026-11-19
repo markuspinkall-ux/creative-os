@@ -1,4 +1,4 @@
-"""Startpunkt: `creative-installer` – die Orbit-Installation in der Live-Umgebung.
+"""Startpunkt: `creative-installer` – die Gibeon-Installation in der Live-Umgebung.
 
 Die Oberfläche (QML) sammelt Festplatte und Benutzerkonto; installiert wird über
 `pkexec creative-installer-helper install` (Anaconda im Hintergrund).
@@ -234,7 +234,7 @@ def main():
     qml_root = next((Path(p) / "creative_shell" / "qml" for p in sys.path
                      if (Path(p) / "creative_shell" / "qml" / "Creative").is_dir()), None)
     if qml_root is None:
-        print("creative-installer: Orbit-Design nicht gefunden")
+        print("creative-installer: Gibeon-Design nicht gefunden")
         return 1
     engine.addImportPath(str(qml_root))
     installer = Installer(demo=demo)
@@ -255,7 +255,7 @@ def main():
             for err in comp.errors():
                 print("QML-FEHLER", err.toString(), flush=True)
             os._exit(1)
-        print("Orbit-Installation: Selbsttest bestanden", flush=True)
+        print("Gibeon-Installation: Selbsttest bestanden", flush=True)
         os._exit(0)
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():

@@ -67,7 +67,7 @@ ApplicationWindow {
             Text { text: "Willkommen im Messenger"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 22; font.bold: true }
             Text {
                 width: parent.width; wrapMode: Text.WordWrap
-                text: "Schreib direkt mit anderen Orbit-OS-Nutzern – ohne Telefonnummer, ohne Konto. Wähle den Namen, unter dem man dich findet."
+                text: "Schreib direkt mit anderen Gibeon-OS-Nutzern – ohne Telefonnummer, ohne Konto. Wähle den Namen, unter dem man dich findet."
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
             }
             TextField {
@@ -82,7 +82,7 @@ ApplicationWindow {
             }
             Text {
                 width: parent.width; wrapMode: Text.WordWrap
-                text: "Deine Orbit-ID wird dein Name mit vier Ziffern, z. B. „" + (nameField.text.trim() ? nameField.text.trim().toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "") : "markus") + ".orbitos2801“. Sie gehört fest zu diesem Rechner."
+                text: "Deine Gibeon-ID wird dein Name mit vier Ziffern, z. B. „" + (nameField.text.trim() ? nameField.text.trim().toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "") : "markus") + ".gibeonos2801“. Sie gehört fest zu diesem Rechner."
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
             }
             Text { visible: messenger.error !== ""; width: parent.width; wrapMode: Text.WordWrap; text: messenger.error; color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 12 }
@@ -111,7 +111,7 @@ ApplicationWindow {
                         Text { width: parent.width; elide: Text.ElideRight; text: messenger.myName; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
                         Text { width: parent.width; elide: Text.ElideRight; text: messenger.myId; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
                     }
-                    IconButton { anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; width: 32; height: 32; iconSize: 16; icon: "copy"; label: "Orbit-ID kopieren"; onClicked: messenger.copyId() }
+                    IconButton { anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; width: 32; height: 32; iconSize: 16; icon: "copy"; label: "Gibeon-ID kopieren"; onClicked: messenger.copyId() }
                 }
                 CButton {
                     width: parent.width; height: 40
@@ -156,7 +156,7 @@ ApplicationWindow {
                 Text {
                     visible: messenger.contacts.length === 0
                     width: parent.width; wrapMode: Text.WordWrap; topPadding: 12; leftPadding: 8
-                    text: "Noch keine Kontakte. Gib deine Orbit-ID weiter oder füge jemanden über seine ID hinzu."
+                    text: "Noch keine Kontakte. Gib deine Gibeon-ID weiter oder füge jemanden über seine ID hinzu."
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
                 }
             }
@@ -302,18 +302,18 @@ ApplicationWindow {
                         id: myCol; x: 16; y: 16; width: parent.width - 32; spacing: 6
                         Text { text: "DEINE ORBIT-ID"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11; font.bold: true }
                         Text { text: messenger.myId; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 20; font.bold: true }
-                        Text { width: parent.width; wrapMode: Text.WordWrap; text: "Gib sie weiter – nur Orbit-OS-Nutzer können dich damit finden."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                        Text { width: parent.width; wrapMode: Text.WordWrap; text: "Gib sie weiter – nur Gibeon-OS-Nutzer können dich damit finden."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
                         CButton { id: copyBtn; text: "ID kopieren"; onClicked: { messenger.copyId(); text = "Kopiert" } }
                     }
                 }
-                Text { text: "Orbit-ID der anderen Person"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
+                Text { text: "Gibeon-ID der anderen Person"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
                 Row {
                     width: parent.width; spacing: 10
                     TextField {
                         id: idField
                         width: parent.width - sendReq.width - 10; height: 44
                         placeholderTextColor: Theme.textMuted
-                        placeholderText: "z. B. jonas.orbitos4417"
+                        placeholderText: "z. B. jonas.gibeonos4417"
                         color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14
                         background: Rectangle { radius: 12; color: Theme.ground; border.color: idField.activeFocus ? Theme.accent : Theme.hairline }
                         onAccepted: sendReq.clicked()

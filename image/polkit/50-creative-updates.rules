@@ -1,4 +1,4 @@
-// Orbit OS: Updates laden wie bei Windows – ohne Passwortabfrage für
+// Gibeon OS: Updates laden wie bei Windows – ohne Passwortabfrage für
 // Administratoren, die gerade am PC sitzen. (Neustart bleibt eine eigene Aktion.)
 polkit.addRule(function (action, subject) {
     var allowed = [

@@ -41,7 +41,7 @@ class Download(QObject):
         req = QNetworkRequest(QUrl(self.url))
         req.setAttribute(QNetworkRequest.Attribute.RedirectPolicyAttribute,
                          QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy)
-        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, "Orbit-Engine")
+        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, "Gibeon-Engine")
         self.reply = self.net.get(req)
         self.reply.readyRead.connect(lambda: self.file.write(bytes(self.reply.readAll())))
         self.reply.downloadProgress.connect(lambda a, b: self.progress.emit(int(a), int(b)))

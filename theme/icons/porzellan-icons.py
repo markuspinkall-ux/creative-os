@@ -40,7 +40,7 @@ def main(src, dst, extra):
     index = dst / "index.theme"
     text = index.read_text(encoding="utf-8")
     text = re.sub(r"^Name=.*$", "Name=Porzellan", text, flags=re.M)
-    text = re.sub(r"^Comment=.*$", "Comment=Symbole von Orbit OS im hellen Design", text, flags=re.M)
+    text = re.sub(r"^Comment=.*$", "Comment=Symbole von Gibeon OS im hellen Design", text, flags=re.M)
     text = re.sub(r"^Inherits=.*$", "Inherits=breeze,hicolor", text, flags=re.M)
     index.write_text(text, encoding="utf-8")
     apps = dst / "apps" / "scalable"

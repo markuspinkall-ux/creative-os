@@ -2,7 +2,7 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Orbit OS</vendor>
+  <vendor>Gibeon OS</vendor>
   <!-- Ohne Passwort: Der Server-Modus beendet nur die eigene Sitzung, und
        zurück geht es nur über die normale Anmeldung mit Passwort. -->
   <action id="org.creativeos.servermode">

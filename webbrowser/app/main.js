@@ -59,7 +59,7 @@ protocol.registerSchemesAsPrivileged([
 process.on('uncaughtException', (e) => console.error('Browser – Fehler:', e && e.stack || e));
 process.on('unhandledRejection', (e) => console.error('Browser – Fehler:', e && e.stack || e));
 
-// ---- Design von Orbit OS: Graphit (dunkel) / Porzellan (hell) + Akzentfarbe -------------------
+// ---- Design von Gibeon OS: Graphit (dunkel) / Porzellan (hell) + Akzentfarbe -------------------
 // Gleiche Quelle wie Taskleiste und Systemsteuerung: ~/.config/creative-os/look.conf
 const ACCENTS = { blau: ['#8fb3ff', '#3d6fe0'], gruen: ['#6fdcc0', '#1f9e7f'], orange: ['#ffb07a', '#d9773a'], lila: ['#c3a6ff', '#7c4ddb'] };
 const lookFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'creative-os', 'look.conf');

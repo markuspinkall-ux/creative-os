@@ -1,7 +1,7 @@
 'use strict';
 // WhatsApp – eigene App um das offizielle WhatsApp Web.
 // Innen läuft web.whatsapp.com (kein nachgebautes Protokoll, also kein Sperr-Risiko für die Nummer),
-// drumherum Orbit OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
+// drumherum Gibeon OS: eigenes Fenster, Zähler an der Taskleiste, Benachrichtigungen mit Klick
 // zum Chat, Hintergrundbetrieb mit Tray-Symbol, Start mit dem PC, Nicht-stören-Zeiten,
 // Rechtschreibprüfung und Dateien per Ziehen.
 // Start: creative-whatsapp [--hidden]   (wird über main.js mit --whatsapp geladen)
@@ -76,7 +76,7 @@ function inQuietTimes(s, now = new Date()) {
 }
 const isQuiet = () => settings.dnd || inQuietTimes(settings);
 
-// ---- Design von Orbit OS --------------------------------------------------------------------
+// ---- Design von Gibeon OS --------------------------------------------------------------------
 const lookFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'creative-os', 'look.conf');
 const ACCENTS = { blau: ['#8fb3ff', '#3d6fe0'], gruen: ['#6fdcc0', '#1f9e7f'], orange: ['#ffb07a', '#d9773a'], lila: ['#c3a6ff', '#7c4ddb'] };
 function readLook() {
@@ -113,7 +113,7 @@ function userAgent() {
   return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
 }
 
-// Zähler an der Taskleiste: die Orbit-Shell nimmt ihn über D-Bus entgegen
+// Zähler an der Taskleiste: die Gibeon-Shell nimmt ihn über D-Bus entgegen
 let badgeSent = -1;
 function sendBadge(n) {
   if (n === badgeSent || SELFTEST) return;

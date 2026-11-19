@@ -139,7 +139,7 @@ def generate(args):
     from PIL import Image
 
     if not torch.cuda.is_available():
-        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Orbit OS installiert?")
+        say("ERR", "Keine NVIDIA-Grafikkarte im Container. Ist das NVIDIA-Abbild von Gibeon OS installiert?")
         return 3
     settings = QUALITY.get(args.quality, QUALITY["normal"])
     out = Path(args.out)

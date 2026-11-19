@@ -2,8 +2,8 @@
     "KPlugin": {
         "Id": "creative-tasks",
         "Name": "Tasks",
-        "Description": "Meldet der Orbit-Taskleiste die offenen Fenster und stellt die Windows-Tastenkürzel bereit.",
-        "Authors": [{ "Name": "Orbit OS" }],
+        "Description": "Meldet der Gibeon-Taskleiste die offenen Fenster und stellt die Windows-Tastenkürzel bereit.",
+        "Authors": [{ "Name": "Gibeon OS" }],
         "License": "GPL-3.0-or-later",
         "Version": "0.1",
         "EnabledByDefault": false

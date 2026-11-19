@@ -201,16 +201,16 @@ SettingsPage {
         onConfirmed: if (account) system.deleteAccount(account.uid, account.name)
     }
 
-    // ---- Danke: worauf Orbit OS aufbaut --------------------------------------------------
+    // ---- Danke: worauf Gibeon OS aufbaut --------------------------------------------------
     Card {
-        title: "Über Orbit OS"
-        subtitle: "Orbit OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
+        title: "Über Gibeon OS"
+        subtitle: "Gibeon OS steht auf den Schultern großartiger Open-Source-Projekte. Danke an alle, die daran mitarbeiten!"
         Repeater {
             id: credits
             model: [
                 { app: "Unterbau", base: "Fedora Kinoite (Fedora-Projekt)" },
                 { app: "Fenster, Anmeldung, Sitzung", base: "KDE Plasma: KWin, SDDM, KDE Frameworks" },
-                { app: "Oberflächen der Orbit-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
+                { app: "Oberflächen der Gibeon-Apps", base: "Qt und PySide (The Qt Company / Qt Project)" },
                 { app: "Software", base: "Flatpak und Flathub" },
                 { app: "Terminal", base: "Konsole (KDE)" },
                 { app: "Entpacken", base: "Ark (KDE)" },
@@ -239,7 +239,7 @@ SettingsPage {
     Card {
         title: "Quellcode und Lizenzen"
         SettingRow {
-            label: "Eigene Programme von Orbit OS"
+            label: "Eigene Programme von Gibeon OS"
             hint: "© 2026 Markus Pinkall – freie Software unter der GPL-3.0. Du darfst sie nutzen, verändern und weitergeben; der Quellcode liegt auf GitHub."
             CButton { text: "Öffnen"; onClicked: system.openUrl("https://github.com/markuspinkall-ux/creative-os") }
         }
@@ -281,15 +281,15 @@ SettingsPage {
         }
     }
 
-    // ---- Datenschutz: was Orbit OS wohin schickt ------------------------------------------------
+    // ---- Datenschutz: was Gibeon OS wohin schickt ------------------------------------------------
     Card {
         id: dsCard
         title: "Datenschutz"
-        subtitle: "Orbit OS sammelt nichts über dich. Verbindungen nach außen entstehen nur, wenn du die jeweilige Funktion nutzt."
+        subtitle: "Gibeon OS sammelt nichts über dich. Verbindungen nach außen entstehen nur, wenn du die jeweilige Funktion nutzt."
         Repeater {
             id: dsRows
             model: [
-                { t: "Keine Datensammlung", d: "Keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte, kein Konto. Der Entwickler von Orbit OS erhält keine Daten von deinem Rechner." },
+                { t: "Keine Datensammlung", d: "Keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte, kein Konto. Der Entwickler von Gibeon OS erhält keine Daten von deinem Rechner." },
                 { t: "Updates und Software", d: "Updates kommen aus der GitHub Container Registry (GitHub Inc., USA), Apps von Flathub und den Fedora- und RPM-Fusion-Spiegeln. Diese Dienste sehen dabei deine IP-Adresse und was geladen wird." },
                 { t: "Nur auf deinem Rechner", d: "KI-Sprachmodell und Stimme, Broadcast (Rauschfilter, Freistellung), Sicherungen, Notizen, Fotos und Dokumente bleiben lokal." },
                 { t: "KI-Helfer", d: "Für Wissensfragen schickt er deine Suchbegriffe an die deutsche Wikipedia (Wikimedia Foundation, USA). Die Modelle lädt er einmalig von Hugging Face." },
@@ -297,7 +297,7 @@ SettingsPage {
                 { t: "Widgets und Apps, nur bei Nutzung", d: "Wetter: Open-Meteo (der eingegebene Ort). Twitch-Status: decapi.me. Podcast-Suche: Apple (iTunes-Suche). Game Launcher: Steam (Spielbilder). Magazin: die Seiten, deren Feeds du abonnierst. Mein Server: ident.me und icanhazip.com für deine öffentliche IP, DuckDNS falls eingerichtet." },
                 { t: "Messenger", d: "Nachrichten gehen direkt und verschlüsselt von Rechner zu Rechner, ohne Server dazwischen, und liegen nur auf euren beiden Rechnern. Um sich zu finden, melden sich die Rechner in einem verteilten Netz (HyperDHT) mit einem Schlüssel an; dabei sehen andere Teilnehmer und eure Kontakte die IP-Adresse." },
                 { t: "Web-Apps und Konten", d: "WhatsApp, Claude, ChatGPT, Mail, YouTube Music, Proton VPN, Steam und Discord: Es gelten die Datenschutzerklärungen der jeweiligen Anbieter." },
-                { t: "Verantwortlich und Beschwerden", d: "Für Orbit OS selbst: siehe Impressum. Für die genannten Dienste sind deren Anbieter verantwortlich. Beschwerden: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Ansbach." }
+                { t: "Verantwortlich und Beschwerden", d: "Für Gibeon OS selbst: siehe Impressum. Für die genannten Dienste sind deren Anbieter verantwortlich. Beschwerden: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Ansbach." }
             ]
             delegate: SettingRow {
                 required property var modelData

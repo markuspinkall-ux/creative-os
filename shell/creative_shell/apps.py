@@ -33,10 +33,10 @@ DESKTOP_NAMES = {"creative", "kde"}
 NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT = range(
     Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 9)
 
-# Eigene Apps liegen im Startmenü gesammelt im Ordner „Orbit Suite“ (Kennung bleibt gleich,
+# Eigene Apps liegen im Startmenü gesammelt im Ordner „Gibeon OS Suite“ (Kennung bleibt gleich,
 # damit Anheften und Ausblenden erhalten bleiben).
 FOLDER_ID = "creative-apps-ordner"
-FOLDER_NAME = "Orbit Suite"
+FOLDER_NAME = "Gibeon OS Suite"
 NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop"}   # Browser gehört direkt ins Startmenü
 SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
@@ -50,7 +50,7 @@ OLD_PREFIX = "Creative "        # alte Namen (z. B. ältere Engine-Flatpaks) ohn
 
 
 def is_creative(entry):
-    """Gehört in den Ordner „Orbit Suite“."""
+    """Gehört in den Ordner „Gibeon OS Suite“."""
     return entry.desktop_id not in NOT_IN_FOLDER and (entry.desktop_id in SUITE or getattr(entry, "suite", False))
 
 
@@ -99,7 +99,7 @@ class AppEntry:
         self.exec = exec_line
         self.terminal = terminal
         self.hidden = False   # im Startmenü ausgeblendet, aber startbar (z. B. Taskleiste)
-        self.members = None   # nur beim Ordner „Orbit Suite“: die Apps darin
+        self.members = None   # nur beim Ordner „Gibeon OS Suite“: die Apps darin
         self.search = _plain(" ".join([name, comment, keywords, desktop_id]))
 
 
@@ -394,7 +394,7 @@ class AppModel(QAbstractListModel):
 
     @Slot(int, result=bool)
     def launchAt(self, row):
-        """Startet die App – oder öffnet den Ordner „Orbit Suite“ (Rückgabe False: Menü bleibt offen)."""
+        """Startet die App – oder öffnet den Ordner „Gibeon OS Suite“ (Rückgabe False: Menü bleibt offen)."""
         if 0 <= row < len(self._shown):
             entry = self._shown[row]
             if entry.members is not None:

@@ -1,5 +1,5 @@
 [Unit]
-Description=Orbit OS Live-Umgebung vorbereiten
+Description=Gibeon OS Live-Umgebung vorbereiten
 After=livesys.service livesys-late.service systemd-udev-settle.service
 Before=display-manager.service sddm.service
 ConditionKernelCommandLine=rd.live.image

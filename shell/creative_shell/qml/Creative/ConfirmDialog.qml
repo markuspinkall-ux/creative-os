@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Creative
 
-// Rückfrage im Orbit-OS-Stil (statt Dialog mit Standardknöpfen).
+// Rückfrage im Gibeon-OS-Stil (statt Dialog mit Standardknöpfen).
 //   ConfirmDialog { id: ask; title: "Löschen?"; text: "…"; confirmText: "Löschen"; danger: true
 //                   onConfirmed: … }
 //   ask.open()

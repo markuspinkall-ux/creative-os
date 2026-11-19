@@ -2,7 +2,7 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Orbit OS</vendor>
+  <vendor>Gibeon OS</vendor>
   <action id="org.creativeos.server.manage">
     <description>Mein Server einrichten</description>
     <message>Zum Ein- oder Ausschalten von „Mein Server“ wird dein Passwort benötigt.</message>

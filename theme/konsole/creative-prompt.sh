@@ -1,4 +1,4 @@
-# Orbit OS – Eingabezeile im Graphit-Look (nur interaktive Bash).
+# Gibeon OS – Eingabezeile im Graphit-Look (nur interaktive Bash).
 # Ein eigenes PS1 in ~/.bashrc hat automatisch Vorrang. Ganz abschalten:
 # CREATIVE_PROMPT=0 in ~/.bashrc vor dem Laden von /etc/bashrc setzen.
 if [ -n "${BASH_VERSION:-}" ] && [ -n "${PS1:-}" ] && [ "${CREATIVE_PROMPT:-1}" != 0 ] \

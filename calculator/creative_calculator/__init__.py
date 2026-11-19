@@ -1,2 +1,2 @@
-"""Calculator – der Rechner von Orbit OS."""
+"""Calculator – der Rechner von Gibeon OS."""
 __version__ = "1.0.0"

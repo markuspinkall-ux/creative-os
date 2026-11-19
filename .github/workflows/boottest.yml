@@ -4,7 +4,7 @@
 name: Starttest
 on:
   workflow_run:
-    workflows: ["Orbit OS bauen"]
+    workflows: ["Gibeon OS bauen"]
     types: [completed]
   workflow_dispatch:
 permissions:

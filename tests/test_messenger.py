@@ -11,7 +11,7 @@ def test_nur_im_tray_nicht_im_startmenue():
     bar = (ROOT / "shell" / "creative_shell" / "qml" / "surfaces" / "Taskbar.qml").read_text(encoding="utf-8")
     assert "shell.toggleMessenger(root.screenName)" in bar and 'name: "chat"' in bar
     apps = (ROOT / "shell" / "creative_shell" / "apps.py").read_text(encoding="utf-8")
-    assert "orbit-messenger" not in apps                     # nicht in der Orbit Suite
+    assert "orbit-messenger" not in apps                     # nicht in der Gibeon OS Suite
 
 
 def test_autostart_und_abbild():

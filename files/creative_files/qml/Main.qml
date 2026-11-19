@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Dateien – der Dateimanager von Orbit OS.
+// Dateien – der Dateimanager von Gibeon OS.
 ApplicationWindow {
     id: win
 

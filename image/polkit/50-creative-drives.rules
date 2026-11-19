@@ -1,4 +1,4 @@
-// Orbit OS: weitere Platten ohne Passwort verbinden und Wechseldatenträger auswerfen
+// Gibeon OS: weitere Platten ohne Passwort verbinden und Wechseldatenträger auswerfen
 // (nur wer am PC sitzt). Das System-Laufwerk schützt die Systemsteuerung zusätzlich.
 // Formatieren, Löschen und Partitionieren brauchen weiterhin das Passwort.
 polkit.addRule(function (action, subject) {

@@ -1,4 +1,4 @@
-"""Bildschirmfoto einer Orbit-App ohne Bildschirm (für die Entwicklung).
+"""Bildschirmfoto einer Gibeon-App ohne Bildschirm (für die Entwicklung).
 Aufruf: python3 tools/shot.py <modul> <ausgabe.png> [wartezeit_ms]"""
 import importlib
 import sys

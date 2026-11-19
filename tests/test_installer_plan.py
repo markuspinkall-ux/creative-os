@@ -1,4 +1,4 @@
-"""Tests für die Logik der Orbit-Installation (ohne Qt, ohne root)."""
+"""Tests für die Logik der Gibeon-Installation (ohne Qt, ohne root)."""
 import json
 import sys
 from pathlib import Path
@@ -84,7 +84,7 @@ def test_kickstart():
 
 
 def test_stage_never_goes_back():
-    assert plan.stage_for("Deployment starting: ...", 0) == (14, "Orbit OS wird kopiert")
+    assert plan.stage_for("Deployment starting: ...", 0) == (14, "Gibeon OS wird kopiert")
     assert plan.stage_for("Starting installer", 50) is None
     assert plan.stage_for("Installation complete", 90)[0] == 100
     assert plan.stage_for("irgendwas", 10) is None

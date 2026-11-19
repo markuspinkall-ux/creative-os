@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Orbit OS: Lautsprecher-Korrekturen für Laptops, die der Kernel noch nicht kennt.
+"""Gibeon OS: Lautsprecher-Korrekturen für Laptops, die der Kernel noch nicht kennt.
 
 Läuft beim Start vor dem Laden der Soundtreiber (creative-ton-fix.service) und schreibt nur auf
 passenden Geräten /etc/modprobe.d/creative-ton-fix.conf – andere PCs bleiben unberührt.
@@ -73,7 +73,7 @@ def wanted():
 
 def config_text(amps):
     model = MODELS[amps]
-    return ("# Orbit OS: Lautsprecher-Korrektur (creative-ton-fix) – nicht von Hand ändern\n"
+    return ("# Gibeon OS: Lautsprecher-Korrektur (creative-ton-fix) – nicht von Hand ändern\n"
             f"# Für ältere und neuere Kernel (Modulname geändert); unbekannte Einträge werden ignoriert\n"
             f"options snd-sof-intel-hda-common hda_model={model}\n"
             f"options snd-sof-intel-hda-generic hda_model={model}\n"

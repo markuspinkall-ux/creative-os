@@ -1,1 +1,1 @@
-"""Orbit-Installation (Live-Umgebung)."""
+"""Gibeon-Installation (Live-Umgebung)."""

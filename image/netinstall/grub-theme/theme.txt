@@ -1,4 +1,4 @@
-# Orbit OS – Startmenü der Installations-ISO im Graphit-Look (GRUB 2)
+# Gibeon OS – Startmenü der Installations-ISO im Graphit-Look (GRUB 2)
 title-text: ""
 desktop-image: "background.png"
 desktop-image-scale-method: "stretch"
@@ -22,7 +22,7 @@ terminal-border: "0"
     top = 14%+8
     width = 70%
     height = 48
-    text = "Orbit OS"
+    text = "Gibeon OS"
     font = "Liberation Sans Bold 36"
     color = "#dce6ff"
 }

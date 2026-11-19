@@ -16,8 +16,8 @@ Window {
     title: cam.cameraDevice && hasVideo ? "Capture – " + cam.cameraDevice.description : "Capture"
     color: hasVideo && cam.active && cam.error === Camera.NoError ? "black" : Theme.surface
 
-    // Nur echte Capture-Karten – virtuelle Kameras (Orbit Kamera, OBS) gehören nicht hierher
-    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Orbit Kamera") < 0
+    // Nur echte Capture-Karten – virtuelle Kameras (Gibeon Kamera, OBS) gehören nicht hierher
+    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Gibeon Kamera") < 0
                                      && d.description.indexOf("OBS") < 0 && d.description.indexOf("Virtuelle") < 0
                                      && d.description.indexOf("Dummy") < 0 && d.description.indexOf("v4l2loopback") < 0)
     readonly property bool hasVideo: cards.length > 0
@@ -409,7 +409,7 @@ Window {
         }
     }
 
-    // ---- Baustein: Auswahlliste im Orbit-Look -------------------------------------------------
+    // ---- Baustein: Auswahlliste im Gibeon-Look -------------------------------------------------
     component Dropdown: ComboBox {
         id: dd
         property string placeholder: ""

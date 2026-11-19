@@ -56,7 +56,7 @@ Popup {
                 width: parent.width - 90 - 70
                 spacing: 4
                 Text {
-                    text: "Was ist neu in Orbit OS"
+                    text: "Was ist neu in Gibeon OS"
                     color: Theme.text
                     font.family: Theme.fontFamily
                     font.pixelSize: 20
@@ -65,7 +65,7 @@ Popup {
                 Text {
                     width: parent.width
                     elide: Text.ElideRight
-                    text: dialog.version ? "Du nutzt Orbit OS " + dialog.version : "Alle Neuerungen und Überarbeitungen"
+                    text: dialog.version ? "Du nutzt Gibeon OS " + dialog.version : "Alle Neuerungen und Überarbeitungen"
                     color: Theme.textMuted
                     font.family: Theme.fontFamily
                     font.pixelSize: 13

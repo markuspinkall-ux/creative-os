@@ -89,7 +89,7 @@ Window {
                 }
                 CButton { id: refreshMics; text: "Aktualisieren"; onClicked: bc.refreshMicrophones() }
             }
-            InfoRow { label: "Neue Eingabe"; value: "Orbit Mikrofon (rauschfrei)" }
+            InfoRow { label: "Neue Eingabe"; value: "Gibeon Mikrofon (rauschfrei)" }
             InfoRow { label: "Technik"; value: bc.deepFilter ? "DeepFilterNet (KI)" : "WebRTC (Ersatz)" }
             InfoRow { label: "Zustand"; value: bc.voice ? bc.voiceStatus : "Aus" }
             Item { width: 1; height: 8 }
@@ -97,7 +97,7 @@ Window {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 visible: bc.voice
-                text: "In Discord, Teams oder Zoom „Orbit Mikrofon (rauschfrei)“ als Mikrofon wählen."
+                text: "In Discord, Teams oder Zoom „Gibeon Mikrofon (rauschfrei)“ als Mikrofon wählen."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }
@@ -317,7 +317,7 @@ Window {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 visible: bc.camera && !upWarn.visible
-                text: "In Discord, Teams, Zoom oder OBS die Kamera „Orbit Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
+                text: "In Discord, Teams, Zoom oder OBS die Kamera „Gibeon Kamera“ wählen. Gerechnet wird nur, solange ein Programm sie benutzt."
                 color: Theme.accent; font.family: Theme.fontFamily; font.pixelSize: 12
             }
         }

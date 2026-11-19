@@ -3,12 +3,12 @@
 Läuft in der Sitzung im Hintergrund und tut nichts, solange beides aus ist.
 
 Mikrofon: PipeWire-Filter mit DeepFilterNet (KI-Rauschentfernung, CPU, sehr
-sparsam) → neue Eingabe „Orbit Mikrofon (rauschfrei)“, wird Standard.
+sparsam) → neue Eingabe „Gibeon Mikrofon (rauschfrei)“, wird Standard.
 Ohne DeepFilterNet: WebRTC-Rauschunterdrückung von PipeWire als Ersatz.
 
 Kamera: echte Kamera → Robust Video Matting (KI-Freistellung) → Hintergrund
-unscharf / Bild / Grün → virtuelle Kamera „Orbit Kamera“ (v4l2loopback).
-Gerechnet wird nur, solange ein Programm die Orbit Kamera benutzt (oder die
+unscharf / Bild / Grün → virtuelle Kamera „Gibeon Kamera“ (v4l2loopback).
+Gerechnet wird nur, solange ein Programm die Gibeon Kamera benutzt (oder die
 Vorschau offen ist); sonst wird die echte Kamera freigegeben.
 """
 
@@ -71,10 +71,10 @@ def ladspa_plugin():
 
 
 def loopback_device():
-    """/dev/videoN der virtuellen „Orbit Kamera“."""
+    """/dev/videoN der virtuellen „Gibeon Kamera“."""
     for d in sorted(Path("/sys/class/video4linux").glob("video*")):
         try:
-            if any(k in (d / "name").read_text() for k in ("Orbit Kamera", "Creative Kamera")):
+            if any(k in (d / "name").read_text() for k in ("Gibeon Kamera", "Orbit Kamera", "Creative Kamera")):
                 return f"/dev/{d.name}"
         except OSError:
             pass
@@ -91,7 +91,7 @@ def list_cameras():
         except (OSError, ValueError):
             continue
         # virtuelle Kameras (unsere und die für OBS) sind keine echten Kameras
-        if "Orbit Kamera" in name or "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
+        if "Gibeon Kamera" in name or "Orbit Kamera" in name or "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
             continue
         out.append({"device": f"/dev/{d.name}", "name": name})
     return out
@@ -152,8 +152,8 @@ class Voice:
             module = f"""
 {{ name = libpipewire-module-filter-chain
   args = {{
-    node.description = "Orbit Mikrofon (rauschfrei)"
-    media.name = "Orbit Mikrofon (rauschfrei)"
+    node.description = "Gibeon Mikrofon (rauschfrei)"
+    media.name = "Gibeon Mikrofon (rauschfrei)"
     filter.graph = {{
       nodes = [
         {{ type = ladspa name = deepfilter plugin = "{plugin}" label = deep_filter_mono
@@ -174,7 +174,7 @@ class Voice:
     library.name = aec/libspa-aec-webrtc
     aec.args = {{ webrtc.noise_suppression = true webrtc.gain_control = true webrtc.extended_filter = false }}
     capture.props = {{ node.name = "creative_voice_in" {target} }}
-    source.props = {{ node.name = "{VOICE_NODE}" node.description = "Orbit Mikrofon (rauschfrei)" }}
+    source.props = {{ node.name = "{VOICE_NODE}" node.description = "Gibeon Mikrofon (rauschfrei)" }}
     sink.props = {{ node.name = "creative_voice_ref" node.description = "Echo-Referenz" }}
   }}
 }}"""
@@ -230,7 +230,7 @@ context.modules = [
 
 # ---- Kamera ---------------------------------------------------------------------------------------
 def _consumers(dev, own_pids):
-    """Wie viele andere Programme haben die Orbit Kamera geöffnet?"""
+    """Wie viele andere Programme haben die Gibeon Kamera geöffnet?"""
     try:
         target = os.path.realpath(dev)
     except OSError:

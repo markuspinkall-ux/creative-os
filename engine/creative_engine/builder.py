@@ -1,4 +1,4 @@
-"""Aus einem Orbit-Engine-Projekt ein Godot-Projekt bauen (Spiel-Laufzeit + Daten + Assets).
+"""Aus einem Gibeon-Engine-Projekt ein Godot-Projekt bauen (Spiel-Laufzeit + Daten + Assets).
 
 Die Laufzeit (runtime/*.gd) liest game.json und lädt Bilder/GLB selbst – Godot muss nichts importieren.
 """

@@ -1,4 +1,4 @@
-/* Orbit OS – Installer im Graphit-Look (GTK 3, wird über updates.img geladen
+/* Gibeon OS – Installer im Graphit-Look (GTK 3, wird über updates.img geladen
    und hat Vorrang vor den Fedora-Farben). Grundlage: Anaconda (GPL v2+). */
 
 @define-color creative_ground  #12151b;

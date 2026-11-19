@@ -1,5 +1,5 @@
 #!/bin/sh
-# Baut das Symbol-Design „Creative“: Die Orbit-Symbole ersetzen die
+# Baut das Symbol-Design „Creative“: Die Gibeon-Symbole ersetzen die
 # Original-Symbole der mitgelieferten Programme überall – im Startmenü,
 # in der Taskleiste und oben in der Titelleiste der Fenster.
 # Aufruf: build-icon-theme.sh <Ordner mit Orbit-SVGs> <Zielordner>
@@ -10,8 +10,8 @@ mkdir -p "$dst/apps/scalable"
 rm -f "$dst"/apps/scalable/*.svg
 cat > "$dst/index.theme" <<'THEME'
 [Icon Theme]
-Name=Orbit
-Comment=Symbole von Orbit OS
+Name=Gibeon
+Comment=Symbole von Gibeon OS
 Inherits=breeze-dark,breeze,hicolor
 Directories=apps/scalable
 

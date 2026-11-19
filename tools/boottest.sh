@@ -1,5 +1,5 @@
 #!/bin/bash
-# Starttest für Orbit OS (läuft auf GitHub): Abbild → virtuelle Festplatte → QEMU → prüfen.
+# Starttest für Gibeon OS (läuft auf GitHub): Abbild → virtuelle Festplatte → QEMU → prüfen.
 set -u
 W="$PWD/boottest"; mkdir -p "$W"
 IMG=ghcr.io/markuspinkall-ux/creative-os:amd-testing

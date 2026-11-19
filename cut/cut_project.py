@@ -188,7 +188,7 @@ def read_project(path):
     """→ (media, clips, titles, music). Liest Version 1 und 2."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("version") not in (1, 2):
-        raise ValueError("Unbekanntes Orbit-Cut-Projektformat.")
+        raise ValueError("Unbekanntes Cut-Projektformat.")
     media = {}
     for item in data["media"]:
         if (not isinstance(item["path"], str) or not Path(item["path"]).is_absolute()

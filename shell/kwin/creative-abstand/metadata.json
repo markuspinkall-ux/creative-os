@@ -3,7 +3,7 @@
         "Id": "creative-abstand",
         "Name": "Abstand",
         "Description": "Maximierte Fenster behalten rundum einen kleinen Abstand (auch zur Taskleiste) und ihre runden Ecken.",
-        "Authors": [{ "Name": "Orbit OS" }],
+        "Authors": [{ "Name": "Gibeon OS" }],
         "License": "GPL-3.0-or-later",
         "Version": "0.1",
         "EnabledByDefault": false

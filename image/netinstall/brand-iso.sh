@@ -1,6 +1,6 @@
 #!/bin/bash
-# Macht aus der Fedora-Netzinstallation die Orbit-OS-Installation:
-#  - Installer-Name „Orbit OS“ (über ein updates.img mit eigener .buildstamp)
+# Macht aus der Fedora-Netzinstallation die Gibeon-OS-Installation:
+#  - Installer-Name „Gibeon OS“ (über ein updates.img mit eigener .buildstamp)
 #  - Startmenü der ISO auf Deutsch und im Graphit-Look (GRUB-Thema, grub-theme/)
 # Aufruf: brand-iso.sh <netinst.iso> <kickstart> <ziel.iso>
 set -euo pipefail
@@ -12,7 +12,7 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/upd"
 cat > "$work/upd/.buildstamp" <<STAMP
 [Main]
-Product=Orbit OS
+Product=Gibeon OS
 Version=$(date +%Y.%m)
 BugURL=https://github.com/markuspinkall-ux/creative-os/issues
 IsFinal=True
@@ -22,7 +22,7 @@ Variant=Everything
 [Compose]
 Lorax=creative-os
 STAMP
-# Look: Graphit-Farben, Orbit-Logo statt Fedora-Blau (Anaconda lädt
+# Look: Graphit-Farben, Gibeon-Logo statt Fedora-Blau (Anaconda lädt
 # /run/install/updates/anaconda-gtk.css mit Vorrang; die Bilder ersetzen die von Fedora)
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ -d "$here/installer" ]; then
@@ -34,7 +34,7 @@ if [ -d "$here/installer" ]; then
     printf '[User Interface]\ncustom_stylesheet = /usr/share/anaconda/creative-gtk.css\n' \
         > "$work/upd/etc/anaconda/conf.d/99-creative-os.conf"
     cp "$here"/installer/pixmaps/*.png "$work/upd/usr/share/anaconda/pixmaps/"
-    # Bilder während der Installation: Orbit OS statt Fedora-Hinweise
+    # Bilder während der Installation: Gibeon OS statt Fedora-Hinweise
     mkdir -p "$work/upd/usr/share/anaconda/pixmaps/rnotes/en" "$work/upd/usr/share/anaconda/pixmaps/rnotes/de"
     cp "$here"/installer/rnotes/*.svg "$work/upd/usr/share/anaconda/pixmaps/rnotes/en/"
     cp "$here"/installer/rnotes/*.svg "$work/upd/usr/share/anaconda/pixmaps/rnotes/de/"
@@ -49,11 +49,11 @@ mkksiso --ks "$ks" --updates "$work/updates.img" "$src" "$work/stage1.iso"
 # 3) Menüeinträge umbenennen (BIOS-, UEFI-Menü und das UEFI-Startabbild)
 brand() {
     sed -i -E '/menuentry|submenu|menu label|^\s*label/ {
-        s/Fedora( Linux)?( [0-9]+)?/Orbit OS/g
-        s/Install Orbit OS in basic graphics mode/Orbit OS im einfachen Grafikmodus installieren/
-        s/Test this media & install Orbit OS/Medium testen und Orbit OS installieren/
-        s/Install Orbit OS/Orbit OS installieren/
-        s/Rescue a Orbit OS system/Orbit OS reparieren (Rettungsmodus)/
+        s/Fedora( Linux)?( [0-9]+)?/Gibeon OS/g
+        s/Install Gibeon OS in basic graphics mode/Gibeon OS im einfachen Grafikmodus installieren/
+        s/Test this media & install Gibeon OS/Medium testen und Gibeon OS installieren/
+        s/Install Gibeon OS/Gibeon OS installieren/
+        s/Rescue a Gibeon OS system/Gibeon OS reparieren (Rettungsmodus)/
         s/Troubleshooting -->/Fehlerbehebung -->/
         s/Boot first drive/Von der ersten Festplatte starten/
         s/Return to main menu/Zurueck zum Hauptmenue/

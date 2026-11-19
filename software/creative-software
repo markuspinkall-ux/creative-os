@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Orbit OS Software: App-Katalog (Flathub) mit Kategorien und Vorschaubildern."""
+"""Gibeon OS Software: App-Katalog (Flathub) mit Kategorien und Vorschaubildern."""
 
 import gzip
 import hashlib
@@ -22,12 +22,12 @@ from PySide6.QtWidgets import (
     QMenu, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QTextEdit, QToolButton,
     QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -52,7 +52,7 @@ ORDER = ("Game", "AudioVideo", "Audio", "Video", "Graphics", "Network", "Email",
 
 
 def category_of(cats):
-    """Freedesktop-Kategorien einer App → eine der sechs Orbit-Kategorien."""
+    """Freedesktop-Kategorien einer App → eine der sechs Gibeon-Kategorien."""
     for key in ORDER:
         if key in cats:
             return next(name for name, _, _, _, keys in CATEGORIES if key in keys)

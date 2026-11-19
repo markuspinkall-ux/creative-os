@@ -1,7 +1,7 @@
 import QtQuick
 import Creative
 
-// Akku-Symbol im Orbit-Stil: Rahmen mit Füllstand, Blitz beim Laden, rot wenn fast leer.
+// Akku-Symbol im Gibeon-Stil: Rahmen mit Füllstand, Blitz beim Laden, rot wenn fast leer.
 Item {
     id: glyph
     property int level: 0

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Baut das Orbit-OS-Abbild und daraus eine Installations-ISO.
+# Baut das Gibeon-OS-Abbild und daraus eine Installations-ISO.
 # Läuft auf Fedora (z. B. in deiner VirtualBox-VM).
 #
 #   ./image/build.sh            NVIDIA-Variante

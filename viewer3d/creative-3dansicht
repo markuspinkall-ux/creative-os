@@ -19,7 +19,7 @@ from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeySequence, QShortc
 from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QPushButton,
                                QStackedWidget, QVBoxLayout, QWidget)
 
-try:  # Graphit-Dialoge von Orbit OS
+try:  # Graphit-Dialoge von Gibeon OS
     from creative_dialogs import QFileDialog  # noqa: F811
 except ImportError:
     pass
