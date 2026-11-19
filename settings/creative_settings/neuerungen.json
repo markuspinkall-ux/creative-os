@@ -1,5 +1,12 @@
 [
   {
+    "datum": "2026-11-19",
+    "titel": "Neuer Software-Shop mit Kategorien",
+    "verbessert": [
+      "Software: neue Startseite mit Empfehlungen, Kategorien („Wofür brauchst du eine App?“) und beliebten Apps. Apps erscheinen als Kacheln mit Vorschaubild statt als Liste, deutsche Namen und Beschreibungen, keine Seitenzahlen mehr"
+    ]
+  },
+  {
     "datum": "2026-11-18",
     "titel": "Aufgeräumtes Startmenü: Deck, Broadcast und Shots",
     "neu": [

@@ -1,0 +1,46 @@
+name: Shop prüfen
+# Software (App-Katalog): Selbsttest und Fotos mit dem echten Flathub-Katalog.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [software/creative-software, .github/workflows/shop-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt und Flatpak installieren
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q flatpak libxkbcommon0 libegl1 libgl1 fonts-noto-core fonts-dejavu dbus
+          pip install -q PySide6
+          mkdir -p /tmp/py && cp shell/creative_shell/look.py /tmp/py/creative_look.py
+      - name: Selbsttest
+        env: { QT_QPA_PLATFORM: offscreen, PYTHONPATH: /tmp/py }
+        run: python3 software/creative-software --selftest && echo "Selbsttest bestanden"
+      - name: Flathub-Katalog holen
+        timeout-minutes: 8
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak update --user --appstream flathub
+          ls ~/.local/share/flatpak/appstream/flathub/*/active/ | head
+      - name: Fotos
+        env: { QT_QPA_PLATFORM: offscreen }
+        run: |
+          mkdir -p fotos
+          foto() {   # foto <name> [argumente …]
+            n="$1"; shift
+            PYTHONPATH="/tmp/py:$GITHUB_WORKSPACE/tools/screenshots" CREATIVE_SCREENSHOT="fotos/$n.png" \
+              CREATIVE_SCREENSHOT_DELAY=45000 timeout 120 dbus-run-session -- python3 software/creative-software "$@" 2>&1 | tail -5 || true
+          }
+          foto shop-start
+          foto shop-spiele --kategorie Spiele
+          foto shop-suche --suche foto
+          mkdir -p /tmp/hell/creative-os && printf '[Look]\ndesign=porzellan\n' > /tmp/hell/creative-os/look.conf
+          XDG_CONFIG_HOME=/tmp/hell foto shop-hell
+          ls -la fotos
+          for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done

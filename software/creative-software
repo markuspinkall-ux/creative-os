@@ -1,7 +1,8 @@
 #!/usr/bin/python3
-"""Orbit OS software center backed by Flatpak."""
+"""Orbit OS Software: App-Katalog (Flathub) mit Kategorien und Vorschaubildern."""
 
 import gzip
+import hashlib
 import os
 import platform
 import re
@@ -12,11 +13,14 @@ from urllib.parse import urljoin, urlsplit
 from urllib.request import urlopen
 from xml.etree import ElementTree
 
-from PySide6.QtCore import QProcess, QStandardPaths, Qt, QTimer
-from PySide6.QtGui import QPixmap, QTextCursor
+from PySide6.QtCore import QObject, QPointF, QProcess, QRectF, QSize, QStandardPaths, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPixmap, QTextCursor,
+)
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
+    QApplication, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+    QMenu, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QTextEdit, QToolButton,
+    QVBoxLayout, QWidget,
 )
 try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
@@ -31,39 +35,123 @@ except ImportError:
         return value
 
 
-DEMO = [
-    ("org.gimp.GIMP", "GIMP", "Fotos bearbeiten und Grafiken gestalten", "G", T("#a998d9")),
-    ("org.blender.Blender", "Blender", "3D-Modelle, Animation und Rendering", "B", T("#f5a567")),
-    ("com.obsproject.Studio", "OBS Studio", "Bildschirm aufnehmen und live streamen", "O", T("#8aa9f2")),
-    ("org.videolan.VLC", "VLC", "Videos, Musik und Streams abspielen", "V", T("#efb477")),
-    ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "I", T("#8fc6af")),
+# ---- Kategorien -------------------------------------------------------------------------------
+
+# Name, Zeichen, Farbe, Untertitel, freedesktop-Hauptkategorien (in dieser Reihenfolge geprüft)
+CATEGORIES = [
+    ("Kreativ & Design", "✎", "#d9772b", "Malen, Fotos, 3D und Grafik", ("Graphics",)),
+    ("Video & Audio", "▶", "#4f78ad", "Schneiden, aufnehmen, streamen und abspielen", ("AudioVideo", "Audio", "Video")),
+    ("Spiele", "◆", "#5a4fb0", "Spiele und Spielebibliotheken", ("Game",)),
+    ("Büro & Lernen", "▤", "#23905a", "Texte, Tabellen, Notizen und Wissen", ("Office", "Education", "Science")),
+    ("Internet & Chat", "◎", "#d4572e", "Surfen, schreiben und telefonieren", ("Network", "Email", "Chat", "WebBrowser")),
+    ("Werkzeuge", "⚙", "#3d86c6", "System, Entwicklung und kleine Helfer", ("Utility", "System", "Development", "Settings")),
 ]
-FEATURED = {row[0]: row for row in DEMO}
-FEATURED["org.creativeos.Engine"] = ("org.creativeos.Engine", "Engine", "Spiele bauen per Klick", "E", "#8fb3ff")
+CATEGORY = {c[0]: c for c in CATEGORIES}
+ORDER = ("Game", "AudioVideo", "Audio", "Video", "Graphics", "Network", "Email", "Chat", "WebBrowser",
+         "Office", "Education", "Science", "Development", "System", "Utility", "Settings")
+
+
+def category_of(cats):
+    """Freedesktop-Kategorien einer App → eine der sechs Orbit-Kategorien."""
+    for key in ORDER:
+        if key in cats:
+            return next(name for name, _, _, _, keys in CATEGORIES if key in keys)
+    return "Werkzeuge"
+
+
+# Beliebte Apps (feste Auswahl – Flathub liefert ohne Netzabfrage keine Zahlen)
+POPULAR = [
+    "com.valvesoftware.Steam", "org.mozilla.firefox", "com.obsproject.Studio", "org.videolan.VLC",
+    "com.discordapp.Discord", "org.libreoffice.LibreOffice", "org.gimp.GIMP", "org.blender.Blender",
+    "com.spotify.Client", "org.kde.krita", "org.kde.kdenlive", "com.heroicgameslauncher.hgl",
+    "org.audacityteam.Audacity", "org.inkscape.Inkscape", "md.obsidian.Obsidian", "org.signal.Signal",
+    "org.telegram.desktop", "com.github.tchx84.Flatseal", "net.lutris.Lutris", "org.mozilla.Thunderbird",
+    "org.darktable.Darktable", "io.missioncenter.MissionCenter", "com.usebottles.bottles", "org.qbittorrent.qBittorrent",
+]
+# Empfehlungen oben (App, Schild)
+SPOTLIGHT = [
+    ("org.blender.Blender", "EMPFEHLUNG"),
+    ("com.obsproject.Studio", "FÜR CREATOR"),
+    ("com.valvesoftware.Steam", "BELIEBT"),
+    ("org.kde.krita", "KREATIV"),
+    ("org.libreoffice.LibreOffice", "BÜRO"),
+]
+
+# Beispieldaten für --preview / --selftest (App, Name, Kurzbeschreibung, Kategorie)
+DEMO = [
+    ("org.blender.Blender", "Blender", "3D-Modelle, Animation und Rendering", "Graphics"),
+    ("org.gimp.GIMP", "GIMP", "Fotos bearbeiten und Grafiken gestalten", "Graphics"),
+    ("org.kde.krita", "Krita", "Digital malen und zeichnen", "Graphics"),
+    ("org.inkscape.Inkscape", "Inkscape", "Vektorgrafiken und Illustrationen erstellen", "Graphics"),
+    ("com.obsproject.Studio", "OBS Studio", "Bildschirm aufnehmen und live streamen", "AudioVideo"),
+    ("org.videolan.VLC", "VLC", "Videos, Musik und Streams abspielen", "AudioVideo"),
+    ("org.kde.kdenlive", "Kdenlive", "Videos schneiden", "AudioVideo"),
+    ("org.audacityteam.Audacity", "Audacity", "Audio aufnehmen und bearbeiten", "AudioVideo"),
+    ("com.valvesoftware.Steam", "Steam", "Spielebibliothek", "Game"),
+    ("com.heroicgameslauncher.hgl", "Heroic", "Epic- und GOG-Spiele", "Game"),
+    ("net.lutris.Lutris", "Lutris", "Spiele verwalten", "Game"),
+    ("org.libreoffice.LibreOffice", "LibreOffice", "Texte, Tabellen und Folien", "Office"),
+    ("md.obsidian.Obsidian", "Obsidian", "Notizen verknüpfen", "Office"),
+    ("org.mozilla.firefox", "Firefox", "Im Web surfen", "Network"),
+    ("com.discordapp.Discord", "Discord", "Chat und Sprache", "Network"),
+    ("org.signal.Signal", "Signal", "Sicher schreiben", "Network"),
+    ("com.github.tchx84.Flatseal", "Flatseal", "Rechte von Apps verwalten", "Utility"),
+    ("io.missioncenter.MissionCenter", "Mission Center", "Systemauslastung ansehen", "System"),
+]
 OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
+PALETTE = ["#4f78ad", "#7a4e8c", "#2f7a6b", "#9a5b3c", "#5a6b2f", "#8c3e52", "#3c6f9a", "#6b5a43"]
+
 STYLE = """
-QWidget { background:#141720; color:#eaf0ff; font-size:14px; }
-QFrame#hero { background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #252643,stop:0.64 #243451,stop:1 #174249); border:1px solid #475576; border-radius:16px; }
-QFrame#hero QLabel, QFrame#card QLabel { background:transparent; }
-QFrame#spotlight { background:#252842; border:1px solid #404774; border-radius:12px; }
-QFrame#spotlight QLabel { background:transparent; }
-QLabel#gallery { background:#10131d; border:1px solid #30384a; border-radius:10px; }
-QFrame#card { background:#1d2230; border:1px solid #30384a; border-radius:11px; }
-QLabel#headline { font-size:30px; font-weight:700; }
-QLabel#eyebrow { color:#acafff; font-weight:700; }
+QWidget { background:#12151b; color:#eaf0ff; font-size:14px; }
+QScrollArea, QScrollArea > QWidget > QWidget { background:transparent; border:0; }
+QLabel { background:transparent; }
+QLabel#headline { font-size:30px; font-weight:800; }
+QLabel#section { font-size:19px; font-weight:700; }
+QLabel#eyebrow { color:#8fb3ff; font-weight:700; font-size:12px; letter-spacing:2px; }
 QLabel#muted { color:#aab4cb; }
-QLabel#appName { font-size:16px; font-weight:700; }
-QLineEdit, QTextEdit { background:#1d2230; border:1px solid #343c53; border-radius:9px; padding:9px; }
-QListWidget { border:0; outline:0; }
-QListWidget::item { border:0; }
-QPushButton { background:#2a3144; border:1px solid #3b455e; border-radius:8px; padding:8px 13px; }
-QPushButton:hover { background:#3a4460; }
-QPushButton:checked, QPushButton#primary { background:#aaa5ff; color:#18192a; border-color:#aaa5ff; font-weight:700; }
-QPushButton#primary:hover { background:#c0bdff; }
+QLabel#appName { font-size:15px; font-weight:700; }
+QLabel#gallery { background:#10131d; border:1px solid #30384a; border-radius:10px; }
+QFrame#box { background:#1c2029; border:1px solid #2a303d; border-radius:14px; }
+QFrame#box QLabel, QFrame#box QWidget { background:transparent; }
+QFrame#popRow { border-bottom:1px solid #232836; }
+QFrame#popRow:hover { background:#232836; border-radius:8px; }
+QLineEdit { background:#1c2029; border:1px solid #2a303d; border-radius:18px; padding:8px 16px; min-width:240px; }
+QLineEdit:focus { border-color:#8fb3ff; }
+QTextEdit { background:#1c2029; border:1px solid #2a303d; border-radius:9px; padding:8px; }
+QPushButton { background:#232836; border:1px solid #2a303d; border-radius:9px; padding:7px 14px; }
+QPushButton:hover { background:#2a3040; }
+QPushButton#primary { background:#eaf0ff; color:#12151b; border-color:#eaf0ff; font-weight:700; }
+QPushButton#primary:hover { background:#ffffff; }
+QPushButton#soft { background:#243451; color:#8fb3ff; border-color:#243451; font-weight:700; }
 QPushButton:disabled { color:#8590a6; background:#262b39; border-color:#343b4d; }
+QPushButton#tab { background:transparent; border:0; border-bottom:2px solid transparent; border-radius:0;
+                  padding:6px 2px; margin-right:20px; color:#aab4cb; font-size:15px; font-weight:600; }
+QPushButton#tab:hover { color:#eaf0ff; }
+QPushButton#tab:checked { color:#eaf0ff; border-bottom-color:#8fb3ff; }
+QPushButton#back { background:transparent; border:0; color:#8fb3ff; font-weight:700; padding:4px 0; text-align:left; }
+QToolButton { background:#1c2029; border:1px solid #2a303d; border-radius:18px; padding:7px 12px; font-size:16px; }
+QToolButton::menu-indicator { image:none; }
+QMenu { background:#1c2029; border:1px solid #2a303d; padding:6px; }
+QMenu::item { padding:8px 18px; border-radius:6px; }
+QMenu::item:selected { background:#243451; }
 """
 
+
+def color(value):
+    return QColor(T(value))
+
+
+def darker(hex_value, factor):
+    c = QColor(hex_value)
+    return QColor(int(c.red() * factor), int(c.green() * factor), int(c.blue() * factor))
+
+
+def tint_for(app_id):
+    return PALETTE[int(hashlib.md5(app_id.encode()).hexdigest(), 16) % len(PALETTE)]
+
+
+# ---- Katalogdaten -----------------------------------------------------------------------------
 
 def catalog_rows(output):
     rows = {}
@@ -81,6 +169,88 @@ def appstream_paths(scope):
     roots = {"user": user_data / "flatpak", "system": Path("/var/lib/flatpak")}
     for filename in ("appstream.xml", "appstream.xml.gz"):
         yield roots[scope] / "appstream/flathub" / platform.machine() / "active" / filename
+
+
+LANG = "{http://www.w3.org/XML/1998/namespace}lang"
+
+
+def _localized(node, tag):
+    """Deutscher Text, sonst der ohne Sprachangabe."""
+    fallback = None
+    for child in node.findall(tag):
+        lang = child.get(LANG)
+        if lang in ("de", "de_DE"):
+            return (child.text or "").strip()
+        if lang is None and fallback is None:
+            fallback = (child.text or "").strip()
+    return fallback
+
+
+def flathub_url(base, text):
+    url = urljoin(base.rstrip("/") + "/", (text or "").strip())
+    parts = urlsplit(url)
+    return url if parts.scheme == "https" and parts.hostname == "dl.flathub.org" else None
+
+
+def read_appstream(scope):
+    """Kategorie, deutscher Name/Text, Symbol und Vorschaubild aller Apps aus dem lokalen Katalog."""
+    infos = {}
+    for path in appstream_paths(scope):
+        if not path.is_file():
+            continue
+        icons = path.parent / "icons"
+        try:
+            opener = gzip.open if path.suffix == ".gz" else open
+            with opener(path, "rb") as stream:
+                base = ""
+                for event, node in ElementTree.iterparse(stream, events=("start", "end")):
+                    if event == "start" and node.tag == "components":
+                        base = node.get("media_baseurl", "")
+                    if event != "end" or node.tag != "component":
+                        continue
+                    app_id = (node.findtext("id") or "").removesuffix(".desktop")
+                    if not ID.fullmatch(app_id):
+                        node.clear()
+                        continue
+                    cats = {c.text for c in node.findall("./categories/category") if c.text}
+                    icon = None
+                    for size in ("128x128", "64x64"):
+                        for el in node.findall("icon"):
+                            if el.get("type") == "cached" and el.get("width") == size.split("x")[0] and el.text:
+                                candidate = icons / size / el.text.strip()
+                                if candidate.is_file():
+                                    icon = str(candidate)
+                                    break
+                        if icon:
+                            break
+                    thumb = None
+                    shots = node.findall("./screenshots/screenshot")
+                    shots.sort(key=lambda shot: shot.get("type") != "default")
+                    for shot in shots[:1]:
+                        best = None
+                        for img in shot.findall("image"):
+                            width = int(img.get("width") or 0)
+                            if img.get("type") == "thumbnail" and width >= 400:
+                                if best is None or abs(width - 624) < abs(best[0] - 624):
+                                    best = (width, img.text)
+                        if best is None:
+                            src = next((i for i in shot.findall("image") if i.get("type") == "source"), None)
+                            best = (0, src.text) if src is not None else None
+                        if best:
+                            thumb = flathub_url(base, best[1])
+                    infos[app_id] = {
+                        "name": _localized(node, "name"),
+                        "summary": _localized(node, "summary"),
+                        "category": category_of(cats),
+                        "icon": icon,
+                        "thumb": thumb,
+                    }
+                    node.clear()
+            if infos:
+                return infos
+        except (OSError, ValueError, EOFError, ElementTree.ParseError):
+            continue
+    return infos
 
 
 def screenshot_urls(app_id, scope):
@@ -106,51 +276,473 @@ def screenshot_urls(app_id, scope):
                             images = shot.findall("image")
                             images.sort(key=lambda img: img.get("type") != "source")
                             for img in images:
-                                url = urljoin(base.rstrip("/") + "/", (img.text or "").strip())
-                                parts = urlsplit(url)
-                                if parts.scheme == "https" and parts.hostname == "dl.flathub.org":
+                                url = flathub_url(base, img.text)
+                                if url:
                                     urls.append(url)
                                     break
                         if urls:
                             return list(dict.fromkeys(urls))[:8]
                         break
-            except (OSError, ValueError, ElementTree.ParseError):
+            except (OSError, ValueError, EOFError, ElementTree.ParseError):
                 continue
     return []
 
 
 def download_screenshot(url):
     limit = 8 * 1024 * 1024
-    with urlopen(url, timeout=7) as response:
+    with urlopen(url, timeout=10) as response:
         payload = response.read(limit + 1)
     if len(payload) > limit:
         raise ValueError("Screenshot zu groß")
     return payload
 
 
+class Images(QObject):
+    """Vorschaubilder im Hintergrund laden und auf der Platte zwischenspeichern."""
+    loaded = Signal(str)
+
+    def __init__(self, cache_dir):
+        super().__init__()
+        self.dir = Path(cache_dir) / "vorschau"
+        self.pool = ThreadPoolExecutor(max_workers=4)
+        self.pixmaps = {}
+        self.pending = set()
+        self.failed = set()
+
+    def path(self, url):
+        return self.dir / (hashlib.sha1(url.encode()).hexdigest() + ".img")
+
+    def get(self, url):
+        """Fertiges Bild oder None (und Laden anstoßen)."""
+        if not url or url in self.failed:
+            return None
+        pix = self.pixmaps.get(url)
+        if pix is not None:
+            return pix
+        file = self.path(url)
+        if file.is_file():
+            pix = QPixmap()
+            if pix.load(str(file)):
+                self.pixmaps[url] = pix
+                return pix
+        if url not in self.pending:
+            self.pending.add(url)
+            self.pool.submit(self._fetch, url)
+        return None
+
+    def _fetch(self, url):
+        try:
+            data = download_screenshot(url)
+            self.dir.mkdir(parents=True, exist_ok=True)
+            tmp = self.path(url).with_suffix(".tmp")
+            tmp.write_bytes(data)
+            tmp.replace(self.path(url))
+        except (OSError, ValueError):
+            self.failed.add(url)
+        self.pending.discard(url)
+        self.loaded.emit(url)
+
+    def stop(self):
+        self.pool.shutdown(wait=False, cancel_futures=True)
+
+
+class Reader(QObject):
+    done = Signal(object)
+
+
+# ---- Gezeichnete Bausteine --------------------------------------------------------------------
+
+def draw_icon(p, rect, app):
+    """App-Symbol (aus dem Katalog) oder Buchstabe auf Farbfläche."""
+    pix = app.get("iconPixmap")
+    if pix is None and app.get("icon"):
+        pix = QPixmap(app["icon"])
+        app["iconPixmap"] = pix
+    if pix is not None and not pix.isNull():
+        p.drawPixmap(rect.toRect(), pix.scaled(rect.size().toSize() * 2, Qt.AspectRatioMode.KeepAspectRatio,
+                                               Qt.TransformationMode.SmoothTransformation))
+        return
+    path = QPainterPath()
+    path.addRoundedRect(rect, rect.width() * 0.24, rect.width() * 0.24)
+    p.fillPath(path, QColor(tint_for(app["id"])))
+    p.setPen(QColor("#ffffff"))
+    font = QFont(p.font())
+    font.setPixelSize(int(rect.height() * 0.48))
+    font.setBold(True)
+    p.setFont(font)
+    p.drawText(rect, Qt.AlignmentFlag.AlignCenter, (app["name"] or "?")[:1].upper())
+
+
+def draw_cover(p, rect, pix, app, radius, corners="all"):
+    """Vorschaubild randlos (zugeschnitten) oder Farbverlauf mit großem Symbol."""
+    path = QPainterPath()
+    if corners == "top":
+        path.addRoundedRect(QRectF(rect.x(), rect.y(), rect.width(), rect.height() + radius), radius, radius)
+        clip = QPainterPath()
+        clip.addRect(rect)
+        path = path.intersected(clip)
+    else:
+        path.addRoundedRect(rect, radius, radius)
+    p.save()
+    p.setClipPath(path)
+    if pix is not None and not pix.isNull():
+        scaled = pix.scaled(rect.size().toSize(), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                            Qt.TransformationMode.SmoothTransformation)
+        x = rect.x() + (rect.width() - scaled.width()) / 2
+        p.drawPixmap(QPointF(x, rect.y()), scaled)
+    else:
+        base = tint_for(app["id"])
+        grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
+        grad.setColorAt(0, QColor(base))
+        grad.setColorAt(1, darker(base, 0.35))
+        p.fillRect(rect, grad)
+        size = min(rect.height() * 0.42, 72)
+        icon = QRectF(rect.center().x() - size / 2, rect.center().y() - size / 2, size, size)
+        draw_icon(p, icon, app)
+    p.restore()
+
+
+class Clickable(QFrame):
+    def __init__(self, on_click=None):
+        super().__init__()
+        self.on_click = on_click
+        self.hover = False
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+
+    def enterEvent(self, event):
+        self.hover = True
+        self.update()
+
+    def leaveEvent(self, event):
+        self.hover = False
+        self.update()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.on_click and self.rect().contains(event.position().toPoint()):
+            self.on_click()
+
+
+class FeatureCard(Clickable):
+    """Große Empfehlung oben: Vorschaubild, Schild, Symbol, Name."""
+
+    def __init__(self, store, app, tag):
+        super().__init__(lambda: store.details(app))
+        self.store, self.app, self.tag = store, app, tag
+        self.setMinimumHeight(200)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(210)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        draw_cover(p, r, self.store.images.get(self.app.get("thumb")), self.app, 14)
+        path = QPainterPath()
+        path.addRoundedRect(r, 14, 14)
+        shade = QLinearGradient(0, r.bottom() - 110, 0, r.bottom())
+        shade.setColorAt(0, QColor(13, 15, 19, 0))
+        shade.setColorAt(1, QColor(13, 15, 19, 235))
+        p.fillPath(path, shade)
+        # Schild
+        font = QFont(self.font())
+        font.setPixelSize(11)
+        font.setBold(True)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.5)
+        p.setFont(font)
+        w = p.fontMetrics().horizontalAdvance(self.tag) + 20
+        tag = QRectF(r.x() + 12, r.y() + 12, w, 24)
+        tp = QPainterPath()
+        tp.addRoundedRect(tag, 8, 8)
+        p.fillPath(tp, QColor(18, 21, 27, 210))
+        p.setPen(color("#8fb3ff"))
+        p.drawText(tag, Qt.AlignmentFlag.AlignCenter, self.tag)
+        # Symbol und Name
+        icon = QRectF(r.x() + 14, r.bottom() - 52, 38, 38)
+        draw_icon(p, icon, self.app)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0)
+        font.setPixelSize(15)
+        p.setFont(font)
+        p.setPen(QColor("#ffffff"))
+        p.drawText(QRectF(icon.right() + 12, icon.y() - 1, r.width() - 80, 20), Qt.AlignmentFlag.AlignLeft,
+                   self.app["name"])
+        font.setBold(False)
+        font.setPixelSize(12)
+        p.setFont(font)
+        p.setPen(QColor(220, 225, 235, 200))
+        text = p.fontMetrics().elidedText(self.app["summary"], Qt.TextElideMode.ElideRight, int(r.width() - 80))
+        p.drawText(QRectF(icon.right() + 12, icon.y() + 20, r.width() - 80, 18), Qt.AlignmentFlag.AlignLeft, text)
+        if self.hover:
+            p.setPen(color("#8fb3ff"))
+            p.drawPath(path)
+
+
+class CategoryTile(Clickable):
+    """Große Kategorie-Kachel mit Farbverlauf, Zeichen, Anzahl und vier Symbolen."""
+
+    def __init__(self, store, name, count, apps):
+        super().__init__(lambda: store.open_category(name))
+        self.store, self.name, self.count, self.apps = store, name, count, apps
+        self.setFixedHeight(150)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+    def paintEvent(self, event):
+        _, glyph, base, _, _ = CATEGORY[self.name]
+        p = QPainter(self)
+        p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        path = QPainterPath()
+        path.addRoundedRect(r, 14, 14)
+        grad = QLinearGradient(r.topLeft(), r.bottomRight())
+        grad.setColorAt(0, QColor(base))
+        grad.setColorAt(1, darker(base, 0.28))
+        p.fillPath(path, grad)
+        font = QFont(self.font())
+        font.setPixelSize(64)
+        p.setFont(font)
+        p.setPen(QColor(255, 255, 255, 60))
+        p.drawText(QRectF(r.right() - 96, r.y() + 4, 84, 84), Qt.AlignmentFlag.AlignCenter, glyph)
+        font.setPixelSize(19)
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(QColor("#ffffff"))
+        p.drawText(QRectF(r.x() + 18, r.y() + 56, r.width() - 36, 26), Qt.AlignmentFlag.AlignLeft, self.name)
+        font.setBold(False)
+        font.setPixelSize(12)
+        p.setFont(font)
+        p.setPen(QColor(255, 255, 255, 175))
+        p.drawText(QRectF(r.x() + 18, r.y() + 82, r.width() - 36, 18), Qt.AlignmentFlag.AlignLeft,
+                   f"{self.count} Apps" if self.count else "Katalog wird geladen …")
+        x = r.right() - 14
+        for app in reversed(self.apps[:4]):
+            x -= 26
+            draw_icon(p, QRectF(x, r.bottom() - 40, 24, 24), app)
+            x -= 5
+        p.setPen(QColor(255, 255, 255, 120 if self.hover else 26))
+        p.drawPath(path)
+
+
+class AppTile(Clickable):
+    """App als Kachel: Vorschaubild oben, Symbol, Name, Kurztext, Knopf."""
+    W, H, SHOT = 236, 206, 132
+
+    def __init__(self, store, app):
+        super().__init__(lambda: store.details(app))
+        self.store, self.app = store, app
+        self.setFixedSize(self.W, self.H)
+        self.button = QPushButton(self)
+        self.button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.button.clicked.connect(self.act)
+        self.refresh()
+
+    def refresh(self):
+        label, verb, style = self.store.action_for(self.app)
+        self.verb = verb
+        self.button.setText(label)
+        self.button.setObjectName(style)
+        self.button.setStyleSheet(T("""
+            QPushButton { background:#232836; border:1px solid #2a303d; border-radius:9px; padding:5px 12px; font-size:13px; }
+            QPushButton#primary { background:#eaf0ff; color:#12151b; border-color:#eaf0ff; font-weight:700; }
+            QPushButton#soft { background:#243451; color:#8fb3ff; border-color:#243451; font-weight:700; }
+            QPushButton:disabled { color:#8590a6; background:#262b39; border-color:#343b4d; }"""))
+        self.button.setEnabled(self.store.can(verb, self.app))
+        self.button.adjustSize()
+        self.button.move(self.W - self.button.width() - 10, self.SHOT + 14)
+        self.update()
+
+    def act(self):
+        self.store.apply(self.verb, self.app)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        path = QPainterPath()
+        path.addRoundedRect(r, 14, 14)
+        p.fillPath(path, color("#1c2029"))
+        draw_cover(p, QRectF(r.x(), r.y(), r.width(), self.SHOT), self.store.images.get(self.app.get("thumb")),
+                   self.app, 14, corners="top")
+        icon = QRectF(r.x() + 12, self.SHOT + 12, 36, 36)
+        draw_icon(p, icon, self.app)
+        text_w = self.button.x() - icon.right() - 18
+        font = QFont(self.font())
+        font.setPixelSize(14)
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(color("#eaf0ff"))
+        p.drawText(QRectF(icon.right() + 10, icon.y(), text_w, 19), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["name"], Qt.TextElideMode.ElideRight, int(text_w)))
+        font.setBold(False)
+        font.setPixelSize(12)
+        p.setFont(font)
+        p.setPen(color("#aab4cb"))
+        p.drawText(QRectF(icon.right() + 10, icon.y() + 19, text_w, 17), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["summary"], Qt.TextElideMode.ElideRight, int(text_w)))
+        # zweite Zeile Kurztext unter dem Symbol
+        p.drawText(QRectF(r.x() + 12, icon.bottom() + 6, r.width() - 24, 17), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["category"], Qt.TextElideMode.ElideRight, int(r.width() - 24)))
+        p.setPen(color("#8fb3ff") if self.hover else color("#2a303d"))
+        p.drawPath(path)
+
+
+class PopularRow(Clickable):
+    def __init__(self, store, rank, app):
+        super().__init__(lambda: store.details(app))
+        self.rank, self.app = rank, app
+        self.setFixedHeight(56)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        r = QRectF(self.rect())
+        if self.hover:
+            hp = QPainterPath()
+            hp.addRoundedRect(r, 8, 8)
+            p.fillPath(hp, color("#232836"))
+        font = QFont(self.font())
+        font.setPixelSize(15)
+        font.setBold(True)
+        p.setFont(font)
+        p.setPen(color("#8fb3ff"))
+        p.drawText(QRectF(4, 0, 20, r.height()), Qt.AlignmentFlag.AlignVCenter, str(self.rank))
+        icon = QRectF(30, (r.height() - 36) / 2, 36, 36)
+        draw_icon(p, icon, self.app)
+        w = r.width() - 84
+        font.setPixelSize(14)
+        p.setFont(font)
+        p.setPen(color("#eaf0ff"))
+        p.drawText(QRectF(78, 9, w, 19), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["name"], Qt.TextElideMode.ElideRight, int(w)))
+        font.setBold(False)
+        font.setPixelSize(12)
+        p.setFont(font)
+        p.setPen(color("#aab4cb"))
+        p.drawText(QRectF(78, 29, w, 17), Qt.AlignmentFlag.AlignLeft,
+                   p.fontMetrics().elidedText(self.app["summary"], Qt.TextElideMode.ElideRight, int(w)))
+        p.setPen(color("#232836"))
+        p.drawLine(QPointF(4, r.bottom()), QPointF(r.right() - 4, r.bottom()))
+
+
+class TileGrid(QScrollArea):
+    """Kacheln in so vielen Spalten wie hineinpassen; weitere werden beim Herunterrollen nachgeladen."""
+    BATCH = 36
+
+    def __init__(self, store):
+        super().__init__()
+        self.store = store
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.inner = QWidget()
+        self.grid = QGridLayout(self.inner)
+        self.grid.setContentsMargins(0, 4, 0, 16)
+        self.grid.setHorizontalSpacing(16)
+        self.grid.setVerticalSpacing(16)
+        self.grid.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.setWidget(self.inner)
+        self.apps = []
+        self.tiles = []
+        self.columns = 0
+        self.empty = QLabel(objectName="muted")
+        self.empty.setWordWrap(True)
+        self.verticalScrollBar().valueChanged.connect(self.maybe_more)
+
+    def show_apps(self, apps, empty_text):
+        for tile in self.tiles:
+            self.grid.removeWidget(tile)
+            tile.deleteLater()
+        self.tiles = []
+        self.apps = apps
+        self.empty.setText(empty_text)
+        self.empty.setVisible(not apps)
+        self.grid.addWidget(self.empty, 0, 0, 1, 4)
+        self.verticalScrollBar().setValue(0)
+        self.add_more()
+
+    def refresh(self):
+        for tile in self.tiles:
+            tile.refresh()
+
+    def column_count(self):
+        width = self.viewport().width()
+        return max(1, (width + 16) // (AppTile.W + 16))
+
+    def add_more(self):
+        self.columns = self.column_count()
+        start = len(self.tiles)
+        for app in self.apps[start:start + self.BATCH]:
+            tile = AppTile(self.store, app)
+            index = len(self.tiles)
+            self.grid.addWidget(tile, index // self.columns, index % self.columns)
+            self.tiles.append(tile)
+
+    def maybe_more(self, value):
+        bar = self.verticalScrollBar()
+        if len(self.tiles) < len(self.apps) and value > bar.maximum() - 400:
+            self.add_more()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.column_count() != self.columns and self.tiles:
+            self.columns = self.column_count()
+            for index, tile in enumerate(self.tiles):
+                self.grid.addWidget(tile, index // self.columns, index % self.columns)
+        QTimer.singleShot(0, lambda: self.maybe_more(self.verticalScrollBar().value()))
+
+
+# ---- Detailansicht ----------------------------------------------------------------------------
+
 class AppDetails(QDialog):
-    def __init__(self, parent, row, scope):
-        super().__init__(parent)
-        app_id, name, description = row
-        self.setWindowTitle(name)
-        self.resize(740, 540)
-        self.setMinimumSize(510, 410)
+    def __init__(self, store, app):
+        super().__init__(store)
+        self.store, self.app = store, app
+        self.setWindowTitle(app["name"])
+        self.resize(820, 600)
+        self.setMinimumSize(560, 440)
         self.pool = ThreadPoolExecutor(max_workers=1)
         self.urls = []
         self.index = 0
         self.original = QPixmap()
         layout = QVBoxLayout(self)
-        heading = QLabel(name, objectName="headline")
+        layout.setContentsMargins(24, 22, 24, 18)
+        top = QHBoxLayout()
+        icon = QLabel()
+        icon.setFixedSize(64, 64)
+        pix = QPixmap(64, 64)
+        pix.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pix)
+        painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        draw_icon(painter, QRectF(0, 0, 64, 64), app)
+        painter.end()
+        icon.setPixmap(pix)
+        top.addWidget(icon)
+        texts = QVBoxLayout()
+        texts.setSpacing(2)
+        texts.addWidget(QLabel(app["category"].upper(), objectName="eyebrow"))
+        heading = QLabel(app["name"], objectName="headline")
         heading.setTextFormat(Qt.TextFormat.PlainText)
-        layout.addWidget(heading)
-        info = QLabel(description or app_id, objectName="muted")
+        texts.addWidget(heading)
+        info = QLabel(app["summary"] or app["id"], objectName="muted")
         info.setTextFormat(Qt.TextFormat.PlainText)
         info.setWordWrap(True)
-        layout.addWidget(info)
+        texts.addWidget(info)
+        top.addSpacing(10)
+        top.addLayout(texts, 1)
+        label, verb, style = store.action_for(app)
+        self.action = QPushButton(label, objectName=style or "primary")
+        self.action.setEnabled(store.can(verb, app))
+        self.action.clicked.connect(lambda: (self.accept(), store.apply(verb, app)))
+        top.addWidget(self.action, 0, Qt.AlignmentFlag.AlignTop)
+        if verb in ("run",) and app.get("installed"):
+            remove = QPushButton("Entfernen")
+            remove.setEnabled(store.can("uninstall", app))
+            remove.clicked.connect(lambda: (self.accept(), store.apply("uninstall", app)))
+            top.addWidget(remove, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(top)
+        layout.addSpacing(10)
         self.image = QLabel("Screenshots werden gesucht …", objectName="gallery")
         self.image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image.setMinimumSize(460, 260)
-        self.image.setScaledContents(False)
         self.image.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         layout.addWidget(self.image, 1)
         controls = QHBoxLayout()
@@ -161,6 +753,7 @@ class AppDetails(QDialog):
         controls.addWidget(self.counter)
         controls.addWidget(self.next)
         controls.addStretch()
+        controls.addWidget(QLabel(app["id"], objectName="muted"))
         close = QPushButton("Schließen")
         close.clicked.connect(self.accept)
         controls.addWidget(close)
@@ -172,7 +765,7 @@ class AppDetails(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll)
         self.finished.connect(self.stop)
-        self.future = self.pool.submit(screenshot_urls, app_id, scope or "system")
+        self.future = self.pool.submit(screenshot_urls, app["id"], app.get("scope") or store.remote_scope or "system")
         self.callback = self.load_gallery
         self.timer.start(50)
 
@@ -229,124 +822,345 @@ class AppDetails(QDialog):
             ))
 
 
+# ---- Hauptfenster -----------------------------------------------------------------------------
+
 class Store(QWidget):
+    SECTIONS = ("Entdecken", "Meine Apps", "Updates", "Eigene Apps")
+
     def __init__(self, preview=False):
         super().__init__()
         self.preview = preview
         self.setWindowTitle("Software")
-        self.resize(980, 690)
-        self.setMinimumSize(630, 480)
+        self.resize(1200, 800)
+        self.setMinimumSize(760, 540)
         self.setStyleSheet(STYLE)
         cache = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
         self.cache = Path(cache) / "flathub.tsv"
+        self.images = Images(cache)
+        self.images.loaded.connect(self.image_ready)
         self.catalog = {r[0]: r[:3] for r in DEMO} if preview else self.read_cache()
+        self.infos = {r[0]: {"category": category_of({r[3]}), "name": None, "summary": None, "icon": None,
+                             "thumb": None} for r in DEMO} if preview else {}
+        self.apps = {}
         self.own_catalog = {}
         self.own_remote = False
         self.installed = {}
         self.updates = set()
-        self.remote_scope = None
+        self.remote_scope = "user" if preview else None
         self.section = "Entdecken"
+        self.view = ("home",)
         self.operation = None
         self.rescan = False
         self.processes = set()
-        self.loaded_scopes = set()
+        self.loaded_scopes = {"user", "system"} if preview else set()
+        self.reader = Reader()
+        self.reader.done.connect(self.appstream_loaded)
+        self.read_pool = ThreadPoolExecutor(max_workers=1)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(26, 22, 26, 20)
-        layout.setSpacing(13)
-        hero = QFrame(objectName="hero")
-        banner = QVBoxLayout(hero)
-        banner.setContentsMargins(20, 14, 20, 14)
-        banner.setSpacing(3)
-        banner.addWidget(QLabel("ORBIT OS  /  APP-KATALOG", objectName="eyebrow"))
-        banner.addWidget(QLabel("Software", objectName="headline"))
-        banner.addWidget(QLabel("Entdecke Apps für Arbeit, Kreativität und Unterhaltung.", objectName="muted"))
-        layout.addWidget(hero)
-        controls = QHBoxLayout()
+        layout.setContentsMargins(28, 16, 28, 14)
+        layout.setSpacing(12)
+
+        bar = QHBoxLayout()
         self.tabs = {}
-        for section in ("Entdecken", "Eigene Apps", "Installiert", "Updates"):
-            button = QPushButton(section, checkable=True)
+        for section in self.SECTIONS:
+            button = QPushButton(section, objectName="tab", checkable=True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda _, value=section: self.select(value))
-            controls.addWidget(button)
+            bar.addWidget(button)
             self.tabs[section] = button
-        controls.addStretch()
-        self.search = QLineEdit(placeholderText="Apps suchen …")
-        self.search.setMinimumWidth(180)
-        self.search.textChanged.connect(self.reset_page)
-        controls.addWidget(self.search)
-        self.refresh = QPushButton("Aktualisieren")
-        self.refresh.clicked.connect(self.scan)
-        controls.addWidget(self.refresh)
-        layout.addLayout(controls)
+        bar.addStretch()
+        self.search = QLineEdit(placeholderText="⌕   Apps suchen …")
+        self.search.setClearButtonEnabled(True)
+        self.search_timer = QTimer(self, singleShot=True, interval=250)
+        self.search_timer.timeout.connect(self.render)
+        self.search.textChanged.connect(lambda: self.search_timer.start())
+        bar.addWidget(self.search)
+        more = QToolButton(text="⋯")
+        more.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(more)
+        menu.addAction("Paket öffnen …", self.open_package)
+        menu.addAction("Flatpak-Link öffnen …", self.open_ref)
+        self.add_source = menu.addAction("Eigenen Katalog hinzufügen …", self.add_catalog)
+        menu.addSeparator()
+        self.refresh = menu.addAction("Katalog aktualisieren", self.scan)
+        more.setMenu(menu)
+        bar.addWidget(more)
+        layout.addLayout(bar)
 
-        imports = QHBoxLayout()
-        for label, handler in (
-            ("Paket öffnen", self.open_package),
-            ("Flatpak-Link öffnen", self.open_ref),
-        ):
-            button = QPushButton(label)
-            button.clicked.connect(handler)
-            imports.addWidget(button)
-        self.add_source = QPushButton("Eigenen Katalog hinzufügen")
-        self.add_source.clicked.connect(self.add_catalog)
-        imports.addWidget(self.add_source)
-        imports.addStretch()
-        layout.addLayout(imports)
+        self.stack = QStackedWidget()
+        layout.addWidget(self.stack, 1)
 
-        self.spotlight = QFrame(objectName="spotlight")
-        spotlight_layout = QHBoxLayout(self.spotlight)
-        spotlight_layout.setContentsMargins(16, 12, 16, 12)
-        spotlight_text = QVBoxLayout()
-        spotlight_text.addWidget(QLabel("IM FOKUS  ·  KREATIVITÄT", objectName="eyebrow"))
-        spotlight_text.addWidget(QLabel("Blender", objectName="appName"))
-        spotlight_text.addWidget(QLabel("Vom ersten Modell bis zum fertigen Rendering.", objectName="muted"))
-        spotlight_layout.addLayout(spotlight_text, 1)
-        spotlight_button = QPushButton("Screenshots ansehen")
-        spotlight_button.clicked.connect(lambda: self.details(self.remote_scope, FEATURED["org.blender.Blender"][:3]))
-        spotlight_layout.addWidget(spotlight_button)
-        layout.addWidget(self.spotlight)
+        # Startseite: Empfehlungen, Kategorien, Beliebt
+        self.home = QScrollArea()
+        self.home.setWidgetResizable(True)
+        self.home.setFrameShape(QFrame.Shape.NoFrame)
+        self.home.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        home_inner = QWidget()
+        home = QVBoxLayout(home_inner)
+        home.setContentsMargins(0, 4, 0, 10)
+        home.setSpacing(16)
+        self.featured = QHBoxLayout()
+        self.featured.setSpacing(16)
+        home.addLayout(self.featured)
+        lower = QHBoxLayout()
+        lower.setSpacing(22)
+        left = QVBoxLayout()
+        left.setSpacing(12)
+        left.addWidget(QLabel("Wofür brauchst du eine App?", objectName="section"))
+        self.category_grid = QGridLayout()
+        self.category_grid.setSpacing(14)
+        left.addLayout(self.category_grid)
+        left.addStretch()
+        lower.addLayout(left, 1)
+        box = QFrame(objectName="box")
+        box.setFixedWidth(310)
+        side = QVBoxLayout(box)
+        side.setContentsMargins(16, 16, 16, 12)
+        side.setSpacing(4)
+        side.addWidget(QLabel("Beliebt", objectName="section"))
+        self.popular = QVBoxLayout()
+        self.popular.setSpacing(0)
+        side.addLayout(self.popular)
+        side.addStretch()
+        lower.addWidget(box, 0, Qt.AlignmentFlag.AlignTop)
+        home.addLayout(lower)
+        home.addStretch()
+        self.home.setWidget(home_inner)
+        self.stack.addWidget(self.home)
 
-        self.heading = QLabel()
-        self.heading.setObjectName("eyebrow")
-        layout.addWidget(self.heading)
-        self.list = QListWidget()
-        self.list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.list.setSpacing(4)
-        layout.addWidget(self.list, 1)
-        self.pagination = QWidget()
-        pages = QHBoxLayout(self.pagination)
-        pages.setContentsMargins(0, 0, 0, 0)
-        pages.addStretch()
-        self.previous_page = QPushButton("‹ Zurück")
-        self.previous_page.clicked.connect(lambda: self.page.stepDown())
-        pages.addWidget(self.previous_page)
-        self.page = QSpinBox(prefix="Seite ")
-        self.page.setAccessibleName("Katalogseite")
-        self.page.setKeyboardTracking(False)
-        self.page.valueChanged.connect(self.render)
-        pages.addWidget(self.page)
-        self.next_page = QPushButton("Weiter ›")
-        self.next_page.clicked.connect(lambda: self.page.stepUp())
-        pages.addWidget(self.next_page)
-        layout.addWidget(self.pagination)
-        self.status = QLabel("Flathub · Beispielansicht" if preview else "Lokaler Katalog · Flathub wird geprüft …")
-        self.status.setObjectName("muted")
+        # Listenansicht: Kategorie, Suche, Meine Apps, Updates, Eigene Apps
+        listing = QWidget()
+        lv = QVBoxLayout(listing)
+        lv.setContentsMargins(0, 0, 0, 0)
+        lv.setSpacing(4)
+        self.back = QPushButton("‹  Übersicht", objectName="back")
+        self.back.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back.clicked.connect(self.go_home)
+        lv.addWidget(self.back, 0, Qt.AlignmentFlag.AlignLeft)
+        self.list_head = QFrame()
+        self.list_head.setFixedHeight(118)
+        head = QVBoxLayout(self.list_head)
+        head.setContentsMargins(24, 16, 24, 16)
+        head.setSpacing(2)
+        self.list_eyebrow = QLabel(objectName="eyebrow")
+        self.list_title = QLabel(objectName="headline")
+        self.list_sub = QLabel(objectName="muted")
+        for w in (self.list_eyebrow, self.list_title, self.list_sub):
+            head.addWidget(w)
+        lv.addWidget(self.list_head)
+        lv.addSpacing(10)
+        self.grid = TileGrid(self)
+        lv.addWidget(self.grid, 1)
+        self.stack.addWidget(listing)
+
+        self.status = QLabel("Flathub · Beispielansicht" if preview else "Lokaler Katalog · Flathub wird geprüft …",
+                             objectName="muted")
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         self.log = QTextEdit(readOnly=True)
-        self.log.setMaximumHeight(125)
+        self.log.setMaximumHeight(110)
         self.log.document().setMaximumBlockCount(200)
         self.log.hide()
         layout.addWidget(self.log)
         self.select(self.section)
         if not preview:
+            for scope in ("user", "system"):
+                if any(path.is_file() for path in appstream_paths(scope)):
+                    self.read_appstream(scope)
+                    break
             self.scan()
+
+    # ---- Daten zusammenführen ---------------------------------------------------------------
+
+    def read_appstream(self, scope):
+        self.read_pool.submit(lambda: self.reader.done.emit(read_appstream(scope)))
+
+    def appstream_loaded(self, infos):
+        if infos:
+            self.infos = infos
+            self.apps = {}
+            self.render(rebuild=True)
+
+    def app(self, app_id, row=None, scope=None):
+        """Alle Angaben zu einer App an einer Stelle (Katalog + Appstream + Installationsstand)."""
+        row = row or self.catalog.get(app_id) or self.own_catalog.get(app_id)
+        info = self.infos.get(app_id, {})
+        app = self.apps.get(app_id)
+        if app is None:
+            name = info.get("name") or (row[1] if row else app_id.split(".")[-1])
+            summary = info.get("summary") or (row[2] if row and len(row) > 2 else "") or ""
+            app = {"id": app_id, "name": name, "summary": summary,
+                   "category": info.get("category") or "Werkzeuge",
+                   "icon": info.get("icon"), "thumb": info.get("thumb")}
+            self.apps[app_id] = app
+        installed = next((s for s in ("user", "system") if (s, app_id) in self.installed), None)
+        app["installed"] = installed
+        app["update"] = bool(installed and (installed, app_id) in self.updates)
+        app["own"] = app_id in self.own_catalog
+        app["scope"] = installed or scope or (("user" if app["own"] else self.remote_scope))
+        return app
+
+    def catalog_apps(self):
+        return [self.app(app_id) for app_id in self.catalog]
+
+    def action_for(self, app):
+        if app.get("update"):
+            return "Aktualisieren", "update", "primary"
+        if app.get("installed"):
+            return "Öffnen", "run", "soft"
+        return "Holen", "install", "primary"
+
+    def can(self, verb, app):
+        if self.preview:
+            return True
+        scope = app.get("installed") if verb != "install" else app.get("scope")
+        return bool(scope in ("user", "system") and not self.operation and
+                    (verb != "install" or len(self.loaded_scopes) == 2))
+
+    def image_ready(self, url):
+        for widget in self.findChildren(Clickable):
+            if getattr(widget, "app", {}).get("thumb") == url:
+                widget.update()
+
+    # ---- Navigation -------------------------------------------------------------------------
+
+    def select(self, section):
+        self.section = section
+        for name, button in self.tabs.items():
+            button.setChecked(name == section)
+        self.view = ("home",) if section == "Entdecken" else ("section", section)
+        self.search.blockSignals(True)
+        self.search.clear()
+        self.search.blockSignals(False)
+        self.render(rebuild=True)
+
+    def go_home(self):
+        self.search.blockSignals(True)
+        self.search.clear()
+        self.search.blockSignals(False)
+        self.select("Entdecken")
+
+    def open_category(self, name):
+        self.view = ("category", name)
+        self.render(rebuild=True)
+
+    def render(self, rebuild=False):
+        query = self.search.text().casefold().strip()
+        if query:
+            view = ("search", self.section, query)
+        elif self.view[0] == "search":
+            view = ("home",) if self.section == "Entdecken" else ("section", self.section)
+        else:
+            view = self.view
+        changed = rebuild or view != getattr(self, "shown_view", None)
+        self.view = view
+        self.shown_view = view
+        if view[0] == "home":
+            self.stack.setCurrentIndex(0)
+            self.build_home()
+            return
+        self.stack.setCurrentIndex(1)
+        if changed:
+            apps, eyebrow, title, sub, colour, empty = self.listing(view)
+            self.list_eyebrow.setText(eyebrow)
+            self.list_title.setText(title)
+            self.list_sub.setText(sub)
+            self.list_head.setStyleSheet(
+                f"QFrame {{ background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {colour},stop:0.7 {T('#1c2029')}); "
+                f"border-radius:16px; }} QLabel {{ background:transparent; }}"
+                + ("QLabel { color:#ffffff; } QLabel#eyebrow { color:rgba(255,255,255,190); }" if colour != T("#1c2029") else ""))
+            self.back.setVisible(self.section == "Entdecken")
+            self.grid.show_apps(apps, empty)
+        else:
+            for tile in self.grid.tiles:
+                self.app(tile.app["id"])
+            self.grid.refresh()
+
+    def listing(self, view):
+        """Apps, Kopfzeilen und Farbe für eine Listenansicht."""
+        plain = T("#1c2029")
+        if view[0] == "category":
+            name, glyph, base, sub, _ = CATEGORY[view[1]]
+            apps = [a for a in self.catalog_apps() if a["category"] == name]
+            apps.sort(key=lambda a: (a["id"] not in POPULAR, POPULAR.index(a["id"]) if a["id"] in POPULAR else 0,
+                                     a["thumb"] is None, a["name"].casefold()))
+            return apps, "KATEGORIE", name, f"{sub} · {len(apps)} Apps", base, "In dieser Kategorie ist noch nichts im Katalog."
+        if view[0] == "search":
+            query = view[2]
+            pool = self.section_apps(view[1]) if view[1] != "Entdecken" else self.catalog_apps()
+            apps = [a for a in pool if query in f"{a['name']} {a['summary']} {a['id']}".casefold()]
+            apps.sort(key=lambda a: (not a["name"].casefold().startswith(query), a["id"] not in POPULAR,
+                                     a["name"].casefold()))
+            return (apps, "SUCHE", f"„{self.search.text().strip()}“", f"{len(apps)} Treffer", plain,
+                    "Keine passenden Apps. Versuch einen anderen Begriff.")
+        section = view[1]
+        apps = self.section_apps(section)
+        if section == "Meine Apps":
+            return apps, "INSTALLIERT", "Meine Apps", f"{len(apps)} Apps auf diesem Rechner", plain, \
+                "Noch keine Apps aus dem Katalog installiert."
+        if section == "Updates":
+            return apps, "AKTUALISIERUNGEN", "Updates", \
+                (f"{len(apps)} Apps können aktualisiert werden" if apps else "Alles aktuell"), plain, \
+                "Alle Apps sind auf dem neuesten Stand."
+        return apps, "EIGENER KATALOG", "Eigene Apps", "Apps aus deinem eigenen Flatpak-Katalog", plain, (
+            "Füge über ⋯ → „Eigenen Katalog hinzufügen“ einen signierten Flatpak-Katalog hinzu, "
+            "um deine Apps hier anzubieten." if not self.own_remote else "Der eigene Katalog ist leer.")
+
+    def section_apps(self, section):
+        if section == "Meine Apps":
+            apps = [self.app(app_id, row, scope) for (scope, app_id), row in self.installed.items()]
+        elif section == "Updates":
+            apps = [self.app(app_id, row, scope) for (scope, app_id), row in self.installed.items()
+                    if (scope, app_id) in self.updates]
+        else:
+            apps = [self.app(app_id, row, "user") for app_id, row in self.own_catalog.items()]
+        unique = {a["id"]: a for a in apps}
+        return sorted(unique.values(), key=lambda a: a["name"].casefold())
+
+    def build_home(self):
+        def clear(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+
+        apps = self.catalog_apps()
+        by_id = {a["id"]: a for a in apps}
+        clear(self.featured)
+        spots = [(by_id[i], tag) for i, tag in SPOTLIGHT if i in by_id][:3]
+        if len(spots) < 3:
+            extra = [a for a in apps if a["thumb"] and a["id"] not in dict(SPOTLIGHT)]
+            spots += [(a, "ENTDECKEN") for a in extra[:3 - len(spots)]]
+        for app, tag in spots:
+            self.featured.addWidget(FeatureCard(self, app, tag))
+
+        clear(self.category_grid)
+        for index, (name, *_rest) in enumerate(CATEGORIES):
+            members = [a for a in apps if a["category"] == name]
+            members.sort(key=lambda a: (a["id"] not in POPULAR, POPULAR.index(a["id"]) if a["id"] in POPULAR else 0,
+                                        not a["icon"]))
+            self.category_grid.addWidget(CategoryTile(self, name, len(members), members[:4]), index // 3, index % 3)
+
+        clear(self.popular)
+        top = [by_id[i] for i in POPULAR if i in by_id][:6]
+        for rank, app in enumerate(top, 1):
+            self.popular.addWidget(PopularRow(self, rank, app))
+        if not top:
+            waiting = QLabel("Der Katalog wird geladen …", objectName="muted")
+            self.popular.addWidget(waiting)
+        updates = len({app for _, app in self.updates})
+        self.tabs["Updates"].setText(f"Updates  {updates}" if updates else "Updates")
+
+    # ---- Flatpak ----------------------------------------------------------------------------
 
     def closeEvent(self, event):
         if self.operation:
             self.status.setText("Flatpak arbeitet noch. Warte, bis der Auftrag abgeschlossen ist.")
             event.ignore()
         else:
+            self.images.stop()
+            self.read_pool.shutdown(wait=False, cancel_futures=True)
             super().closeEvent(event)
 
     def read_cache(self):
@@ -417,14 +1231,17 @@ class Store(QWidget):
             self.installed = {key: value for key, value in self.installed.items() if key[0] != scope}
             self.installed.update({(scope, app): row for app, row in catalog_rows(data).items()})
         self.loaded_scopes.add(scope)
-        self.render()
+        self.render(rebuild=self.section == "Meine Apps")
 
     def find_remote(self, scope, code, data):
         if code == 0 and "flathub" in data.splitlines():
             self.remote_scope = scope
             self.render()
             if not any(path.is_file() for path in appstream_paths(scope)):
-                self.command(["update", f"--{scope}", "--appstream", "flathub"], lambda *_: None)
+                self.command(["update", f"--{scope}", "--appstream", "flathub"],
+                             lambda *_: self.read_appstream(scope))
+            elif not self.infos:
+                self.read_appstream(scope)
             self.command(["remote-ls", f"--{scope}", "--app",
                           "--columns=application,name,description", "flathub"], self.catalog_loaded)
         elif scope == "user":
@@ -447,8 +1264,8 @@ class Store(QWidget):
                 except OSError:
                     pass
         if not self.operation:
-            self.status.setText("Flathub · Katalog bereit" if code == 0 else "Flathub · Gespeicherter Katalog")
-        self.render()
+            self.status.setText(f"Flathub · {len(self.catalog)} Apps" if code == 0 else "Flathub · Gespeicherter Katalog")
+        self.render(rebuild=self.view[0] != "home")
         self.scan_finished()
 
     def scan_finished(self):
@@ -461,118 +1278,14 @@ class Store(QWidget):
         if code == 0:
             self.updates = {key for key in self.updates if key[0] != scope}
             self.updates.update((scope, app) for app in data.splitlines() if ID.fullmatch(app))
-        if self.section in ("Updates", "Eigene Apps"):
-            self.render()
-
-    def reset_page(self):
-        self.page.blockSignals(True)
-        self.page.setValue(1)
-        self.page.blockSignals(False)
-        self.render()
-
-    def select(self, section):
-        self.section = section
-        for name, button in self.tabs.items():
-            button.setChecked(name == section)
-        self.reset_page()
-
-    def render(self):
-        self.list.clear()
-        self.spotlight.setVisible(self.section == "Entdecken" and not self.search.text().strip()
-                                  and "org.blender.Blender" in self.catalog)
-        self.heading.setText("ENTDECKEN   ·   FLATHUB" if self.section == "Entdecken" else self.section.upper())
-        if self.section == "Entdecken":
-            entries = [(self.remote_scope, row) for row in self.catalog.values()]
-        elif self.section == "Eigene Apps":
-            entries = [("user", row) for row in self.own_catalog.values()]
-        else:
-            entries = [(key[0], row) for key, row in self.installed.items()
-                       if self.section != "Updates" or key in self.updates]
-        query = self.search.text().casefold().strip()
-        entries = [(scope, row) for scope, row in entries if query in " ".join(row).casefold()]
-        discover = self.section == "Entdecken"
-        self.pagination.setVisible(discover and bool(entries))
-        if discover:
-            entries.sort(key=lambda entry: (entry[1][1].casefold(), entry[1][0]))
-            pages = max(1, (len(entries) + 9) // 10)
-            self.page.blockSignals(True)
-            self.page.setRange(1, pages)
-            self.page.setSuffix(f" / {pages}")
-            self.page.blockSignals(False)
-            current = self.page.value()
-            self.previous_page.setEnabled(current > 1)
-            self.next_page.setEnabled(current < pages)
-            entries = entries[(current - 1) * 10:current * 10]
-        else:
-            entries.sort(key=lambda entry: (entry[1][0] not in FEATURED, entry[1][1].casefold()))
-        for scope, row in entries:
-            self.add_row(scope, row)
-        if not entries:
-            if self.section == "Eigene Apps" and not self.own_remote:
-                self.list.addItem("Füge einen signierten Flatpak-Katalog hinzu, um deine Apps hier anzubieten.")
-            else:
-                self.list.addItem("Keine passenden Apps. Verwende die Suche oder aktualisiere den Katalog.")
-
-    def add_row(self, scope, row):
-        app_id, name, description = row
-        card = QFrame(objectName="card")
-        layout = QHBoxLayout(card)
-        layout.setContentsMargins(12, 7, 12, 7)
-        featured = FEATURED.get(app_id)
-        icon = QLabel(featured[3] if featured else name[:1].upper())
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon.setFixedSize(43, 43)
-        color = featured[4] if featured else T("#a9b6d6")
-        icon.setStyleSheet(f"background:#30384f; color:{color}; border-radius:10px; font-size:19px; font-weight:700;")
-        layout.addWidget(icon)
-        labels = QVBoxLayout()
-        title = QLabel(name, objectName="appName")
-        subtitle = QLabel(description or app_id, objectName="muted")
-        for label in (title, subtitle):
-            label.setTextFormat(Qt.TextFormat.PlainText)
-            labels.addWidget(label)
-        layout.addLayout(labels, 1)
-        installed_scope = next((candidate for candidate in ("user", "system")
-                                if (candidate, app_id) in self.installed), None)
-        details = QPushButton("Screenshots")
-        details.clicked.connect(lambda: self.details(scope, row))
-        layout.addWidget(details)
-        if self.section == "Eigene Apps" and installed_scope:
-            self.action(layout, "Öffnen", "run", installed_scope, app_id, name)
-            if (installed_scope, app_id) in self.updates:
-                self.action(layout, "Aktualisieren", "update", installed_scope, app_id, name)
-            self.action(layout, "Deinstallieren", "uninstall", installed_scope, app_id, name)
-        elif self.section in ("Entdecken", "Eigene Apps"):
-            if installed_scope:
-                layout.addWidget(QLabel("Installiert", objectName="muted"))
-            else:
-                self.action(layout, "Installieren", "install", scope, app_id, name)
-        elif self.section == "Updates":
-            self.action(layout, "Update", "update", scope, app_id, name)
-        else:
-            self.action(layout, "Öffnen", "run", scope, app_id, name)
-            self.action(layout, "Entfernen", "uninstall", scope, app_id, name)
-        item = QListWidgetItem()
-        item.setSizeHint(card.sizeHint())
-        self.list.addItem(item)
-        self.list.setItemWidget(item, card)
+        self.render(rebuild=self.section == "Updates")
 
     def write_progress(self, output):
         self.log.moveCursor(QTextCursor.MoveOperation.End)
         self.log.insertPlainText(output.replace("\r", "\n"))
 
-    def details(self, scope, row):
-        dialog = AppDetails(self, row, scope)
-        dialog.exec()
-
-    def action(self, layout, label, verb, scope, app_id, name):
-        button = QPushButton(label, objectName="primary" if verb in ("install", "update") else "")
-        button.setEnabled(self.preview or (
-            scope is not None and not self.operation and
-            (verb != "install" or len(self.loaded_scopes) == 2)
-        ))
-        button.clicked.connect(lambda: self.apply(verb, scope, app_id, name))
-        layout.addWidget(button)
+    def details(self, app):
+        AppDetails(self, self.app(app["id"])).exec()
 
     def open_package(self):
         if self.preview or self.operation:
@@ -632,7 +1345,9 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
             self.transact(["remote-add", "--user", "--if-not-exists", OWN_REMOTE, url], "Eigene Apps")
             self.select("Eigene Apps")
 
-    def apply(self, verb, scope, app_id, name):
+    def apply(self, verb, app):
+        app_id, name = app["id"], app["name"]
+        scope = app.get("installed") if verb != "install" else app.get("scope")
         if self.preview or self.operation or scope not in ("user", "system"):
             return
         if verb == "run":
@@ -647,7 +1362,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
             return
         args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
         if verb == "install":
-            args.append(OWN_REMOTE if self.section == "Eigene Apps" else "flathub")
+            args.append(OWN_REMOTE if app.get("own") and app_id not in self.catalog else "flathub")
         args.append(app_id)
         self.transact(args, name)
 
@@ -655,7 +1370,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
         if self.operation:
             return
         self.operation = args[0]
-        self.status.setText(f"{name} · Flatpak-Auftrag gestartet …")
+        self.status.setText(f"{name} · wird ausgeführt …")
         self.log.clear()
         self.log.show()
         self.render()
@@ -664,7 +1379,9 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
             if cleanup:
                 cleanup()
             self.operation = None
-            self.status.setText(f"{name} · " + ("Abgeschlossen" if code == 0 else f"Fehlgeschlagen (Code {code})"))
+            self.status.setText(f"{name} · " + ("Fertig" if code == 0 else f"Fehlgeschlagen (Code {code})"))
+            if code == 0:
+                self.log.hide()
             self.render()
             if code == 0:
                 if self.refresh.isEnabled():
@@ -682,10 +1399,24 @@ def main():
     preview = "--preview" in sys.argv
     window = Store(preview or "--selftest" in sys.argv)
     if "--selftest" in sys.argv:
-        assert window.list.count() == len(DEMO)
+        tiles = window.findChildren(CategoryTile)
+        assert len(tiles) == len(CATEGORIES), len(tiles)
+        assert sum(t.count for t in tiles) == len(DEMO)
+        assert len(window.findChildren(FeatureCard)) == 3
+        window.open_category("Spiele")
+        assert len(window.grid.apps) == 3 and window.stack.currentIndex() == 1
+        window.search.setText("blend")
+        window.render()
+        assert [a["id"] for a in window.grid.apps] == ["org.blender.Blender"]
+        window.go_home()
+        assert window.stack.currentIndex() == 0
         return 0
     if "--updates" in sys.argv:
         window.select("Updates")
+    if "--kategorie" in sys.argv:
+        window.open_category(sys.argv[sys.argv.index("--kategorie") + 1])
+    if "--suche" in sys.argv:
+        window.search.setText(sys.argv[sys.argv.index("--suche") + 1])
     window.show()
     if preview:
         app.processEvents()
