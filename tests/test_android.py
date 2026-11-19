@@ -48,3 +48,12 @@ class AndroidAppsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_einrichten_gibt_ota_adressen_an():
+    """Fedoras Waydroid kennt keine Standard-Server: ohne -c/-v bricht „waydroid init“ ab."""
+    from pathlib import Path
+    helper = (Path(__file__).resolve().parents[1] / "android" / "gibeon-android-helper").read_text()
+    init = next(line for line in helper.splitlines() if "waydroid init" in line)
+    assert '-c "$SYSTEM_OTA"' in init and '-v "$VENDOR_OTA"' in init
+    assert "https://ota.waydro.id/system" in helper and "https://ota.waydro.id/vendor" in helper

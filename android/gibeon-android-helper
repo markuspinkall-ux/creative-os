@@ -17,6 +17,10 @@ set -u
 PIDFILE=/run/gibeon-android.pid
 LIB=/var/lib/waydroid
 CFG=$LIB/waydroid.cfg
+# Offizielle Download-Server von Waydroid. Das Fedora-Paket bringt keine Standardadressen mit
+# („You must provide 'System OTA' and 'Vendor OTA' URLs“), deshalb geben wir sie selbst an.
+SYSTEM_OTA="${GIBEON_ANDROID_SYSTEM_OTA:-https://ota.waydro.id/system}"
+VENDOR_OTA="${GIBEON_ANDROID_VENDOR_OTA:-https://ota.waydro.id/vendor}"
 
 say()  { echo "@@ $1 $2"; }
 fail() { echo "@@fehler $1"; rm -f "$PIDFILE"; exit 1; }
@@ -120,7 +124,7 @@ einrichten() {
     systemctl stop waydroid-container.service >/dev/null 2>&1
     say 5 "Lade Android herunter …"
     # -f: auch eine frühere, abgebrochene Einrichtung sauber ersetzen
-    waydroid init -f -s "$typ" 2>&1 \
+    waydroid init -f -c "$SYSTEM_OTA" -v "$VENDOR_OTA" -s "$typ" 2>&1 \
         || fail "Android konnte nicht heruntergeladen werden – Internetverbindung prüfen und nochmal versuchen."
     [ -f "$LIB/images/system.img" ] || [ -f /etc/waydroid-extra/images/system.img ] \
         || fail "Das Android-Abbild fehlt nach dem Herunterladen."
