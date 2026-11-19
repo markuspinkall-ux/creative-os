@@ -22,7 +22,12 @@ class AndroidAppsTest(unittest.TestCase):
         self.assertIn("waydroid0", text)          # Internet durch die Firewall
 
     def test_startmenue(self):
-        self.assertIn('"gibeon-android.desktop"', (ROOT / "shell/creative_shell/apps.py").read_text(encoding="utf-8"))
+        # steht direkt im Startmenü, nicht im Ordner „Gibeon OS Suite“
+        apps = (ROOT / "shell/creative_shell/apps.py").read_text(encoding="utf-8")
+        suite = apps.split("SUITE = {", 1)[1].split("}", 1)[0]
+        folder_out = apps.split("NOT_IN_FOLDER = {", 1)[1].split("}", 1)[0]
+        self.assertNotIn("gibeon-android.desktop", suite)
+        self.assertIn('"gibeon-android.desktop"', folder_out)
         self.assertIn('"gibeon-android.desktop"', (ROOT / "theme/apps/creative-apps-sync").read_text(encoding="utf-8"))
         desktop = (ROOT / "android/gibeon-android.desktop").read_text(encoding="utf-8")
         self.assertIn("Exec=gibeon-android\n", desktop)

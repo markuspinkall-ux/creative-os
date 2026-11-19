@@ -37,11 +37,12 @@ NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT =
 # damit Anheften und Ausblenden erhalten bleiben).
 FOLDER_ID = "creative-apps-ordner"
 FOLDER_NAME = "Gibeon OS Suite"
-NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop"}   # Browser gehört direkt ins Startmenü
+NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop",   # Browser gehört direkt ins Startmenü
+                 "gibeon-android.desktop"}                                    # Android-Apps ebenso
 SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
     "creative-cut.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
-    "creative-iso.desktop", "gibeon-android.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
+    "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
     "creative-widgets.desktop", "creative-writer.desktop",
 }
 # Broadcast, Deck und Shots stehen nicht im Startmenü (NoDisplay): Broadcast und Deck leben im
