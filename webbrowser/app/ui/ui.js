@@ -4,7 +4,7 @@ const api = window.creative;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// ---- Symbole (Linien wie die Orbit-Symbole) ----
+// ---- Symbole (Linien wie die Gibeon-Symbole) ----
 const P = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   close: '<path d="M7 7l10 10M17 7L7 17"/>',

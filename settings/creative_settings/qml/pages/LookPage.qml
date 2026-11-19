@@ -12,7 +12,7 @@ SettingsPage {
 
     Card {
         title: "Design"
-        subtitle: "Gilt für Taskleiste, Startmenü, Einstellungen und alle Orbit-Programme"
+        subtitle: "Gilt für Taskleiste, Startmenü, Einstellungen und alle Gibeon-Programme"
         Row {
             spacing: 14
             bottomPadding: 6

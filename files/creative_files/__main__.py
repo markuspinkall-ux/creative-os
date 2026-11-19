@@ -64,7 +64,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-files: Orbit-Design nicht gefunden (Shell installiert?)")
+        print("creative-files: Gibeon-Design nicht gefunden (Shell installiert?)")
         return 1
 
     start = start_folder(sys.argv[1:])

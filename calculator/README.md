@@ -1,6 +1,6 @@
 # Calculator
 
-Der Rechner von Orbit OS im Graphit-Look.
+Der Rechner von Gibeon OS im Graphit-Look.
 
 - Rechnet exakt (0,1 + 0,2 = 0,3), deutsch mit Komma, Punkt vor Strich, Klammern
 - Prozent wie bei Windows: 200 + 10 % = 220

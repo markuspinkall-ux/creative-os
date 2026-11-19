@@ -1,5 +1,5 @@
-/* Orbit OS – Graphit für GTK-Programme (z. B. Software).
-   Diese Datei wird von Orbit OS verwaltet. Wer sie selbst ändern will,
+/* Gibeon OS – Graphit für GTK-Programme (z. B. Software).
+   Diese Datei wird von Gibeon OS verwaltet. Wer sie selbst ändern will,
    löscht diese erste Zeile – dann wird sie nicht mehr überschrieben. */
 
 /* libadwaita (GTK 4) */
@@ -60,7 +60,7 @@ window, .background, label, entry, button {
   font-family: Arial, "Liberation Sans", sans-serif;
 }
 
-/* Fensterknöpfe wie überall in Orbit OS (flach, Schließen rot) */
+/* Fensterknöpfe wie überall in Gibeon OS (flach, Schließen rot) */
 windowcontrols button, .titlebar button.titlebutton {
   min-width: 34px;
   min-height: 28px;
@@ -80,7 +80,7 @@ windowcontrols button > image, .titlebar button.titlebutton > image {
   box-shadow: none;
 }
 
-/* Kopfleiste wie die Fensterrahmen von Orbit OS: flach, Graphit */
+/* Kopfleiste wie die Fensterrahmen von Gibeon OS: flach, Graphit */
 headerbar, .titlebar {
   background-color: #1c2029;
   color: #dce6ff;

@@ -1,5 +1,5 @@
 [Unit]
-Description=Orbit OS Google Drive
+Description=Gibeon OS Google Drive
 ConditionFileNotEmpty=%h/.config/creative-drive/rclone.conf
 After=creative-graphical-session.service
 PartOf=creative-graphical-session.service

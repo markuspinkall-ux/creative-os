@@ -1,7 +1,7 @@
 """Proton VPN über NetworkManager (WireGuard, ohne Proton-App).
 
 Proton bietet für jedes Konto – auch das kostenlose – WireGuard-Konfigurationen
-zum Herunterladen an (account.protonvpn.com › Downloads). Orbit OS liest so
+zum Herunterladen an (account.protonvpn.com › Downloads). Gibeon OS liest so
 eine .conf-Datei selbst und legt daraus eine NetworkManager-Verbindung an:
 
 * nur für den angemeldeten Benutzer (connection.permissions = user:NAME),

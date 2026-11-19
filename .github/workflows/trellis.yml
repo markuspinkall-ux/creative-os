@@ -1,7 +1,7 @@
 # Baut den TRELLIS-Container für 3D Studio (Bild → 3D-Figur) und legt ihn in die
 # GitHub-Registry: ghcr.io/<besitzer>/creative-trellis:latest
 # 3D Studio lädt ihn beim „KI einrichten“ herunter. Nur nötig, wenn sich
-# creative3d/trellis/ ändert – das Orbit-OS-Abbild selbst bleibt klein.
+# creative3d/trellis/ ändert – das Gibeon-OS-Abbild selbst bleibt klein.
 name: TRELLIS-Container bauen
 
 on:

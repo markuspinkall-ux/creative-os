@@ -1,12 +1,12 @@
 # Broadcast
 
-Rauschfreies Mikrofon und virtueller Greenscreen für Orbit OS – sparsam im Verbrauch.
+Rauschfreies Mikrofon und virtueller Greenscreen für Gibeon OS – sparsam im Verbrauch.
 
 - **Mikrofon:** DeepFilterNet (KI-Rauschentfernung, CPU) als PipeWire-Filter → neue Eingabe
-  „Orbit Mikrofon (rauschfrei)“, wird beim Einschalten automatisch Standard. Stärke einstellbar.
+  „Gibeon Mikrofon (rauschfrei)“, wird beim Einschalten automatisch Standard. Stärke einstellbar.
   Ohne DeepFilterNet: WebRTC-Rauschunterdrückung als Ersatz.
 - **Kamera:** Robust Video Matting (KI-Freistellung bis in die Haare) → Hintergrund unscharf, eigenes Bild
-  oder echtes Grün → virtuelle Kamera „Orbit Kamera“ (v4l2loopback). „Sparsam“ rechnet intern in 640×360,
+  oder echtes Grün → virtuelle Kamera „Gibeon Kamera“ (v4l2loopback). „Sparsam“ rechnet intern in 640×360,
   „Beste Qualität“ in 1280×720. Gerechnet wird **nur, solange ein Programm die Kamera benutzt** – sonst wird die
   echte Kamera freigegeben (Licht aus) und es entsteht keine Last.
 - Mit NVIDIA-Grafikkarte und CUDA-fähiger ONNX Runtime rechnet die Freistellung auf der Grafikkarte.

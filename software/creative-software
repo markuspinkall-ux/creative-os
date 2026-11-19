@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Orbit OS software center backed by Flatpak."""
+"""Gibeon OS software center backed by Flatpak."""
 
 import gzip
 import os
@@ -18,12 +18,12 @@ from PySide6.QtWidgets import (
     QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMessageBox, QPushButton, QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:

@@ -62,11 +62,11 @@ def list_disks(selected):
                 system = any(m in ("/", "/sysroot", "/var", "/home", "/var/home") for m in mps)
                 size = int(n.get("size") or 0)
                 used = int(n.get("fsused") or 0)
-                name = "Orbit OS" if system else kind(tran, n.get("rota", rota), n["path"])
+                name = "Gibeon OS" if system else kind(tran, n.get("rota", rota), n["path"])
                 disks.append({
                     "device": n["path"], "name": f"{name} · {fmt_size(size)}", "system": system,
                     "removable": rem, "used": used / size if size and used else 0,
-                    "info": ("Hier läuft Orbit OS – der Server bekommt einen eigenen, geschützten Ordner" if system else
+                    "info": ("Hier läuft Gibeon OS – der Server bekommt einen eigenen, geschützten Ordner" if system else
                              (f"Enthält {fmt_size(used)} Daten – sie bleiben unangetastet" if used else "Leer oder noch nicht eingebunden")),
                     "selected": n["path"] == selected or (system and selected == "system"),
                 })

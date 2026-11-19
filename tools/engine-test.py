@@ -1,4 +1,4 @@
-"""Test der Orbit-Engine-Laufzeit mit echtem Godot (für den Workflow „Engine prüfen“).
+"""Test der Gibeon-Engine-Laufzeit mit echtem Godot (für den Workflow „Engine prüfen“).
 
     python3 tools/engine-test.py <godot> <ausgabe>
 Baut ein Beispielprojekt (inkl. selbst erzeugter GLB-Figur), lässt das Level automatisch spielen,

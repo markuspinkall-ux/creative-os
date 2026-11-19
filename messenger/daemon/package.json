@@ -1,7 +1,7 @@
 {
   "name": "orbit-messenger",
   "version": "1.0.0",
-  "description": "Orbit OS Messenger – direkter Austausch zwischen Orbit-OS-Rechnern (Hyperswarm), mit Warteschlange",
+  "description": "Gibeon OS Messenger – direkter Austausch zwischen Gibeon-OS-Rechnern (Hyperswarm), mit Warteschlange",
   "license": "GPL-3.0-or-later",
   "private": true,
   "main": "index.js",

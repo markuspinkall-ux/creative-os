@@ -1,6 +1,6 @@
 [Plymouth Theme]
-Name=Orbit OS
-Description=Startbildschirm von Orbit OS (Graphit)
+Name=Gibeon OS
+Description=Startbildschirm von Gibeon OS (Graphit)
 ModuleName=two-step
 
 [two-step]
@@ -46,7 +46,7 @@ SubTitle=Bitte den PC nicht ausschalten.
 SuppressMessages=true
 ProgressBarShowPercentComplete=true
 UseProgressBar=true
-Title=Orbit OS wird aktualisiert …
+Title=Gibeon OS wird aktualisiert …
 SubTitle=Bitte den PC nicht ausschalten.
 
 [firmware-upgrade]

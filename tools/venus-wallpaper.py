@@ -1,4 +1,4 @@
-"""Hintergrundbilder „Vivid Venus“ (Orbit OS 2) – drei Motive, je Graphit und Porzellan.
+"""Hintergrundbilder „Vivid Venus“ (Gibeon OS 2) – drei Motive, je Graphit und Porzellan.
 
   python3 tools/venus-wallpaper.py <ordner>      → venus-<motiv>-<design>.svg
 
@@ -254,7 +254,7 @@ def layers(design):
     p = PAL[design]
     T = 0.0
     wrap = lambda body: (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">\n  '
-                         f'<!-- Orbit OS 2 „Vivid Venus“ – Ebene für den bewegten Hintergrund ({design}) -->\n  {body}\n</svg>\n')
+                         f'<!-- Gibeon OS 2 „Vivid Venus“ – Ebene für den bewegten Hintergrund ({design}) -->\n  {body}\n</svg>\n')
     h = HORIZONT
     x, y, ang, _ = h["rocket"]
     meta = {"size": [W, H], "rocket": {"x": x, "y": y, "angle": ang}, "stars": star_list(h["stars"], 95, (h["cx"], h["cy"], h["r"] * 1.2)),
@@ -299,7 +299,7 @@ def build(motiv, design):
     p = PAL[design]
     body = MOTIVE[motiv](p, design)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">\n'
-            f'  <!-- Orbit OS 2 „Vivid Venus“ – Motiv „{motiv}“, Design {design} -->\n  {body}\n</svg>\n')
+            f'  <!-- Gibeon OS 2 „Vivid Venus“ – Motiv „{motiv}“, Design {design} -->\n  {body}\n</svg>\n')
 
 
 if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--frames":
@@ -313,7 +313,7 @@ if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "--frames":
     sys.exit(0)
 
 if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "--creative":
-    # in Orbit OS einsetzen: Hintergrund „Horizont“ für Schreibtisch, Anmeldung, Sperre, Startseite
+    # in Gibeon OS einsetzen: Hintergrund „Horizont“ für Schreibtisch, Anmeldung, Sperre, Startseite
     root = Path(__file__).resolve().parent.parent
     qml = root / "shell/creative_shell/qml/Creative"
     T = 0.0

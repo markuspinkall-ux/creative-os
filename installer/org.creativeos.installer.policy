@@ -2,10 +2,10 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-  <vendor>Orbit OS</vendor>
+  <vendor>Gibeon OS</vendor>
   <action id="org.creativeos.installer">
-    <description>Orbit OS installieren</description>
-    <message>Zum Installieren von Orbit OS sind Administratorrechte nötig.</message>
+    <description>Gibeon OS installieren</description>
+    <message>Zum Installieren von Gibeon OS sind Administratorrechte nötig.</message>
     <defaults>
       <allow_any>auth_admin</allow_any>
       <allow_inactive>auth_admin</allow_inactive>

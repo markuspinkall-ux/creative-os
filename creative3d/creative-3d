@@ -23,12 +23,12 @@ from PySide6.QtWidgets import (
     QLineEdit, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSlider, QStackedWidget, QVBoxLayout,
     QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox
 except ImportError:
     pass
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:
@@ -98,7 +98,7 @@ def token_file():
 
 
 def run_override(model="trellis"):
-    """Neuere Fassung des Rechenteils aus Orbit OS in den Container legen – so kommen
+    """Neuere Fassung des Rechenteils aus Gibeon OS in den Container legen – so kommen
     Verbesserungen (z. B. „Sehr hoch“) mit dem System-Update, ohne den 14-GB-Container neu zu laden."""
     newer = LIB / "trellis-run.py"
     if not newer.is_file():

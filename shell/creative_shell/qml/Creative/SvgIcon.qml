@@ -1,7 +1,7 @@
 import QtQuick
 import Creative
 
-// Eigene Orbit-Symbole aus dem Ordner icons/ (einheitlich weiß-blau).
+// Eigene Gibeon-Symbole aus dem Ordner icons/ (einheitlich weiß-blau).
 Image {
     property string name
     property int size: 22

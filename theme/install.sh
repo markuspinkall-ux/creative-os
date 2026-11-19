@@ -1,10 +1,10 @@
 #!/bin/sh
-# Installiert das Orbit-OS-Aussehen für alle Programme:
+# Installiert das Gibeon-OS-Aussehen für alle Programme:
 #  - Fensterrahmen „Graphit“ (KWin)
 #  - Graphit-Farben + Arial für Qt/KDE-Programme (kdeglobals)
 #  - Graphit für GTK-Programme (z. B. Software)
-#  - aufgeräumtes Startmenü mit Orbit-Symbolen
-# Alles gilt nur in der Orbit-OS-Sitzung; Plasma bleibt unverändert.
+#  - aufgeräumtes Startmenü mit Gibeon-Symbolen
+# Alles gilt nur in der Gibeon-OS-Sitzung; Plasma bleibt unverändert.
 set -eu
 cd "$(dirname "$0")"
 
@@ -97,7 +97,7 @@ KDED
 install -Dm755 apps/creative-theme-user /usr/libexec/creative-theme-user
 install -Dm755 apps/creative-look-apply /usr/libexec/creative-look-apply
 
-# Orbit-Symbole für die mitgelieferten Apps
+# Gibeon-Symbole für die mitgelieferten Apps
 ICONS="${CREATIVE_ICONS:-../shell/creative_shell/qml/Creative/icons}"
 for pair in settings:settings browser:browser games:games chat:chat discord:discord whatsapp:whatsapp store:store terminal:terminal \
             editor:editor image:image calculator:calculator screenshot:screenshot \
@@ -110,7 +110,7 @@ gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 # Symbol-Design „Creative“: ersetzt die Original-Symbole der Standard-Apps
 # auch in Titelleiste und Taskleiste (z. B. Rechner, Terminal, Steam)
 sh icons/build-icon-theme.sh "$ICONS" /usr/share/icons/Creative
-# Startmenü: alle Orbit-App-Symbole als Graphit-Kachel (wie Art, Writer, Cut …).
+# Startmenü: alle Gibeon-App-Symbole als Graphit-Kachel (wie Art, Writer, Cut …).
 # Die Strichsymbole der Shell selbst bleiben unverändert.
 python3 icons/tile-icons.py /usr/share/icons/Creative/apps/scalable
 python3 icons/tile-icons.py --inplace /usr/share/icons/hicolor/scalable/apps/creative-*.svg
@@ -126,7 +126,7 @@ install -Dm755 apps/creative-apps-sync /usr/bin/creative-apps-sync
 creative-apps-sync
 
 echo
-echo "Fertig. Bitte Orbit OS einmal neu starten (abmelden und wieder anmelden)."
+echo "Fertig. Bitte Gibeon OS einmal neu starten (abmelden und wieder anmelden)."
 
 # GTK-Voreinstellungen auch für neue Benutzer (GSettings)
 if command -v dconf >/dev/null 2>&1; then

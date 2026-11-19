@@ -2,7 +2,7 @@
 Type=Application
 Name=Mail
 Keywords=Mail;E-Mail;Post;Nachrichten;
-Comment=Gmail im Orbit-OS-Design
+Comment=Gmail im Gibeon-OS-Design
 Exec=/usr/lib/creative-mail/creative-mail
 Icon=creative-mail
 Terminal=false

@@ -1,4 +1,4 @@
-// Orbit OS – Sperrbildschirm im Graphit-Look.
+// Gibeon OS – Sperrbildschirm im Graphit-Look.
 //
 // Ersetzt die LockScreen.qml im Plasma-Shell-Paket, die KWins
 // Bildschirmsperre (kscreenlocker_greet) lädt. Die
@@ -223,7 +223,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 28
-        text: "Orbit OS · gesperrt"
+        text: "Gibeon OS · gesperrt"
         color: Qt.rgba(220 / 255, 230 / 255, 255 / 255, 0.6)
         font.family: root.fontFamily
         font.pixelSize: 13

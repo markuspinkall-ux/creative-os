@@ -1,5 +1,5 @@
 #!/bin/sh
-# Orbit OS: Startauswahl (GRUB) verstecken – sie erscheint nur, wenn man beim Start Esc drückt,
+# Gibeon OS: Startauswahl (GRUB) verstecken – sie erscheint nur, wenn man beim Start Esc drückt,
 # oder von selbst, wenn ein Update-Start schiefging (greenboot zählt dann herunter).
 #   sudo creative-grub-menue           verstecken (Standard, läuft bei jedem Start)
 #   sudo creative-grub-menue zeigen    bei jedem Start wieder anzeigen (bleibt so, auch nach Updates)

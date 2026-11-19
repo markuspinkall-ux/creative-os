@@ -63,7 +63,7 @@ def main():
     engine = QQmlApplicationEngine()
     qml_root = next((d / "creative_shell" / "qml" for d in SHELL_DIRS if (d / "creative_shell" / "qml").is_dir()), None)
     if qml_root is None:
-        print("creative-settings: Orbit-Design nicht gefunden (Shell installiert?)")
+        print("creative-settings: Gibeon-Design nicht gefunden (Shell installiert?)")
         return 1
     engine.addImportPath(str(qml_root))
 

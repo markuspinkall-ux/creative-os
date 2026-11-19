@@ -1,4 +1,4 @@
-"""Bildschirmfotos des Orbit-Engine-Editors (Graphit und Porzellan) – für den Workflow „Engine prüfen“.
+"""Bildschirmfotos des Gibeon-Engine-Editors (Graphit und Porzellan) – für den Workflow „Engine prüfen“.
 
     QT_QPA_PLATFORM=offscreen python3 tools/engine-editor-vorschau.py ausgabe/ [präfix]
 """

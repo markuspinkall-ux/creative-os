@@ -1,4 +1,4 @@
-# Dateien – der Dateimanager von Orbit OS
+# Dateien – der Dateimanager von Gibeon OS
 
 Graphit-Design, so einfach wie der Windows-Explorer – und so gebaut, dass man nichts kaputt machen kann:
 

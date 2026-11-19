@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
-// Willkommen bei Orbit OS – einmal nach der ersten Anmeldung.
+// Willkommen bei Gibeon OS – einmal nach der ersten Anmeldung.
 ApplicationWindow {
     id: win
     width: 980
@@ -11,7 +11,7 @@ ApplicationWindow {
     minimumWidth: 820
     minimumHeight: 560
     visible: true
-    title: "Willkommen bei Orbit OS"
+    title: "Willkommen bei Gibeon OS"
     property bool dontShow: false
     color: Theme.ground
     font.family: Theme.fontFamily
@@ -95,7 +95,7 @@ ApplicationWindow {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    text: "Schön, dass du Orbit OS benutzt. In einer Minute ist alles eingerichtet – " +
+                    text: "Schön, dass du Gibeon OS benutzt. In einer Minute ist alles eingerichtet – " +
                           "du kannst jeden Schritt auch überspringen."
                     color: Theme.text; font.pixelSize: 15; lineHeight: 1.3
                 }
@@ -298,7 +298,7 @@ ApplicationWindow {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    text: "Updates kommen automatisch im Hintergrund. Viel Spaß mit Orbit OS!"
+                    text: "Updates kommen automatisch im Hintergrund. Viel Spaß mit Gibeon OS!"
                     color: Theme.text; font.pixelSize: 15
                 }
             }

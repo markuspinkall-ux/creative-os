@@ -1,4 +1,4 @@
-# Orbit OS: Stromsparen am USB-Anschluss des Bluetooth-Adapters aus – auch wenn btusb
+# Gibeon OS: Stromsparen am USB-Anschluss des Bluetooth-Adapters aus – auch wenn btusb
 # schon vor der Einstellung in creative-bluetooth.conf geladen war (z. B. im initramfs).
 # %p ist die Schnittstelle des Adapters, ../power/control gehört zum USB-Gerät selbst.
 ACTION=="add|bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", DRIVER=="btusb", \

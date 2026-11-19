@@ -12,7 +12,7 @@ Liest Tests, Reviews, News und Artikel der Lieblingsseiten wie eine Zeitschrift.
 - **Lesen:** Volltext aus dem Feed oder von der Artikelseite (`extract.py`, nur Standardbibliothek,
   HTML wird nie ausgeführt, nur als Text dargestellt). Unter jedem Artikel steht die Quelle
   (Seite, Autor, Datum, Link, „Original öffnen“). Bei Bezahlschranken: Hinweis + Original.
-- **Daten:** `~/.local/share/Orbit OS/Magazin/magazin.sqlite`
+- **Daten:** `~/.local/share/Gibeon OS/Magazin/magazin.sqlite`
 
 Tests ohne Internet und ohne Qt: `python3 -m unittest tests/test_magazin.py`
 Selbsttest mit Oberfläche (beim Bauen): `creative-magazin --selftest` – scheitert bei jeder QML-Warnung.

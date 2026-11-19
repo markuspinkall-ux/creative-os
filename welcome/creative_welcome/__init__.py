@@ -1,1 +1,1 @@
-"""Willkommens-Assistent von Orbit OS (erster Start)."""
+"""Willkommens-Assistent von Gibeon OS (erster Start)."""

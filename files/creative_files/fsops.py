@@ -307,7 +307,7 @@ def drive_kind(tran, rota, name=""):
 
 def parse_lsblk(data, user=None):
     """Wandelt `lsblk -J -b -o …` in eine Liste von Laufwerken für „Dieser PC“.
-    Das System heißt immer „Orbit OS“, weitere Laufwerke nach Bauart:
+    Das System heißt immer „Gibeon OS“, weitere Laufwerke nach Bauart:
     „Festplatte“, „SSD“ oder „M2“ (bei mehreren gleicher Art durchnummeriert)."""
     drives = []
 
@@ -325,7 +325,7 @@ def parse_lsblk(data, user=None):
                     used = n.get("fsused")
                     label = n.get("label") or ""
                     if system:
-                        name, tag = "Orbit OS", "System"
+                        name, tag = "Gibeon OS", "System"
                     elif removable:
                         name, tag = label or "USB-Stick", "Auswerfen" if mps else "Wechseldatenträger"
                     else:

@@ -204,9 +204,9 @@ PaddingRight={P}
 
 META_DESKTOP = """[Desktop Entry]
 Name=Graphit
-Comment=Fensterrahmen von Orbit OS
+Comment=Fensterrahmen von Gibeon OS
 X-KDE-PluginInfo-Name=CreativeGraphit
-X-KDE-PluginInfo-Author=Orbit OS
+X-KDE-PluginInfo-Author=Gibeon OS
 X-KDE-PluginInfo-Version=1.0
 X-KDE-PluginInfo-License=GPL
 """
@@ -214,8 +214,8 @@ META_JSON = """{
     "KPlugin": {
         "Id": "CreativeGraphit",
         "Name": "Graphit",
-        "Description": "Fensterrahmen von Orbit OS",
-        "Authors": [{ "Name": "Orbit OS" }],
+        "Description": "Fensterrahmen von Gibeon OS",
+        "Authors": [{ "Name": "Gibeon OS" }],
         "License": "GPL",
         "Version": "1.0"
     }

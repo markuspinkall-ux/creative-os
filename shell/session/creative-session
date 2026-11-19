@@ -1,5 +1,5 @@
 #!/bin/sh
-# Startet die Orbit-OS-Sitzung: KWin als Fenstermanager, darauf die
+# Startet die Gibeon-OS-Sitzung: KWin als Fenstermanager, darauf die
 # Shell (Taskleiste, Startmenü, Schnellzugriff).
 export XDG_CURRENT_DESKTOP=Creative:KDE
 export XDG_SESSION_DESKTOP=creative
@@ -8,7 +8,7 @@ layout="$(localectl status 2>/dev/null | awk -F': *' '/X11 Layout/ {print $2; ex
 export XKB_DEFAULT_LAYOUT="${layout:-de}"
 # Orbit-Voreinstellungen (Windows-Taste, Fensterknöpfe rechts, Tastatur …) nur in dieser Sitzung
 export XDG_CONFIG_DIRS="/usr/share/creative-os/xdg:${XDG_CONFIG_DIRS:-/etc/xdg}"
-# Aufgeräumtes Startmenü (nur die nötigsten Apps, deutsche Namen, Orbit-Symbole)
+# Aufgeräumtes Startmenü (nur die nötigsten Apps, deutsche Namen, Gibeon-Symbole)
 data="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # Flatpak-Apps (aus „Software“) müssen startbar bleiben
 for d in "$HOME/.local/share/flatpak/exports/share" /var/lib/flatpak/exports/share; do

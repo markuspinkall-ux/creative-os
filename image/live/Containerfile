@@ -1,4 +1,4 @@
-# Orbit OS – Live-Umgebung für die große Installations-ISO (eigener Graphit-Installer).
+# Gibeon OS – Live-Umgebung für die große Installations-ISO (eigener Graphit-Installer).
 # Bauen (braucht diese Rechte, weil das Abbild für die Installation hineingeladen wird):
 #   sudo podman build --cap-add sys_admin --security-opt label=disable --squash \
 #        -f image/live/Containerfile --build-arg VARIANT=amd -t localhost/creative-live:amd .

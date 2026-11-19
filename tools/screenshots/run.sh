@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fotografiert alle Orbit-Apps im fertigen Abbild (ohne Bildschirm, ohne Netz).
+# Fotografiert alle Gibeon-Apps im fertigen Abbild (ohne Bildschirm, ohne Netz).
 # Aufruf im Container:  sh /tools/run.sh /out
 out="${1:-/out}"
 mkdir -p "$out"

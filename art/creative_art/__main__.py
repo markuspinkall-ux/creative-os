@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QHBoxLayout, QInputDialog, QLabel, QListWidget, QListWidgetItem, QMainWindow,
     QMessageBox, QScrollArea, QSlider, QSpinBox, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox
 except ImportError:
     pass
@@ -21,7 +21,7 @@ from .canvas import Canvas
 from .document import Document, MAX_SIDE, apply_alpha, check_size, read_image, transparent
 from .transform import TransformDialog
 
-try:  # Design (Graphit/Porzellan) und Akzentfarbe von Orbit OS
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
     from creative_look import install as _look_install, themed as T
     _look_install()
 except ImportError:

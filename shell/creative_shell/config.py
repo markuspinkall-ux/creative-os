@@ -12,7 +12,7 @@ from pathlib import Path
 # die auf dem System existiert, wird verwendet. So funktioniert die Taskleiste
 # auch, solange z. B. der eigene Dateimanager noch nicht installiert ist.
 DEFAULTS = {
-    # Eigenes Hintergrundbild: Pfad zu einer Bild-Datei, leer = Orbit-Graphit
+    # Eigenes Hintergrundbild: Pfad zu einer Bild-Datei, leer = Gibeon-Graphit
     "wallpaper": "",
     "wallpaperAnimated": True,     # „Vivid Venus“ bewegt sich (Rakete, Sterne, Wolken)
     # Leistungsanzeige (CPU, Speicher …) oben rechts auf dem Schreibtisch

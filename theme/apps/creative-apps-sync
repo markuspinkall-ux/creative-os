@@ -1,13 +1,13 @@
 #!/usr/bin/python3
-"""Räumt das Startmenü von Orbit OS auf.
+"""Räumt das Startmenü von Gibeon OS auf.
 
 Nur die nötigsten Apps sind sichtbar – mit deutschen, einfachen Namen und
-Symbolen im Orbit-Stil. Alles andere wird im Startmenü ausgeblendet
+Symbolen im Gibeon-Stil. Alles andere wird im Startmenü ausgeblendet
 (bleibt aber installiert, z. B. damit sich ZIP-Dateien weiter öffnen lassen).
 
 Die Änderungen landen als „Schatten-Kopien“ in
 /usr/share/creative-os/data/applications und gelten nur in der
-Orbit-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
+Gibeon-OS-Sitzung (creative-session stellt diesen Ordner nach vorn).
 Später nachinstallierte Apps (Software, Flathub) erscheinen ganz normal.
 
 Aufruf (als root): creative-apps-sync [Zielordner]
@@ -140,7 +140,7 @@ def main():
             label, icon = VISIBLE[name]
             if label is None:
                 shown.append(name)
-                continue          # eigene Orbit-App, schon passend
+                continue          # eigene Gibeon-App, schon passend
             orig = re.search(r"^Name=(.*)$", text, re.M)
             orig = orig.group(1).strip() if orig else ""
             text = drop_translations(text, "Name")

@@ -10,7 +10,7 @@ from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtQuick import QQuickImageProvider
 
 FALLBACK = "application-x-executable"
-# Orbit-Symbole haben immer Vorrang – auch wenn eine App (z. B. ein OBS-Update oder
+# Gibeon-Symbole haben immer Vorrang – auch wenn eine App (z. B. ein OBS-Update oder
 # eine Flatpak-Version) ihr eigenes Symbol mitbringt oder ihr Symbol als Dateipfad angibt.
 CREATIVE_DIRS = ("/usr/share/icons/Creative/apps/scalable",)
 PORZELLAN_DIRS = ("/usr/share/icons/CreativePorzellan/apps/scalable",) + CREATIVE_DIRS
@@ -35,7 +35,7 @@ ALIASES = {
 
 
 def creative_icon(icon_id):
-    """Pfad des Orbit-Symbols für einen Symbolnamen oder Symbolpfad – sonst None."""
+    """Pfad des Gibeon-Symbols für einen Symbolnamen oder Symbolpfad – sonst None."""
     stem = os.path.splitext(os.path.basename(icon_id or ""))[0]
     for name in dict.fromkeys((stem, ALIASES.get(stem.lower(), stem))):
         for folder in (PORZELLAN_DIRS if _LIGHT else CREATIVE_DIRS):
@@ -126,7 +126,7 @@ class IconFiles(QObject):
         cached = self._urls.get(icon_id)
         if cached:
             return cached
-        # Orbit-Symbol samt Änderungszeit im Namen: ein neues Symbol (Update) ersetzt das alte sofort
+        # Gibeon-Symbol samt Änderungszeit im Namen: ein neues Symbol (Update) ersetzt das alte sofort
         override = creative_icon(icon_id) or ""
         try:
             stamp = f"{override}:{os.path.getmtime(override)}" if override else ""

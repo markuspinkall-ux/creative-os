@@ -2,11 +2,11 @@
     name: 'Porzellan';
     id: 'com.obsproject.Yami.CreativePorzellan';
     extends: 'com.obsproject.Yami';
-    author: 'Orbit OS';
+    author: 'Gibeon OS';
     dark: 'false';
 }
 
-/* Helles Design „Porzellan“ von Orbit OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
+/* Helles Design „Porzellan“ von Gibeon OS auf Grundlage von „Yami“ (OBS Studio, GPL v2+) */
 @OBSThemeVars {
     --grey1: #9aa5b8;
     --grey2: #b5bfd0;

@@ -280,7 +280,7 @@ class Document:
                     raise ValueError("Projektinformationen sind zu groß.")
                 meta = json.loads(archive.read("project.json"))
                 if meta["version"] not in (1, 2):
-                    raise ValueError("Unbekannte Orbit-Art-Projektversion.")
+                    raise ValueError("Unbekannte Gibeon-Art-Projektversion.")
                 size = QSize(meta["width"], meta["height"])
                 check_size(size, len(meta["layers"]))
                 check_size(size, len(meta["layers"]) + sum(
@@ -315,4 +315,4 @@ class Document:
                 document.active = min(len(layers) - 1, max(0, int(meta["active"])))
                 return document
         except (AttributeError, KeyError, TypeError, OverflowError, zipfile.BadZipFile) as error:
-            raise ValueError("Ungültiges Orbit-Art-Projekt.") from error
+            raise ValueError("Ungültiges Gibeon-Art-Projekt.") from error

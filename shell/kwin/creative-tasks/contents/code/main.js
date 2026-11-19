@@ -1,5 +1,5 @@
 // Tasks – läuft dauerhaft in KWin.
-//  1. Meldet der Orbit-Taskleiste bei jeder Änderung alle offenen Fenster
+//  1. Meldet der Gibeon-Taskleiste bei jeder Änderung alle offenen Fenster
 //     (welche App, auf welchem Monitor, minimiert, aktiv).
 //  2. Stellt die Windows-Tastenkürzel bereit.
 
@@ -80,26 +80,26 @@ workspace.windowActivated.connect(push);
 // (Die Windows-Taste allein öffnet das Startmenü – das ist in kwinrc unter
 //  ModifierOnlyShortcuts eingetragen. Win+Pfeile und Alt+Tab bringt KWin mit.)
 registerShortcut("Creative Dateien",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Dateien öffnen", "Meta+E",
+     "Gibeon OS: Dateien öffnen", "Meta+E",
                  function () { call("launchRole", "files"); });
 registerShortcut("Creative Einstellungen",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Einstellungen öffnen", "Meta+I",
+     "Gibeon OS: Einstellungen öffnen", "Meta+I",
                  function () { call("openSettings"); });
 registerShortcut("Creative Sperren",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Bildschirm sperren", "Meta+L",
+     "Gibeon OS: Bildschirm sperren", "Meta+L",
                  function () { call("lock"); });
 registerShortcut("Creative Bildschirmfoto",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
+     "Gibeon OS: Bildschirmausschnitt aufnehmen", "Meta+Shift+S",
                  function () { call("screenshot"); });
 registerShortcut("Creative Druck",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Bildschirmfoto (Druck-Taste)", "Print",
+     "Gibeon OS: Bildschirmfoto (Druck-Taste)", "Print",
                  function () { call("screenshot"); });
 registerShortcut("Creative Aufgaben-Manager",   // Kennung bleibt (gespeicherte Tastenkürzel)
-     "Orbit OS: Taskmanager", "Ctrl+Shift+Escape",
+     "Gibeon OS: Taskmanager", "Ctrl+Shift+Escape",
                  function () { call("taskManager"); });
-registerShortcut("Taskmanager Strg-Alt-Entf", "Orbit OS: Taskmanager (Strg+Alt+Entf)", "Ctrl+Alt+Del",
+registerShortcut("Taskmanager Strg-Alt-Entf", "Gibeon OS: Taskmanager (Strg+Alt+Entf)", "Ctrl+Alt+Del",
                  function () { call("taskManager"); });
-registerShortcut("Desktop", "Orbit OS: Desktop anzeigen", "Meta+D",
+registerShortcut("Desktop", "Gibeon OS: Desktop anzeigen", "Meta+D",
                  function () { workspace.showingDesktop = !workspace.showingDesktop; });
 
 push();

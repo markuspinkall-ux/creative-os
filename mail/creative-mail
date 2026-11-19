@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Mail – E-Mail-Programm für Orbit OS im Graphit-Look (IMAP/SMTP: Gmail, GMX, WEB.DE, T-Online, …).
+"""Mail – E-Mail-Programm für Gibeon OS im Graphit-Look (IMAP/SMTP: Gmail, GMX, WEB.DE, T-Online, …).
 
 Drei Spalten wie in professionellen Mail-Programmen: Ordner und Labels,
 Nachrichtenliste, Lesebereich. HTML-Mails werden echt dargestellt; Bilder
@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTextBrowser, QTextEdit,
     QToolButton, QVBoxLayout, QWidget,
 )
-try:  # Graphit-Dialoge von Orbit OS statt der Qt-Standarddialoge
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
     from creative_dialogs import QFileDialog, QMessageBox  # noqa: F811
 except ImportError:
     pass

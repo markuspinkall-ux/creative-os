@@ -1,8 +1,8 @@
-# Baut Orbit OS automatisch auf GitHub (kostenlos für öffentliche Projekte):
+# Baut Gibeon OS automatisch auf GitHub (kostenlos für öffentliche Projekte):
 #  - bei jeder Änderung und jede Nacht → neues System-Abbild in der GitHub-Registry
 #    (installierte PCs holen sich daraus ihre Updates)
 #  - ISO-Dateien entstehen separat im Workflow „Installations-ISO erstellen“.
-name: Orbit OS bauen
+name: Gibeon OS bauen
 
 on:
   push:
@@ -113,7 +113,7 @@ jobs:
           done < "$RUNNER_TEMP/app-update-paths"
           echo "image=${BASE_TAG%:*}@$digest" >> "$GITHUB_OUTPUT"
 
-      - name: Orbit-Apps auf der vorhandenen Systembasis bauen
+      - name: Gibeon-Apps auf der vorhandenen Systembasis bauen
         if: steps.base.outputs.image != ''
         env:
           BASE_IMAGE: ${{ steps.base.outputs.image }}
@@ -151,7 +151,7 @@ jobs:
             "localhost/creative-os:${{ matrix.variant }}-build" -ec '
               XDG_RUNTIME_DIR="$(mktemp -d)"
               export XDG_RUNTIME_DIR HOME="$XDG_RUNTIME_DIR"
-              echo "Starte Orbit-Art-Selbsttest"
+              echo "Starte Gibeon-Art-Selbsttest"
               /usr/bin/creative-art --selftest
               echo "Starte Orbit-Writer-Selbsttest"
               /usr/bin/creative-writer --selftest
@@ -201,7 +201,7 @@ jobs:
           dir="$(mktemp -d)"
           cp shots/*.png "$dir/"
           {
-            echo "# Bildschirmfotos aller Orbit-Apps"
+            echo "# Bildschirmfotos aller Gibeon-Apps"
             echo
             echo "Build: ${{ github.sha }} · $(date -u '+%Y-%m-%d %H:%M UTC') · automatisch erzeugt, ohne Bildschirm"
             echo
@@ -210,7 +210,7 @@ jobs:
           } > "$dir/README.md"
           cd "$dir"
           git init -q -b bildschirmfotos
-          git config user.name "Orbit OS Build"
+          git config user.name "Gibeon OS Build"
           git config user.email "build@creative-os.invalid"
           git add -A
           git commit -q -m "Bildschirmfotos ${{ github.sha }}"

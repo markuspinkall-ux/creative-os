@@ -20,14 +20,14 @@ os.environ["ORBIT_MESSENGER_SOCKET"] = SOCK
 now = int(time.time() * 1000)
 MIN = 60_000
 CHATS = {
-    "jonas.orbitos4417": [
+    "jonas.gibeonos4417": [
         {"mid": "1", "me": False, "text": "Hast du das Update schon drauf? Die Rakete beim Start sieht richtig gut aus.", "ts": now - 14 * MIN, "state": ""},
         {"mid": "2", "me": True, "text": "Ja, läuft seit heute früh. Broadcast kann jetzt auch 2K.", "ts": now - 12 * MIN, "state": "read"},
         {"mid": "3", "me": False, "text": "Nice, dann teste ich das heute Abend mit meiner Brio.", "ts": now - 11 * MIN, "state": ""},
         {"mid": "4", "me": True, "text": "Sag Bescheid, wie es läuft. Ich trag dich als Orbit-Pilot ein.", "ts": now - 9 * MIN, "state": "read"},
         {"mid": "5", "me": False, "text": "Deal. Schick mir den Link zum Discord?", "ts": now - 2 * MIN, "state": ""},
     ],
-    "lena.orbitos0932": [
+    "lena.gibeonos0932": [
         {"mid": "6", "me": True, "text": "Hier ist das Engine-Spiel von gestern – sag mir, ob die Landung klappt!", "ts": now - 5 * MIN, "state": "queued"},
     ],
 }
@@ -40,16 +40,16 @@ def state():
         m = CHATS.get(cid, [])[-1:] or [None]
         return m[0]
     return {
-        "ready": True, "me": {"id": "markus.orbitos2801", "name": "Markus"}, "online": True, "dnd": False,
+        "ready": True, "me": {"id": "markus.gibeonos2801", "name": "Markus"}, "online": True, "dnd": False,
         "unread": 1, "queued": 1,
         "contacts": [
-            {"id": "jonas.orbitos4417", "name": "Jonas", "status": "accepted", "online": True, "unread": 1,
-             "last": last("jonas.orbitos4417"), "since": now - 86_400_000, "fingerprint": "a31e ced8"},
-            {"id": "lena.orbitos0932", "name": "Lena", "status": "accepted", "online": False, "unread": 0,
-             "last": last("lena.orbitos0932"), "since": now - 86_400_000, "fingerprint": "7c02 19fa"},
-            {"id": "tim.orbitos7710", "name": "tim", "status": "outgoing", "online": False, "unread": 0,
+            {"id": "jonas.gibeonos4417", "name": "Jonas", "status": "accepted", "online": True, "unread": 1,
+             "last": last("jonas.gibeonos4417"), "since": now - 86_400_000, "fingerprint": "a31e ced8"},
+            {"id": "lena.gibeonos0932", "name": "Lena", "status": "accepted", "online": False, "unread": 0,
+             "last": last("lena.gibeonos0932"), "since": now - 86_400_000, "fingerprint": "7c02 19fa"},
+            {"id": "tim.gibeonos7710", "name": "tim", "status": "outgoing", "online": False, "unread": 0,
              "last": None, "since": now - 3_600_000, "fingerprint": ""},
-            {"id": "paul.orbitos3390", "name": "Paul", "status": "incoming", "online": True, "unread": 0,
+            {"id": "paul.gibeonos3390", "name": "Paul", "status": "incoming", "online": True, "unread": 0,
              "last": None, "since": now - 300_000, "fingerprint": "e94b 0d21"},
         ],
     }
@@ -106,7 +106,7 @@ fake_shell = FakeShell()
 engine = QQmlApplicationEngine()
 engine.addImportPath(str(QML))
 engine.rootContext().setContextProperty("messenger", model)
-engine.rootContext().setContextProperty("startChat", "" if NEW else "jonas.orbitos4417")
+engine.rootContext().setContextProperty("startChat", "" if NEW else "jonas.gibeonos4417")
 engine.load(QUrl.fromLocalFile(str(QML / "messenger" / "MessengerWindow.qml")))
 win = engine.rootObjects()[0]
 

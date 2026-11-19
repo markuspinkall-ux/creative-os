@@ -1,4 +1,4 @@
-# Systemsteuerung von Orbit OS
+# Systemsteuerung von Gibeon OS
 
 Seiten: Netzwerk (WLAN, Kabel), Bildschirme (Anordnen per Ziehen, Auflösung, Hz, Skalierung,
 Ausrichtung, Hauptbildschirm – mit 15-Sekunden-Rückfrage wie bei Windows), Ton (Ausgabe/Eingabe,

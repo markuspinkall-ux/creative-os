@@ -25,7 +25,7 @@ HERE = Path(__file__).resolve().parent
 
 
 def creative_qml_dirs():
-    """Fundorte des gemeinsamen Orbit-Designs (Theme, Knöpfe, Symbole)."""
+    """Fundorte des gemeinsamen Gibeon-Designs (Theme, Knöpfe, Symbole)."""
     return [
         HERE.parent.parent / "shell" / "creative_shell" / "qml",   # Entwicklung
         Path("/usr/lib/creative-shell/creative_shell/qml"),         # installiert
@@ -91,7 +91,7 @@ def main():
             engine.addImportPath(str(d))
             break
     else:
-        print("creative-media: Orbit-Design nicht gefunden (Shell installiert?)")
+        print("creative-media: Gibeon-Design nicht gefunden (Shell installiert?)")
         return 1
 
     settings = Settings()

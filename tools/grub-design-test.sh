@@ -1,5 +1,5 @@
 #!/bin/sh
-# Startauswahl (GRUB) im Orbit-Design prüfen – in Fedora 44 mit echtem GRUB in QEMU.
+# Startauswahl (GRUB) im Gibeon-Design prüfen – in Fedora 44 mit echtem GRUB in QEMU.
 #   sh tools/grub-design-test.sh <ausgabeordner>
 # 1. creative-grub-design gegen ein nachgebautes /boot: Thema kopieren, Block in user.cfg,
 #    zweimal ausführen ändert nichts, „aus“ entfernt alles wieder, fremde Zeilen bleiben.
@@ -78,8 +78,8 @@ set timeout=30
 set default=0
 set prefix=($root)/boot/grub
 if [ -f $prefix/user.cfg ]; then source $prefix/user.cfg; fi
-menuentry "Orbit OS 2 – Vivid Venus" { sleep 600 }
-menuentry "Orbit OS 2 – Vivid Venus (vorherige Version)" { sleep 600 }
+menuentry "Gibeon OS 2 – Vivid Venus" { sleep 600 }
+menuentry "Gibeon OS 2 – Vivid Venus (vorherige Version)" { sleep 600 }
 menuentry "UEFI-Firmware-Einstellungen" { sleep 600 }
 CFG
 grub2-mkrescue -o "$W/test.iso" "$ISO" >/dev/null 2>&1

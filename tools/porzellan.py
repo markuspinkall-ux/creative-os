@@ -62,7 +62,7 @@ def outputs():
         files[CREATIVE / "icons-light" / svg.name] = swap_hex(svg.read_text())
     gtk = ROOT / "theme/gtk/gtk.css"
     css = swap_rgba(swap_hex(gtk.read_text()))
-    css = css.replace("/* Orbit OS – Graphit", "/* Orbit OS – Porzellan", 1)
+    css = css.replace("/* Gibeon OS – Graphit", "/* Gibeon OS – Porzellan", 1)
     files[ROOT / "theme/gtk/gtk-light.css"] = css
     colors = (ROOT / "theme/CreativeGraphit.colors").read_text()
     colors = swap_triplets(colors).replace("Name=Graphit", "Name=Porzellan") \

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-// Orbit OS Messenger – Hintergrunddienst
+// Gibeon OS Messenger – Hintergrunddienst
 //
-// Jede Installation hat ein Schlüsselpaar und eine Orbit-ID (z. B. markus.orbitos2801).
+// Jede Installation hat ein Schlüsselpaar und eine Gibeon-ID (z. B. markus.gibeonos2801).
 // Rechner finden sich über ein verteiltes Netz (Hyperswarm/HyperDHT, kein eigener Server) und
 // verbinden sich direkt; die Verbindung ist mit den Schlüsseln beider Rechner verschlüsselt
 // (Noise). Ist der Empfänger offline, bleibt die Nachricht in der Warteschlange und geht raus,
@@ -22,7 +22,7 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 
 const VERSION = 1;
-const ID_RE = /^[a-z0-9]{1,24}\.orbitos[0-9]{4}$/;
+const ID_RE = /^[a-z0-9]{1,24}\.(?:gibeonos|orbitos)[0-9]{4}$/;
 const MAX_TEXT = 4000;
 const MAX_CHAT = 2000;          // so viele Nachrichten je Chat werden aufbewahrt
 
@@ -76,7 +76,7 @@ function saveNow() {
 
 function makeIdentity(name) {
   const digits = String(crypto.randomInt(0, 10000)).padStart(4, '0');
-  identity = { name: cleanName(name) || 'Orbit', id: `${slug(name)}.orbitos${digits}`,
+  identity = { name: cleanName(name) || 'Gibeon', id: `${slug(name)}.gibeonos${digits}`,
                seed: crypto.randomBytes(32).toString('hex'), created: new Date().toISOString() };
   writeJson(IDENTITY, identity, 0o600);
 }
@@ -86,7 +86,7 @@ function makeIdentity(name) {
 let Hyperswarm, b4a, hcrypto;
 let swarm = null;
 const peers = new Map();        // Schlüssel (hex) -> {conn, key, id, name, buf}
-const joined = new Map();       // Orbit-ID -> Discovery
+const joined = new Map();       // Gibeon-ID -> Discovery
 let ui = { active: '', focused: false };
 let refreshTimer = null;
 
@@ -357,8 +357,8 @@ async function command(req) {
         .map((m) => ({ mid: m.mid, me: m.me, text: m.text, ts: m.ts, state: m.state || '' }));
     case 'add': {
       if (!identity) throw new Error('Messenger ist noch nicht eingerichtet.');
-      if (!ID_RE.test(id)) throw new Error('Das ist keine Orbit-ID (Beispiel: jonas.orbitos4417).');
-      if (id === identity.id) throw new Error('Das ist deine eigene Orbit-ID.');
+      if (!ID_RE.test(id)) throw new Error('Das ist keine Gibeon-ID (Beispiel: jonas.gibeonos4417).');
+      if (id === identity.id) throw new Error('Das ist deine eigene Gibeon-ID.');
       const c = state.contacts[id];
       if (c && c.status === 'incoming') return command({ cmd: 'accept', id });
       if (c) return snapshot();

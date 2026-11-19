@@ -6,7 +6,7 @@ import ".."
 SettingsPage {
     id: root
 
-    // Eingabefeld im Orbit-Stil
+    // Eingabefeld im Gibeon-Stil
     component Field: Rectangle {
         id: field
         property alias text: input.text

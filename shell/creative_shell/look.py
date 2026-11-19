@@ -1,4 +1,4 @@
-"""Design von Orbit OS: „graphit“ (dunkel) oder „porzellan“ (hell) und die Akzentfarbe.
+"""Design von Gibeon OS: „graphit“ (dunkel) oder „porzellan“ (hell) und die Akzentfarbe.
 
 Gespeichert in ~/.config/creative-os/look.conf (INI, wird auch von QML gelesen: Theme.qml).
 Python-Programme mit eigenen Farben holen sich hier ihre Palette: palette().
@@ -94,7 +94,7 @@ def apply_system():
 
 
 # ---- Fertige Apps mit festen Graphit-Farben ins gewählte Design bringen ------------------------
-# Viele Orbit-Apps schreiben ihre Farben als Graphit-Hexwerte. themed() übersetzt diese Werte
+# Viele Gibeon-Apps schreiben ihre Farben als Graphit-Hexwerte. themed() übersetzt diese Werte
 # (in Stylesheets, Paletten, einzelnen Farben) ins helle Design „Porzellan“ und die Akzentfarbe
 # ins gewählte Akzent – Programmcode der Apps bleibt dabei unverändert.
 _LIGHT = {

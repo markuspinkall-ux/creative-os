@@ -1,7 +1,7 @@
-"""Orbit OS – Benachrichtigungen (org.freedesktop.Notifications).
+"""Gibeon OS – Benachrichtigungen (org.freedesktop.Notifications).
 
 Zeigt Meldungen von Programmen (Steam, Discord, Downloads, Updates …) unten rechts
-über der Taskleiste im Orbit-Look. Startpunkt: `creative-notifyd`.
+über der Taskleiste im Gibeon-Look. Startpunkt: `creative-notifyd`.
 """
 
 import os
@@ -136,7 +136,7 @@ def start_dbus(center):
 
         @dbus.service.method("org.freedesktop.Notifications", in_signature="", out_signature="ssss")
         def GetServerInformation(self):
-            return ("Orbit OS", "Orbit OS", "1.0", "1.2")
+            return ("Gibeon OS", "Gibeon OS", "1.0", "1.2")
 
         @dbus.service.signal("org.freedesktop.Notifications", signature="uu")
         def NotificationClosed(self, nid, reason):

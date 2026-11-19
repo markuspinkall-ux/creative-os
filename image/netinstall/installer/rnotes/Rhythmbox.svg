@@ -5,5 +5,5 @@
   <circle cx="56" cy="55" r="4.5" fill="#8fb3ff"/>
   <path d="M51 80h10l-5 9z" fill="#ffb07a"/>
   <text x="112" y="52" font-family="Liberation Sans, Arial, sans-serif" font-size="24" font-weight="700" fill="#dce6ff">Fast geschafft</text>
-  <text x="112" y="82" font-family="Liberation Sans, Arial, sans-serif" font-size="14" fill="#a9b6d3">Nach dem Neustart hilft dir Orbit OS beim WLAN und beim Hintergrund.</text>
+  <text x="112" y="82" font-family="Liberation Sans, Arial, sans-serif" font-size="14" fill="#a9b6d3">Nach dem Neustart hilft dir Gibeon OS beim WLAN und beim Hintergrund.</text>
 </svg>

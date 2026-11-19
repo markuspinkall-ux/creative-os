@@ -1,5 +1,5 @@
 #!/bin/bash
-# Orbit OS – Gesundheitsprüfung NACH der Anmeldung.
+# Gibeon OS – Gesundheitsprüfung NACH der Anmeldung.
 # Läuft nach jedem Start im Hintergrund und wartet auf die erste Anmeldung:
 #  - Oberfläche läuft eine Minute stabil  → diese Version gilt als gesund (merken)
 #  - Oberfläche stürzt immer wieder ab    → ist es eine NEUE Version, automatisch zur
@@ -24,12 +24,12 @@ while true; do
         case "$(cat "$f" 2>/dev/null)" in
             ok)
                 echo "$cur" > /var/lib/creative-os/last-good
-                echo "Orbit OS: Oberfläche läuft stabil – Version als gesund gemerkt"
+                echo "Gibeon OS: Oberfläche läuft stabil – Version als gesund gemerkt"
                 exit 0 ;;
             failed)
                 good=$(cat /var/lib/creative-os/last-good 2>/dev/null || true)
                 if [ -n "$good" ] && [ "$good" != "$cur" ]; then
-                    echo "Orbit OS: Oberfläche stürzt nach dem Update ab – zurück zur letzten gesunden Version"
+                    echo "Gibeon OS: Oberfläche stürzt nach dem Update ab – zurück zur letzten gesunden Version"
                     date '+%Y-%m-%d %H:%M' > /var/lib/creative-os/rolled-back
                     sleep 8
                     rpm-ostree rollback && systemctl reboot
