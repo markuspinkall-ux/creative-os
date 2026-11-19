@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Graphit / Porzellan -->
+    <color name="ground">#15171C</color>
+    <color name="raised">#1F232B</color>
+    <color name="raised2">#2A2F39</color>
+    <color name="text">#EEEBE4</color>
+    <color name="muted">#9AA0AC</color>
+    <color name="accent">#8FB3FF</color>
+    <color name="live">#FF5A5A</color>
+</resources>

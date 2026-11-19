@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Oben rechts scheint der laufende Sender durch, nach unten und links wird es Graphit -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape><gradient android:angle="270" android:startColor="#5915171C" android:centerColor="#EB15171C"
+            android:endColor="#FA15171C" android:centerY="0.42" /></shape>
+    </item>
+    <item>
+        <shape><gradient android:angle="0" android:startColor="#F215171C" android:centerColor="#9915171C"
+            android:endColor="#0015171C" android:centerX="0.45" /></shape>
+    </item>
+</layer-list>
