@@ -1,0 +1,26 @@
+name: Namen prüfen
+# Fragt bei der DENIC (whois.denic.de), ob die .de-Domains zu den Namensvorschlägen frei sind.
+on:
+  push:
+    branches: ["claude/namen-pruefen"]
+    paths: [tools/namen/**, .github/workflows/namen-pruefen.yml]
+permissions:
+  contents: read
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get install -y -q whois >/dev/null
+      - name: DENIC fragen
+        run: |
+          while read -r n; do
+            [ -z "$n" ] && continue
+            for d in "$n.de" "${n}os.de" "$n-os.de"; do
+              s=$(whois -h whois.denic.de -- "-T dn $d" 2>&1 | grep -m1 -i '^Status:' | awk '{print $2}')
+              [ -z "$s" ] && { sleep 3; s=$(whois -h whois.denic.de -- "-T dn $d" 2>&1 | grep -m1 -i '^Status:' | awk '{print $2}'); }
+              echo "ERGEBNIS $d ${s:-unbekannt}"
+              sleep 1
+            done
+          done < tools/namen/kandidaten.txt
