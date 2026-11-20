@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gibeon OS – Das Betriebssystem, das sich anfühlt wie Windows</title>
-<meta name="description" content="Gibeon OS: dunkles Graphit-Design, Steam und Proton ab Werk, schreibgeschützter Unterbau – stabil, sicher und mit Rückweg bei jedem Update.">
+<meta name="description" content="Gibeon OS ist ein kostenloses Betriebssystem auf Fedora-Basis, das sich wie Windows bedienen lässt. Steam und NVIDIA-Treiber sind vorinstalliert, Updates lassen sich zurücknehmen.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.5 12.5L5 15.5v3l2.8-1.6z' fill='%238fb3ff'/%3E%3Cpath d='M16.5 12.5L19 15.5v3l-2.8-1.6z' fill='%238fb3ff'/%3E%3Cpath d='M12 2c3 2.5 4.6 6 4.6 10v4.6H7.4V12C7.4 8 9 4.5 12 2z' fill='%23dce6ff'/%3E%3Ccircle cx='12' cy='9.2' r='1.9' fill='%2312151b'/%3E%3Cpath d='M10 17.6h4l-2 4.4z' fill='%23ffb07a'/%3E%3C/svg%3E">
 <script>
 /* Design merken (Graphit/Porzellan) – vor dem ersten Zeichnen setzen, damit nichts aufblitzt */
@@ -41,6 +41,7 @@ nav.links a:hover{color:var(--text)}
 .btn.ghost:hover{background:var(--raised)}
 .btn.sm{height:38px;padding:0 16px;font-size:14px;border-radius:10px}
 @media (max-width:860px){nav.links{display:none} header.nav .btn{margin-left:auto}}
+@media (max-width:520px){header.nav .wrap{gap:10px} header.nav .btn.sm{padding:0 12px} .brand{font-size:16px}}
 
 /* ---------- Hero ---------- */
 .hero{position:relative;overflow:hidden;padding:84px 0 40px}
@@ -588,7 +589,7 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <a class="brand" href="#top"><span class="logo"><svg><use href="#rocket"/></svg></span>Gibeon OS</a>
     <nav class="links">
-      <a href="#funktionen">Funktionen</a>
+      <a href="#funktionen">Was anders ist</a>
       <a href="#apps">Apps</a>
       <a href="#widgets">Widgets</a>
       <a href="#gaming">Gaming</a>
@@ -608,18 +609,18 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
 <!-- ============ HERO ============ -->
 <section class="hero">
   <div class="wrap">
-    <span class="eyebrow"><b>Version 2 · Vivid Venus</b> Neuer Name, neuer Software-Shop, Messenger und Android-Apps</span>
-    <h1>Fühlt sich an wie Windows.<br><em>Bleibt stabil, egal was passiert.</em></h1>
-    <p class="lead">Gibeon OS ist ein Betriebssystem im Graphit- oder Porzellan-Design – wie aus einem Guss, mit eigener Taskleiste, eigenem Dateimanager und Spielen, die ab Werk laufen.</p>
+    <span class="eyebrow"><b>Version 2 · Vivid Venus</b> Neu: Android-Apps, Messenger und ein eigener App-Shop</span>
+    <h1>Bedient sich wie Windows.<br><em>Läuft ohne Windows.</em></h1>
+    <p class="lead">Gibeon OS ist ein kostenloses Betriebssystem auf Basis von Fedora. Steam, Proton und der NVIDIA-Treiber sind schon drauf. Und wenn ein Update Ärger macht, startest du einfach den vorherigen Stand.</p>
     <div class="cta">
       <a class="btn primary" href="#download"><svg class="i"><use href="#down"/></svg>Gibeon OS holen</a>
-      <a class="btn ghost" href="#apps">Rundgang ansehen<svg class="i"><use href="#chev"/></svg></a>
+      <a class="btn ghost" href="#apps">Programme ansehen<svg class="i"><use href="#chev"/></svg></a>
     </div>
     <div class="hero-meta">
       <span><svg class="i"><use href="#check"/></svg>Kostenlos</span>
-      <span><svg class="i"><use href="#check"/></svg>Steam + Proton eingebaut</span>
+      <span><svg class="i"><use href="#check"/></svg>Steam vorinstalliert</span>
       <span><svg class="i"><use href="#check"/></svg>NVIDIA & AMD/Intel</span>
-      <span><svg class="i"><use href="#check"/></svg>Updates automatisch</span>
+      <span><svg class="i"><use href="#check"/></svg>Updates mit Rückweg</span>
     </div>
 
     <div class="screen-frame cq">
@@ -698,10 +699,10 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
 
 <div class="strip">
   <div class="wrap">
-    <div class="stat"><b>Graphit &amp; Porzellan</b><span>dunkel oder hell – vom Installer bis zum Herunterfahren</span></div>
-    <div class="stat"><b>Steam + Proton</b><span>fest eingebaut, Spiele laufen ab Werk</span></div>
-    <div class="stat"><b>Schreibgeschützt</b><span>Systemdateien lassen sich nicht versehentlich löschen</span></div>
-    <div class="stat"><b>Jede Nacht</b><span>neue Updates – aktiv beim nächsten Neustart</span></div>
+    <div class="stat"><b>Graphit &amp; Porzellan</b><span>dunkel oder hell, vom Installer an</span></div>
+    <div class="stat"><b>Steam + Proton</b><span>vorinstalliert, nicht löschbar</span></div>
+    <div class="stat"><b>Schreibgeschützt</b><span>das System lässt sich nicht kaputtklicken</span></div>
+    <div class="stat"><b>24 eigene Programme</b><span>alle auf Deutsch</span></div>
   </div>
 </div>
 
@@ -709,26 +710,17 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
 <section id="funktionen">
   <div class="wrap">
     <div class="head">
-      <div class="kicker">Funktionen</div>
-      <h2>Alles, was man braucht.<br>Nichts, was stört.</h2>
-      <p class="sub">Gibeon OS ist für Menschen gebaut, die einfach loslegen wollen. Vertraut wie Windows, ruhig wie macOS – und ohne Kommandozeilen-Meldungen beim Start.</p>
+      <div class="kicker">Was anders ist</div>
+      <h2>Was du sonst erst<br>selbst einrichten müsstest.</h2>
+      <p class="sub">Taskleiste, Startmenü und Dateimanager hat jedes System. Hier geht es um die Dinge, die bei Gibeon OS ab Werk dabei sind.</p>
     </div>
     <div class="grid">
-      <div class="card"><div class="badge"><svg class="i"><use href="#pc"/></svg></div><h3>Eigene Taskleiste</h3><p>Schwebend, links ausgerichtet, auf jedem Monitor. Startmenü mit Rakete, Dateien, Browser und Terminal – alles mit einem Klick.</p></div>
-      <div class="card"><div class="badge"><svg class="i"><use href="#search"/></svg></div><h3>Schlankes Startmenü</h3><p>Keine Werbe-Kacheln, kein Durcheinander: alle Apps alphabetisch, die eigenen Programme gesammelt im Ordner „Gibeon OS Suite“, Game Launcher und Software direkt griffbereit. Lostippen sucht sofort, Enter startet.</p></div>
-      <div class="card"><div class="badge"><svg class="i"><use href="#wifi"/></svg></div><h3>Schnellzugriff im Tray</h3><p>WLAN, Helligkeit für jeden Monitor einzeln und Druckerstatus – genau dort, wo man sie sucht.</p></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#wave"/></svg></div><h3>KI-Helfer auf dem Schreibtisch</h3><p>Eine eigene KI zum Fragen und Formulieren – Allgemeinwissen mit Wikipedia-Quellen, E-Mails, Erklärungen. Läuft komplett auf deinem PC, ohne Konto und ohne Cloud.</p></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#layers"/></svg></div><h3>KI direkt dabei</h3><p>Claude und ChatGPT als eigene Fenster in der Taskleiste. Discord ist ebenfalls fest eingebaut.</p></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#globe"/></svg></div><h3>Eigener Browser</h3><p>Der Browser von Gibeon OS spielt Videos ab Werk ab, hat eine eigene Startseite mit Uhr und Kacheln zum Anheften und folgt Graphit oder Porzellan.</p></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#printer"/></svg></div><h3>Drucker & Netzwerk</h3><p>Drucker hinzufügen, Testseite drucken, WLAN verbinden – in der Systemsteuerung, ohne Fachbegriffe.</p></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#server"/></svg></div><h3>Mein Server</h3><p>Eine eigene Webseite im Heimnetz – eingeschaltet mit einem einzigen Schalter.</p></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#refresh"/></svg></div><h3>Absturzsicher</h3><p>Stürzt die Oberfläche ab, ist sie in einer Sekunde wieder da. Offene Programme laufen einfach weiter.</p></div>
-      <div class="card"><div class="badge"><svg class="i"><use href="#sun"/></svg></div><h3>Hell oder dunkel</h3><p>Design „Graphit“ (dunkel) oder „Porzellan“ (hell) mit Akzentfarbe – in allen Gibeon-Apps, den Programmsymbolen, OBS und im Browser. Probier’s oben rechts auf dieser Seite.</p></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#cube"/></svg></div><h3>Aus Fotos wird 3D</h3><p>3D Studio macht aus einem einzigen Foto eine 3D-Figur – lokal auf der Grafikkarte, fertig für 3D-Druck und Animation.</p></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#refresh"/></svg></div><h3>Updates mit Restzeit</h3><p>Das Update-Center zeigt Menge, Tempo und Restzeit – auch nach dem Schließen und Wiederöffnen. Wer mag, liest im Terminal mit: <code>creative-update --verfolgen</code>. Aktiv wird das Update beim nächsten Neustart.</p></div>
-      <div class="card"><div class="badge"><svg class="i"><use href="#folder"/></svg></div><h3>Ziehen &amp; Ablegen</h3><p>Dateien zwischen Ordnern, Fenstern, Schreibtisch und Programmen hin- und herziehen. Auf dem Schreibtisch bleiben Symbole dort liegen, wo du sie hinlegst – und nie unter einem Widget. Entf schiebt in den Papierkorb, Rechtsklick in der Taskleiste schließt Fenster.</p></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#user"/></svg></div><h3>Konten für die Familie</h3><p>Benutzerkonten in der Systemsteuerung anlegen und löschen – auf Wunsch ohne Passwort für Kinder, Administrator-Rechte mit einem Schalter.</p></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#gamepad"/></svg></div><h3>Spiele selbst bauen</h3><p>Die Engine kommt über „Eigene Apps“: Jump’n’Run per Klick gestalten, Figuren per KI animieren und als fertiges Spiel für Linux und Windows exportieren.</p></div>
+      <div class="card"><div class="badge f"><svg class="i"><use href="#gamepad"/></svg></div><h3>Spiele laufen sofort</h3><p>Steam, Proton und GameMode sind vorinstalliert, in der NVIDIA-Ausgabe auch der Treiber. Bei Steam anmelden, Spiel installieren, losspielen.</p></div>
+      <div class="card"><div class="badge g"><svg class="i"><use href="#undo"/></svg></div><h3>Updates lassen sich zurücknehmen</h3><p>Ein Update wird komplett eingespielt oder gar nicht. Läuft danach etwas nicht, wählst du beim Start den vorherigen Stand.</p></div>
+      <div class="card"><div class="badge"><svg class="i"><use href="#wave"/></svg></div><h3>KI auf dem eigenen PC</h3><p>Der KI-Helfer läuft auf deiner Grafikkarte, nicht in der Cloud. Claude und ChatGPT gibt es zusätzlich als Fenster in der Taskleiste.</p></div>
+      <div class="card"><div class="badge f"><svg class="i"><use href="#cube"/></svg></div><h3>Aus einem Foto wird 3D</h3><p>3D Studio rechnet aus einem einzigen Bild eine Figur, die du drucken oder animieren kannst. Dafür brauchst du eine NVIDIA-Karte mit 12 GB.</p></div>
+      <div class="card"><div class="badge g"><svg class="i"><use href="#server"/></svg></div><h3>Eigene Webseite per Schalter</h3><p>„Mein Server“ macht deinen PC zum Webserver fürs Heimnetz. Wer will, macht ihn auch übers Internet erreichbar.</p></div>
+      <div class="card"><div class="badge"><svg class="i"><use href="#pad"/></svg></div><h3>Android-Apps</h3><p>Apps vom Handy laufen in eigenen Fenstern auf dem PC, mit oder ohne Google Play Store.</p></div>
     </div>
   </div>
 </section>
@@ -738,8 +730,8 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head">
       <div class="kicker">Programme</div>
-      <h2>Hauseigene Apps. Ein Look.</h2>
-      <p class="sub">24 eigene Programme – selbst entwickelt, auf Deutsch und mit derselben Titelleiste, Schrift und Farbe. Alle Bilder sind echte Bildschirmfotos aus Gibeon OS. Klick dich durch:</p>
+      <h2>Die eigenen Programme.</h2>
+      <p class="sub">Alle selbst geschrieben, alle auf Deutsch. Die Bilder sind echte Bildschirmfotos.</p>
     </div>
     <div class="tabgroups" role="tablist">
       <div class="tabgroup"><span class="glabel">Kreativ</span>
@@ -777,98 +769,81 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
     </div>
     <div class="panel on" data-p="3d">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/3d.jpg" data-hell="bilder/hell-3d.jpg" alt="Bildschirmfoto von 3D Studio" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/3d.jpg" data-hell="bilder/hell-3d.jpg" alt="Bildschirmfoto von 3D Studio" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>3D Studio</h3>
-          <p>Aus einem einzigen Foto wird eine echte 3D-Figur – berechnet direkt auf deiner NVIDIA-Grafikkarte, ohne Cloud und ohne Konto.</p>
+          <p>Du gibst ein Foto hinein und bekommst eine 3D-Figur heraus. Gerechnet wird auf deiner eigenen Grafikkarte.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Foto einfach hineinziehen: Der Hintergrund wird automatisch freigestellt.</li>
-            <li><svg class="i"><use href="#check"/></svg>KI-Modell TRELLIS von Microsoft – deutlich genauer als einfache Foto-zu-3D-Werkzeuge. Neu wählbar: TRELLIS.2 mit 4 Milliarden Parametern für noch feinere Formen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Das Originalfoto wird auf die Vorderseite gelegt – Gesichter, Schrift und Muster bleiben gestochen scharf.</li>
-            <li><svg class="i"><use href="#check"/></svg>Drei Qualitätsstufen: „Normal“ für schnelle Entwürfe, „Hoch“ für feine Details und „Sehr hoch“ mit 4K-Textur, per KI hochgerechnet.</li>
-            <li><svg class="i"><use href="#check"/></svg>Drehbare 3D-Vorschau mit Maus: drehen, zoomen, von allen Seiten ansehen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Export als GLB, OBJ (mit Textur), STL für den 3D-Drucker (auf 100 mm skaliert) und PLY.</li>
-            <li><svg class="i"><use href="#check"/></svg>Skelett-Editor: Gelenke setzen, damit die Figur später animiert werden kann.</li>
-            <li><svg class="i"><use href="#check"/></svg>Fortschritt mit Prozent und Restzeit – die Berechnung läuft im Hintergrund weiter.</li>
+            <li><svg class="i"><use href="#check"/></svg>Der Hintergrund wird automatisch entfernt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Rechnet mit TRELLIS oder dem größeren TRELLIS.2 von Microsoft.</li>
+            <li><svg class="i"><use href="#check"/></svg>Speichert als STL für den 3D-Drucker, außerdem als GLB, OBJ und PLY.</li>
+            <li><svg class="i"><use href="#check"/></svg>Mit Skelett-Editor, damit sich die Figur später animieren lässt.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Braucht eine NVIDIA-Grafikkarte mit mindestens 12 GB Speicher. Die KI wird beim ersten Start mit einem Klick eingerichtet (einmalig ≈ 18 GB).</div>
+          <div class="know"><b>Gut zu wissen:</b> Braucht eine NVIDIA-Karte mit mindestens 12 GB. Beim ersten Start werden einmalig rund 18 GB geladen.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="launcher">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/gamelauncher.jpg" data-hell="bilder/hell-gamelauncher.jpg" alt="Bildschirmfoto des Game Launchers mit großen Spiele-Kacheln" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS (mit Beispiel-Spielen)</figcaption></figure>
+        <figure class="shot"><img src="bilder/gamelauncher.jpg" data-hell="bilder/hell-gamelauncher.jpg" alt="Bildschirmfoto des Game Launchers mit großen Spiele-Kacheln" loading="lazy"><figcaption>Mit Beispiel-Spielen</figcaption></figure>
         <div class="desc">
           <span class="gtag">Spielen</span>
           <h3>Game Launcher</h3>
-          <p>Die Konsole im PC: deine Steam-Bibliothek im Vollbild, gemacht für Controller und Sofa – das Gegenstück zu Steam Big Picture.</p>
+          <p>Deine Steam-Bibliothek im Vollbild, gedacht für Sofa und Controller. Ähnlich wie Big Picture.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Große Kacheln mit Cover und Titelbild – oder als Liste mit Spielzeit, Größe und „Zuletzt gespielt“.</li>
-            <li><svg class="i"><use href="#check"/></svg>Mit Controller, Tastatur oder Maus: Spiel starten, installieren oder in Steam ansehen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Bereiche „Zuletzt gespielt“, „Bibliothek“, „Nicht installiert“ und Steam-Shop – mit LB/RB wechseln.</li>
-            <li><svg class="i"><use href="#check"/></svg>Läuft auf dem Hauptbildschirm im Vollbild, mit ☰ zurück zum Desktop.</li>
-            <li><svg class="i"><use href="#check"/></svg>Auf Wunsch startet er direkt nach der Anmeldung – einstellbar in der Systemsteuerung.</li>
-            <li><svg class="i"><use href="#check"/></svg>Passt sich Graphit und Porzellan an.</li>
+            <li><svg class="i"><use href="#check"/></svg>Kacheln mit Cover oder Liste mit Spielzeit.</li>
+            <li><svg class="i"><use href="#check"/></svg>Spiele direkt starten oder installieren.</li>
+            <li><svg class="i"><use href="#check"/></svg>Startet auf Wunsch gleich nach der Anmeldung.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Der Game Launcher liest deine Steam-Bibliothek direkt – Steam muss nur einmal geöffnet und angemeldet sein.</div>
+          <div class="know"><b>Gut zu wissen:</b> Steam muss einmal geöffnet und angemeldet sein, dann findet der Launcher deine Spiele.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="engine">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/engine-charakter.jpg" data-hell="bilder/hell-engine-charakter.jpg" alt="Bildschirmfoto der Engine mit Charakter-Editor" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/engine-charakter.jpg" data-hell="bilder/hell-engine-charakter.jpg" alt="Bildschirmfoto der Engine mit Charakter-Editor" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Engine</h3>
-          <p>Spiele bauen per Klick: Genre wählen, Level malen, Figuren animieren – und als fertiges Spiel exportieren.</p>
+          <p>Ein Baukasten für 2,5D-Jump’n’Runs, ganz ohne Programmieren.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Ablauf wie eine Zeitleiste: Splash, Startbildschirm, Seiten mit Sprechblasen, Bildern und Videos, dann das Level.</li>
-            <li><svg class="i"><use href="#check"/></svg>Level-Editor für 2,5D-Jump’n’Run: Blöcke malen, Münzen, Gegner, Federn, NPCs mit Dialogen und eigene 3D-Kulisse.</li>
-            <li><svg class="i"><use href="#check"/></svg>Charakter-Editor: eigene GLB-Figur laden, Skelett setzen und der KI beschreiben, wie sie laufen soll – „watschelt wie eine Ente“.</li>
-            <li><svg class="i"><use href="#check"/></svg>Angriffe mit eigener Taste, Lebensanzeige als Herzen oder Balken, eigene Grafiken für Anzeige und Sprechblasen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Testen mit einem Klick, Export als fertiges Spiel für Linux und Windows.</li>
+            <li><svg class="i"><use href="#check"/></svg>Level aus Blöcken, Münzen, Gegnern und Figuren mit Dialogen zusammenklicken.</li>
+            <li><svg class="i"><use href="#check"/></svg>Eigene 3D-Figur laden und per Text beschreiben, wie sie laufen soll.</li>
+            <li><svg class="i"><use href="#check"/></svg>Das fertige Spiel für Linux und Windows exportieren.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Die Engine steckt nicht im System, sondern kommt über Software → „Eigene Apps“. Action-Adventure und Rennspiele folgen.</div>
+          <div class="know"><b>Gut zu wissen:</b> Nicht vorinstalliert. Du holst sie dir über Software → „Eigene Apps“.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="art">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/art.jpg" data-hell="bilder/hell-art.jpg" alt="Bildschirmfoto von Art" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/art.jpg" data-hell="bilder/hell-art.jpg" alt="Bildschirmfoto von Art" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Art</h3>
-          <p>Malen und Bildbearbeitung mit Ebenen und echten Pinseln – mit vielen Funktionen, wie man sie aus Photoshop kennt, im Graphit-Look.</p>
+          <p>Malen und Bilder bearbeiten mit Ebenen und Pinseln.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Ebenen mit Deckkraft, Ebenenmasken und Reihenfolge – Bilder auch als neue Ebene öffnen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Pinsel-Engine mit Spitzen, Abstand, Streuung und Druck – fein einstellbar im Pinsel-Panel.</li>
-            <li><svg class="i"><use href="#check"/></svg>Photoshop-Pinsel laden: .abr-Dateien einfach importieren und sofort verwenden.</li>
-            <li><svg class="i"><use href="#check"/></svg>Werkzeuge: Pinsel, Radierer, Fülleimer, Pipette, Auswahl, Lasso, Text, Transformieren.</li>
-            <li><svg class="i"><use href="#check"/></svg>Rückgängig in vielen Schritten, Zoom und Verschieben mit Maus oder Tastatur.</li>
-            <li><svg class="i"><use href="#check"/></svg>Speichern als Projekt oder Export als PNG/JPEG.</li>
+            <li><svg class="i"><use href="#check"/></svg>Ebenen, Masken und Deckkraft.</li>
+            <li><svg class="i"><use href="#check"/></svg>Photoshop-Pinsel (.abr) lassen sich importieren.</li>
+            <li><svg class="i"><use href="#check"/></svg>Grafiktabletts mit Druckstufen werden unterstützt.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Grafiktabletts mit Druckstufen werden unterstützt – ideal zum Zeichnen.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="cut">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/cut.jpg" data-hell="bilder/hell-cut.jpg" alt="Bildschirmfoto von Cut" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/cut.jpg" data-hell="bilder/hell-cut.jpg" alt="Bildschirmfoto von Cut" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Cut</h3>
-          <p>Videos schneiden nach dem Vorbild von Final Cut: Medien links, Vorschau in der Mitte, Inspektor rechts – und unten die magnetische Zeitleiste.</p>
+          <p>Videoschnitt mit magnetischer Zeitleiste wie bei Final Cut: Schneidest du etwas heraus, rücken die anderen Clips nach.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Magnetische Zeitleiste: Clips rücken automatisch nach, es entstehen keine Lücken.</li>
             <li><svg class="i"><use href="#check"/></svg>Eigene Spuren für Titel, Video und Musik.</li>
-            <li><svg class="i"><use href="#check"/></svg>Looks (Farbstimmungen), Tempo schneller/langsamer und Rückwärts-Abspielen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Ken-Burns-Effekt für Fotos: sanftes Zoomen und Schwenken.</li>
-            <li><svg class="i"><use href="#check"/></svg>Übergänge zwischen Clips und fertige Titel-Vorlagen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Hintergrundmusik mit Ein- und Ausblenden.</li>
-            <li><svg class="i"><use href="#check"/></svg>Export als fertiges Video in einem Rutsch.</li>
+            <li><svg class="i"><use href="#check"/></svg>Farblooks, Zeitlupe, Rückwärts und Übergänge.</li>
+            <li><svg class="i"><use href="#check"/></svg>Langsames Zoomen und Schwenken über Fotos.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Ein gespeichertes Projekt merkt sich alle Schnitte – die Originaldateien bleiben unverändert.</div>
+          <div class="know"><b>Gut zu wissen:</b> Die Originaldateien werden nie verändert.</div>
         </div>
       </div>
     </div>
@@ -878,326 +853,274 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Shots</h3>
-          <p>Bildschirmfotos wie mit dem Snipping Tool von Windows 11 – mit Editor zum Markieren.</p>
+          <p>Bildschirmfotos wie mit dem Snipping Tool: Druck-Taste oder Win + Umschalt + S.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Druck-Taste oder Win + Umschalt + S: Der Bildschirm friert ein, oben erscheint die Leiste.</li>
-            <li><svg class="i"><use href="#check"/></svg>Rechteck, Fenster, Vollbild oder Freihand (Tasten 1–4, Esc bricht ab).</li>
-            <li><svg class="i"><use href="#check"/></svg>Das Foto landet sofort in der Zwischenablage und unter „Bilder › Bildschirmfotos“.</li>
-            <li><svg class="i"><use href="#check"/></svg>Editor mit Kugelschreiber, Textmarker, Pfeil, Rechteck, Radierer und Zuschneiden.</li>
-            <li><svg class="i"><use href="#check"/></svg>Verzögerung von 3, 5 oder 10 Sekunden – z. B. für geöffnete Menüs.</li>
-            <li><svg class="i"><use href="#check"/></svg>Direkt in Pictures öffnen oder speichern unter.</li>
+            <li><svg class="i"><use href="#check"/></svg>Bereich, Fenster, ganzer Bildschirm oder freihand.</li>
+            <li><svg class="i"><use href="#check"/></svg>Pfeile, Markierungen und Text direkt einzeichnen.</li>
+            <li><svg class="i"><use href="#check"/></svg>Mit Selbstauslöser, falls ein Menü mit aufs Bild soll.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="broadcast">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/broadcast.jpg" alt="Bildschirmfoto von Broadcast" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/broadcast.jpg" alt="Bildschirmfoto von Broadcast" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Broadcast</h3>
-          <p>Rauschfreies Mikrofon und virtueller Greenscreen für Discord, Teams, OBS und Co. – sparsam im Verbrauch.</p>
+          <p>Filtert Geräusche aus dem Mikrofon und tauscht den Hintergrund der Webcam aus. Das klappt in Discord, Teams, OBS und jedem anderen Programm.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>KI-Rauschentfernung (DeepFilterNet): Tastatur, Lüfter und Straße verschwinden.</li>
-            <li><svg class="i"><use href="#check"/></svg>Neue Eingabe „Gibeon Mikrofon (rauschfrei)“ – wird beim Einschalten automatisch Standard.</li>
-            <li><svg class="i"><use href="#check"/></svg>Virtueller Hintergrund mit KI-Freistellung bis in die Haare: unscharf, eigenes Bild oder Grün.</li>
-            <li><svg class="i"><use href="#check"/></svg>Virtuelle Kamera „Gibeon Kamera“ – funktioniert in jedem Programm.</li>
-            <li><svg class="i"><use href="#check"/></svg>„Sparsam“ oder „Beste Qualität“; mit NVIDIA rechnet die Grafikkarte.</li>
-            <li><svg class="i"><use href="#check"/></svg>Nutzt die höchste Bildrate deiner Webcam (bis 60 Bilder/s) – flüssig in OBS, Discord und Co.</li>
-            <li><svg class="i"><use href="#check"/></svg>KI-Upscaling auf 1080p (NVIDIA): „Schnell“ oder „Beste Schärfe“, entfernt auch JPEG-Klötzchen – mit Anzeige der Rechenzeit pro Bild.</li>
-            <li><svg class="i"><use href="#check"/></svg>Gerechnet wird nur, solange ein Programm die Kamera benutzt – sonst keine Last.</li>
+            <li><svg class="i"><use href="#check"/></svg>Tastatur und Lüfter hört keiner mehr.</li>
+            <li><svg class="i"><use href="#check"/></svg>Hintergrund unscharf, eigenes Bild oder Greenscreen.</li>
+            <li><svg class="i"><use href="#check"/></svg>Rechnet nur, solange ein Programm die Kamera benutzt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Mit NVIDIA-Karte wird das Webcam-Bild auf 1080p hochgerechnet.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="podcast">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/podcast.jpg" alt="Bildschirmfoto von Podcast" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/podcast.jpg" alt="Bildschirmfoto von Podcast" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Kreativ</span>
           <h3>Podcast</h3>
-          <p>Podcasts entdecken, abonnieren und unterwegs hören – ohne Konto.</p>
+          <p>Podcasts suchen, abonnieren und herunterladen. Ein Konto brauchst du nicht.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Entdecken nach Kategorien wie Nachrichten, Wissen, Comedy oder Gaming.</li>
-            <li><svg class="i"><use href="#check"/></svg>Suche im großen öffentlichen Podcast-Katalog oder eigene RSS-Links.</li>
-            <li><svg class="i"><use href="#check"/></svg>Abos mit neuen Folgen auf einen Blick.</li>
-            <li><svg class="i"><use href="#check"/></svg>Folgen herunterladen und offline hören.</li>
-            <li><svg class="i"><use href="#check"/></svg>Wiedergabe mit Zurück/Vor, Geschwindigkeit und Fortschritt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Durchsucht einen großen öffentlichen Katalog, eigene RSS-Links gehen auch.</li>
+            <li><svg class="i"><use href="#check"/></svg>Folgen offline hören, auch schneller oder langsamer.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="mail">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/mail.jpg" data-hell="bilder/hell-mail.jpg" alt="Bildschirmfoto von Mail" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/mail.jpg" data-hell="bilder/hell-mail.jpg" alt="Bildschirmfoto von Mail" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>Mail</h3>
-          <p>Das E-Mail-Programm von Gibeon OS: drei Spalten wie in professionellen Mailprogrammen – Ordner, Liste, Lesebereich.</p>
+          <p>E-Mail-Programm mit Ordnern, Liste und Lesebereich. Du gibst Adresse und Passwort ein, den Rest findet es selbst heraus.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Anmelden mit Adresse und Passwort: Gmail, GMX, WEB.DE, T-Online, Yahoo, iCloud, AOL, freenet, IONOS, Posteo, mailbox.org und eigene Server.</li>
-            <li><svg class="i"><use href="#check"/></svg>Den Anbieter erkennt Mail selbst – inklusive Hinweis, was bei ihm zu beachten ist.</li>
-            <li><svg class="i"><use href="#check"/></svg>Echte HTML-Darstellung; Bilder aus dem Netz bleiben zum Schutz vor Tracking gesperrt, bis du sie freigibst.</li>
-            <li><svg class="i"><use href="#check"/></svg>Antworten, Allen antworten, Weiterleiten mit Anhängen, Archivieren, Papierkorb, Markieren.</li>
-            <li><svg class="i"><use href="#check"/></svg>Verfassen mit Cc/Bcc, Formatierung, Anhängen bis 25 MB und Signatur.</li>
-            <li><svg class="i"><use href="#check"/></svg>Suche, automatisches Nachladen beim Blättern und alle zwei Minuten neue Mails.</li>
-            <li><svg class="i"><use href="#check"/></svg>Tastenkürzel: Strg+N neu, Strg+R antworten, E archivieren, Entf löschen, F5 aktualisieren.</li>
+            <li><svg class="i"><use href="#check"/></svg>Klappt mit Gmail, GMX, WEB.DE, T-Online, iCloud, Posteo und vielen anderen.</li>
+            <li><svg class="i"><use href="#check"/></svg>Bilder aus dem Netz bleiben gesperrt, bis du sie erlaubst. So kann dich niemand über geöffnete Mails verfolgen.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Das Passwort liegt sicher im Schlüsselbund des PCs. Outlook/Hotmail gehen nicht, weil Microsoft keine Passwort-Anmeldung mehr erlaubt.</div>
+          <div class="know"><b>Gut zu wissen:</b> Outlook und Hotmail gehen leider nicht, weil Microsoft keine Anmeldung per Passwort mehr zulässt.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="writer">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/writer.jpg" data-hell="bilder/hell-writer.jpg" alt="Bildschirmfoto von Writer" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/writer.jpg" data-hell="bilder/hell-writer.jpg" alt="Bildschirmfoto von Writer" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>Writer</h3>
-          <p>Textverarbeitung wie man sie von Word kennt – mit Menüband, echten Seiten und Word-Dateien.</p>
+          <p>Textverarbeitung mit Menüband, aufgebaut wie Word.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Menüband mit Start, Einfügen, Layout, Überprüfen und Ansicht; Datei-Bereich mit Vorlagen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Öffnet und speichert Word-Dateien (.docx), dazu PDF, ODT, HTML und Markdown.</li>
-            <li><svg class="i"><use href="#check"/></svg>Formatvorlagen, automatisches Inhaltsverzeichnis, Kopf- und Fußzeile mit Seitenzahlen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Rechtschreibprüfung auf Deutsch, Suchen und Ersetzen, Zoom und Seitenansicht.</li>
-            <li><svg class="i"><use href="#check"/></svg>Tabellen, Bilder, Aufzählungen – und automatische Sicherung, falls mal etwas abstürzt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Öffnet und speichert Word-Dateien (.docx), außerdem PDF und ODT.</li>
+            <li><svg class="i"><use href="#check"/></svg>Inhaltsverzeichnis, Kopf- und Fußzeilen, deutsche Rechtschreibprüfung.</li>
+            <li><svg class="i"><use href="#check"/></svg>Sichert automatisch, falls doch mal etwas abstürzt.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="notes">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/notes.jpg" data-hell="bilder/hell-notes.jpg" alt="Bildschirmfoto von Notes" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/notes.jpg" data-hell="bilder/hell-notes.jpg" alt="Bildschirmfoto von Notes" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>Notes</h3>
-          <p>Der Texteditor von Gibeon OS – vom Umfang her an Notepad++ angelehnt.</p>
+          <p>Texteditor für Notizen und Code, ähnlich wie Notepad++.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Beliebig viele Reiter; offene Texte sind beim nächsten Start wieder da – auch ungespeicherte.</li>
-            <li><svg class="i"><use href="#check"/></svg>Syntaxfarben für Python, JavaScript, HTML, CSS, C/C++, Rust, Go, Shell, SQL, YAML, Markdown und mehr.</li>
-            <li><svg class="i"><use href="#check"/></svg>Zeilennummern, Klammerpaare, gleiche Wörter markiert, automatische Einrückung.</li>
-            <li><svg class="i"><use href="#check"/></svg>Suchen und Ersetzen mit regulären Ausdrücken – auch über alle Reiter.</li>
-            <li><svg class="i"><use href="#check"/></svg>Zeilen duplizieren, verschieben, sortieren; Groß-/Kleinschreibung umwandeln.</li>
-            <li><svg class="i"><use href="#check"/></svg>Zoom mit Strg + Mausrad.</li>
+            <li><svg class="i"><use href="#check"/></svg>Offene Tabs sind beim nächsten Start wieder da, auch ungespeicherte.</li>
+            <li><svg class="i"><use href="#check"/></svg>Farbige Hervorhebung für Python, HTML, JavaScript und viele andere Sprachen.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="magazin">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/magazin.jpg" alt="Bildschirmfoto von Magazin" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/magazin.jpg" alt="Bildschirmfoto von Magazin" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>Magazin</h3>
-          <p>Liest Tests, News und Artikel deiner Lieblingsseiten wie eine Zeitschrift – jeden Tag eine neue Ausgabe.</p>
+          <p>Macht aus deinen Lieblingsseiten eine Zeitschrift, die jeden Tag neu erscheint.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Quelle per Name, Adresse oder RSS-Link hinzufügen – der Feed wird automatisch gefunden.</li>
-            <li><svg class="i"><use href="#check"/></svg>Titelseite, Inhaltsverzeichnis und Rubriken mit je vier Artikeln; Doppelseiten auf großen Bildschirmen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Blättern mit Pfeiltasten, Mausrad oder Wischen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Volltext direkt im Heft – ohne Werbung und ohne Tracking.</li>
-            <li><svg class="i"><use href="#check"/></svg>Artikel merken; Archiv der letzten 60 Tage.</li>
+            <li><svg class="i"><use href="#check"/></svg>Seite per Name oder Adresse hinzufügen, den Feed sucht Magazin selbst.</li>
+            <li><svg class="i"><use href="#check"/></svg>Artikel komplett in der App lesen, ohne Werbung.</li>
+            <li><svg class="i"><use href="#check"/></svg>Die letzten 60 Tage bleiben im Archiv.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="ki">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/ki.jpg" data-hell="bilder/hell-ki.jpg" alt="Bildschirmfoto des KI-Helfers" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/ki.jpg" data-hell="bilder/hell-ki.jpg" alt="Bildschirmfoto des KI-Helfers" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>KI-Helfer</h3>
-          <p>Eine KI wie Claude – aber Open Source und komplett auf deinem PC. Als Widget direkt auf dem Schreibtisch.</p>
+          <p>Eine KI, die komplett auf deinem Rechner läuft. Deine Fragen verlassen den PC nicht.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Allgemeinwissen: „Wer war der erste Bundeskanzler?“ – mit Quellen aus Wikipedia, damit die Antwort stimmt.</li>
-            <li><svg class="i"><use href="#check"/></svg>E-Mails, Briefe und Nachrichten formulieren – fertig zum Kopieren.</li>
-            <li><svg class="i"><use href="#check"/></svg>Erklärt Begriffe, fasst zusammen und übersetzt.</li>
-            <li><svg class="i"><use href="#check"/></svg>Drei Größen: Gemma 4 12B, E4B oder E2B – die passende wird für deine Grafikkarte vorgeschlagen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Läuft über llama.cpp auf NVIDIA, AMD und Intel – ohne Konto, ohne Cloud, ohne Abo.</li>
+            <li><svg class="i"><use href="#check"/></svg>Beantwortet Wissensfragen und nennt Wikipedia als Quelle.</li>
+            <li><svg class="i"><use href="#check"/></svg>Formuliert E-Mails, Briefe und Nachrichten.</li>
+            <li><svg class="i"><use href="#check"/></svg>Sucht das passende Modell (Gemma 4) für deine Grafikkarte aus.</li>
           </ul>
-          <div class="know"><b>Gut zu wissen:</b> Das Modell wird beim ersten Öffnen mit einem Klick geladen (2,8 bis 7 GB). Ersetzt den früheren Sprachassistenten.</div>
+          <div class="know"><b>Gut zu wissen:</b> Beim ersten Öffnen werden je nach Modell 2,8 bis 7 GB geladen.</div>
         </div>
       </div>
     </div>
     <div class="panel" data-p="claude">
       <div class="appshow">
-        <figure class="shot small"><img src="bilder/claude.jpg" data-hell="bilder/hell-claude.jpg" alt="Bildschirmfoto von Claude" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot small"><img src="bilder/claude.jpg" data-hell="bilder/hell-claude.jpg" alt="Bildschirmfoto von Claude" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>Claude</h3>
-          <p>Die KI Claude im Chat – und auf Wunsch als Helfer bei der Fehlersuche direkt auf deinem PC.</p>
+          <p>Öffnet den Claude-Chat. Auf Wunsch richtet die App auch Claude Code ein, das dir bei Problemen am PC hilft.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Claude-Chat mit einem Klick öffnen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Claude Code installieren: einmalig, nur für dein Benutzerkonto.</li>
-            <li><svg class="i"><use href="#check"/></svg>Lokale Systemdiagnose: Claude fragt nach dem Problem und vor jeder Änderung nach.</li>
-            <li><svg class="i"><use href="#check"/></svg>Auf Wunsch voller Benutzerzugriff – Administratorrechte gibt es nur mit Passwort.</li>
+            <li><svg class="i"><use href="#check"/></svg>Claude fragt vor jeder Änderung nach.</li>
+            <li><svg class="i"><use href="#check"/></svg>Administratorrechte gibt es nur mit deinem Passwort.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="ftp">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/ftp.jpg" data-hell="bilder/hell-ftp.jpg" alt="Bildschirmfoto von FTP" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/ftp.jpg" data-hell="bilder/hell-ftp.jpg" alt="Bildschirmfoto von FTP" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Büro &amp; Internet</span>
           <h3>FTP</h3>
-          <p>Dateien zum eigenen Webspace oder Server übertragen – links dein PC, rechts der Server.</p>
+          <p>Dateien auf den eigenen Webspace laden: links dein PC, rechts der Server.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>FTP, FTPS (verschlüsselt) und SFTP – auch mit SSH-Schlüssel.</li>
-            <li><svg class="i"><use href="#check"/></svg>Gespeicherte Server für den schnellen Zugriff.</li>
-            <li><svg class="i"><use href="#check"/></svg>Hoch- und Herunterladen per Auswahl, Warteschlange mit Fortschritt.</li>
-            <li><svg class="i"><use href="#check"/></svg>Fehlgeschlagene Übertragungen mit einem Klick wiederholen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Ordner anlegen, umbenennen und auf dem Server löschen.</li>
+            <li><svg class="i"><use href="#check"/></svg>FTP, FTPS und SFTP, auch mit SSH-Schlüssel.</li>
+            <li><svg class="i"><use href="#check"/></svg>Server speichern und Übertragungen in einer Warteschlange abarbeiten.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="player">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/player.jpg" alt="Bildschirmfoto von Player" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/player.jpg" alt="Bildschirmfoto von Player" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Medien</span>
           <h3>Player</h3>
           <p>Musik, Videos und Fernsehen in einer App.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Musik aus deinem Ordner „Musik“ mit Titel, Künstler, Album und Dauer.</li>
-            <li><svg class="i"><use href="#check"/></svg>YouTube Music direkt im Player – Charts, Suche und Anmeldung bleiben erhalten.</li>
-            <li><svg class="i"><use href="#check"/></svg>Videos aus dem Ordner „Videos“, Doppelklick für Vollbild.</li>
-            <li><svg class="i"><use href="#check"/></svg>Fernsehen (IPTV) mit deutscher Senderliste, Kategorien und schnellem Senderwechsel.</li>
-            <li><svg class="i"><use href="#check"/></svg>Zufall, Wiederholen, Lautstärke – und Standardprogramm für Musik- und Videodateien.</li>
+            <li><svg class="i"><use href="#check"/></svg>Spielt deine Musik und Videos aus den eigenen Ordnern.</li>
+            <li><svg class="i"><use href="#check"/></svg>YouTube Music über die offizielle Webseite, mit deinem Konto.</li>
+            <li><svg class="i"><use href="#check"/></svg>Fernsehen per IPTV mit deutscher Senderliste.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="pictures">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/pictures.jpg" alt="Bildschirmfoto von Pictures" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/pictures.jpg" alt="Bildschirmfoto von Pictures" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">Medien</span>
           <h3>Pictures</h3>
-          <p>Bildbetrachter aufgebaut wie „Fotos“ bei Windows 11.</p>
+          <p>Fotos ansehen, sortiert nach Monaten. Aufgebaut wie „Fotos“ unter Windows 11.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Alle Bilder aus Bilder, Downloads und Schreibtisch – sortiert nach Monaten.</li>
-            <li><svg class="i"><use href="#check"/></svg>Favoriten und Ordneransicht.</li>
-            <li><svg class="i"><use href="#check"/></svg>Zoom, Verschieben, Filmstreifen zum Blättern, Diashow (F5) und Vollbild (F11).</li>
-            <li><svg class="i"><use href="#check"/></svg>Drehen (wird gespeichert, Fotodaten bleiben), Umbenennen, Als Hintergrundbild.</li>
-            <li><svg class="i"><use href="#check"/></svg>Infos zu Aufnahmedatum, Kamera und Belichtung.</li>
-            <li><svg class="i"><use href="#check"/></svg>Formate: JPEG, PNG, GIF, WebP, TIFF, SVG, HEIC, AVIF, JPEG XL.</li>
+            <li><svg class="i"><use href="#check"/></svg>Öffnet auch HEIC-Fotos vom iPhone sowie AVIF und JPEG XL.</li>
+            <li><svg class="i"><use href="#check"/></svg>Diashow, Drehen und als Hintergrundbild setzen.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="files">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/files.jpg" data-hell="bilder/hell-files.jpg" alt="Bildschirmfoto von Dateien" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/files.jpg" data-hell="bilder/hell-files.jpg" alt="Bildschirmfoto von Dateien" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Dateien</h3>
-          <p>Der Dateimanager von Gibeon OS – so einfach wie der Explorer, aber mit Sicherheitsnetz.</p>
+          <p>Der Dateimanager. Bedient sich wie der Explorer, passt aber besser auf.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Nichts wird überschrieben: Gibt es den Namen schon, entsteht automatisch „Name (2)“.</li>
-            <li><svg class="i"><use href="#check"/></svg>Löschen landet im Papierkorb – endgültig nur nach Rückfrage.</li>
-            <li><svg class="i"><use href="#check"/></svg>Alles rückgängig: Kopieren, Verschieben, Umbenennen, Löschen (Strg+Z).</li>
-            <li><svg class="i"><use href="#check"/></svg>„Dieser PC“: Festplatten und USB-Sticks mit freiem Platz; USB-Sticks mit einem Klick auswerfen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Tastenkürzel wie bei Windows: Strg+C/X/V, F2, Entf, Alt+Enter.</li>
+            <li><svg class="i"><use href="#check"/></svg>Überschreibt nie etwas: Bei gleichem Namen entsteht „Name (2)“.</li>
+            <li><svg class="i"><use href="#check"/></svg>Kopieren, Verschieben und sogar Löschen lassen sich mit Strg + Z rückgängig machen.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="settings">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/einstellungen-look.jpg" data-hell="bilder/hell-einstellungen-look.jpg" alt="Bildschirmfoto von Systemsteuerung" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/einstellungen-look.jpg" data-hell="bilder/hell-einstellungen-look.jpg" alt="Bildschirmfoto von Systemsteuerung" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Systemsteuerung</h3>
-          <p>Alle Einstellungen an einem Ort – in klaren Karten statt verschachtelter Menüs.</p>
+          <p>Alle Einstellungen an einem Ort.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Darstellung: Design Graphit (dunkel) oder Porzellan (hell), Akzentfarbe, Hintergrundbild.</li>
-            <li><svg class="i"><use href="#check"/></svg>Netzwerk, WLAN, Bildschirme (auch drei Monitore), Ton und Drucker.</li>
-            <li><svg class="i"><use href="#check"/></svg>Software &amp; Updates: Fortschritt mit Restzeit – auch beim Entpacken und Einrichten.</li>
-            <li><svg class="i"><use href="#check"/></svg>Datensicherung auf eine externe Platte – ältere Versionen bleiben erhalten.</li>
-            <li><svg class="i"><use href="#check"/></svg>Benutzerkonten anlegen und löschen – auch ohne Passwort, Dateien gelöschter Konten bleiben auf Wunsch erhalten.</li>
-            <li><svg class="i"><use href="#check"/></svg>„Neuerungen ansehen“ zeigt direkt im Update-Center, was neu ist.</li>
+            <li><svg class="i"><use href="#check"/></svg>Design, Monitore, Netzwerk, Drucker und Ton.</li>
+            <li><svg class="i"><use href="#check"/></svg>Datensicherung auf eine externe Festplatte.</li>
+            <li><svg class="i"><use href="#check"/></svg>Benutzerkonten, für Kinder auch ohne Passwort.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="server">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/einstellungen-server.jpg" alt="Bildschirmfoto von Mein Server" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/einstellungen-server.jpg" alt="Bildschirmfoto von Mein Server" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Mein Server</h3>
-          <p>Eine eigene Webseite und Dateiablage im Heimnetz – eingeschaltet mit einem Schalter.</p>
+          <p>Macht deinen PC zum Webserver fürs Heimnetz. Einschalten, Dateien in den Ordner legen, fertig.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Webserver mit PHP, ohne Datenbank- oder Kontosystem.</li>
-            <li><svg class="i"><use href="#check"/></svg>Speicherort auf einer Zusatz-Festplatte (wird nie formatiert) oder einem geschützten Systemordner.</li>
-            <li><svg class="i"><use href="#check"/></svg>Dateien einfach in den Ordner „Mein Server/Webseite“ legen.</li>
+            <li><svg class="i"><use href="#check"/></svg>Mit PHP.</li>
             <li><svg class="i"><use href="#check"/></svg>Im Heimnetz unter http://gerätename.local erreichbar.</li>
-            <li><svg class="i"><use href="#check"/></svg>Optional im Internet über DuckDNS – „Verbindung prüfen“ zeigt, ob alles passt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Auf Wunsch auch übers Internet (mit DuckDNS).</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="tm">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/taskmanager.jpg" data-hell="bilder/hell-taskmanager.jpg" alt="Bildschirmfoto von Taskmanager" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/taskmanager.jpg" data-hell="bilder/hell-taskmanager.jpg" alt="Bildschirmfoto von Taskmanager" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Taskmanager</h3>
           <p>Aufgebaut wie der Taskmanager von Windows.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Prozesse: Apps, Hintergrund- und Systemprozesse mit CPU, Arbeitsspeicher und Datenträger.</li>
-            <li><svg class="i"><use href="#check"/></svg>„Task beenden“ – hängt ein Programm, wird es nach 4 Sekunden erzwungen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Leistung: CPU mit allen Kernen, Speicher, Datenträger, Netzwerk und Grafikkarte (AMD/NVIDIA).</li>
-            <li><svg class="i"><use href="#check"/></svg>Autostart-Apps ein- und ausschalten.</li>
-            <li><svg class="i"><use href="#check"/></svg>Details mit PID, Status und Befehlszeile.</li>
+            <li><svg class="i"><use href="#check"/></svg>Hängende Programme beenden.</li>
+            <li><svg class="i"><use href="#check"/></svg>Auslastung von Prozessor, Speicher, Netzwerk und Grafikkarte.</li>
+            <li><svg class="i"><use href="#check"/></svg>Autostart-Programme ein- und ausschalten.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="software">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/software.jpg" data-hell="bilder/hell-software.jpg" alt="Bildschirmfoto von Software" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/software.jpg" data-hell="bilder/hell-software.jpg" alt="Bildschirmfoto von Software" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Software</h3>
-          <p>Programme installieren wie aus einem App-Store – mit Flathub ab Werk. Aufgebaut wie ein Streamingdienst statt wie eine Tabelle.</p>
+          <p>Der App-Shop mit über 3.000 Programmen von Flathub, sortiert danach, wofür du sie brauchst.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Startseite mit Empfehlungen und Kacheln „Wofür brauchst du eine App?“: Kreativ &amp; Design, Video &amp; Audio, Spiele, Büro &amp; Lernen, Internet &amp; Chat, Werkzeuge.</li>
-            <li><svg class="i"><use href="#check"/></svg>Über 3.000 Apps von Flathub als Kacheln mit Vorschaubild – weiterrollen statt blättern.</li>
-            <li><svg class="i"><use href="#check"/></svg>Deutsche Namen und Beschreibungen, wo vorhanden; Suche über den ganzen Katalog.</li>
-            <li><svg class="i"><use href="#check"/></svg>Meine Apps, Updates und „Eigene Apps“ – zum Beispiel die Engine.</li>
-            <li><svg class="i"><use href="#check"/></svg>Programme laufen abgeschottet vom System – nichts kann Gibeon OS beschädigen.</li>
-</ul>
+            <li><svg class="i"><use href="#check"/></svg>Deutsche Beschreibungen, wo es welche gibt.</li>
+            <li><svg class="i"><use href="#check"/></svg>Programme laufen abgeschottet und können das System nicht beschädigen.</li>
+          </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="iso">
       <div class="appshow">
-        <figure class="shot"><img src="bilder/iso.jpg" alt="Bildschirmfoto von ISO" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot"><img src="bilder/iso.jpg" alt="Bildschirmfoto von ISO" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>ISO</h3>
-          <p>Eigene Installations-ISOs und bootfähige USB-Sticks erstellen.</p>
+          <p>Erstellt Installations-ISOs und schreibt sie auf einen USB-Stick.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Kleine Installations-ISO (lädt Gibeon OS bei der Installation) oder Offline-ISO.</li>
-            <li><svg class="i"><use href="#check"/></svg>Variante für AMD/Intel oder NVIDIA, Kanal Stable oder Test.</li>
-            <li><svg class="i"><use href="#check"/></svg>Direkt auf einen USB-Stick schreiben – mit Sicherheitsabfrage.</li>
+            <li><svg class="i"><use href="#check"/></svg>Für AMD/Intel oder NVIDIA.</li>
+            <li><svg class="i"><use href="#check"/></svg>Kleine Online-ISO oder komplette Offline-ISO.</li>
           </ul>
         </div>
       </div>
     </div>
     <div class="panel" data-p="calc">
       <div class="appshow">
-        <figure class="shot small"><img src="bilder/calculator.jpg" data-hell="bilder/hell-calculator.jpg" alt="Bildschirmfoto von Taschenrechner" loading="lazy"><figcaption>Echtes Bildschirmfoto aus Gibeon OS</figcaption></figure>
+        <figure class="shot small"><img src="bilder/calculator.jpg" data-hell="bilder/hell-calculator.jpg" alt="Bildschirmfoto von Taschenrechner" loading="lazy"></figure>
         <div class="desc">
           <span class="gtag">System</span>
           <h3>Taschenrechner</h3>
-          <p>Der Rechner von Gibeon OS.</p>
+          <p>Ein Taschenrechner, der Prozent so rechnet wie unter Windows: 200 + 10 % = 220.</p>
           <ul>
-            <li><svg class="i"><use href="#check"/></svg>Rechnet exakt (0,1 + 0,2 = 0,3) – deutsch mit Komma, Punkt vor Strich, Klammern.</li>
-            <li><svg class="i"><use href="#check"/></svg>Prozent wie bei Windows: 200 + 10 % = 220.</li>
-            <li><svg class="i"><use href="#check"/></svg>Wurzel, Quadrat, Kehrwert, Vorzeichen.</li>
-            <li><svg class="i"><use href="#check"/></svg>Live-Vorschau beim Tippen und Verlauf (Strg+H).</li>
+            <li><svg class="i"><use href="#check"/></svg>Rechnet ohne Rundungsfehler.</li>
+            <li><svg class="i"><use href="#check"/></svg>Verlauf mit Strg + H.</li>
           </ul>
         </div>
       </div>
@@ -1209,8 +1132,8 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head">
       <div class="kicker">Widgets</div>
-      <h2>Dein Schreibtisch.<br>Auf einen Blick.</h2>
-      <p class="sub">Mit Widgets holst du dir Wetter, Leistung, Nachrichten und deine liebsten Streamer direkt auf den Desktop – und legst für jedes Widget fest, auf welchem Monitor es erscheint.</p>
+      <h2>Widgets für den Schreibtisch.</h2>
+      <p class="sub">Wetter, Auslastung, Nachrichten und Twitch. Bei mehreren Monitoren legst du für jedes Widget fest, wo es sitzt.</p>
     </div>
 
     <div class="screen-frame cq" style="margin-top:0">
@@ -1285,22 +1208,22 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
     </div>
 
     <div class="wlist">
-      <div class="wli"><span class="ai"><svg class="i"><use href="#dock"/></svg></span><div><b>Ablage</b><span>Wie das Dock bei macOS – oben auf dem Schreibtisch. Apps, Ordner und Dateien einfach hineinziehen, zum Entfernen wieder herausziehen. Frei verschiebbar.</span></div></div>
-      <div class="wli"><span class="ai"><svg class="i"><use href="#chart"/></svg></span><div><b>Leistungsanzeige</b><span>CPU, Arbeitsspeicher, Datenträger, Netzwerk und Grafikkarte – live auf dem Hintergrund.</span></div></div>
-      <div class="wli"><span class="ai"><svg class="i"><use href="#cloud"/></svg></span><div><b>Wetter</b><span>Aktuelles Wetter und Vorhersage für deinen Ort – einfach Ort oder Postleitzahl eingeben, ganz ohne Konto.</span></div></div>
-      <div class="wli"><span class="ai"><svg class="i"><use href="#rss"/></svg></span><div><b>RSS-Nachrichten</b><span>Schlagzeilen deiner Lieblingsseiten direkt auf dem Desktop – ein Klick öffnet den Artikel.</span></div></div>
-      <div class="wli"><span class="ai"><svg class="i"><use href="#live"/></svg></span><div><b>Twitch-Favoriten</b><span>Bis zu acht Kanäle im Blick: Wer ist gerade live und seit wann?</span></div></div>
-      <div class="wli"><span class="ai"><svg class="i"><use href="#clock"/></svg></span><div><b>Analoge Uhr</b><span>Stunden-, Minuten- und Sekundenzeiger im Graphit-Look – aus dem Widget-Katalog.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#dock"/></svg></span><div><b>Ablage</b><span>Eine Leiste für Apps und Ordner oben auf dem Schreibtisch, wie das Dock bei macOS.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#chart"/></svg></span><div><b>Leistungsanzeige</b><span>Prozessor, Speicher, Festplatte, Netzwerk und Grafikkarte im Blick.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#cloud"/></svg></span><div><b>Wetter</b><span>Ort oder Postleitzahl eingeben, mehr ist nicht nötig.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#rss"/></svg></span><div><b>RSS-Nachrichten</b><span>Schlagzeilen deiner Lieblingsseiten.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#live"/></svg></span><div><b>Twitch-Favoriten</b><span>Zeigt, wer von bis zu acht Kanälen gerade live ist.</span></div></div>
+      <div class="wli"><span class="ai"><svg class="i"><use href="#clock"/></svg></span><div><b>Analoge Uhr</b><span>Gibt es zum Nachladen im Widget-Katalog.</span></div></div>
     </div>
 
     <div class="mgr">
       <div>
         <div class="kicker">Widgets</div>
-        <h2 style="font-size:clamp(26px,3vw,36px)">Alles an einer Stelle verwalten.</h2>
-        <p class="sub">In der App „Widgets“ schaltest du jedes Widget mit einem Haken ein oder aus und wählst den Monitor, auf dem es erscheinen soll. Neue Widgets kommen aus dem Widget-Katalog – mit einem Klick auf „Herunterladen“.</p>
+        <h2 style="font-size:clamp(26px,3vw,36px)">Ein Haken pro Widget.</h2>
+        <p class="sub">In der App „Widgets“ hakst du an, was du sehen willst, und wählst den Monitor. Die App öffnest du per Rechtsklick auf den Schreibtisch.</p>
         <ul class="checks" style="margin-top:22px">
-          <li><span class="n"><svg class="i"><use href="#monitors"/></svg></span><div><b>Monitor pro Widget wählen</b><span>Wetter links, Leistung in der Mitte, Twitch rechts – ganz wie du willst.</span></div></li>
-          <li><span class="n"><svg class="i"><use href="#down"/></svg></span><div><b>Widget-Katalog</b><span>Neue Widgets nachladen. Es werden nur geprüfte Widgets von Gibeon OS angenommen.</span></div></li>
+          <li><span class="n"><svg class="i"><use href="#monitors"/></svg></span><div><b>Monitor pro Widget</b><span>Zum Beispiel Wetter links, Auslastung in der Mitte, Twitch rechts.</span></div></li>
+          <li><span class="n"><svg class="i"><use href="#down"/></svg></span><div><b>Widget-Katalog</b><span>Neue Widgets nachladen. Angenommen werden nur geprüfte Widgets.</span></div></li>
         </ul>
       </div>
       <div class="stage cq"><div class="appwin"><div class="win">
@@ -1327,15 +1250,14 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap split">
     <div>
       <div class="kicker">Gaming</div>
-      <h2>Installieren. Starten. Spielen.</h2>
-      <p class="sub">Steam und Proton sind kein Zusatz, sondern Kern des Systems. Sie sind fest eingebaut und lassen sich nicht versehentlich entfernen – Windows-Spiele laufen out of the box.</p>
+      <h2>Zum Spielen gemacht.</h2>
+      <p class="sub">Steam und Proton gehören fest zum System und lassen sich nicht aus Versehen entfernen. Viele Windows-Spiele laufen damit ohne weiteres Zutun.</p>
       <ul class="checks">
-        <li><span class="n"><svg class="i"><use href="#tv"/></svg></span><div><b>Game Launcher</b><span>Deine Steam-Spiele im Vollbild – mit dem Controller durchblättern, starten oder installieren, wie Big Picture. Große Kacheln oder Liste, auf Wunsch direkt nach dem Start.</span></div></li>
-        <li><span class="n"><svg class="i"><use href="#pad"/></svg></span><div><b>Steam + Proton ab Werk</b><span>Steam Play ist eingeschaltet, deine Bibliothek ist nach der Anmeldung sofort da.</span></div></li>
-        <li><span class="n"><svg class="i"><use href="#chart"/></svg></span><div><b>GameMode</b><span>Holt beim Spielen automatisch mehr Leistung aus dem Rechner.</span></div></li>
-        <li><span class="n"><svg class="i"><use href="#pc"/></svg></span><div><b>NVIDIA-Treiber eingebaut</b><span>Eigene NVIDIA-Variante – kein Treiber-Gefummel. Für AMD/Intel gibt es eine eigene Ausgabe.</span></div></li>
-        <li><span class="n"><svg class="i"><use href="#music"/></svg></span><div><b>Alle Codecs dabei</b><span>Videos, Musik und Streams laufen ohne Nachinstallieren.</span></div></li>
-      </ul>
+        <li><span class="n"><svg class="i"><use href="#tv"/></svg></span><div><b>Game Launcher</b><span>Deine Steam-Spiele im Vollbild, mit dem Controller bedienbar.</span></div></li>
+        <li><span class="n"><svg class="i"><use href="#pad"/></svg></span><div><b>Steam + Proton ab Werk</b><span>Steam Play ist schon eingeschaltet. Nach der Anmeldung ist deine Bibliothek da.</span></div></li>
+        <li><span class="n"><svg class="i"><use href="#chart"/></svg></span><div><b>GameMode</b><span>Schaltet den Rechner beim Spielen automatisch auf Leistung.</span></div></li>
+        <li><span class="n"><svg class="i"><use href="#pc"/></svg></span><div><b>NVIDIA-Treiber eingebaut</b><span>Die NVIDIA-Ausgabe bringt den Treiber gleich mit. AMD und Intel brauchen keinen extra.</span></div></li>
+              </ul>
     </div>
     <div class="gamecard">
       <svg class="i pad" viewBox="0 0 24 24" style="stroke-width:.9"><use href="#pad"/></svg>
@@ -1355,8 +1277,8 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head center">
       <div class="kicker">Mehrere Bildschirme</div>
-      <h2>Drei Monitore? Kein Problem.</h2>
-      <p class="sub">Die Taskleiste erscheint auf jedem Bildschirm. Werden Monitore an- oder abgesteckt, passt sich alles automatisch an – Helligkeit lässt sich für jeden einzeln regeln.</p>
+      <h2>Für mehrere Monitore gebaut.</h2>
+      <p class="sub">Jeder Monitor bekommt seine eigene Taskleiste. Die Helligkeit stellst du für jeden einzeln ein.</p>
     </div>
     <div class="monitors">
       <div class="m3"><div class="scr cq"><div class="taskbar"><div class="tb-btn start"><svg><use href="#rocket"/></svg></div><div class="tb-btn"><svg class="i"><use href="#folder"/></svg></div><div class="tb-btn"><svg class="i"><use href="#globe"/></svg></div></div></div><div class="stand"></div><div class="base"></div><div class="lab">Chat & Musik</div></div>
@@ -1371,14 +1293,14 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head">
       <div class="kicker">Sicherheit</div>
-      <h2>Ein System, das auf sich selbst aufpasst.</h2>
-      <p class="sub">Unter der Haube arbeitet ein schreibgeschützter Unterbau. Das System schützt sich selbst – und dich gleich mit.</p>
+      <h2>Schwer kaputtzumachen.</h2>
+      <p class="sub">Das System selbst ist schreibgeschützt. Deine Dateien und Programme liegen getrennt davon.</p>
     </div>
     <div class="shield">
-      <div class="card"><div class="badge"><svg class="i"><use href="#shield"/></svg></div><div><h3>Schreibgeschützt</h3><p>Systemdateien lassen sich nicht versehentlich ändern oder löschen. Deine Dateien, Einstellungen und Apps liegen getrennt und bleiben bei jedem Update erhalten.</p></div></div>
-      <div class="card"><div class="badge f"><svg class="i"><use href="#layers"/></svg></div><div><h3>Updates nur als Ganzes</h3><p>Ein Update klappt komplett oder gar nicht. Es lädt im Hintergrund und wird beim nächsten Neustart aktiv.</p></div></div>
-      <div class="card"><div class="badge g"><svg class="i"><use href="#undo"/></svg></div><div><h3>Immer ein Rückweg</h3><p>Im Bootmenü steht stets der vorherige Stand bereit. Lief etwas schief, ist man mit einem Neustart zurück.</p></div></div>
-      <div class="card"><div class="badge"><svg class="i"><use href="#trash"/></svg></div><div><h3>Nichts geht verloren</h3><p>Dateien landen im Papierkorb, doppelte Namen werden nie überschrieben, Notizen werden alle 15 Sekunden gesichert.</p></div></div>
+      <div class="card"><div class="badge"><svg class="i"><use href="#shield"/></svg></div><div><h3>Schreibgeschützt</h3><p>Systemdateien kannst du nicht aus Versehen ändern oder löschen. Deine eigenen Dateien und Einstellungen bleiben bei jedem Update erhalten.</p></div></div>
+      <div class="card"><div class="badge f"><svg class="i"><use href="#layers"/></svg></div><div><h3>Updates nur als Ganzes</h3><p>Ein Update wird komplett eingespielt oder gar nicht. Es lädt im Hintergrund und gilt ab dem nächsten Neustart.</p></div></div>
+      <div class="card"><div class="badge g"><svg class="i"><use href="#undo"/></svg></div><div><h3>Der vorherige Stand bleibt</h3><p>Im Bootmenü steht immer der letzte Stand bereit. Startet das System nach einem Update nicht sauber, springt es von selbst zurück.</p></div></div>
+      <div class="card"><div class="badge"><svg class="i"><use href="#trash"/></svg></div><div><h3>Nichts geht verloren</h3><p>Gelöschtes landet im Papierkorb, und beim Kopieren wird nie eine Datei mit gleichem Namen überschrieben.</p></div></div>
     </div>
   </div>
 </section>
@@ -1387,51 +1309,30 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
 <section style="padding-top:0">
   <div class="wrap">
     <div class="head">
-      <div class="kicker">Mit an Bord</div>
-      <h2>Und noch viel mehr.</h2>
-      <p class="sub">Noch mehr eigene Helfer – alle im selben Look, alle auf Deutsch, alle so gebaut, dass man nichts falsch machen kann.</p>
+      <div class="kicker">Außerdem dabei</div>
+      <h2>Noch ein paar Programme.</h2>
     </div>
     <div class="apps2">
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#cube"/></svg></span><div><b>3D-Ansicht</b><span class="typ">GLB &amp; glTF</span></div></div>
-        <p>3D-Modelle per Doppelklick ansehen – so einfach wie Fotos.</p>
-        <ul><li>Drehen mit der Maus, zoomen mit dem Mausrad</li><li>Mit den Pfeiltasten durch den Ordner blättern</li><li>Langsames Drehen auf Knopfdruck, Vollbild mit F11</li><li>Zeigt Größe und Maße der Figur</li></ul>
-        <span class="based">Mit model-viewer von Google</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#wave"/></svg></span><div><b>KI-Helfer</b><span class="typ">Schreibtisch-Widget</span></div></div>
-        <p>Fragen stellen, Texte schreiben lassen – direkt auf dem Schreibtisch.</p>
-        <ul><li>Allgemeinwissen mit Wikipedia-Quellen</li><li>E-Mails, Briefe und Nachrichten formulieren</li><li>Drei Modellgrößen, passend zur Grafikkarte</li><li>Läuft komplett auf deinem PC – ohne Konto</li></ul>
-        <span class="based">Mit llama.cpp und Gemma 4</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#broadcast"/></svg></span><div><b>Broadcast</b><span class="typ">Mikrofon &amp; Kamera</span></div></div>
-        <p>Klingt und sieht aus wie im Studio – in jeder App, die Mikro oder Kamera nutzt.</p>
-        <ul><li>KI-Rauschentfernung fürs Mikrofon, Stärke einstellbar</li><li>Virtueller Greenscreen: Hintergrund unscharf, eigenes Bild oder echtes Grün</li><li>Webcam mit bis zu 60 Bildern/s und KI-Upscaling auf 1080p</li><li>Rechnet nur, solange die Kamera benutzt wird</li><li>Auf NVIDIA-Karten über die Grafikkarte</li></ul>
-        <span class="based">Mit DeepFilterNet, Robust Video Matting, PipeWire</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#capture"/></svg></span><div><b>Capture</b><span class="typ">Capture-Karten</span></div></div>
-        <p>Konsole oder Kamera per HDMI-Grabber anschließen und direkt am PC anzeigen.</p>
-        <ul><li>Bild und Ton automatisch dem richtigen Gerät zugeordnet</li><li>Vollbild mit einem Klick</li><li>Bildschirmfoto und Aufnahme</li></ul>
-        <span class="based">Komplett selbst entwickelt</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#calc"/></svg></span><div><b>Taschenrechner</b><span class="typ">Rechner</span></div></div>
-        <p>Der Rechner, der so rechnet, wie man es erwartet.</p>
-        <ul><li>Exakt: 0,1 + 0,2 = 0,3</li><li>Prozent wie bei Windows: 200 + 10 % = 220</li><li>Live-Vorschau und Verlauf (Strg + H)</li><li>Wurzel, Quadrat, Kehrwert</li></ul>
-        <span class="based">Komplett selbst entwickelt</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#bell"/></svg></span><div><b>Benachrichtigungen</b><span class="typ">System</span></div></div>
-        <p>Meldungen von Steam, Discord, Downloads oder Updates erscheinen unten rechts über der Taskleiste – im Gibeon-Look.</p>
-        <ul><li>Einheitliches Design für alle Programme</li><li>Unaufdringlich und klar</li></ul>
-        <span class="based">Komplett selbst entwickelt</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#wave"/></svg></span><div><b>Willkommens-Assistent</b><span class="typ">erster Start</span></div></div>
-        <p>Begrüßt dich nach der Anmeldung und hilft beim Einrichten – bis du „Nicht mehr anzeigen“ anhakst.</p>
-        <ul><li>Mit dem Internet verbinden</li><li>Hintergrundbild aussuchen</li><li>Kurze Tipps, z. B. Windows-Taste + I für die Systemsteuerung</li></ul>
-        <span class="based">Komplett selbst entwickelt</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#rec"/></svg></span><div><b>OBS Studio im Graphit-Look</b><span class="typ">Streaming &amp; Aufnahme</span></div></div>
-        <p>Das bekannte OBS Studio – vorkonfiguriert, auf Deutsch und im Design von Gibeon OS.</p>
-        <ul><li>Eigenes Graphit-Theme ab dem ersten Start</li><li>Für Aufnahmen und Livestreams</li></ul>
-        <span class="based">Basiert auf OBS Studio</span></div>
-      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#chat"/></svg></span><div><b>Messenger</b><span class="typ">Chat zwischen Gibeon-Rechnern</span></div></div>
-        <p>Nachrichten direkt von PC zu PC – ohne Konto, ohne Telefonnummer und ohne fremden Server.</p>
-        <ul><li>Jede Installation hat eine eigene ID, z. B. markus.gibeonos2801</li><li>Nachrichten an ausgeschaltete PCs werden zugestellt, sobald sie wieder online sind</li><li>Wohnt im Tray und startet von selbst</li></ul>
-        <span class="based">Komplett selbst entwickelt</span></div>
       <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#pad"/></svg></span><div><b>Android-Apps <span class="soon">NEU</span></b><span class="typ">Apps vom Handy</span></div></div>
-        <p>Android-Apps direkt auf dem PC nutzen – in eigenen Fenstern, wie normale Programme.</p>
-        <ul><li>Einrichten mit einem Klick in der App „Android-Apps“</li><li>Wahlweise mit Google Play Store oder ohne</li><li>Steht direkt im Startmenü</li></ul>
+        <p>Android-Apps laufen in eigenen Fenstern wie normale Programme.</p>
+        <ul><li>Mit einem Klick eingerichtet</li><li>Mit oder ohne Google Play Store</li></ul>
         <span class="based">Basiert auf Waydroid</span></div>
+      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#chat"/></svg></span><div><b>Messenger</b><span class="typ">Chat zwischen Gibeon-Rechnern</span></div></div>
+        <p>Schickt Nachrichten direkt von PC zu PC. Kein Konto, keine Telefonnummer, kein Server dazwischen.</p>
+        <ul><li>Jede Installation hat eine eigene ID, z. B. markus.gibeonos2801</li><li>Ist der andere PC aus, kommt die Nachricht an, sobald er wieder online ist</li></ul>
+        <span class="based">Selbst entwickelt</span></div>
+      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#capture"/></svg></span><div><b>Capture</b><span class="typ">Capture-Karten</span></div></div>
+        <p>Zeigt das Bild einer Konsole oder Kamera, die per HDMI-Grabber angeschlossen ist.</p>
+        <ul><li>Bild und Ton werden automatisch zugeordnet</li><li>Mit Aufnahme und Bildschirmfoto</li></ul>
+        <span class="based">Selbst entwickelt</span></div>
+      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#rec"/></svg></span><div><b>OBS Studio</b><span class="typ">Streaming &amp; Aufnahme</span></div></div>
+        <p>Das bekannte OBS Studio, vorinstalliert und im Design von Gibeon OS.</p>
+        <ul><li>Für Aufnahmen und Livestreams</li></ul>
+        <span class="based">Basiert auf OBS Studio</span></div>
+      <div class="app2"><div class="top"><span class="ai"><svg class="i"><use href="#cube"/></svg></span><div><b>3D-Ansicht</b><span class="typ">GLB &amp; glTF</span></div></div>
+        <p>Öffnet 3D-Modelle per Doppelklick, so wie ein Bildbetrachter Fotos öffnet.</p>
+        <ul><li>Drehen, zoomen und durch den Ordner blättern</li></ul>
+        <span class="based">Mit model-viewer von Google</span></div>
     </div>
   </div>
 </section>
@@ -1441,8 +1342,8 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head">
       <div class="kicker">Grundlage & Dank</div>
-      <h2>Auf starken Schultern.</h2>
-      <p class="sub">Gibeon OS steht auf großartigen Open-Source-Projekten. Wir nennen sie gern – ohne sie gäbe es dieses System nicht.</p>
+      <h2>Darauf baut Gibeon OS auf.</h2>
+      <p class="sub">Ohne diese Open-Source-Projekte gäbe es Gibeon OS nicht.</p>
     </div>
     <div class="credits">
       <div class="cr">Fedora Atomic<span>Unterbau des Systems</span></div>
@@ -1472,7 +1373,7 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
     <div class="head">
       <div class="kicker">Systemanforderungen</div>
       <h2>Was dein PC braucht.</h2>
-      <p class="sub">Gibeon OS läuft auf jedem aktuellen 64-Bit-PC. Für die KI-Funktionen lohnt sich eine starke Grafikkarte – sie sind aber alle freiwillig.</p>
+      <p class="sub">Gibeon OS läuft auf jedem aktuellen 64-Bit-PC. Eine starke Grafikkarte brauchst du nur für Spiele und die KI-Funktionen.</p>
     </div>
     <div class="hwgrid">
       <div class="hw"><span class="hwtag">Minimum</span><h3>Läuft</h3>
@@ -1483,7 +1384,7 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
           <li><b>Grafik</b><span>Intel, AMD oder NVIDIA mit Vulkan</span></li>
           <li><b>Start</b><span>UEFI, Internet bei der Installation</span></li>
         </ul></div>
-      <div class="hw rec"><span class="hwtag">Empfohlen</span><h3>Läuft rund – auch Spiele</h3>
+      <div class="hw rec"><span class="hwtag">Empfohlen</span><h3>Läuft rund, auch mit Spielen</h3>
         <ul>
           <li><b>Prozessor</b><span>6 Kerne oder mehr</span></li>
           <li><b>Arbeitsspeicher</b><span>16 GB</span></li>
@@ -1507,12 +1408,12 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="dl">
       <div class="kicker">Download</div>
-      <h2 style="margin-bottom:10px">Bereit zum Abheben?</h2>
-      <p class="sub" style="margin-bottom:6px"><b style="color:var(--accent)">Gibeon OS 2 „Vivid Venus“</b> – jede Version fliegt einen Planeten weiter. Installations-ISO vom 19.11.2026.</p>
-      <p class="sub">Wähle die Ausgabe passend zu deiner Grafikkarte – ein Klick, und der Download startet. Die ISO auf einen USB-Stick schreiben, davon starten und den Eintrag zum Installieren wählen. Während der Installation wird das aktuelle Gibeon OS aus dem Internet geladen – du bekommst also immer den neuesten Stand.</p>
+      <h2 style="margin-bottom:10px">Herunterladen</h2>
+      <p class="sub" style="margin-bottom:6px"><b style="color:var(--accent)">Gibeon OS 2 „Vivid Venus“</b>, Installations-ISO vom 19.11.2026.</p>
+      <p class="sub">Nimm die Ausgabe, die zu deiner Grafikkarte passt. Schreib die ISO auf einen USB-Stick und starte den PC davon. Das System selbst wird bei der Installation aus dem Internet geladen, du bekommst also den neuesten Stand.</p>
       <div class="dlgrid">
-        <div class="dlc"><h3>Für NVIDIA</h3><p>Mit eingebautem NVIDIA-Treiber – für Rechner mit GeForce-Grafik.</p><a class="btn primary" href="https://github.com/markuspinkall-ux/creative-os/releases/download/installer/creative-os-nvidia.iso"><svg class="i"><use href="#down"/></svg>ISO für NVIDIA</a></div>
-        <div class="dlc"><h3>Für AMD / Intel</h3><p>Für AMD- und Intel-Grafik – und zum Ausprobieren in einer virtuellen Maschine.</p><a class="btn ghost" href="https://github.com/markuspinkall-ux/creative-os/releases/download/installer/creative-os-amd.iso"><svg class="i"><use href="#down"/></svg>ISO für AMD / Intel</a></div>
+        <div class="dlc"><h3>Für NVIDIA</h3><p>Für Rechner mit GeForce-Grafikkarte. Der Treiber ist schon drin.</p><a class="btn primary" href="https://github.com/markuspinkall-ux/creative-os/releases/download/installer/creative-os-nvidia.iso"><svg class="i"><use href="#down"/></svg>ISO für NVIDIA</a></div>
+        <div class="dlc"><h3>Für AMD / Intel</h3><p>Für AMD- und Intel-Grafik. Diese Ausgabe nimmst du auch für eine virtuelle Maschine.</p><a class="btn ghost" href="https://github.com/markuspinkall-ux/creative-os/releases/download/installer/creative-os-amd.iso"><svg class="i"><use href="#down"/></svg>ISO für AMD / Intel</a></div>
       </div>
       <div class="req"><span>64-Bit-PC mit UEFI</span><span>8 GB RAM, 16 GB empfohlen</span><span>mind. 80 GB Speicher</span><span>Internet bei der Installation</span><a href="#anforderungen" style="color:var(--accent)">Alle Anforderungen</a></div>
     </div>
@@ -1524,12 +1425,12 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
   <div class="wrap">
     <div class="head center"><div class="kicker">Fragen</div><h2>Gut zu wissen</h2></div>
     <div class="faq">
-      <details open><summary>Muss ich mich mit Linux auskennen?</summary><p>Nein. Gibeon OS ist so gebaut, dass es sich wie Windows anfühlt. Alles Wichtige erreichst du über Startmenü, Tray und Systemsteuerung – ganz ohne Kommandozeile.</p></details>
+      <details open><summary>Muss ich mich mit Linux auskennen?</summary><p>Nein. Alles Wichtige erreichst du über Startmenü und Systemsteuerung. Ein Terminal brauchst du nicht.</p></details>
       <details><summary>Was kostet Gibeon OS?</summary><p>Nichts. Gibeon OS ist kostenlos herunterladbar, die eigenen Programme sind Open Source (GPL-3.0).</p></details>
-      <details><summary>Warum heißt es Gibeon OS?</summary><p>Gibeon ist ein berühmter Eisenmeteorit aus Namibia – bekannt für sein kristallines Muster. Bis November 2026 hieß das System Orbit OS, davor Creative OS. Die Rakete als Logo und die Planeten-Versionsnamen sind geblieben.</p></details>
-      <details><summary>Wie kommen Updates auf meinen PC?</summary><p>Automatisch. Neue Stände werden im Hintergrund geladen und beim nächsten Neustart aktiv. Gefällt dir ein Update nicht, wählst du im Bootmenü einfach den vorherigen Stand.</p></details>
-      <details><summary>Laufen meine Windows-Spiele?</summary><p>Viele ja – dank Steam und Proton, die fest eingebaut sind. Einige Spiele mit bestimmten Kopierschutz- oder Anti-Cheat-Systemen können trotzdem Probleme machen.</p></details>
-      <details><summary>Kann ich es erst mal ausprobieren?</summary><p>Klar – in VirtualBox: Typ „Fedora (64-bit)“, EFI aktivieren, 8 GB RAM, 4 CPUs, 80 GB Festplatte und die AMD/Intel-Ausgabe nehmen.</p></details>
+      <details><summary>Warum heißt es Gibeon OS?</summary><p>Gibeon ist ein Eisenmeteorit aus Namibia. Bis November 2026 hieß das System Orbit OS, davor Creative OS. Das Raketen-Logo und die Planeten-Namen der Versionen sind geblieben.</p></details>
+      <details><summary>Wie kommen Updates auf meinen PC?</summary><p>Automatisch im Hintergrund. Aktiv werden sie beim nächsten Neustart. Gefällt dir ein Update nicht, wählst du im Bootmenü den vorherigen Stand.</p></details>
+      <details><summary>Laufen meine Windows-Spiele?</summary><p>Viele ja, dank Proton. Spiele mit manchen Anti-Cheat-Systemen (zum Beispiel einige Online-Shooter) laufen unter Linux allerdings nicht.</p></details>
+      <details><summary>Kann ich es erst mal ausprobieren?</summary><p>Ja, zum Beispiel in VirtualBox: Typ „Fedora (64-bit)“, EFI an, 8 GB RAM, 4 CPUs, 80 GB Festplatte und die AMD/Intel-Ausgabe.</p></details>
     </div>
   </div>
 </section>
