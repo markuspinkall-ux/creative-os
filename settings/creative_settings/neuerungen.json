@@ -7,7 +7,8 @@
     ],
     "verbessert": [
       "Neuer Name: Orbit OS heißt jetzt Gibeon OS, benannt nach dem berühmten Eisenmeteoriten aus Namibia. Der Name ist überall im System umgestellt: Startauswahl, Anmeldung, Systemsteuerung, Installer, Willkommen, Software und Hilfetexte. Der Startmenü-Ordner heißt jetzt „Gibeon OS Suite“, die virtuellen Geräte „Gibeon Kamera“ und „Gibeon Mikrofon“ (in Discord & Co. einmal neu auswählen). Version und Hintergrundbilder bleiben: Gibeon OS 2 · Vivid Venus. Eigene Dateien, Einstellungen und Messenger-Kontakte bleiben unverändert, bestehende IDs wie markus.orbitos2801 gelten weiter, neue IDs enden auf „gibeonos“",
-      "Software: neue Startseite mit Empfehlungen, Kategorien („Wofür brauchst du eine App?“) und beliebten Apps. Apps erscheinen als Kacheln mit Vorschaubild statt als Liste, deutsche Namen und Beschreibungen, keine Seitenzahlen mehr"
+      "Software: neue Startseite mit Empfehlungen, Kategorien („Wofür brauchst du eine App?“) und beliebten Apps. Apps erscheinen als Kacheln mit Vorschaubild statt als Liste, deutsche Namen und Beschreibungen, keine Seitenzahlen mehr",
+      "Startmenü aufgeräumt: „Widgets“ steht nicht mehr im Startmenü. Geöffnet wird es per Rechtsklick auf den Schreibtisch → „Widgets öffnen“"
     ],
     "behoben": [
       "Android-Apps: Das Einrichten brach mit „You must provide System OTA and Vendor OTA URLs“ ab. Android wird jetzt direkt von den offiziellen Waydroid-Servern geladen"

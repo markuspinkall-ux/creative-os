@@ -67,3 +67,12 @@ def test_deck_im_tray_und_autostart():
         assert (ROOT / f"shell/creative_shell/qml/Creative/{d}/deck.svg").is_file()
     sup = (ROOT / "shell/session/creative-shell-supervisor").read_text(encoding="utf-8")
     assert "creative-deck --hintergrund" in sup
+
+
+def test_widgets_nur_per_rechtsklick():
+    """Widgets steht nicht im Startmenü, ist aber über den Schreibtisch-Rechtsklick erreichbar."""
+    assert "NoDisplay=true" in _main_section("widgets/creative-widgets.desktop")
+    src = (ROOT / "shell/creative_shell/apps.py").read_text(encoding="utf-8")
+    assert '"creative-widgets.desktop"' not in src.split("SUITE = {", 1)[1].split("}", 1)[0]
+    qml = (ROOT / "shell/creative_shell/qml/surfaces/Wallpaper.qml").read_text(encoding="utf-8")
+    assert 'act: "widgets"' in qml
