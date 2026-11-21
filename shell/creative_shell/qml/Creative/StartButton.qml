@@ -1,38 +1,52 @@
 import QtQuick
 import Creative
 
-// Startknopf mit der Orbit-Rakete. Leuchtet mit einem Ring, solange das
-// Startmenü offen ist.
+// Startknopf mit der Rakete – rund im Fluid-Design. Leuchtet sanft in der
+// Akzentfarbe, stärker, solange das Startmenü offen ist.
 Item {
     id: root
 
     property bool open: false
     signal clicked()
 
-    implicitWidth: 44
-    implicitHeight: 44
+    implicitWidth: 40
+    implicitHeight: 40
 
-    Rectangle {
-        anchors.centerIn: parent
-        width: 50
-        height: 50
-        radius: 15
-        color: "transparent"
-        border.width: 3
-        border.color: Qt.rgba(143 / 255, 179 / 255, 255 / 255, 0.35)
-        visible: root.open
+    // weiches Leuchten (zwei Ringe, nach außen schwächer)
+    Repeater {
+        model: [{ grow: 12, a: 0.10 }, { grow: 6, a: 0.18 }]
+        delegate: Rectangle {
+            required property var modelData
+            anchors.centerIn: parent
+            width: root.width + modelData.grow
+            height: width
+            radius: width / 2
+            color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b,
+                           modelData.a * (root.open ? 1.8 : (mouse.containsMouse ? 1.2 : 0.7)))
+            Behavior on color { ColorAnimation { duration: 160 } }
+        }
     }
 
     Rectangle {
         anchors.fill: parent
-        radius: Theme.radiusButton
+        radius: width / 2
         color: mouse.pressed ? Qt.darker(Theme.accent, 1.15)
                              : (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent)
+
+        // Lichtkante oben
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 1
+            width: parent.width * 0.55
+            height: 1
+            radius: 1
+            color: Qt.rgba(1, 1, 1, 0.45)
+        }
 
         SvgIcon {
             anchors.centerIn: parent
             name: "rocket"
-            size: 26
+            size: 22
         }
     }
 

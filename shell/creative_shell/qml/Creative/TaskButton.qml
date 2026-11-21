@@ -19,8 +19,8 @@ Item {
     signal rightClicked()
     readonly property bool hovered: mouse.containsMouse
 
-    implicitWidth: 44
-    implicitHeight: 44
+    implicitWidth: 40
+    implicitHeight: 40
 
     Rectangle {
         anchors.fill: parent

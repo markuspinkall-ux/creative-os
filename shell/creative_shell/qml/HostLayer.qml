@@ -14,7 +14,7 @@ Window {
     property string placement: "bar"   // bar | left | right | background
     property string popupKey: ""        // start | panel | trash
     property int surfaceWidth: 400
-    property int surfaceHeight: 74
+    property int surfaceHeight: 52
     property bool wantsKeyboard: false
 
     width: surfaceWidth
