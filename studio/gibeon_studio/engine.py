@@ -535,16 +535,36 @@ class Sender:
         # Pads ausdrücklich benennen: ohne Caps beim Aufbau wüsste flvmux sonst nicht, was Bild und was Ton ist
         desc = (f"flvmux name=mux streamable=true ! {sink}  "
                 f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.video  "
+                f"! queue name=vq max-size-time=30000000000 max-size-bytes=0 max-size-buffers=0 ! mux.video  "
                 f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
                 f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.audio")
         self.pipe = gst.launch(desc)
         self.v = gst.bin_by_name(self.pipe, b"v")
         self.a = gst.bin_by_name(self.pipe, b"a")
+        self.vq = gst.bin_by_name(self.pipe, b"vq")
         self.bus = gst.get_bus(self.pipe)
+        self.backlog = 0.0               # Sekunden Bild, die noch aufs Hochladen warten
+        self._peak = []                  # (zeit, rückstau) der letzten Sekunden
         if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
             self.close()
             raise RuntimeError("Das Ziel ließ sich nicht starten.")
+
+    def health(self):
+        """Wie gut kommt der Upload hinterher? „gut“, „wackelig“ oder „schlecht“ (+ Rückstau in s).
+        Kommt die Leitung nicht nach, staut sich fertig kodiertes Bild vor dem Senden."""
+        with self.lock:
+            if not self.pipe:
+                return "schlecht", 0.0
+            q = gst.get_u64(self.vq, "current-level-time") / gst.SECOND
+            pending = gst.get_u64(self.v, "current-level-bytes")
+        now = time.monotonic()
+        self._peak = [(t, b) for t, b in self._peak if now - t < 3] + [(now, q)]
+        self.backlog = max(b for _t, b in self._peak) + pending / 1_000_000   # grob: 1 MB ≈ 1 s bei 8 Mbit/s
+        if self.backlog < 0.7:
+            return "gut", self.backlog
+        if self.backlog < 2.5:
+            return "wackelig", self.backlog
+        return "schlecht", self.backlog
 
     def push(self, sample, video):
         with self.lock:
@@ -589,10 +609,10 @@ class Sender:
         with self.lock:
             if self.pipe:
                 gst.set_state(self.pipe, gst.STATE_NULL)
-                for el in (self.v, self.a, self.bus, self.pipe):
+                for el in (self.v, self.a, self.vq, self.bus, self.pipe):
                     if el:
                         gst.object_unref(el)
-                self.pipe = self.v = self.a = self.bus = None
+                self.pipe = self.v = self.a = self.vq = self.bus = None
 
 
 class LiveEncoder(Output):
@@ -627,6 +647,10 @@ class LiveEncoder(Output):
             finally:
                 gst.mini_unref(s)
         return gst.FLOW_OK
+
+    def health(self):
+        """{ziel: (zustand, rückstau)} aller laufenden Ziele."""
+        return {key: snd.health() for key, snd in list(self.senders.items())}
 
     def stop_target(self, key):
         snd = self.senders.get(key)

@@ -555,6 +555,45 @@ ApplicationWindow {
                     x: 14; y: 14
                     spacing: 8
                     Badge { visible: !!st.live; text: "LIVE  " + st.liveTime; fill: win.redLive; pulse: true }
+                    // Ampel je Ziel: kommt der Upload hinterher?
+                    Repeater {
+                        model: st.live ? (st.upload || []) : []
+                        delegate: Rectangle {
+                            id: upItem
+                            required property var modelData
+                            readonly property color dot: modelData.state === "gut" ? "#3ecf8e" : modelData.state === "wackelig" ? "#f5b544" : "#e5484d"
+                            height: 26
+                            width: upRow.implicitWidth + 18
+                            radius: 8
+                            color: Qt.rgba(0.07, 0.08, 0.1, 0.78)
+                            border.color: modelData.state === "gut" ? "transparent" : dot
+                            Row {
+                                id: upRow
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: upItem.dot
+                                    SequentialAnimation on opacity {
+                                        running: upItem.modelData.state === "schlecht"
+                                        loops: Animation.Infinite
+                                        NumberAnimation { to: 0.3; duration: 400 }
+                                        NumberAnimation { to: 1; duration: 400 }
+                                    }
+                                }
+                                Text {
+                                    text: upItem.modelData.label + (upItem.modelData.state === "gut" ? "  flüssig"
+                                          : upItem.modelData.state === "wackelig" ? "  wackelig" : "  Upload zu langsam")
+                                    color: "white"; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true
+                                }
+                            }
+                            ToolTip.visible: upHover.containsMouse
+                            ToolTip.text: modelData.state === "gut" ? "Der Upload kommt hinterher."
+                                : "Rückstau " + modelData.backlog.toFixed(1) + " s – deine Leitung schafft die Bitrate gerade nicht. Bitrate senken hilft."
+                            MouseArea { id: upHover; anchors.fill: parent; hoverEnabled: true }
+                        }
+                    }
                     Badge { visible: !!st.recording; text: "● Aufnahme  " + st.recTime; fill: Qt.rgba(0.07, 0.08, 0.1, 0.78) }
                 }
                 Text {

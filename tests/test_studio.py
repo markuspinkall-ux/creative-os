@@ -177,6 +177,8 @@ class Mischpult(unittest.TestCase):
                 time.sleep(0.05)
             self.assertIn("custom", ended)                     # ein Ziel bricht ab …
             self.assertEqual(sorted(enc.senders), ["kick", "twitch"])   # … die anderen senden weiter
+            health = enc.health()
+            self.assertEqual(health["kick"][0], "gut")              # Datei schreibt schnell genug
             m.stop_output("live")
             t = time.time()
             while m.outputs and time.time() - t < 10:

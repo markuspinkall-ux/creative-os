@@ -451,6 +451,7 @@ class Studio(QObject):
             "unsupported": getattr(self, "unsupported", []),
             "sinkDevices": [{"id": d["id"][:-len(".monitor")] if d["id"] else "", "name": d["name"]} for d in self.output_list],
             "monitorEcho": self._monitor_echo(),
+            "upload": self._upload_health(),
             "scenes": [{"name": sc["name"], "count": len(sc["items"])} for sc in self.cfg["scenes"]],
             "scene": self.cfg["scene"], "items": self._items_state(),
         }
@@ -1009,6 +1010,14 @@ class Studio(QObject):
                     self.mixer.monitors[slot].device = self.cfg["monitor_device"]
             except (RuntimeError, ValueError) as e:
                 self.toast.emit(str(e))
+
+    def _upload_health(self):
+        """Ampel je Stream-Ziel: [{key, label, state, backlog}]."""
+        enc = self.mixer.outputs.get("live")
+        if not enc or not hasattr(enc, "health"):
+            return []
+        return [{"key": k, "label": _target_label(k), "state": st, "backlog": round(b, 1)}
+                for k, (st, b) in enc.health().items()]
 
     def _monitor_echo(self):
         """Hörst du die Capture-Karte über dasselbe Gerät mit, das „Desktop-Ton“ aufnimmt, landet sie

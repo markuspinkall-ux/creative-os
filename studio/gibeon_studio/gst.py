@@ -402,3 +402,15 @@ def relay_sample(appsink, appsrc):
         appsrc_push_buffer(appsrc, out)
     finally:
         mini_unref(s)
+
+
+g_object_get_u64 = _fn(gobj, "g_object_get", None, P, S, ctypes.POINTER(U64), P)
+
+
+def get_u64(obj, name):
+    """Zahl-Eigenschaft (guint64) lesen, z. B. „current-level-time“ einer queue. 0, wenn es sie nicht gibt."""
+    if not obj or not has_property(obj, name):
+        return 0
+    v = U64(0)
+    g_object_get_u64(obj, name.encode(), ctypes.byref(v), None)
+    return v.value
