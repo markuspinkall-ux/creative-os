@@ -65,6 +65,10 @@ time.sleep(1.5)
 app.processEvents()
 f = s.mixer.frame()
 check(f is not None, "Vorschau liefert Bilder")
+if f is None:
+    print("  Fehler:", s.error, s.mixer.errors, "Pads:", s.mixer.pads, "Pipeline:", bool(s.mixer.pipe))
+    sources, audio = s._sources()
+    print("  Quellen:", sources)
 if f:
     d, w, h = f
 
