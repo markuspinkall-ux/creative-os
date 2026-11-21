@@ -42,10 +42,12 @@ DEFAULTS = {
     "main": {"type": "screen", "device": ""},
     "cam": {"on": False, "device": "", "corner": "unten-rechts", "size": "mittel"},
     "audio": {
-        "mic": {"on": True, "device": "", "volume": 1.0, "muted": False},
-        "desktop": {"on": True, "device": "", "volume": 1.0, "muted": False},
-        "extra": {"on": False, "device": "", "volume": 1.0, "muted": False},
+        "mic": {"on": True, "device": "", "volume": 1.0, "muted": False, "listen": False},
+        "desktop": {"on": True, "device": "", "volume": 1.0, "muted": False, "listen": False},
+        "extra": {"on": False, "device": "", "volume": 1.0, "muted": False, "listen": False},
     },
+    # Mithören (z. B. Capture-Karte über Kopfhörer): Ausgabegerät, "" = Standard-Ausgabe
+    "monitor_device": "",
     "format": "mp4",
     "targets": {"twitch": True, "youtube": True, "kick": False, "tiktok": False, "custom": False},
     "custom_url": "",
@@ -447,6 +449,8 @@ class Studio(QObject):
             "recFile": self.rec_file, "canvases": list(engine.CANVAS),
             "locked": self.live or self.recording, "outputDevices": self.output_list,
             "unsupported": getattr(self, "unsupported", []),
+            "sinkDevices": [{"id": d["id"][:-len(".monitor")] if d["id"] else "", "name": d["name"]} for d in self.output_list],
+            "monitorEcho": self._monitor_echo(),
             "scenes": [{"name": sc["name"], "count": len(sc["items"])} for sc in self.cfg["scenes"]],
             "scene": self.cfg["scene"], "items": self._items_state(),
         }
@@ -506,12 +510,16 @@ class Studio(QObject):
         if old == value:
             return
         if keys[0] in SOURCE_KEYS and self.live or keys[0] in SOURCE_KEYS and self.recording:
-            if not (keys[0] == "audio" and keys[-1] in ("volume", "muted")):
+            if not (keys[0] == "audio" and keys[-1] in ("volume", "muted", "listen")):
                 self.toast.emit("Quellen lassen sich während Aufnahme oder Stream nicht tauschen.")
                 self.changed.emit()
                 return
         node[keys[-1]] = value
         self._save()
+        if keys[0] == "audio" and keys[-1] == "listen" or path == "monitor_device":
+            self._apply_monitors()
+            self.changed.emit()
+            return
         if keys[0] == "audio" and keys[-1] in ("volume", "muted"):
             a = self.cfg["audio"][keys[1]]
             self.mixer.set_volume(keys[1], a["volume"], a["muted"])
@@ -722,7 +730,7 @@ class Studio(QObject):
             if slot == "extra" and not a["device"]:
                 continue
             audio[slot] = {"type": "device" if slot == "extra" else slot, "device": a["device"],
-                           "volume": a["volume"], "muted": a["muted"]}
+                           "volume": a["volume"], "muted": a["muted"], "monitorable": slot == "extra"}
         if self.selftest:
             audio = {"mic": {"type": "test", "freq": 440}, "desktop": {"type": "test", "freq": 660}}
         return out, audio
@@ -980,7 +988,37 @@ class Studio(QObject):
         except (ValueError, RuntimeError) as e:
             self.error = f"Studio konnte die Quellen nicht starten: {e}"
         self.levels = dict(self.mixer.levels)
+        self._apply_monitors()
         self.changed.emit()
+
+    def _apply_monitors(self):
+        """Mithören wie eingestellt (Kopfhörer) – läuft unabhängig von Stream und Aufnahme."""
+        if self.selftest:
+            return
+        for slot in ("extra",):                    # nur die weitere Tonquelle (Capture-Karte) – das Mikrofon
+            a = self.cfg["audio"][slot]             # würdest du doppelt hören
+            want = a["listen"] and a["on"]
+            mon = self.mixer.monitors.get(slot)
+            if want and mon and getattr(mon, "device", None) == self.cfg["monitor_device"]:
+                continue
+            if not want and not mon:
+                continue
+            try:
+                self.mixer.set_monitor(slot, want, self.cfg["monitor_device"])
+                if want:
+                    self.mixer.monitors[slot].device = self.cfg["monitor_device"]
+            except (RuntimeError, ValueError) as e:
+                self.toast.emit(str(e))
+
+    def _monitor_echo(self):
+        """Hörst du die Capture-Karte über dasselbe Gerät mit, das „Desktop-Ton“ aufnimmt, landet sie
+        doppelt im Stream (einmal direkt, einmal über den Desktop-Ton)."""
+        a = self.cfg["audio"]
+        if not (a["extra"]["listen"] and a["extra"]["on"] and a["desktop"]["on"]):
+            return False
+        dev = self.cfg["monitor_device"]
+        desk = a["desktop"]["device"]
+        return (not desk and not dev) or desk == f"{dev}.monitor"
 
     def _on_frame(self, data, w, h):
         # GStreamer-Thread: Bild kopieren, das Signal bringt es in den Hauptthread
@@ -1261,6 +1299,8 @@ class Studio(QObject):
             self.mixer.poll()
             time.sleep(0.05)
         self.mixer.stop()
+        for slot in list(self.mixer.monitors):
+            self.mixer.set_monitor(slot, False)
         self._stop_portal()
 
     @Slot(result=bool)
@@ -1312,6 +1352,8 @@ def _nice_error(text):
         return "Die Bildschirmfreigabe liefert gerade kein Bild – Studio versucht es weiter."
     if "v4l2" in low or "video" in low and "device" in low:
         return "Kamera oder Capture-Karte antwortet nicht – ist sie angeschlossen oder in einem anderen Programm offen?"
+    if low.startswith("monitor:"):
+        return "Mithören ist ausgefallen – sind die Kopfhörer noch angeschlossen?"
     if "pulse" in low:
         return "Eine Tonquelle ist nicht verfügbar."
     if "pipewire" in low:

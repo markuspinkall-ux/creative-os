@@ -1119,6 +1119,28 @@ ApplicationWindow {
                 empty: "Kein Gerät"
                 onChosen: (id) => studio.set("audio." + strip.slot + ".device", id)
             }
+            // Capture-Karte über Kopfhörer mithören (nicht fürs Mikrofon – da hörst du dich doppelt)
+            RowLayout {
+                Layout.fillWidth: true
+                visible: strip.slot === "extra"
+                Text { text: "Mithören"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true }
+                CSwitch { checked: !!strip.a.listen; enabled: !!strip.a.on; label: "Mithören"; onToggled: (v) => studio.set("audio.extra.listen", v) }
+            }
+            Pick {
+                Layout.fillWidth: true
+                visible: strip.slot === "extra" && !!strip.a.listen
+                items: st.sinkDevices || []
+                current: cfg.monitor_device || ""
+                empty: "Standard-Ausgabe"
+                onChosen: (id) => { if (id !== (cfg.monitor_device || "")) studio.set("monitor_device", id) }
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: strip.slot === "extra" && !!st.monitorEcho
+                wrapMode: Text.WordWrap
+                text: "Achtung: Desktop-Ton nimmt dein Mithören mit auf – die Capture-Karte wäre doppelt im Stream. Wähle beim Desktop-Ton ein anderes Gerät oder hier eigene Kopfhörer."
+                color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
+            }
         }
     }
 

@@ -331,7 +331,14 @@ def build_description(cfg, sources, audio, layout=None):
         if not d:
             continue
         vol = max(0.0, min(2.0, float(src.get("volume", 1.0))))
-        parts.append(f"{d} ! audioconvert ! audioresample ! {AUDIO_CAPS} "
+        # Mithören (Kopfhörer): Abzweig vor der Lautstärke → appsink; die Wiedergabe läuft in einer
+        # eigenen kleinen Pipeline (Monitor) und lässt sich jederzeit an- und abschalten
+        tap = ""
+        if src.get("monitorable"):
+            tap = f"! tee name=tee_{slot} allow-not-linked=true ! queue max-size-time=200000000 leaky=downstream "
+            parts.append(f"tee_{slot}. ! queue max-size-time=100000000 leaky=downstream "
+                         f"! appsink name=mon_{slot} emit-signals=true sync=false max-buffers=4 drop=true")
+        parts.append(f"{d} ! audioconvert ! audioresample ! {AUDIO_CAPS} {tap}"
                      f"! volume name=vol_{slot} volume={vol:.3f} mute={'true' if src.get('muted') else 'false'} "
                      f"! level name=lvl_{slot} interval=50000000 post-messages=true "
                      f"! queue max-size-time=500000000 leaky=downstream ! amix.")
@@ -462,6 +469,51 @@ class Output:
                 if el:
                     gst.object_unref(el)
             self.pipe = self.v = self.a = self.bus = None
+
+
+class Monitor:
+    """Mithören über Kopfhörer: Ton aus dem Mischpult → eigene Wiedergabe-Pipeline.
+    Kurze Puffer, damit der Ton kaum hinterherhängt; ein Fehler hier stört Stream und Aufnahme nicht."""
+
+    def __init__(self, device=""):
+        dev = f" device={_q(device)}" if device else ""
+        sink = "pulsesink" if gst.has("pulsesink") else "autoaudiosink"
+        extra = (f'{dev} sync=false buffer-time=40000 latency-time=10000 client-name="Studio (Mithören)"'
+                 if sink == "pulsesink" else " sync=false")
+        self.pipe = gst.launch(f"appsrc name=src is-live=true do-timestamp=true format=time block=false "
+                               f"caps={_q(AUDIO_CAPS)} ! queue max-size-time=100000000 leaky=downstream "
+                               f"! audioconvert ! audioresample ! {sink} name=out{extra}")
+        self.src = gst.bin_by_name(self.pipe, b"src")
+        self.bus = gst.get_bus(self.pipe)
+        self.lock = threading.Lock()
+        self.error = ""
+        if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
+            self.close()
+            raise RuntimeError("Mithören lässt sich nicht starten.")
+
+    def push(self, sink):
+        with self.lock:
+            gst.relay_sample(sink, self.src)
+
+    def poll(self):
+        while self.bus:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            if m[0] == gst.MSG_ERROR:
+                self.error = m[2].split(" | ")[0]
+                self.close()
+                return False
+        return self.pipe is not None
+
+    def close(self):
+        with self.lock:
+            if self.pipe:
+                gst.set_state(self.pipe, gst.STATE_NULL)
+                for el in (self.src, self.bus, self.pipe):
+                    if el:
+                        gst.object_unref(el)
+            self.pipe = self.src = self.bus = None
 
 
 class Sender:
@@ -628,6 +680,8 @@ class Mixer:
         self.pads = {}                  # Quelle → Pad-Name am Mischpult
         self.feeders = {}               # Quelle → Feeder (Kameras, Bildschirm)
         self.on_frame = None            # fn(bytes, b, h) – jedes Vorschaubild, sobald es fertig ist
+        self.monitors = {}              # Tonquelle → Monitor (Mithören über Kopfhörer)
+        self.monitor_device = ""
         self.last_frame = None
         self.rounds = {}                # Pad-Name → Eckenradius (Anteil), 0 = eckig
         self._overlays = []
@@ -669,7 +723,28 @@ class Mixer:
                 self.feeders[key] = Feeder(key, by_key[key], feed, self.size)
         self.set_rounds(rounds or {})
         self.levels = {slot: -90.0 for slot in audio}
+        for slot in audio:
+            tap = gst.bin_by_name(self.pipe, f"mon_{slot}".encode())
+            if tap:
+                self._handlers.append((tap, gst.connect_new_sample(tap, lambda s, slot=slot: self._on_monitor(s, slot))))
+                gst.object_unref(tap)
         gst.set_state(self.pipe, gst.STATE_PLAYING)
+
+    def _on_monitor(self, sink, slot):
+        mon = self.monitors.get(slot)
+        if mon:
+            mon.push(sink)
+        else:
+            gst.relay_sample(sink, None)            # nur abholen, damit nichts staut
+        return gst.FLOW_OK
+
+    def set_monitor(self, slot, on, device=""):
+        """Mithören an/aus – sofort, ohne das Mischpult neu aufzubauen."""
+        old = self.monitors.pop(slot, None)
+        if old:
+            old.close()
+        if on:
+            self.monitors[slot] = Monitor(device)
 
     def _branch_ok(self, src):
         w, h, fps = CANVAS.get(self.cfg.get("canvas"), CANVAS["1080p30"])
@@ -878,6 +953,10 @@ class Mixer:
                         self.levels[src[4:]] = max(-90.0, max(vals))
             elif typ == gst.MSG_ERROR:
                 self.errors.append(f"{src}: {text.split(' | ')[0]}")
+        for slot, mon in list(self.monitors.items()):
+            if not mon.poll():
+                self.monitors.pop(slot, None)
+                self.errors.append(f"monitor:{slot}: {mon.error}")
         for key, f in list(self.feeders.items()):
             err = f.poll()
             if err:

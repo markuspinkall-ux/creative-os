@@ -127,6 +127,36 @@ class Szenen(unittest.TestCase):
             m.stop()
 
 
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class Mithoeren(unittest.TestCase):
+    def test_capture_ton_kommt_beim_mithoeren_an(self):
+        class Fake:
+            n = 0
+
+            def push(self, sink):
+                engine.gst.relay_sample(sink, None)
+                Fake.n += 1
+
+            def poll(self):
+                return True
+
+            def close(self):
+                pass
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, [], {"extra": {"type": "test", "monitorable": True},
+                                           "mic": {"type": "test"}}, {}, {})
+        try:
+            self.assertIn("mon_extra", engine.build_description({}, [], {"extra": {"type": "test", "monitorable": True}})[0])
+            self.assertNotIn("mon_mic", engine.build_description({}, [], {"mic": {"type": "test"}})[0])
+            m.monitors["extra"] = Fake()
+            time.sleep(0.8)
+            m.poll()
+            self.assertGreater(Fake.n, 5)
+            self.assertGreater(m.levels.get("extra", -90), -60)        # Stream-Ton läuft weiter
+        finally:
+            m.stop()
+
+
 @unittest.skipUnless(HAVE_GST, "GStreamer fehlt")
 class Mischpult(unittest.TestCase):
     def test_multistream_einmal_kodiert(self):
