@@ -405,3 +405,62 @@ class StreamDeck(unittest.TestCase):
         # selbst angepasste OBS-Seite bleibt, wie sie ist
         cfg["seiten"][1] = {"name": "OBS", "tasten": {"0": config._key("X", "", {"typ": "obs", "was": "stream"})}}
         self.assertEqual(config._to_studio(cfg)["seiten"][1]["name"], "OBS")
+
+
+class Qualitaet(unittest.TestCase):
+    def test_leinwand_und_stream(self):
+        self.assertEqual(engine.canvas_size("1440p50"), (2560, 1440, 50))
+        self.assertEqual(engine.canvas_size("2160p30"), (3840, 2160, 30))
+        self.assertEqual(engine.canvas_size("quatsch"), (1920, 1080, 30))
+        self.assertEqual(engine.size_for_height(936), (1664, 936))
+
+    def test_capture_karte_passend_zur_leinwand(self):
+        from gibeon_studio import geraete
+        k = [{"format": "NV12", "width": 3840, "height": 2160, "fps": 30.0},
+             {"format": "NV12", "width": 1920, "height": 1080, "fps": 60.0},
+             {"format": "NV12", "width": 2560, "height": 1440, "fps": 60.0}]
+        self.assertEqual(geraete.pick_capture_mode(k, 30, 2160)["height"], 2160)
+        self.assertEqual(geraete.pick_capture_mode(k, 60, 1080)["height"], 1080)
+        self.assertEqual(geraete.pick_capture_mode(k, 60, 1440)["height"], 1440)
+        self.assertEqual(geraete.pick_capture_mode(k[:2], 60, 1440)["height"], 1080)   # nie unnötig größer
+
+    @unittest.skipUnless(__import__("shutil").which("ffmpeg"), "ffmpeg fehlt")
+    def test_hochskalieren_schnell(self):
+        import subprocess
+        d = tempfile.mkdtemp()
+        src, dst = os.path.join(d, "a.mp4"), os.path.join(d, "a_4K.mp4")
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+                        "testsrc=size=640x360:rate=25", "-f", "lavfi", "-i", "sine", "-t", "1",
+                        "-c:v", "libx264", "-c:a", "aac", src], check=True)
+        out = subprocess.run([sys.executable, "-m", "gibeon_studio.hochskalieren", "--art", "schnell", src, dst],
+                             capture_output=True, text=True, cwd=ROOT / "studio", timeout=600)
+        self.assertIn("fertig", out.stdout, out.stdout + out.stderr)
+        info = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                               "stream=width,height", "-of", "csv=p=0", dst], capture_output=True, text=True).stdout
+        self.assertEqual(info.strip(), "3840,2160")
+        self.assertFalse(any(n.startswith(".teil-") for n in os.listdir(d)))
+
+
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class Browserquelle(unittest.TestCase):
+    def test_durchsichtig_im_bild(self):
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, [{"key": "bg", "type": "test", "pattern": "white"},
+                                       {"key": "w", "type": "browser", "w": 200, "h": 100}], {},
+                {"bg": (0, 0, 1280, 720, 1), "w": (0, 0, 640, 320, 2)}, {})
+        try:
+            half = b"".join(b"\x00\x00\xff\xff" * 100 + b"\x00\x00\x00\x00" * 100 for _ in range(100))
+            for _ in range(8):
+                self.assertTrue(m.push_web("w", half, 200, 100))
+                time.sleep(0.05)
+            self.assertFalse(m.push_web("w", half, 100, 100))            # falsche Größe wird abgelehnt
+            time.sleep(0.4)
+            d, w, h = m.frame()
+
+            def px(x, y):
+                i = (int(y * h) * w + int(x * w)) * 4
+                return tuple(d[i:i + 3])
+            self.assertEqual(px(0.1, 0.2), (0, 0, 255))      # roter Teil der Seite
+            self.assertEqual(px(0.4, 0.2), (255, 255, 255))  # durchsichtiger Teil zeigt das Bild darunter
+        finally:
+            m.stop()

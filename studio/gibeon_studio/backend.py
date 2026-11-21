@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Property, QObject, QSocketNotifier, Qt, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QObject, QProcess, QSocketNotifier, Qt, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QImageReader, QPainter
 from PySide6.QtQuick import QQuickPaintedItem
 
@@ -49,6 +49,12 @@ DEFAULTS = {
     # Mithören (z. B. Capture-Karte über Kopfhörer): Ausgabegerät, "" = Standard-Ausgabe
     "monitor_device": "",
     "format": "mp4",
+    # Qualität: Stream eigens verkleinern/drosseln, Aufnahme-Qualität, Kodierer, 4K nach der Aufnahme
+    "stream_res": "gleich",          # gleich | 1080 | 936 | 720
+    "stream_fps": "gleich",          # gleich | 30
+    "rec_quality": "normal",         # normal | hoch | sehr-hoch
+    "encoder": "auto",               # auto (Grafikkarte, wenn möglich) | cpu
+    "upscale": "aus",                # aus | schnell | ki
     "targets": {"twitch": True, "youtube": True, "kick": False, "tiktok": False, "custom": False},
     "custom_url": "",
     "custom_key": "",
@@ -68,7 +74,8 @@ SOURCE_KEYS = ("canvas", "audio")
 # Standard-Server, wenn jemand nur den Stream-Schlüssel einträgt
 INGEST = {"twitch": "rtmp://ingest.global-contribute.live-video.net/app",
           "youtube": "rtmp://a.rtmp.youtube.com/live2"}
-KINDS = {"screen": "Bildschirm", "camera": "Kamera", "capture": "Capture-Karte", "image": "Bild", "test": "Test"}
+KINDS = {"screen": "Bildschirm", "camera": "Kamera", "capture": "Capture-Karte", "image": "Bild",
+         "browser": "Browserquelle", "test": "Test"}
 
 
 def user_dir(kind, fallback):
@@ -214,6 +221,9 @@ def item_key(item):
         return f"image:{item['file']}" if item.get("file") else None
     if k == "test":
         return f"test:{item['id']}"
+    if k == "browser":
+        # gleiche Seite in gleicher Größe = eine Quelle, auch über mehrere Szenen
+        return f"web:{item.get('bw', 800)}x{item.get('bh', 600)}:{item['url']}" if item.get("url") else None
     return None
 
 
@@ -334,6 +344,9 @@ class Studio(QObject):
         self.video_list = []
         self.audio_list = []
         self.output_list = []
+        self.upscale_queue = []
+        self.upscale_job = None
+        self.ki_ok, self.ki_why = False, ""
         self._images = {}                         # Datei → (png, b, h)
         if selftest:
             # Selbsttest beim Bauen: Testbild, abgerundete Test-Kamera mit Grünschlüssel, ein Bild
@@ -380,6 +393,7 @@ class Studio(QObject):
         if self._wants_screen():
             self._screen_wanted = True
             self._start_portal()
+        self._check_ki()
         self._rebuild()
         for name, acc in self.accounts.items():
             if acc.connected:
@@ -453,6 +467,12 @@ class Studio(QObject):
             if engine.video_encoder() else "kein Kodierer", "status": self.status, "error": self.error,
             "screenReady": self.screen is not None, "screenAsking": self._portal is not None and self.screen is None,
             "recFile": self.rec_file, "canvases": list(engine.CANVAS),
+            "canvasHeight": engine.canvas_size(self.cfg["canvas"])[1], "canvasFps": engine.canvas_size(self.cfg["canvas"])[2],
+            "heights": list(engine.HEIGHTS), "rates": list(engine.RATES),
+            "recMbit": round(self._rec_kbps() / 1000), "kiOk": self.ki_ok, "kiWhy": self.ki_why,
+            "upscaleJob": {k: v for k, v in self.upscale_job.items() if k != "proc"} if self.upscale_job else {},
+            "upscaleQueue": len(self.upscale_queue),
+            "webSources": self._web_sources(),
             "locked": self.live or self.recording, "outputDevices": self.output_list,
             "unsupported": getattr(self, "unsupported", []),
             "sinkDevices": [{"id": d["id"][:-len(".monitor")] if d["id"] else "", "name": d["name"]} for d in self.output_list],
@@ -468,12 +488,14 @@ class Studio(QObject):
         for it in self._scene()["items"]:
             label = it.get("name") or {
                 "screen": "Bildschirm", "image": Path(it.get("file") or "Bild").name,
+                "browser": (QUrl(it.get("url") or "").host() or "Browserquelle"),
             }.get(it["kind"]) or names.get(it.get("device")) or KINDS.get(it["kind"], it["kind"])
             out.append({"id": it["id"], "kind": it["kind"], "label": label, "device": it.get("device", ""),
                         "x": it["x"], "y": it["y"], "w": it["w"], "h": item_height(it),
                         "round": it.get("round", False), "green": it.get("green", False),
                         "hidden": it.get("hidden", False), "ok": item_key(it) is not None,
-                        "virtual": is_virtual(names.get(it.get("device"), ""))})
+                        "virtual": is_virtual(names.get(it.get("device"), "")),
+                        "url": it.get("url", ""), "bw": it.get("bw", 800), "bh": it.get("bh", 600)})
         return out
 
     state = Property("QVariantMap", lambda self: self._state(), notify=changed)
@@ -708,7 +730,8 @@ class Studio(QObject):
             dev = next((d for d in self.video_list if d["id"] == it["device"]), {})
             if k == "capture" or dev.get("capture"):
                 # Capture-Karten (z. B. Elgato): bestes Format fest einstellen, 1080p mit voller Bildrate
-                src["mode"] = geraete.capture_mode(it["device"])
+                _w, ch, cfps = engine.canvas_size(self.cfg["canvas"])
+                src["mode"] = geraete.capture_mode(it["device"], fps_max=min(60, max(cfps, 30)), height=ch)
             return src
         if k == "image":
             img = self._image(it["file"])
@@ -717,6 +740,8 @@ class Studio(QObject):
             return {"key": key, "type": "image", "file": img[0], "w": img[1], "h": img[2]}
         if k == "test":
             return {"key": key, "type": "test", "pattern": it.get("pattern", "smpte"), "green": bool(it.get("green"))}
+        if k == "browser":
+            return {"key": key, "type": "browser", "w": it.get("bw", 800), "h": it.get("bh", 600)}
         return None
 
     def _sources(self):
@@ -744,7 +769,7 @@ class Studio(QObject):
 
     def _layout(self):
         """Anordnung der aktiven Szene in Pixeln + Ecken: ({key: (x, y, b, h, z)}, {key: radius})."""
-        W, H, _fps = engine.CANVAS.get(self.cfg["canvas"], engine.CANVAS["1080p30"])
+        W, H, _fps = engine.canvas_size(self.cfg["canvas"])
         layout, rounds = {}, {}
         for z, it in enumerate(self._scene()["items"], start=1):
             key = item_key(it)
@@ -857,6 +882,13 @@ class Studio(QObject):
             items.insert(0, new_item(self.cfg, "screen"))
             self._structure()
             return 0
+        if kind == "browser":
+            # z. B. StreamElements/Streamlabs-Alerts: oben rechts, 800×600, Adresse trägt man danach ein
+            it = new_item(self.cfg, "browser", url="", bw=800, bh=600, aspect=800 / 600, w=0.32)
+            it["x"], it["y"] = 1 - 0.32 - 0.02, 0.04
+            items.append(it)
+            self._structure()
+            return len(items) - 1
         if kind not in ("camera", "capture"):
             return -1
         used = {it.get("device") for it in items}
@@ -918,7 +950,19 @@ class Studio(QObject):
     @Slot(int, str, "QVariant")
     def setItem(self, index, field, value):
         it = self._item(index)
-        if not it or field not in ("device", "round", "hidden", "green", "name"):
+        if not it or field not in ("device", "round", "hidden", "green", "name", "url", "bw", "bh"):
+            return
+        if field in ("url", "bw", "bh"):
+            if field == "url":
+                url = str(value).strip()
+                if url and "://" not in url:
+                    url = "https://" + url
+                it["url"] = url
+            else:
+                it[field] = max(64, min(3840, int(value or 0) // 2 * 2))
+                # Seitengröße ändern: Höhe im Bild passt sich an, Breite bleibt
+                it["aspect"] = it.get("bw", 800) / max(1, it.get("bh", 600))
+            self._structure()
             return
         if field == "device":
             it["device"] = str(value)
@@ -1060,6 +1104,9 @@ class Studio(QObject):
                 self.rec_since = 0
                 if err:
                     self.toast.emit(f"Aufnahme abgebrochen: {err}")
+                elif self.cfg["upscale"] != "aus" and engine.canvas_size(self.cfg["canvas"])[1] < 2160:
+                    self.toast.emit("Aufnahme gespeichert – wird jetzt im Hintergrund auf 4K hochskaliert.")
+                    self._start_upscale(out.target)
                 else:
                     self.toast.emit("Aufnahme gespeichert")
             else:
@@ -1096,7 +1143,8 @@ class Studio(QObject):
         ext = "mkv" if self.cfg["format"] == "mkv" else "mp4"
         self.rec_file = str(folder / f"Studio_{time.strftime('%Y-%m-%d_%H-%M-%S')}.{ext}")
         try:
-            out = self.mixer.start_output("record", self.rec_file, self.cfg["kbps"] + 4000, ext)
+            out = self.mixer.start_output("record", self.rec_file, self._rec_kbps(), ext,
+                                          cpu_only=self.cfg["encoder"] == "cpu")
         except (RuntimeError, ValueError) as e:
             self.toast.emit(f"Aufnahme startet nicht: {e}")
             return
@@ -1144,10 +1192,122 @@ class Studio(QObject):
         self._start_live(targets)
         self.changed.emit()
 
+    def _rec_kbps(self):
+        """Aufnahme-Bitrate nach Qualität, Auflösung und Bildrate (1080p30: 12 / 20 / 40 Mbit/s)."""
+        w, h, fps = engine.canvas_size(self.cfg["canvas"])
+        base = {"normal": 12000, "hoch": 20000, "sehr-hoch": 40000}.get(self.cfg["rec_quality"], 12000)
+        return int(base * (w * h) / (1920 * 1080) * (fps / 30) ** 0.6)
+
+    def _stream_size(self):
+        """(b, h, fps) für den Stream oder None (wie die Leinwand)."""
+        w, h, fps = engine.canvas_size(self.cfg["canvas"])
+        if self.cfg["stream_res"].isdigit() and int(self.cfg["stream_res"]) < h:
+            w, h = engine.size_for_height(int(self.cfg["stream_res"]))
+        if self.cfg["stream_fps"] == "30" and fps > 30:
+            fps = 30
+        out = (w, h, fps)
+        return None if out == engine.canvas_size(self.cfg["canvas"]) else out
+
+    # ---- Browserquellen -----------------------------------------------------------------------------
+    def _web_sources(self):
+        """Alle Browserquellen aller Szenen (je Seite+Größe einmal) – die Oberfläche rendert sie."""
+        seen, out = set(), []
+        for sc in self.cfg["scenes"]:
+            for it in sc["items"]:
+                key = item_key(it) if it["kind"] == "browser" else None
+                if key and key not in seen:
+                    seen.add(key)
+                    out.append({"key": key, "url": it["url"], "w": it.get("bw", 800), "h": it.get("bh", 600)})
+        return out
+
+    @Slot(str, QImage)
+    def pushWeb(self, key, img):
+        if img.isNull():
+            return
+        img = img.convertToFormat(QImage.Format.Format_ARGB32)       # nicht vormultipliziert = BGRA
+        w, h = img.width(), img.height()
+        data = bytes(img.constBits())[: w * h * 4] if img.bytesPerLine() == w * 4 else b"".join(
+            bytes(img.constScanLine(y))[: w * 4] for y in range(h))
+        self.mixer.push_web(key, data, w, h)
+
+    # ---- 4K nach der Aufnahme --------------------------------------------------------------------
+    def _check_ki(self):
+        p = QProcess(self)
+        p.setProcessEnvironment(self._job_env())
+
+        def done(*_a):
+            out = bytes(p.readAllStandardOutput()).decode("utf-8", "replace").strip()
+            self.ki_ok = out.startswith("ki ja")
+            self.ki_why = out[len("ki nein "):] if out.startswith("ki nein") else ""
+            p.deleteLater()
+            self.changed.emit()
+        p.finished.connect(done)
+        p.start(sys.executable, ["-m", "gibeon_studio.hochskalieren", "--pruefen"])
+
+    def _job_env(self):
+        from PySide6.QtCore import QProcessEnvironment
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONPATH", str(HERE.parent))
+        return env
+
+    def _start_upscale(self, path):
+        art = self.cfg["upscale"]
+        if art == "ki" and not self.ki_ok:
+            art = "schnell"
+        src = Path(path)
+        dst = src.with_name(f"{src.stem}_4K{src.suffix}")
+        self.upscale_queue.append((str(src), str(dst), art))
+        self._next_upscale()
+
+    def _next_upscale(self):
+        if self.upscale_job or not self.upscale_queue:
+            return
+        src, dst, art = self.upscale_queue.pop(0)
+        p = QProcess(self)
+        p.setProcessEnvironment(self._job_env())
+        self.upscale_job = {"proc": p, "file": Path(dst).name, "path": dst, "pct": 0, "art": art, "error": ""}
+
+        def read():
+            for line in bytes(p.readAllStandardOutput()).decode("utf-8", "replace").splitlines():
+                if line.startswith("fortschritt "):
+                    try:
+                        self.upscale_job["pct"] = int(line.split()[1])
+                    except (ValueError, IndexError, TypeError):
+                        pass
+                elif line.startswith("fehler "):
+                    self.upscale_job["error"] = line[7:]
+            self.changed.emit()
+
+        def done(code, _st):
+            read()
+            job, self.upscale_job = self.upscale_job, None
+            if job.get("cancelled"):
+                self.toast.emit("Hochskalieren abgebrochen.")
+            elif code == 0 and not job["error"]:
+                self.toast.emit(f"In 4K fertig: {job['file']}")
+            else:
+                self.toast.emit(f"Hochskalieren hat nicht geklappt: {job['error'] or 'unbekannter Fehler'}")
+            p.deleteLater()
+            self._next_upscale()
+            self.changed.emit()
+        p.readyReadStandardOutput.connect(read)
+        p.finished.connect(done)
+        # niedrige Priorität: Spiel, Stream und Aufnahme gehen vor
+        p.start("nice", ["-n", "10", sys.executable, "-m", "gibeon_studio.hochskalieren", "--art", art, src, dst])
+        self.changed.emit()
+
+    @Slot()
+    def cancelUpscale(self):
+        self.upscale_queue.clear()
+        if self.upscale_job:
+            self.upscale_job["cancelled"] = True
+            self.upscale_job["proc"].kill()
+
     def _start_live(self, targets, cpu_only=False):
         """Multistream: einmal kodieren, an alle Ziele gleichzeitig senden."""
         try:
-            enc = self.mixer.start_live(dict(targets), self.cfg["kbps"], cpu_only)
+            enc = self.mixer.start_live(dict(targets), self.cfg["kbps"], cpu_only or self.cfg["encoder"] == "cpu",
+                                        self._stream_size())
         except (RuntimeError, ValueError) as e:
             self.toast.emit(f"Live startet nicht: {e}")
             return False

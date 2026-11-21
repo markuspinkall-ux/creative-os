@@ -31,6 +31,7 @@ ApplicationWindow {
     property var categoryHits: []
     property string selected: ""                 // ausgewählte Quelle (id) in der aktiven Szene
     property int renaming: -1                    // Szene, deren Namen gerade bearbeitet wird
+    property int webReload: 0                    // „Seite neu laden“ bei Browserquellen
     readonly property var items: st.items || []
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
@@ -134,6 +135,7 @@ ApplicationWindow {
                             CButton { Layout.fillWidth: true; text: "+ Kamera"; onClicked: selectAt(studio.addSource("camera")) }
                             CButton { Layout.fillWidth: true; text: "+ Capture-Karte"; onClicked: selectAt(studio.addSource("capture")) }
                             CButton { Layout.fillWidth: true; text: "+ Bild"; onClicked: imagePicker.open() }
+                            CButton { Layout.fillWidth: true; Layout.columnSpan: 2; text: "+ Browserquelle (Alerts, Spenden, Subs …)"; onClicked: selectAt(studio.addSource("browser")) }
                         }
                         // Elgato-Karten ohne Treiber: lieber klar sagen als still nichts zeigen
                         Repeater {
@@ -187,6 +189,43 @@ ApplicationWindow {
                                     Text { text: "Für Greenscreen und die Gibeon Kamera"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
                                 }
                                 CSwitch { checked: !!(win.selItem && win.selItem.green); label: "Grünen Hintergrund entfernen"; onToggled: (v) => studio.setItem(win.selIndex, "green", v) }
+                            }
+                            // Browserquelle: Adresse und Seitengröße
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem && win.selItem.kind === "browser"
+                                spacing: 6
+                                Field {
+                                    Layout.fillWidth: true
+                                    placeholderText: "Adresse, z. B. von StreamElements › Overlays › Alertbox"
+                                    text: win.selItem && win.selItem.kind === "browser" ? win.selItem.url : ""
+                                    onEditingFinished: if (win.selItem && text.trim() !== win.selItem.url) studio.setItem(win.selIndex, "url", text)
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    Text { text: "Seite"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                                    Field {
+                                        Layout.fillWidth: true
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        text: win.selItem ? String(win.selItem.bw) : ""
+                                        onEditingFinished: if (win.selItem && parseInt(text) !== win.selItem.bw) studio.setItem(win.selIndex, "bw", parseInt(text) || 800)
+                                    }
+                                    Text { text: "×"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                                    Field {
+                                        Layout.fillWidth: true
+                                        inputMethodHints: Qt.ImhDigitsOnly
+                                        text: win.selItem ? String(win.selItem.bh) : ""
+                                        onEditingFinished: if (win.selItem && parseInt(text) !== win.selItem.bh) studio.setItem(win.selIndex, "bh", parseInt(text) || 600)
+                                    }
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    text: "Hintergrund ist durchsichtig. In der Vorschau ziehen und an den Ecken skalieren. Töne der Seite (z. B. Alert-Sounds) kommen über den Desktop-Ton."
+                                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                                }
+                                CButton { Layout.fillWidth: true; text: "Seite neu laden"; onClicked: win.webReload++ }
                             }
                             RowLayout {
                                 Layout.fillWidth: true
@@ -715,12 +754,50 @@ ApplicationWindow {
                     spacing: 10
 
                     Heading { text: "Qualität" }
+                    Label2 { text: "Auflösung" }
                     Seg {
                         Layout.fillWidth: true
                         enabled: !win.locked
-                        options: [["720p30", "720p 30"], ["720p60", "720p 60"], ["1080p30", "1080p 30"], ["1080p60", "1080p 60"]]
-                        value: cfg.canvas || "1080p30"
-                        onPicked: (v) => studio.set("canvas", v)
+                        options: [["720", "720p"], ["1080", "1080p"], ["1440", "1440p"], ["2160", "4K"]]
+                        value: String(st.canvasHeight || 1080)
+                        onPicked: (v) => studio.set("canvas", v + "p" + (st.canvasFps || 30))
+                    }
+                    Label2 { text: "Bilder pro Sekunde" }
+                    Seg {
+                        Layout.fillWidth: true
+                        enabled: !win.locked
+                        options: [["24", "24"], ["25", "25"], ["30", "30"], ["50", "50"], ["60", "60"]]
+                        value: String(st.canvasFps || 30)
+                        onPicked: (v) => studio.set("canvas", (st.canvasHeight || 1080) + "p" + v)
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        visible: (st.canvasHeight || 1080) >= 1440
+                        text: "1440p und 4K brauchen viel Leistung – am besten mit Grafikkarte. Für den Stream unten verkleinern."
+                        color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
+                    }
+                    Label2 { text: "Stream-Ausgabe" }
+                    Seg {
+                        Layout.fillWidth: true
+                        enabled: !st.live
+                        options: [["gleich", "Wie oben"], ["1080", "1080p"], ["936", "936p"], ["720", "720p"]]
+                        value: cfg.stream_res || "gleich"
+                        onPicked: (v) => studio.set("stream_res", v)
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: (st.canvasFps || 30) > 30
+                        Text { text: "Stream mit 30 Bildern/s (spart Bandbreite)"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                        CSwitch { checked: cfg.stream_fps === "30"; enabled: !st.live; label: "Stream mit 30 Bildern/s"; onToggled: (v) => studio.set("stream_fps", v ? "30" : "gleich") }
+                    }
+                    Label2 { text: "Kodierer" }
+                    Seg {
+                        Layout.fillWidth: true
+                        enabled: !win.locked
+                        options: [["auto", "Automatisch"], ["cpu", "Prozessor"]]
+                        value: cfg.encoder || "auto"
+                        onPicked: (v) => studio.set("encoder", v)
                     }
                     RowLayout {
                         Layout.fillWidth: true
@@ -826,6 +903,57 @@ ApplicationWindow {
                         value: cfg.format || "mp4"
                         onPicked: (v) => studio.set("format", v)
                     }
+                    Label2 { text: "Qualität · " + (st.recMbit || 12) + " Mbit/s" }
+                    Seg {
+                        Layout.fillWidth: true
+                        enabled: !st.recording
+                        options: [["normal", "Normal"], ["hoch", "Hoch"], ["sehr-hoch", "Sehr hoch"]]
+                        value: cfg.rec_quality || "normal"
+                        onPicked: (v) => studio.set("rec_quality", v)
+                    }
+                    Label2 { text: "Danach auf 4K hochskalieren" }
+                    Seg {
+                        Layout.fillWidth: true
+                        enabled: (st.canvasHeight || 1080) < 2160
+                        options: [["aus", "Aus"], ["schnell", "Schnell"], ["ki", "KI"]]
+                        value: cfg.upscale || "aus"
+                        onPicked: (v) => studio.set("upscale", v)
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        visible: cfg.upscale && cfg.upscale !== "aus"
+                        text: cfg.upscale === "ki"
+                              ? (st.kiOk ? "KI macht das Bild deutlich schärfer (z. B. Capture-Karte in 1080p → 4K), dauert aber länger als die Aufnahme selbst."
+                                         : "KI geht hier nicht (" + (st.kiWhy || "nur mit NVIDIA-Grafikkarte") + ") – Studio nimmt „Schnell“.")
+                              : "Klassisch hochgerechnet – geht schnell, schärft aber nichts nach."
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                    }
+                    // laufendes Hochskalieren
+                    Rectangle {
+                        Layout.fillWidth: true
+                        visible: !!(st.upscaleJob && st.upscaleJob.file)
+                        implicitHeight: upCol.implicitHeight + 20
+                        radius: Theme.radiusRow
+                        color: Theme.raised
+                        ColumnLayout {
+                            id: upCol
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 6
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "4K (" + ((st.upscaleJob || {}).art === "ki" ? "KI" : "schnell") + "): " + ((st.upscaleJob || {}).pct || 0) + " %" + (st.upscaleQueue ? "  · noch " + st.upscaleQueue + " in der Warteschlange" : ""); color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight }
+                                IconBtn { width: 28; height: 28; icon: "close"; tip: "Abbrechen"; onClicked: studio.cancelUpscale() }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 6; radius: 3
+                                color: Theme.tint(0.1)
+                                Rectangle { width: parent.width * ((st.upscaleJob || {}).pct || 0) / 100; height: 6; radius: 3; color: Theme.accent }
+                            }
+                        }
+                    }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
                     Text {
                         Layout.fillWidth: true
@@ -855,6 +983,49 @@ ApplicationWindow {
                     fill: st.recording ? Theme.tint(0.16) : Theme.tint(0.08)
                     textColor: Theme.text
                     onClicked: studio.toggleRecord()
+                }
+            }
+        }
+    }
+
+    // Browserquellen: Seiten unsichtbar rendern (1 px großer Ausschnitt) und Bild für Bild ans Mischpult
+    // geben – mit durchsichtigem Hintergrund, so wie OBS-Browserquellen
+    WebEngineProfile {
+        id: webProfile
+        storageName: "gibeon-studio-quellen"
+        offTheRecord: false
+        persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
+    }
+    Item {
+        id: webHost
+        x: 0; y: 0; z: -1
+        width: 1; height: 1
+        clip: true
+        Repeater {
+            model: st.webSources || []
+            delegate: WebEngineView {
+                id: wv
+                required property var modelData
+                property bool busy: false
+                width: modelData.w
+                height: modelData.h
+                url: modelData.url
+                profile: webProfile
+                backgroundColor: "transparent"
+                settings.javascriptCanOpenWindows: false
+                settings.playbackRequiresUserGesture: false
+                Connections { target: win; function onWebReloadChanged() { wv.reload() } }
+                Timer {
+                    interval: Math.round(1000 / Math.min(30, st.canvasFps || 30))
+                    running: true
+                    repeat: true
+                    onTriggered: {
+                        if (wv.busy) return
+                        wv.busy = true
+                        if (!wv.grabToImage(function (r) { studio.pushWeb(wv.modelData.key, r.image); wv.busy = false },
+                                            Qt.size(wv.modelData.w, wv.modelData.h)))
+                            wv.busy = false
+                    }
                 }
             }
         }
@@ -961,6 +1132,8 @@ ApplicationWindow {
 
     // =============== Bausteine ===============
     component Card: Rectangle { radius: 16; color: Theme.surface; border.color: Theme.hairline }
+
+    component Label2: Text { color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; topPadding: 2 }
 
     component Heading: Text { color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
 
@@ -1215,14 +1388,15 @@ ApplicationWindow {
             anchors.rightMargin: 4
             spacing: 4
             SvgIcon {
-                name: sr.item.kind === "screen" ? "pc" : sr.item.kind === "image" ? "image" : sr.item.kind === "capture" ? "capture" : "video"
+                name: sr.item.kind === "screen" ? "pc" : sr.item.kind === "image" ? "image" : sr.item.kind === "capture" ? "capture"
+                      : sr.item.kind === "browser" ? "browser" : "video"
                 size: 16
                 opacity: sr.item.hidden ? 0.4 : 1
             }
             Text {
                 Layout.fillWidth: true
                 leftPadding: 6
-                text: sr.item.label + (sr.item.ok ? "" : " – kein Gerät")
+                text: sr.item.label + (sr.item.ok ? "" : (sr.item.kind === "browser" ? " – Adresse fehlt" : " – kein Gerät"))
                 elide: Text.ElideRight
                 color: sr.item.hidden ? Theme.textMuted : Theme.text
                 font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: sr.sel

@@ -414,3 +414,16 @@ def get_u64(obj, name):
     v = U64(0)
     g_object_get_u64(obj, name.encode(), ctypes.byref(v), None)
     return v.value
+
+
+buffer_new_allocate = _fn(gst, "gst_buffer_new_allocate", P, P, ctypes.c_size_t, P)
+buffer_fill = _fn(gst, "gst_buffer_fill", ctypes.c_size_t, P, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t)
+
+
+def push_bytes(appsrc, data):
+    """Fertige Bilddaten (z. B. eine Browserquelle) in eine appsrc geben."""
+    buf = buffer_new_allocate(None, len(data), None)
+    if not buf:
+        return False
+    buffer_fill(buf, 0, data, len(data))
+    return appsrc_push_buffer(appsrc, buf) == FLOW_OK
