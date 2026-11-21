@@ -18,8 +18,8 @@ Window {
     height: surfaceHeight
     visible: false
     color: "transparent"
-    title: placement === "bar" ? "Taskleiste" : "Menü"
-    flags: placement === "bar"
+    title: placement === "bar" ? "Taskleiste" : (placement === "top" ? "Obere Leiste" : "Menü")
+    flags: placement === "bar" || placement === "top"
         ? (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus)
         : (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
            | (popupKey === "tasktip" ? (Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus) : 0))
@@ -33,14 +33,14 @@ Window {
     Component.onCompleted: loader.setSource(contentSource, { screenName: screenName })
 
     onVisibleChanged: {
-        if (visible && placement !== "bar" && popupKey !== "bubble" && popupKey !== "tasktip") {
+        if (visible && placement !== "bar" && placement !== "top" && popupKey !== "bubble" && popupKey !== "tasktip") {
             requestActivate()
             if (loader.item && loader.item.opened)
                 loader.item.opened()
         }
     }
     onActiveChanged: {
-        if (!active && visible && placement !== "bar" && popupKey !== "bubble" && popupKey !== "tasktip")
+        if (!active && visible && placement !== "bar" && placement !== "top" && popupKey !== "bubble" && popupKey !== "tasktip")
             shell.popupLostFocus(screenName, popupKey || placement)
     }
 }

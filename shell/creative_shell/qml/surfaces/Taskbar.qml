@@ -1,8 +1,8 @@
 import QtQuick
 import Creative
 
-// Die Taskleiste: links Startmenü, Dateien, Browser, Terminal –
-// rechts der Tray mit Papierkorb, Helligkeit, Drucker, WLAN und Uhr.
+// Die Taskleiste: links Startmenü und Apps, Mitte „Gerade läuft“, rechts der Papierkorb.
+// Tray (WLAN, Ton, Bluetooth, Programme) und Uhrzeit sitzen in der oberen Leiste (Topbar.qml).
 Item {
     id: root
 
@@ -137,7 +137,7 @@ Item {
         Item {
             id: nowPlaying
             readonly property real freeL: appsRow.x + appsRow.width + 18
-            readonly property real freeR: tray.x - 18
+            readonly property real freeR: trashBtn.x - 26
             // Breite aus dem Text selbst (nicht aus der Zeile – sonst bleibt sie bei 0 hängen)
             width: Math.max(0, Math.min(15 + 9 + npText.implicitWidth + 24, freeR - freeL, 460))
             x: Math.max(freeL, Math.min(bar.width / 2 - width / 2, freeR - width))
@@ -180,339 +180,49 @@ Item {
             Accessible.name: "Gerade läuft: " + nowplaying.artist + " – " + nowplaying.title
         }
 
+        // Papierkorb ganz rechts (Tray, Uhrzeit und WLAN sitzen jetzt oben in der Leiste)
         Rectangle {
-            id: tray
+            id: trashBtn
             anchors.right: parent.right
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            height: 44
-            width: trayRow.implicitWidth + 28
-            radius: Theme.radiusButton
-            color: (trayMouse.containsMouse || shell.quickPanelOpenOn === root.screenName)
-                   ? Theme.hover : Theme.subtle
-
-            Row {
-                id: trayRow
+            width: 40
+            height: 40
+            radius: 12
+            color: (trashMouse.containsMouse || shell.trashMenuOpenOn === root.screenName)
+                   ? Theme.hover : "transparent"
+            SvgIcon {
                 anchors.centerIn: parent
-                spacing: 14
-
-                // Tray-Symbole anderer Programme (Steam, Discord …) im Gibeon-Look
-                Repeater {
-                    model: trayApps.items
-                    delegate: Rectangle {
-                        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-                        width: 30
-                        height: 30
-                        radius: 8
-                        color: am.containsMouse ? Theme.hover : "transparent"
-                        SvgIcon {
-                            anchors.centerIn: parent
-                            visible: modelData.creative !== ""
-                            name: modelData.creative
-                            size: 17
-                        }
-                        Image {
-                            anchors.centerIn: parent
-                            visible: modelData.creative === ""
-                            width: 17; height: 17
-                            sourceSize.width: 34; sourceSize.height: 34
-                            source: modelData.creative === "" && modelData.icon ? iconFiles.url(modelData.icon) : ""
-                        }
-                        MouseArea {
-                            id: am
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: (mouse) => {
-                                shell.noteScreen(root.screenName)
-                                if (mouse.button === Qt.RightButton && (modelData.hasMenu || modelData.canQuit)) {
-                                    trayApps.loadMenu(modelData.key)
-                                    shell.toggleTrayAppMenu(root.screenName, modelData.key)
-                                } else {
-                                    shell.closePopups()
-                                    trayApps.activate(modelData.key)
-                                }
-                            }
-                        }
-                        Accessible.role: Accessible.Button
-                        Accessible.name: modelData.title
-                    }
-                }
-
-                // Messenger: Sprechblase mit Zähler ungelesener Nachrichten und Anfragen
-                Rectangle {
-                    id: messengerBtn
-                    visible: messenger.available
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30
-                    height: 30
-                    radius: 8
-                    readonly property int count: messenger.unread + messenger.requests.length
-                    color: (msgMouse.containsMouse || shell.messengerOpenOn === root.screenName) ? Theme.hover : "transparent"
-                    SvgIcon {
-                        anchors.centerIn: parent
-                        name: "chat"
-                        size: 17
-                        opacity: messenger.connected ? 1 : 0.5
-                    }
-                    Rectangle {
-                        visible: messengerBtn.count > 0
-                        anchors.right: parent.right; anchors.top: parent.top
-                        anchors.rightMargin: -3; anchors.topMargin: -3
-                        width: Math.max(16, msgBadge.implicitWidth + 8); height: 16; radius: 8
-                        color: messenger.dnd ? Theme.track : Theme.flame
-                        Text {
-                            id: msgBadge
-                            anchors.centerIn: parent
-                            text: messengerBtn.count > 99 ? "99+" : messengerBtn.count
-                            color: Theme.accentText
-                            font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true
-                        }
-                    }
-                    MouseArea {
-                        id: msgMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.MiddleButton) { shell.closePopups(); messenger.openWindow() }
-                            else shell.toggleMessenger(root.screenName)
-                        }
-                    }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Messenger" + (messengerBtn.count > 0 ? ", " + messengerBtn.count + " neu" : "")
-                    Accessible.onPressAction: shell.toggleMessenger(root.screenName)
-                }
-
-                // Broadcast: blau hinterlegt, wenn Mikrofon-Filter oder Kamera-Effekt an sind
-                Rectangle {
-                    id: broadcastBtn
-                    visible: broadcast.available
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30
-                    height: 30
-                    radius: 8
-                    color: broadcast.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, bcMouse.containsMouse ? 0.3 : 0.2)
-                                            : (bcMouse.containsMouse ? Theme.hover : "transparent")
-                    SvgIcon {
-                        anchors.centerIn: parent
-                        name: "broadcast"
-                        size: 17
-                        opacity: broadcast.active ? 1 : 0.8
-                    }
-                    // Punkt: eine App benutzt gerade die Gibeon Kamera
-                    Rectangle {
-                        visible: broadcast.cameraInUse
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.margins: 3
-                        width: 6; height: 6; radius: 3
-                        color: Theme.ok
-                    }
-                    MouseArea {
-                        id: bcMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            shell.closePopups()
-                            // schon offen → nur nach vorn holen
-                            if (!tasks.focusApp("creative-broadcast.desktop"))
-                                broadcast.open()
-                        }
-                    }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: broadcast.tooltip
-                }
-
-                // Deck: öffnet den Stream-Deck-Editor; Punkt = Gerät verbunden
-                Rectangle {
-                    id: deckBtn
-                    visible: deckTray.available
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30
-                    height: 30
-                    radius: 8
-                    color: deckMouse.containsMouse ? Theme.hover : "transparent"
-                    SvgIcon {
-                        anchors.centerIn: parent
-                        name: "deck"
-                        size: 17
-                        opacity: deckTray.connected ? 1 : 0.8
-                    }
-                    Rectangle {
-                        visible: deckTray.connected
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.margins: 3
-                        width: 6; height: 6; radius: 3
-                        color: Theme.ok
-                    }
-                    MouseArea {
-                        id: deckMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            shell.closePopups()
-                            if (!tasks.focusApp("creative-deck.desktop"))
-                                deckTray.open()
-                        }
-                    }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: deckTray.tooltip
-                }
-
-                // Papierkorb: Klick öffnet ihn, Rechtsklick zeigt „Leeren“
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30
-                    height: 30
-                    radius: 8
-                    color: (trashMouse.containsMouse || shell.trashMenuOpenOn === root.screenName)
-                           ? Theme.hover : "transparent"
-                    SvgIcon {
-                        anchors.centerIn: parent
-                        name: trash.full ? "trash-full" : "trash"
-                        size: 17
-                    }
-                    MouseArea {
-                        id: trashMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: (mouse) => {
-                            if (mouse.button === Qt.RightButton) {
-                                shell.toggleTrashMenu(root.screenName)
-                            } else {
-                                shell.closePopups()
-                                trash.open()
-                            }
-                        }
-                    }
-                    Accessible.role: Accessible.Button
-                    Accessible.name: trash.full ? "Papierkorb (" + trash.count + " Elemente)" : "Papierkorb (leer)"
-                    Accessible.onPressAction: trash.open()
-                }
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 1
-                    height: 20
-                    color: Theme.tint(0.1)
-                }
-
-                SvgIcon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "brightness"
-                    size: 16
-                }
-                SvgIcon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: printers.available
-                    name: printers.attention ? "printer-alert" : "printer"
-                    size: 16
-                }
-                SvgIcon {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: network.wired ? "wired" : (network.connected ? "wifi" : "wifi-off")
-                    size: 16
-                }
-                // Akku (nur bei Laptops): Symbol mit Füllstand und Prozent
-                Row {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: akku.present && widgetExtras.akkuInstalled
-                    spacing: 5
-                    BatteryGlyph {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 24; height: 12
-                        level: akku.percent
-                        charging: akku.charging
-                        low: akku.low
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: akku.percent + "%"
-                        color: akku.low ? Theme.flame : Theme.text
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 12
-                    }
-                    Accessible.role: Accessible.StaticText
-                    Accessible.name: "Akku " + akku.percent + " Prozent, " + akku.statusText
-                }
-                IconButton {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30; height: 30; iconSize: 17
-                    icon: "bluetooth"
-                    label: bluetooth.powered ? "Bluetooth eingeschaltet" : "Bluetooth ausgeschaltet"
-                    opacity: bluetooth.powered ? 1 : 0.5
-                    onClicked: shell.toggleBluetooth(root.screenName)
-                }
-                IconButton {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 30; height: 30; iconSize: 17
-                    icon: audioOutput.muted || audioOutput.value === 0 ? "volume-off" : "volume"
-                    label: "Systemlautstärke"
-                    onClicked: shell.toggleQuickPanel(root.screenName)
-                }
-                // Uhr und Datum – Klick öffnet den Kalender
-                Item {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: clockCol.implicitWidth
-                    height: clockCol.implicitHeight
-                    Column {
-                        id: clockCol
-                        Text {
-                            id: clock
-                            anchors.right: parent.right
-                            color: Theme.text
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 13
-                            font.bold: true
-                        }
-                        Text {
-                            id: date
-                            anchors.right: parent.right
-                            color: Theme.text
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 11
-                        }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -7
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: shell.toggleCalendar(root.screenName)
-                    }
-                }
+                name: trash.full ? "trash-full" : "trash"
+                size: 20
             }
-
             MouseArea {
-                id: trayMouse
-                z: -1          // liegt unter dem Papierkorb-Knopf
+                id: trashMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
-                onClicked: shell.toggleQuickPanel(root.screenName)
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton) {
+                        shell.toggleTrashMenu(root.screenName)
+                    } else {
+                        shell.closePopups()
+                        trash.open()
+                    }
+                }
             }
-
             Accessible.role: Accessible.Button
-            Accessible.name: "Schnellzugriff: Lautstärke, Helligkeit, Drucker, WLAN – " + clock.text
-            Accessible.onPressAction: shell.toggleQuickPanel(root.screenName)
+            Accessible.name: trash.full ? "Papierkorb (" + trash.count + " Elemente)" : "Papierkorb (leer)"
+            Accessible.onPressAction: trash.open()
+        }
+        Rectangle {
+            anchors.right: trashBtn.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: 24
+            color: Theme.tint(0.1)
         }
     }
 
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: {
-            const now = new Date()
-            clock.text = Qt.formatTime(now, "HH:mm")
-            date.text = Qt.formatDate(now, "dd.MM.yyyy")
-        }
-    }
 }

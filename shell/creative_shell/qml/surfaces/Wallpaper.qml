@@ -56,6 +56,9 @@ Item {
     property string screenName
     readonly property string iconDragFormat: "application/x-creative-desktop-icon"
     readonly property int barSpace: 52
+    // obere Leiste (Tray links, Uhrzeit rechts): Widgets und Symbole bleiben darunter
+    readonly property int topSpace: 50
+    readonly property int minY: topSpace + 8
 
     // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.
     property var fallbackPositions: ({})
@@ -85,7 +88,7 @@ Item {
 
     function saveWidgetPosition(key, source, item) {
         const x = item.maxX > 8 ? (item.x - 8) / (item.maxX - 8) : 0
-        const y = item.maxY > 8 ? (item.y - 8) / (item.maxY - 8) : 0
+        const y = item.maxY > root.minY ? (item.y - root.minY) / (item.maxY - root.minY) : 0
         if (onFallback(key))
             setFallbackPosition(key, x, y)
         else
@@ -110,11 +113,11 @@ Item {
         const g = shell.screenGeometry(name)
         const grab = handle.mapToItem(item, mouse.x, mouse.y)
         const maxX = Math.max(8, g.width - item.width - 8)
-        const maxY = Math.max(8, g.height - root.barSpace - item.height - 8)
+        const maxY = Math.max(root.minY, g.height - root.barSpace - item.height - 8)
         const x = Math.max(8, Math.min(maxX, gx - g.x - grab.x))
-        const y = Math.max(8, Math.min(maxY, gy - g.y - grab.y))
+        const y = Math.max(root.minY, Math.min(maxY, gy - g.y - grab.y))
         return { screen: name, x: x, y: y, nx: maxX > 8 ? (x - 8) / (maxX - 8) : 0,
-                 ny: maxY > 8 ? (y - 8) / (maxY - 8) : 0 }
+                 ny: maxY > root.minY ? (y - root.minY) / (maxY - root.minY) : 0 }
     }
 
     function crossDragMove(key, item, handle, mouse) {
@@ -479,14 +482,14 @@ Item {
         required property int defaultY
         property bool isWeather: false
         readonly property real maxX: Math.max(8, root.width - width - 8)
-        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        readonly property real maxY: Math.max(root.minY, root.height - root.barSpace - height - 8)
         function homeX() {
             const pos = root.widgetPosition(widgetKey, source, "x")
             return pos < 0 ? maxX : 8 + pos * (maxX - 8)
         }
         function homeY() {
             const pos = root.widgetPosition(widgetKey, source, "y")
-            return pos < 0 ? Math.min(defaultY, maxY) : 8 + pos * (maxY - 8)
+            return pos < 0 ? Math.max(root.minY, Math.min(defaultY, maxY)) : root.minY + pos * (maxY - root.minY)
         }
         function restorePosition() {
             x = Qt.binding(() => widget.homeX())
@@ -514,7 +517,7 @@ Item {
                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                 drag.target: widget
                 drag.minimumX: 8
-                drag.minimumY: 8
+                drag.minimumY: root.minY
                 drag.maximumX: widget.maxX
                 drag.maximumY: widget.maxY
                 onPositionChanged: (mouse) => { if (pressed) root.crossDragMove(widget.widgetKey, widget, handle, mouse) }
@@ -596,14 +599,14 @@ Item {
         required property real defaultY
         required property Component body
         readonly property real maxX: Math.max(8, root.width - width - 8)
-        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        readonly property real maxY: Math.max(root.minY, root.height - root.barSpace - height - 8)
         function homeX() {
             const pos = root.widgetPosition(key, extra, "x")
             return pos < 0 ? Math.min(defaultX, maxX) : 8 + pos * (maxX - 8)
         }
         function homeY() {
             const pos = root.widgetPosition(key, extra, "y")
-            return pos < 0 ? Math.min(defaultY, maxY) : 8 + pos * (maxY - 8)
+            return pos < 0 ? Math.max(root.minY, Math.min(defaultY, maxY)) : root.minY + pos * (maxY - root.minY)
         }
         function setPos(x, y) {
             if (key === "ki") kiHelper.setPos(x, y)
@@ -640,7 +643,7 @@ Item {
                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                 drag.target: extra
                 drag.minimumX: 8
-                drag.minimumY: 8
+                drag.minimumY: root.minY
                 drag.maximumX: extra.maxX
                 drag.maximumY: extra.maxY
                 onPositionChanged: (mouse) => { if (pressed) root.crossDragMove(extra.key, extra, extraGrip, mouse) }
@@ -1054,7 +1057,7 @@ Item {
         id: statsBox
         visible: root.widgetOnScreen("stats") && desktopStats.enabled && desktopStats.tiles.length > 0
         readonly property real maxX: Math.max(8, root.width - width - 8)
-        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        readonly property real maxY: Math.max(root.minY, root.height - root.barSpace - height - 8)
         x: homeX()
         y: homeY()
         function homeX() {
@@ -1063,7 +1066,7 @@ Item {
         }
         function homeY() {
             const pos = root.widgetPosition("stats", desktopStats, "y")
-            return pos < 0 ? Math.min(16, maxY) : 8 + pos * (maxY - 8)
+            return pos < 0 ? Math.max(root.minY, Math.min(16, maxY)) : root.minY + pos * (maxY - root.minY)
         }
         function restoreBindings() {
             x = Qt.binding(() => statsBox.homeX())
@@ -1090,7 +1093,7 @@ Item {
                 drag.target: statsBox
                 drag.minimumX: 8
                 drag.maximumX: statsBox.maxX
-                drag.minimumY: 8
+                drag.minimumY: root.minY
                 drag.maximumY: statsBox.maxY
                 onPositionChanged: (mouse) => { if (pressed) root.crossDragMove("stats", statsBox, statsMove, mouse) }
                 onReleased: (mouse) => {
@@ -1133,9 +1136,9 @@ Item {
     Item {
         id: icons
         x: 12
-        y: 12
+        y: root.topSpace + 12
         width: parent.width - 24
-        height: parent.height - root.barSpace - 24
+        height: parent.height - root.barSpace - root.topSpace - 24
         readonly property int cellWidth: 104
         readonly property int cellHeight: 108
         readonly property int cols: Math.max(1, Math.floor(width / cellWidth))
@@ -1446,7 +1449,7 @@ Item {
         readonly property bool dropHover: shelfDrop.containsDrag || root.moveShelf
         // frei verschiebbar (am Griff links oder an einer freien Stelle ziehen); Position bleibt gespeichert
         readonly property real maxX: Math.max(8, root.width - width - 8)
-        readonly property real maxY: Math.max(8, root.height - root.barSpace - height - 8)
+        readonly property real maxY: Math.max(root.minY, root.height - root.barSpace - height - 8)
         property bool moving: false
         function homeX() {
             const pos = root.widgetPosition("shelf", shelf, "x")
@@ -1454,7 +1457,7 @@ Item {
         }
         function homeY() {
             const pos = root.widgetPosition("shelf", shelf, "y")
-            return pos >= 0 ? 8 + pos * (maxY - 8) : 12
+            return pos >= 0 ? root.minY + pos * (maxY - root.minY) : root.topSpace + 12
         }
         function rebind() {
             x = Qt.binding(() => shelfBox.homeX())
@@ -1494,7 +1497,7 @@ Item {
                 if (!shelfBox.moving) return
                 const p = mapToItem(root, mouse.x, mouse.y)
                 shelfBox.x = Math.max(8, Math.min(shelfBox.maxX, origin.x + p.x - start.x))
-                shelfBox.y = Math.max(8, Math.min(shelfBox.maxY, origin.y + p.y - start.y))
+                shelfBox.y = Math.max(root.minY, Math.min(shelfBox.maxY, origin.y + p.y - start.y))
             }
             onReleased: (mouse) => {
                 if (!shelfBox.moving) return

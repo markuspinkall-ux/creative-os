@@ -50,6 +50,10 @@ from .messenger import MessengerModel
 QML_DIR = Path(__file__).resolve().parent / "qml"
 BAR_HEIGHT = 52       # Leiste über die ganze Breite, bündig am unteren Rand (Fluid-Design)
 POPUP_GAP = 10        # Abstand zwischen Leiste und Menü
+TOP_HEIGHT = 50       # obere Leiste: Tray links, Uhrzeit rechts (Fluid-Design)
+# Menüs des Trays öffnen sich oben unter der Leiste: Schnellzugriff/Bluetooth/Messenger links,
+# der Kalender (Klick auf die Uhr) rechts.
+TRAY_POPUPS = ("panel", "bluetooth", "messenger", "appmenu")
 START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24
 TRASH_WIDTH = 270 + 8
@@ -139,6 +143,7 @@ class ShellController(QObject):
         self._primary_proc = None
         self._last_auto_close = ("", 0.0)
         self._widget_ghost = {}
+        self._tray_side = {}
         self._widget_screens = {
             key: name for key, name in config.load()["desktopWidgetScreens"].items()
             if key in DESKTOP_WIDGETS and isinstance(name, str) and name
@@ -226,6 +231,8 @@ class ShellController(QObject):
             _win_show(entry["bg"])
         entry["bar"] = self._create(screen, "bar", "Taskbar.qml", geo.width(), BAR_HEIGHT, False)
         _win_show(entry["bar"])
+        entry["top"] = self._create(screen, "top", "Topbar.qml", geo.width(), TOP_HEIGHT, False)
+        _win_show(entry["top"])
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
         screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
         self.screensChanged.emit()
@@ -234,7 +241,7 @@ class ShellController(QObject):
         entry = self._surfaces.pop(screen.name(), None)
         if not entry:
             return
-        for key in ("bg", "bar") + SURFACES:
+        for key in ("bg", "bar", "top") + SURFACES:
             win = entry.get(key)
             if win is not None:
                 _win_hide(win)
@@ -257,6 +264,10 @@ class ShellController(QObject):
         geo = entry["screen"].geometry()
         bar = entry["bar"]
         bar.setProperty("surfaceWidth", geo.width())
+        if entry.get("top") is not None:
+            entry["top"].setProperty("surfaceWidth", geo.width())
+            if not self._layer:
+                _win_move(entry["top"], geo.x(), geo.y())
         if entry.get("bg") is not None:
             entry["bg"].setProperty("surfaceWidth", geo.width())
             entry["bg"].setProperty("surfaceHeight", geo.height())
@@ -268,7 +279,7 @@ class ShellController(QObject):
         """Sichtbarkeit und Rendering nach dem Entsperren wiederherstellen."""
         for name, entry in self._surfaces.items():
             self._relayout(name)
-            for key in ("bg", "bar"):
+            for key in ("bg", "bar", "top"):
                 win = entry.get(key)
                 if win is not None:
                     _win_show(win)
@@ -276,7 +287,7 @@ class ShellController(QObject):
         self.refreshPrimary()
 
     def _popup_height(self, screen, wanted):
-        return min(wanted, screen.geometry().height() - BAR_HEIGHT - 40) + POPUP_GAP
+        return min(wanted, screen.geometry().height() - BAR_HEIGHT - TOP_HEIGHT - 40) + POPUP_GAP
 
     def _create(self, screen, placement, content, width, height, keyboard, key=""):
         props = {
@@ -297,6 +308,12 @@ class ShellController(QObject):
             bottom = geo.y() + geo.height()
             if placement == "bar":
                 _win_move(win, geo.x(), bottom - height)
+            elif placement == "top":
+                _win_move(win, geo.x(), geo.y())
+            elif placement == "topleft":
+                _win_move(win, geo.x(), geo.y() + TOP_HEIGHT)
+            elif placement == "topright":
+                _win_move(win, geo.x() + geo.width() - width, geo.y() + TOP_HEIGHT)
             elif placement == "left":
                 _win_move(win, geo.x(), bottom - BAR_HEIGHT - height)
             else:
@@ -307,25 +324,31 @@ class ShellController(QObject):
         entry = self._surfaces.get(name)
         if entry is None:
             return None
+        # Tray-Menüs: oben links oder (Kalender) oben rechts – bei Seitenwechsel neu anlegen
+        side = self._tray_side.get(key, "topleft") if key in TRAY_POPUPS else None
+        if side and entry[key] is not None and entry[key].property("placement") != side:
+            _win_hide(entry[key])
+            entry[key].deleteLater()
+            entry[key] = None
         if entry[key] is None:
             screen = entry["screen"]
             if key == "start":
                 entry[key] = self._create(screen, "left", "StartMenu.qml", START_WIDTH,
                                           self._popup_height(screen, 780), True, key)
             elif key == "panel":
-                entry[key] = self._create(screen, "right", "QuickPanel.qml", PANEL_WIDTH,
+                entry[key] = self._create(screen, side, "QuickPanel.qml", PANEL_WIDTH,
                                           self._popup_height(screen, 940), True, key)
             elif key == "bluetooth":
-                entry[key] = self._create(screen, "right", "BluetoothMenu.qml", PANEL_WIDTH,
+                entry[key] = self._create(screen, side, "BluetoothMenu.qml", PANEL_WIDTH,
                                           self._popup_height(screen, 620), True, key)
             elif key == "messenger":
-                entry[key] = self._create(screen, "right", "MessengerMenu.qml", PANEL_WIDTH + 20,
+                entry[key] = self._create(screen, side, "MessengerMenu.qml", PANEL_WIDTH + 20,
                                           self._popup_height(screen, 640), True, key)
             elif key == "trash":
                 entry[key] = self._create(screen, "right", "TrashMenu.qml", TRASH_WIDTH,
                                           200 + POPUP_GAP, True, key)
             elif key == "appmenu":
-                entry[key] = self._create(screen, "right", "TrayAppMenu.qml", TRASH_WIDTH,
+                entry[key] = self._create(screen, side, "TrayAppMenu.qml", TRASH_WIDTH,
                                           self._popup_height(screen, 460), True, key)
             elif key == "tasktip":    # ganze Breite, durchlässig für die Maus
                 entry[key] = self._create(screen, "left", "TaskTip.qml", screen.geometry().width(),
@@ -372,7 +395,15 @@ class ShellController(QObject):
     @Slot(str)
     def toggleQuickPanel(self, name):
         self._panel_focus = ""
+        self._side_for("panel", "topleft", name)
         self._toggle(name, "panel")
+
+    def _side_for(self, key, side, name):
+        """Menü auf die richtige Seite holen; ein offenes auf der anderen Seite erst schließen."""
+        if self._tray_side.get(key, "topleft") != side:
+            if self._open.get(key):
+                self.closePopups()
+            self._tray_side[key] = side
 
     @Slot(str)
     def toggleBluetooth(self, name):
@@ -383,6 +414,7 @@ class ShellController(QObject):
         """Klick auf Uhr/Datum: Schnellzugriff öffnen und zum Kalender springen."""
         self._panel_focus = "calendar"
         self.openChanged.emit()
+        self._side_for("panel", "topright", name)
         self._toggle(name, "panel")
 
     @Slot(str)

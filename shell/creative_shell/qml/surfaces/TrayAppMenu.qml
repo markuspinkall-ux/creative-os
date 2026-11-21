@@ -1,10 +1,14 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
 // Rechtsklick-Menü eines Tray-Programms (z. B. Steam, Discord) im Gibeon-Look.
 Item {
     id: root
+    // Lage der Fläche: oben unter der Leiste (links/rechts) oder unten über der Taskleiste
+    readonly property string place: Window.window ? Window.window.placement : ""
+    readonly property bool atTop: place === "topleft" || place === "topright"
     property string screenName
 
     function opened() { root.forceActiveFocus() }
@@ -15,9 +19,13 @@ Item {
 
     Rectangle {
         id: card
-        anchors.right: parent.right
-        anchors.rightMargin: 8
-        anchors.bottom: parent.bottom
+        anchors.left: root.place === "topleft" ? parent.left : undefined
+        anchors.leftMargin: 10
+        anchors.right: root.place === "topleft" ? undefined : parent.right
+        anchors.rightMargin: root.place === "topright" ? 10 : 8
+        anchors.top: root.atTop ? parent.top : undefined
+        anchors.topMargin: 6
+        anchors.bottom: root.atTop ? undefined : parent.bottom
         anchors.bottomMargin: 10
         width: 270
         height: Math.min(parent.height - 10, col.implicitHeight + 16)

@@ -1,10 +1,14 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
 // Schnellzugriff aus dem Tray: WLAN, Helligkeit aller Monitore, Drucker, Kalender.
 Item {
     id: root
+    // Lage der Fläche: oben unter der Leiste (links/rechts) oder unten über der Taskleiste
+    readonly property string place: Window.window ? Window.window.placement : ""
+    readonly property bool atTop: place === "topleft" || place === "topright"
 
     property string screenName
 
@@ -47,9 +51,13 @@ Item {
 
     Rectangle {
         id: panel
-        anchors.right: parent.right
-        anchors.rightMargin: 24
-        anchors.bottom: parent.bottom
+        anchors.left: root.place === "topleft" ? parent.left : undefined
+        anchors.leftMargin: 10
+        anchors.right: root.place === "topleft" ? undefined : parent.right
+        anchors.rightMargin: root.place === "topright" ? 10 : 24
+        anchors.top: root.atTop ? parent.top : undefined
+        anchors.topMargin: 6
+        anchors.bottom: root.atTop ? undefined : parent.bottom
         anchors.bottomMargin: 10
         // So hoch wie der Inhalt – nur bei kleinen Bildschirmen scrollbar
         height: Math.min(parent.height - 10, content.implicitHeight + 36)
