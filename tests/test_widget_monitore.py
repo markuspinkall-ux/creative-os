@@ -29,3 +29,13 @@ def test_obere_leiste_fluid():
     for f in ("QuickPanel", "BluetoothMenu", "MessengerMenu", "TrayAppMenu"):
         qml = (ROOT / f"shell/creative_shell/qml/surfaces/{f}.qml").read_text(encoding="utf-8")
         assert "root.atTop ? parent.top" in qml, f
+
+
+def test_fluid_glas():
+    """Fluid-Glas: durchscheinende Leisten/Startmenü, KWin-Weichzeichnen über KWindowEffects."""
+    glas = (ROOT / "shell/creative_shell/glas.py").read_text(encoding="utf-8")
+    assert "_ZN14KWindowEffects16enableBlurBehindEP7QWindowbRK7QRegion" in glas
+    for f in ("Taskbar", "Topbar", "StartMenu"):
+        qml = (ROOT / f"shell/creative_shell/qml/surfaces/{f}.qml").read_text(encoding="utf-8")
+        assert "shell.setBlur(Window.window" in qml and "Theme.glass" in qml, f
+    assert "blurEnabled=true" in (ROOT / "shell/kwin/kwinrc").read_text(encoding="utf-8")

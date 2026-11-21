@@ -811,6 +811,9 @@ RUN python3 /tmp/appstream-brand.py && rm -f /tmp/appstream-brand.py \
  && (command -v appstreamcli >/dev/null && appstreamcli refresh-cache --force >/dev/null 2>&1 || true)
 
 # Oberflächen prüfen – bei einem Fehler wird das Abbild nicht veröffentlicht
+# Fluid-Glas: Weichzeichnen hinter Leisten/Startmenü über KWindowEffects (libKF6WindowSystem)
+RUN python3 -c "import ctypes; ctypes.CDLL('libKF6WindowSystem.so.6')._ZN14KWindowEffects16enableBlurBehindEP7QWindowbRK7QRegion; print('Fluid-Glas: Weichzeichnen verfügbar')" \
+ || echo "FLUID-GLAS: KWindowEffects fehlt – Leisten bleiben ohne Weichzeichnen"
 COPY image/qml-check.py /tmp/qml-check.py
 RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-calculator/creative_calculator/qml/Main.qml \
