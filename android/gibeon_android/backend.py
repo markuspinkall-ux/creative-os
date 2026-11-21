@@ -18,6 +18,8 @@ from pathlib import Path
 from PySide6.QtCore import Property, QObject, QProcess, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 
+from . import fenster
+
 HELPER = "/usr/libexec/gibeon-android-helper"
 CFG = Path("/var/lib/waydroid/waydroid.cfg")
 IMAGES = (Path("/var/lib/waydroid/images/system.img"), Path("/etc/waydroid-extra/images/system.img"),
@@ -89,6 +91,7 @@ class Android(QObject):
         self._dl_last = 0.0
         self._choice = "google"
         self._apps = 0
+        self._win = fenster.load_config()
         self._refresh_static()
         self._status_proc = None
         self._timer = QTimer(self)
@@ -254,6 +257,27 @@ class Android(QObject):
             self._choice = c
             self.changed.emit()
 
+    # ---- Fenster: Gibeon-Rahmen und Tablet-Format ---------------------------------------------
+    def _set_window_option(self, key, on):
+        if self._win.get(key) == on:
+            return
+        self._win[key] = on
+        try:
+            fenster.save_config(self._win)
+        except OSError:
+            self._error = "Die Einstellung ließ sich nicht speichern."
+        if key == "rahmen" and self._session != "STOPPED":
+            self._message = "Gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“."
+        self.changed.emit()
+
+    @Slot(bool)
+    def setFrame(self, on):
+        self._set_window_option("rahmen", bool(on))
+
+    @Slot(bool)
+    def setTablet(self, on):
+        self._set_window_option("tablet", bool(on))
+
     @Slot()
     def clearMessage(self):
         self._message = ""
@@ -382,4 +406,6 @@ class Android(QObject):
     message = Property(str, lambda self: self._message, notify=changed)
     gsfId = Property(str, lambda self: self._gsf, notify=changed)
     appCount = Property(int, lambda self: self._apps, notify=changed)
+    frame = Property(bool, lambda self: self._win["rahmen"], notify=changed)
+    tablet = Property(bool, lambda self: self._win["tablet"], notify=changed)
     log = Property(str, lambda self: "\n".join(self._log[-200:]), notify=logChanged)

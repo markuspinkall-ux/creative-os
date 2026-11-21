@@ -1,5 +1,14 @@
 [
   {
+    "datum": "2026-11-21",
+    "titel": "Android-Apps mit normalem Fensterrahmen und im Tablet-Format",
+    "neu": [
+      "Android-Apps haben jetzt denselben Fensterrahmen wie alle anderen Fenster – mit der gewohnten Titelleiste, Minimieren, Maximieren und Schließen. Die kleine Android-Leiste oben im Fenster bleibt zusätzlich",
+      "Android-Apps öffnen sich im Tablet-Format: groß im Querformat statt schmal wie auf einem Handy. Maximieren und Größe ziehen am Rahmen funktionieren, die App passt sich kurz nach dem Loslassen an. Apps, die nur hochkant gedacht sind, wirken dabei manchmal gestreckt",
+      "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“"
+    ]
+  },
+  {
     "datum": "2026-11-19",
     "titel": "Neuer Name: Gibeon OS, neuer Software-Shop und Android-Apps",
     "neu": [

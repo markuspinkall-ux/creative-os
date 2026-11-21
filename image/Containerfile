@@ -477,6 +477,22 @@ COPY --chmod=755 android/gibeon-android-helper /usr/libexec/gibeon-android-helpe
 COPY android/org.creativeos.android.policy /usr/share/polkit-1/actions/org.creativeos.android.policy
 COPY android/gibeon-android.desktop /usr/share/applications/gibeon-android.desktop
 COPY android/gibeon-android.svg /usr/share/icons/hicolor/scalable/apps/gibeon-android.svg
+# Android-Fenster mit Gibeon-Rahmen und im Tablet-Format: Fenster-Vermittler zwischen Waydroid und KWin.
+# Er liest die Wayland-Nachrichtenformate aus den XML-Beschreibungen (wayland-devel, wayland-protocols-devel).
+# /usr/bin/waydroid wird ein kleiner Wrapper, der den Vermittler beim Start von Android dazwischenschaltet.
+COPY --chmod=755 android/bin/gibeon-android-fenster /usr/libexec/gibeon-android-fenster
+COPY --chmod=755 android/gibeon-android-fenster-helper /usr/libexec/gibeon-android-fenster-helper
+COPY --chmod=755 android/waydroid-wrapper /usr/libexec/gibeon-waydroid-wrapper
+RUN dnf install -y wayland-devel wayland-protocols-devel && dnf clean all \
+ && test -f /usr/share/wayland/wayland.xml \
+ && find /usr/share/wayland-protocols -name 'xdg-decoration-unstable-v1.xml' | grep -q . \
+ && real=$(readlink -f /usr/bin/waydroid) \
+ && if [ -L /usr/bin/waydroid ] && [ "$real" != /usr/bin/waydroid ] && [ -f "$real" ]; then \
+      sed "s#@WAYDROID@#$real#" /usr/libexec/gibeon-waydroid-wrapper > /usr/bin/waydroid.neu \
+      && chmod 755 /usr/bin/waydroid.neu && mv -f /usr/bin/waydroid.neu /usr/bin/waydroid \
+      && echo "Android-Fenster: Wrapper vor $real"; \
+    else echo "ANDROID-FENSTER: /usr/bin/waydroid ist kein Verweis – Rahmen und Tablet-Format fehlen"; fi \
+ && PYTHONPATH=/usr/lib/gibeon-android python3 -c "from gibeon_android import wayland as w; i=w.load_protocols(); assert {'wl_display','xdg_toplevel','zxdg_decoration_manager_v1','wp_viewport'} <= set(i), sorted(i); print('Android-Fenster:', len(i), 'Wayland-Schnittstellen')"
 
 # OBS Studio (Original, Qt) – läuft unter X11 (XWayland): unter Wayland fehlen OBS noch Funktionen.
 # Look: Graphit-Variante des OBS-Designs „Yami“; eigene virtuelle Kamera „OBS Virtuelle Kamera“ (/dev/video43)
