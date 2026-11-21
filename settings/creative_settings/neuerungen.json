@@ -10,7 +10,8 @@
     ],
     "verbessert": [
       "Startmenü aufgeräumt: „Pictures“ und „3D-Ansicht“ stehen nicht mehr im Startmenü. Sie öffnen sich weiterhin automatisch, sobald du ein Bild oder eine 3D-Datei (.glb, .gltf) öffnest, zum Beispiel per Doppelklick in „Dateien“",
-      "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten"
+      "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten",
+      "Widgets lassen sich jetzt direkt auf einen anderen Monitor ziehen: am Griff festhalten und einfach mit der Maus hinüberziehen. Ein Umriss zeigt, wo das Widget landet. Der Weg per Rechtsklick auf den Griff geht weiterhin"
     ]
   },
   {
