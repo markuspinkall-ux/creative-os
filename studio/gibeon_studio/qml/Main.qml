@@ -83,124 +83,240 @@ ApplicationWindow {
         anchors.margins: 14
         spacing: 14
 
-        // ---------------- Chat ----------------
-        Card {
-            id: chatPane
+        // ---------------- Links: Quellen und Chat ----------------
+        ColumnLayout {
+            id: leftCol
             Layout.fillHeight: true
-            Layout.preferredWidth: cfg.chat_open ? 340 : 56
-            Behavior on Layout.preferredWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            Layout.preferredWidth: 300
+            spacing: 14
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 10
-                visible: cfg.chat_open
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Repeater {
-                        model: ["twitch", "youtube"]
-                        delegate: Pill {
-                            required property string modelData
+            Card {
+                id: sourcesPane
+                Layout.fillWidth: true
+                Layout.fillHeight: !cfg.chat_open
+                // mit Chat: so hoch wie nötig, höchstens gut die Hälfte – der Rest gehört dem Chat
+                Layout.preferredHeight: cfg.chat_open ? Math.min(srcCol.implicitHeight + 32, leftCol.height * 0.58) : -1
+                Flickable {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    contentHeight: srcCol.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                    ColumnLayout {
+                        id: srcCol
+                        width: parent.width
+                        spacing: 10
+                        Heading { text: "Quellen in „" + ((st.scenes || [])[st.scene] || {name: ""}).name + "“" }
+                        Text {
                             Layout.fillWidth: true
-                            text: modelData === "twitch" ? "Twitch" : "YouTube"
-                            dot: modelData === "twitch" ? "#9f7aea" : "#ff4e45"
-                            checked: win.chatTab === modelData
-                            onClicked: win.chatTab = modelData
+                            wrapMode: Text.WordWrap
+                            text: win.items.length ? "In der Vorschau anklicken und ziehen. An den Ecken größer oder kleiner ziehen, Doppelklick füllt das Bild."
+                                                   : "Diese Szene ist noch leer – füge unten eine Quelle hinzu."
+                            color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                         }
-                    }
-                    IconBtn { icon: "chevron-left"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    readonly property var a: acc[win.chatTab] || ({})
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: Theme.radiusRow
-                        color: Theme.raised
-                        clip: true
-                        WebEngineView {
-                            id: chatView
-                            anchors.fill: parent
-                            anchors.margins: 1
-                            visible: !!parent.parent.a.chat
-                            url: parent.parent.a.chat || "about:blank"
-                            backgroundColor: Theme.raised
-                            settings.javascriptCanOpenWindows: false
-                            profile: WebEngineProfile {
-                                storageName: "gibeon-studio-chat"
-                                offTheRecord: false
-                                persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
-                            }
-                            // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
-                            onLoadingChanged: (info) => {
-                                if (info.status !== WebEngineView.LoadSucceededStatus)
-                                    return
-                                const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
-                                    + "{display:none!important} body{background:" + Theme.raised + "!important}"
-                                runJavaScript("(function(){var s=document.createElement('style');s.textContent="
-                                              + JSON.stringify(css) + ";document.head.appendChild(s);})()")
+                        // vorne liegende Quellen stehen oben
+                        Repeater {
+                            model: win.items.slice().reverse()
+                            delegate: SourceRow {
+                                required property var modelData
+                                required property int index
+                                item: modelData
+                                pos: win.items.length - 1 - index
                             }
                         }
-                        Column {
-                            anchors.centerIn: parent
-                            width: parent.width - 40
-                            spacing: 12
-                            visible: !chatView.visible
-                            Text {
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                                color: Theme.textMuted
-                                font.family: Theme.fontFamily
-                                font.pixelSize: 13
-                                text: !parent.parent.parent.a.connected
-                                      ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
-                                      : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
+                        GridLayout {
+                            Layout.fillWidth: true
+                            columns: 2
+                            columnSpacing: 6
+                            rowSpacing: 6
+                            CButton { Layout.fillWidth: true; text: "+ Bildschirm"; onClicked: selectAt(studio.addSource("screen")) }
+                            CButton { Layout.fillWidth: true; text: "+ Kamera"; onClicked: selectAt(studio.addSource("camera")) }
+                            CButton { Layout.fillWidth: true; text: "+ Capture-Karte"; onClicked: selectAt(studio.addSource("capture")) }
+                            CButton { Layout.fillWidth: true; text: "+ Bild"; onClicked: imagePicker.open() }
+                        }
+                        // Elgato-Karten ohne Treiber: lieber klar sagen als still nichts zeigen
+                        Repeater {
+                            model: st.unsupported || []
+                            delegate: Rectangle {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                implicitHeight: unsupText.implicitHeight + 18
+                                radius: Theme.radiusRow
+                                color: Qt.rgba(0.95, 0.55, 0.2, 0.14)
+                                border.color: Qt.rgba(0.95, 0.55, 0.2, 0.5)
+                                Text {
+                                    id: unsupText
+                                    anchors.fill: parent
+                                    anchors.margins: 9
+                                    wrapMode: Text.WordWrap
+                                    text: modelData
+                                    color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 11
+                                }
                             }
-                            CButton {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                visible: !parent.parent.parent.a.connected
-                                primary: true
-                                text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
-                                onClicked: studio.login(win.chatTab)
+                        }
+
+                        // Einstellungen der ausgewählten Quelle
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: !!win.selItem
+                            spacing: 8
+                            Divider { Layout.fillWidth: true; Layout.topMargin: 4 }
+                            Heading { text: win.selItem ? win.selItem.label : "" }
+                            Pick {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                                enabled: !win.locked
+                                items: st.videoDevices || []
+                                current: win.selItem ? win.selItem.device : ""
+                                empty: "Keine Kamera gefunden"
+                                onChosen: (id) => { if (win.selIndex >= 0 && id !== win.selItem.device) studio.setItem(win.selIndex, "device", id) }
                             }
-                            CButton {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
-                                text: "Neu laden"
-                                onClicked: studio.reloadChannel("youtube")
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                                Text { text: "Abgerundete Ecken"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; Layout.fillWidth: true }
+                                CSwitch { checked: !!(win.selItem && win.selItem.round); label: "Abgerundete Ecken"; onToggled: (v) => studio.setItem(win.selIndex, "round", v) }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                                Column {
+                                    Layout.fillWidth: true
+                                    Text { text: "Grünen Hintergrund entfernen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                                    Text { text: "Für Greenscreen und die Gibeon Kamera"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                                }
+                                CSwitch { checked: !!(win.selItem && win.selItem.green); label: "Grünen Hintergrund entfernen"; onToggled: (v) => studio.setItem(win.selIndex, "green", v) }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+                                CButton { Layout.fillWidth: true; text: "Bildfüllend"; onClicked: studio.fillItem(win.selIndex) }
+                                CButton { Layout.fillWidth: true; danger: true; text: "Entfernen"; onClicked: { studio.removeItem(win.selIndex); win.selected = "" } }
                             }
                         }
                     }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
-                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
-                    opacity: enabled ? 1 : 0.5
-                    Field {
-                        id: chatInput
-                        Layout.fillWidth: true
-                        placeholderText: "Nachricht an den Chat"
-                        onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
-                    }
-                    IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
                 }
             }
-            IconBtn {
-                visible: !cfg.chat_open
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: 12
-                icon: "chevron-left"
-                turn: 180
-                tip: "Chat zeigen"
-                onClicked: studio.set("chat_open", true)
+
+            // ---------------- Chat ----------------
+            Card {
+                id: chatPane
+                Layout.fillWidth: true
+                Layout.fillHeight: !!cfg.chat_open
+                Layout.preferredHeight: cfg.chat_open ? -1 : 52
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+                    visible: cfg.chat_open
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Repeater {
+                            model: ["twitch", "youtube"]
+                            delegate: Pill {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: modelData === "twitch" ? "Twitch" : "YouTube"
+                                dot: modelData === "twitch" ? "#9f7aea" : "#ff4e45"
+                                checked: win.chatTab === modelData
+                                onClicked: win.chatTab = modelData
+                            }
+                        }
+                        IconBtn { icon: "chevron-down"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        readonly property var a: acc[win.chatTab] || ({})
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Theme.radiusRow
+                            color: Theme.raised
+                            clip: true
+                            WebEngineView {
+                                id: chatView
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                visible: !!parent.parent.a.chat
+                                url: parent.parent.a.chat || "about:blank"
+                                backgroundColor: Theme.raised
+                                settings.javascriptCanOpenWindows: false
+                                profile: WebEngineProfile {
+                                    storageName: "gibeon-studio-chat"
+                                    offTheRecord: false
+                                    persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
+                                }
+                                // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
+                                onLoadingChanged: (info) => {
+                                    if (info.status !== WebEngineView.LoadSucceededStatus)
+                                        return
+                                    const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
+                                        + "{display:none!important} body{background:" + Theme.raised + "!important}"
+                                    runJavaScript("(function(){var s=document.createElement('style');s.textContent="
+                                                  + JSON.stringify(css) + ";document.head.appendChild(s);})()")
+                                }
+                            }
+                            Column {
+                                anchors.centerIn: parent
+                                width: parent.width - 40
+                                spacing: 12
+                                visible: !chatView.visible
+                                Text {
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    wrapMode: Text.WordWrap
+                                    color: Theme.textMuted
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 13
+                                    text: !parent.parent.parent.a.connected
+                                          ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
+                                          : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: !parent.parent.parent.a.connected
+                                    primary: true
+                                    text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
+                                    onClicked: studio.login(win.chatTab)
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
+                                    text: "Neu laden"
+                                    onClicked: studio.reloadChannel("youtube")
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
+                        opacity: enabled ? 1 : 0.5
+                        Field {
+                            id: chatInput
+                            Layout.fillWidth: true
+                            placeholderText: "Nachricht an den Chat"
+                            onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
+                        }
+                        IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
+                    }
+                }
+                RowLayout {
+                    visible: !cfg.chat_open
+                    anchors.fill: parent
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 8
+                    Text { text: "Chat"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true; Layout.fillWidth: true }
+                    IconBtn { icon: "chevron-down"; turn: 180; tip: "Chat zeigen"; onClicked: studio.set("chat_open", true) }
+                }
             }
         }
 
@@ -543,7 +659,7 @@ ApplicationWindow {
         // ---------------- Quellen ----------------
         Card {
             Layout.fillHeight: true
-            Layout.preferredWidth: 320
+            Layout.preferredWidth: 290
 
             Flickable {
                 anchors.fill: parent
@@ -558,96 +674,6 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 10
 
-                    Heading { text: "Quellen in „" + ((st.scenes || [])[st.scene] || {name: ""}).name + "“" }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: win.items.length ? "In der Vorschau anklicken und ziehen. An den Ecken größer oder kleiner ziehen, Doppelklick füllt das Bild."
-                                               : "Diese Szene ist noch leer – füge unten eine Quelle hinzu."
-                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
-                    }
-                    // vorne liegende Quellen stehen oben
-                    Repeater {
-                        model: win.items.slice().reverse()
-                        delegate: SourceRow {
-                            required property var modelData
-                            required property int index
-                            item: modelData
-                            pos: win.items.length - 1 - index
-                        }
-                    }
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: 2
-                        columnSpacing: 6
-                        rowSpacing: 6
-                        CButton { Layout.fillWidth: true; text: "+ Bildschirm"; onClicked: selectAt(studio.addSource("screen")) }
-                        CButton { Layout.fillWidth: true; text: "+ Kamera"; onClicked: selectAt(studio.addSource("camera")) }
-                        CButton { Layout.fillWidth: true; text: "+ Capture-Karte"; onClicked: selectAt(studio.addSource("capture")) }
-                        CButton { Layout.fillWidth: true; text: "+ Bild"; onClicked: imagePicker.open() }
-                    }
-                    // Elgato-Karten ohne Treiber: lieber klar sagen als still nichts zeigen
-                    Repeater {
-                        model: st.unsupported || []
-                        delegate: Rectangle {
-                            required property string modelData
-                            Layout.fillWidth: true
-                            implicitHeight: unsupText.implicitHeight + 18
-                            radius: Theme.radiusRow
-                            color: Qt.rgba(0.95, 0.55, 0.2, 0.14)
-                            border.color: Qt.rgba(0.95, 0.55, 0.2, 0.5)
-                            Text {
-                                id: unsupText
-                                anchors.fill: parent
-                                anchors.margins: 9
-                                wrapMode: Text.WordWrap
-                                text: modelData
-                                color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 11
-                            }
-                        }
-                    }
-
-                    // Einstellungen der ausgewählten Quelle
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        visible: !!win.selItem
-                        spacing: 8
-                        Divider { Layout.fillWidth: true; Layout.topMargin: 4 }
-                        Heading { text: win.selItem ? win.selItem.label : "" }
-                        Pick {
-                            Layout.fillWidth: true
-                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
-                            enabled: !win.locked
-                            items: st.videoDevices || []
-                            current: win.selItem ? win.selItem.device : ""
-                            empty: "Keine Kamera gefunden"
-                            onChosen: (id) => { if (win.selIndex >= 0 && id !== win.selItem.device) studio.setItem(win.selIndex, "device", id) }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
-                            Text { text: "Abgerundete Ecken"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; Layout.fillWidth: true }
-                            CSwitch { checked: !!(win.selItem && win.selItem.round); label: "Abgerundete Ecken"; onToggled: (v) => studio.setItem(win.selIndex, "round", v) }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
-                            Column {
-                                Layout.fillWidth: true
-                                Text { text: "Grünen Hintergrund entfernen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
-                                Text { text: "Für Greenscreen und die Gibeon Kamera"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
-                            }
-                            CSwitch { checked: !!(win.selItem && win.selItem.green); label: "Grünen Hintergrund entfernen"; onToggled: (v) => studio.setItem(win.selIndex, "green", v) }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 6
-                            CButton { Layout.fillWidth: true; text: "Bildfüllend"; onClicked: studio.fillItem(win.selIndex) }
-                            CButton { Layout.fillWidth: true; danger: true; text: "Entfernen"; onClicked: { studio.removeItem(win.selIndex); win.selected = "" } }
-                        }
-                    }
-
-                    Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
                     Heading { text: "Qualität" }
                     Seg {
                         Layout.fillWidth: true

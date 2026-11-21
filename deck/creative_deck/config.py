@@ -47,7 +47,7 @@ def default_config():
         "1": _key("Browser", "app:creative-browser.desktop", {"typ": "app", "app": "creative-browser.desktop"}),
         "2": _key("Terminal", "glyph:terminal", {"typ": "app", "app": "org.kde.konsole.desktop"}),
         "3": _key("Bildschirm-foto", "glyph:screenshot", {"typ": "tasten", "tasten": "print"}),
-        "4": _key("OBS", "glyph:broadcast", {"typ": "seite", "seite": 1}, "#2b3550"),
+        "4": _key("Studio", "glyph:broadcast", {"typ": "seite", "seite": 1}, "#2b3550"),
         "5": _key("Zurück", "glyph:prev", {"typ": "medien", "was": "zurueck"}),
         "6": _key("", "glyph:play", {"typ": "medien", "was": "play-pause"}),
         "7": _key("Weiter", "glyph:next", {"typ": "medien", "was": "weiter"}),
@@ -59,21 +59,41 @@ def default_config():
         "13": _key("Einfügen", "glyph:paste", {"typ": "tasten", "tasten": "ctrl+v"}),
         "14": _key("Sperren", "glyph:lock", {"typ": "tasten", "tasten": "meta+l"}),
     }
-    obs = {
+    studio = studio_page()
+    return {
+        "version": 1,
+        "helligkeit": 70,
+        "aus_nach_min": 0,
+        "obs": {"host": "localhost", "port": 4455, "passwort": ""},
+        "seiten": [{"name": "Start", "tasten": start}, {"name": "Studio", "tasten": studio}],
+        "letztes_geraet": {"modell": DEFAULT_MODEL, "spalten": 5, "zeilen": 3},
+    }
+
+
+def studio_page():
+    """Seite für Studio (Gibeon): Live, Aufnahme, Szenen 1–3, nächste Szene, Mikro und Desktop-Ton."""
+    return {
+        "0": _key("Zurück", "glyph:back", {"typ": "zurueck"}),
+        "1": _key("Live", "glyph:broadcast", {"typ": "studio", "was": "live"}, "#5a2a32"),
+        "2": _key("Aufnahme", "glyph:video", {"typ": "studio", "was": "aufnahme"}, "#2b3550"),
+        "3": _key("Mikro", "glyph:mic", {"typ": "studio", "was": "mikrofon"}),
+        "4": _key("Desktop-Ton", "glyph:volume", {"typ": "studio", "was": "desktop"}),
+        "5": _key("Szene 1", "glyph:screen-tool", {"typ": "studio", "was": "szene", "name": "1"}),
+        "6": _key("Szene 2", "glyph:screen-tool", {"typ": "studio", "was": "szene", "name": "2"}),
+        "7": _key("Szene 3", "glyph:screen-tool", {"typ": "studio", "was": "szene", "name": "3"}),
+        "8": _key("Nächste Szene", "glyph:next", {"typ": "studio", "was": "naechste"}),
+    }
+
+
+def old_obs_page():
+    """Die frühere OBS-Beispielseite – unverändert übernommen wird sie zur Studio-Seite."""
+    return {
         "0": _key("Zurück", "glyph:back", {"typ": "zurueck"}),
         "1": _key("Aufnahme", "glyph:video", {"typ": "obs", "was": "aufnahme"}, "#5a2a32"),
         "2": _key("Stream", "glyph:broadcast", {"typ": "obs", "was": "stream"}, "#2b3550"),
         "3": _key("Replay", "glyph:save", {"typ": "obs", "was": "replay"}),
         "4": _key("Mikro", "glyph:mic", {"typ": "obs", "was": "stumm", "name": "Mikrofon/AUX"}),
         "5": _key("Szene 1", "glyph:screen-tool", {"typ": "obs", "was": "szene", "name": "Szene"}),
-    }
-    return {
-        "version": 1,
-        "helligkeit": 70,
-        "aus_nach_min": 0,
-        "obs": {"host": "localhost", "port": 4455, "passwort": ""},
-        "seiten": [{"name": "Start", "tasten": start}, {"name": "OBS", "tasten": obs}],
-        "letztes_geraet": {"modell": DEFAULT_MODEL, "spalten": 5, "zeilen": 3},
     }
 
 
@@ -116,9 +136,22 @@ def _to_creative_browser(cfg):
     return cfg
 
 
+def _to_studio(cfg):
+    """Unveränderte OBS-Beispielseite (aus der ersten Einrichtung) auf Studio umstellen."""
+    for i, seite in enumerate(cfg["seiten"]):
+        if seite["name"] == "OBS" and seite["tasten"] == old_obs_page():
+            seite["name"], seite["tasten"] = "Studio", studio_page()
+            for other in cfg["seiten"]:
+                for key in other["tasten"].values():
+                    a = key.get("aktion") or {}
+                    if a.get("typ") == "seite" and a.get("seite") == i and key.get("text") == "OBS":
+                        key["text"] = "Studio"
+    return cfg
+
+
 def load():
     try:
-        return _to_creative_browser(_clean(json.loads(config_path().read_text(encoding="utf-8"))))
+        return _to_studio(_to_creative_browser(_clean(json.loads(config_path().read_text(encoding="utf-8")))))
     except (OSError, ValueError):
         return default_config()
 

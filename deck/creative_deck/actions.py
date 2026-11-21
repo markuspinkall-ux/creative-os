@@ -4,7 +4,7 @@ import os
 import shutil
 import subprocess
 
-from . import apps, obs
+from . import apps, obs, studio
 from .keys import Keyboard, german
 
 # Typ → (Name im Editor, Beschreibung)
@@ -17,6 +17,7 @@ TYPES = [
     ("medien", "Musik & Video"),
     ("lautstaerke", "Lautstärke"),
     ("mikrofon", "Mikrofon stumm"),
+    ("studio", "Studio (Gibeon)"),
     ("obs", "OBS Studio"),
     ("sound", "Ton abspielen"),
     ("seite", "Seite öffnen"),
@@ -57,6 +58,9 @@ def describe(action, pages=()):
         return VOLUME_NAMES.get(a.get("was"), "")
     if t == "mikrofon":
         return "Mikrofon stumm/an"
+    if t == "studio":
+        extra = f" „{a.get('name')}“" if a.get("name") and a.get("was") == "szene" else ""
+        return studio.NAMES.get(a.get("was"), "Studio") + extra
     if t == "obs":
         extra = f" „{a.get('name')}“" if a.get("name") and a.get("was") in ("szene", "stumm") else ""
         return OBS_NAMES.get(a.get("was"), "OBS") + extra
@@ -127,6 +131,9 @@ class Runner:
                 return self._volume(a.get("was"))
             if t == "mikrofon":
                 return "" if _spawn(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"]) else "wpctl fehlt"
+            if t == "studio":
+                studio.run(a.get("was", "live"), a.get("name", ""))
+                return ""
             if t == "obs":
                 obs.run(cfg.get("obs") or {}, a.get("was", "aufnahme"), a.get("name", ""))
                 return ""
@@ -135,7 +142,7 @@ class Runner:
                 if not player or not a.get("datei"):
                     return "Kein Ton gewählt"
                 return "" if _spawn([player, a["datei"]]) else "Ton ließ sich nicht abspielen"
-        except obs.ObsError as exc:
+        except (obs.ObsError, studio.StudioError) as exc:
             return str(exc)
         except (OSError, KeyError, ValueError) as exc:
             return str(exc)

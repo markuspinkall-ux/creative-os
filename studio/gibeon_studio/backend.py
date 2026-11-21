@@ -77,9 +77,23 @@ def merge(base, data):
     return out
 
 
+def stable_paths():
+    """/dev/videoN → feste Kennung (/dev/v4l/by-id/…, sonst by-path). Die Nummer N kann sich nach
+    Neustart oder Umstecken ändern, die Kennung nicht – so bleibt die Capture-Karte in der Szene."""
+    out = {}
+    for kind in ("by-path", "by-id"):          # by-id gewinnt (enthält Hersteller und Seriennummer)
+        for link in sorted(Path("/dev/v4l", kind).glob("*video-index0")):
+            try:
+                out[os.path.realpath(link)] = str(link)
+            except OSError:
+                pass
+    return out
+
+
 def video_devices():
     """Kameras und Capture-Karten: (Gerät, Name)."""
     out = []
+    stable = stable_paths()
     root = Path("/sys/class/video4linux")
     for d in sorted(root.glob("video*"), key=lambda p: int(p.name[5:]) if p.name[5:].isdigit() else 999):
         try:
@@ -89,7 +103,7 @@ def video_devices():
         except OSError:
             continue
         info = geraete.describe(d)
-        out.append({"id": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name),
+        out.append({"id": stable.get(f"/dev/{d.name}", f"/dev/{d.name}"), "node": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name),
                     "capture": info["capture"], "elgato": info["elgato"]})
     return out
 
@@ -313,6 +327,7 @@ class Studio(QObject):
                 new_item(self.cfg, "test", pattern="smpte"),
                 new_item(self.cfg, "test", pattern="ball", x=0.68, y=0.665, w=0.30, round=True, green=True)]}]
         elif migrate(self.cfg):
+            self._first_start = not CFG.exists()
             self._save()
         self.levels = {}
         self.status = ""
@@ -342,6 +357,9 @@ class Studio(QObject):
         self._clock = QTimer(self, interval=1000, timeout=self.changed.emit)
         self.refreshDevices()
         self._poll.start()
+        self._devwatch = QTimer(self, interval=4000, timeout=self._watch_devices)
+        if not selftest:
+            self._devwatch.start()
         self._clock.start()
         if selftest:
             return
@@ -503,7 +521,43 @@ class Studio(QObject):
             self.unsupported = geraete.unsupported()
         except OSError:
             self.unsupported = []
+        self._stable_devices()
+        if getattr(self, "_first_start", False):
+            self._first_start = False
+            self._capture_scene()
         self.changed.emit()
+
+    def _stable_devices(self):
+        """Ältere Einträge mit /dev/videoN auf die feste Kennung umstellen."""
+        by_node = {d["node"]: d["id"] for d in self.video_list}
+        changed = False
+        for sc in self.cfg["scenes"]:
+            for it in sc["items"]:
+                dev = it.get("device") or ""
+                if dev in by_node and by_node[dev] != dev:
+                    it["device"] = by_node[dev]
+                    changed = True
+        if changed:
+            self._save()
+
+    def _capture_scene(self):
+        """Erster Start mit angeschlossener Capture-Karte (z. B. Elgato): gleich eine fertige Szene dafür."""
+        card = next((d for d in self.video_list if d.get("elgato")), None) or \
+            next((d for d in self.video_list if d.get("capture") and not d.get("virtual")), None)
+        if not card or any(sc["name"] == "Capture-Karte" for sc in self.cfg["scenes"]):
+            return
+        it = new_item(self.cfg, "capture", device=card["id"])
+        self.cfg["scenes"].append({"name": "Capture-Karte", "items": [it]})
+        self._device_chosen(it)
+        self._save()
+
+    def _watch_devices(self):
+        """Alle paar Sekunden: neu angesteckte Kameras/Karten erkennen (Studio verbindet sich dann
+        von selbst wieder – die Szene kennt die Karte ja an ihrer festen Kennung)."""
+        before = [(d["id"], d["node"]) for d in self.video_list]
+        vids = video_devices()
+        if [(d["id"], d["node"]) for d in vids] != before:
+            self.refreshDevices()
 
     # ---- Bildschirm freigeben -----------------------------------------------------------------
     @Slot()
@@ -828,7 +882,7 @@ class Studio(QObject):
             if broadcast_green():
                 self.toast.emit("Broadcast zeigt jetzt einen grünen Hintergrund – Studio blendet ihn aus.")
         elif it["kind"] == "capture" and not self.cfg["audio"]["extra"]["device"]:
-            match = matching_audio(it.get("device", ""), self.audio_list)
+            match = matching_audio(os.path.realpath(it.get("device", "")), self.audio_list)
             if match:
                 self.cfg["audio"]["extra"].update(on=True, device=match)
 
@@ -1140,6 +1194,35 @@ class Studio(QObject):
                 self.toast.emit("YouTube: Der Chat ist erst offen, wenn die Übertragung bereit ist.")
                 return
             self._bg(lambda: self.accounts["youtube"].send_chat(chat, text))
+
+    # ---- Fernsteuerung (Stream Deck über Deck) ------------------------------------------------------
+    @Slot(str, result=str)
+    def command(self, line):
+        """„live“, „aufnahme“, „szene <Name oder Nummer>“, „naechste“, „stumm mic|desktop|extra“."""
+        cmd, _sp, arg = line.strip().partition(" ")
+        arg = arg.strip()
+        if cmd == "live":
+            self.toggleLive()
+        elif cmd == "aufnahme":
+            self.toggleRecord()
+        elif cmd == "szene":
+            names = [sc["name"].casefold() for sc in self.cfg["scenes"]]
+            if arg.casefold() in names:
+                index = names.index(arg.casefold())
+            elif arg.isdigit() and 1 <= int(arg) <= len(names):
+                index = int(arg) - 1
+            else:
+                return f"fehler Die Szene „{arg}“ gibt es in Studio nicht."
+            self.setScene(index)
+        elif cmd == "naechste":
+            n = len(self.cfg["scenes"])
+            if n:
+                self.setScene((self.cfg["scene"] + 1) % n)
+        elif cmd == "stumm" and arg in self.cfg["audio"]:
+            self.set(f"audio.{arg}.muted", not self.cfg["audio"][arg]["muted"])
+        else:
+            return "fehler Unbekannter Befehl"
+        return "ok"
 
     # ---- Ende -----------------------------------------------------------------------------------------
     @Slot()

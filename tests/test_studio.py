@@ -290,3 +290,55 @@ class FesteEinstellung(unittest.TestCase):
             self.assertTrue(f.no_mode)            # klappt nicht → nochmal ohne feste Einstellung
         finally:
             f.stop()
+
+
+class StreamDeck(unittest.TestCase):
+    """Deck-Tasten für Studio: Befehle, Beispielseite, Umstellung der alten OBS-Seite."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "deck"))
+
+    def test_befehle(self):
+        from creative_deck import studio
+        self.assertEqual(studio.command("szene", "Pause"), "szene Pause")
+        self.assertEqual(studio.command("mikrofon"), "stumm mic")
+        self.assertEqual(studio.command("live"), "live")
+        with self.assertRaises(studio.StudioError):
+            studio.command("szene", "")
+
+    def test_studio_antwortet(self):
+        import socket
+        import threading
+        from creative_deck import studio
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": d}):
+            srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            srv.bind(studio.socket_path())
+            srv.listen(1)
+            got = []
+
+            def serve():
+                c, _ = srv.accept()
+                got.append(c.recv(100).decode())
+                c.sendall(b"fehler Die Szene gibt es nicht\n")
+                c.close()
+            t = threading.Thread(target=serve)
+            t.start()
+            with self.assertRaises(studio.StudioError) as cm:
+                studio.run("szene", "Gibtsnicht", start=False)
+            t.join(2)
+            srv.close()
+        self.assertEqual(got, ["szene Gibtsnicht\n"])
+        self.assertIn("gibt es nicht", str(cm.exception))
+
+    def test_alte_obs_seite_wird_studio(self):
+        from creative_deck import config
+        cfg = config.default_config()
+        cfg["seiten"][1] = {"name": "OBS", "tasten": config.old_obs_page()}
+        cfg["seiten"][0]["tasten"]["4"]["text"] = "OBS"
+        cfg = config._to_studio(cfg)
+        self.assertEqual(cfg["seiten"][1]["name"], "Studio")
+        self.assertEqual(cfg["seiten"][1]["tasten"]["1"]["aktion"], {"typ": "studio", "was": "live"})
+        self.assertEqual(cfg["seiten"][0]["tasten"]["4"]["text"], "Studio")
+        # selbst angepasste OBS-Seite bleibt, wie sie ist
+        cfg["seiten"][1] = {"name": "OBS", "tasten": {"0": config._key("X", "", {"typ": "obs", "was": "stream"})}}
+        self.assertEqual(config._to_studio(cfg)["seiten"][1]["name"], "OBS")

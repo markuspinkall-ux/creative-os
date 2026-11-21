@@ -285,13 +285,13 @@ class DeckEditor(QObject):
         if old.get("typ") == typ:
             return
         defaults = {"medien": {"was": "play-pause"}, "lautstaerke": {"was": "lauter"},
-                    "obs": {"was": "aufnahme"}, "helligkeit": {"was": "hoch"}, "seite": {"seite": 0}}
+                    "obs": {"was": "aufnahme"}, "studio": {"was": "live"}, "helligkeit": {"was": "hoch"}, "seite": {"seite": 0}}
         k["aktion"] = {"typ": typ, **defaults.get(typ, {})}
         # passende Vorschläge für Beschriftung und Symbol, solange die Taste noch leer ist
         if not k.get("symbol"):
             k["symbol"] = {"befehl": "glyph:terminal", "webseite": "glyph:browser", "tasten": "glyph:grid",
                            "text": "glyph:paste", "medien": "glyph:play", "lautstaerke": "glyph:volume",
-                           "mikrofon": "glyph:mic", "obs": "glyph:video", "sound": "glyph:music",
+                           "mikrofon": "glyph:mic", "obs": "glyph:video", "studio": "glyph:broadcast", "sound": "glyph:music",
                            "seite": "glyph:folder-plus", "zurueck": "glyph:back",
                            "helligkeit": "glyph:brightness"}.get(typ, "")
         self._touch()
