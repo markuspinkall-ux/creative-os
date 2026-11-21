@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Window
+import QtQuick.Effects
 import Creative
 
 // Hintergrundbild – liegt hinter allen Fenstern, auf jedem Monitor.
@@ -59,6 +60,58 @@ Item {
     // obere Leiste (Tray links, Uhrzeit rechts): Widgets und Symbole bleiben darunter
     readonly property int topSpace: 50
     readonly property int minY: topSpace + 8
+    // Fluid-Glas der Widgets: diese Ebene liegt weichgezeichnet hinter jedem Widget
+    readonly property Item wallLayer: wallLayerItem
+
+    // Milchglas hinter einem Widget: weichgezeichneter Hintergrund, Glas-Tönung, heller Rand,
+    // Lichtkante oben. Das Widget selbst ist durchsichtig; diese Fläche liegt ganz unten darin.
+    component GlassBackdrop: Item {
+        id: gb
+        required property Item target
+        property color edge: Theme.glassEdge
+        property int edgeWidth: 1
+        anchors.fill: parent
+        z: -1
+        ShaderEffectSource {
+            id: gbSrc
+            anchors.fill: parent
+            sourceItem: root.wallLayer
+            sourceRect: Qt.rect(gb.target.x, gb.target.y, gb.target.width, gb.target.height)
+            live: true
+            visible: false
+        }
+        MultiEffect {
+            anchors.fill: parent
+            source: gbSrc
+            blurEnabled: true
+            blur: 1.0
+            blurMax: 48
+            saturation: 0.15
+            maskEnabled: true
+            maskSource: gbMask
+        }
+        Item {
+            id: gbMask
+            anchors.fill: parent
+            layer.enabled: true
+            visible: false
+            Rectangle { anchors.fill: parent; radius: gb.target.radius; color: "black" }
+        }
+        Rectangle {
+            anchors.fill: parent
+            radius: gb.target.radius
+            color: Theme.light ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(28 / 255, 33 / 255, 46 / 255, 0.42)
+            border.color: gb.edge
+            border.width: gb.edgeWidth
+        }
+        Rectangle {
+            x: gb.target.radius
+            y: 1
+            width: Math.max(0, parent.width - 2 * gb.target.radius)
+            height: 1
+            color: Theme.glassShine
+        }
+    }
 
     // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.
     property var fallbackPositions: ({})
@@ -257,89 +310,95 @@ Item {
         return "auto"
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: Theme.ground
-    }
-
-    Image {
-        anchors.fill: parent
-        source: wallpaperUrl
-        // Beim bewegten Hintergrund liegt dieselbe Szene in Ebenen darüber
-        visible: !(wallAnim.on && wallGround.status === Image.Ready)
-        fillMode: Image.PreserveAspectCrop
-        sourceSize.width: width
-        sourceSize.height: height
-        asynchronous: true
-        smooth: true
-        cache: true
-    }
-
-    // „Vivid Venus“ bewegt sich: Wolken ziehen, die Rakete schwebt, Sterne funkeln.
-    // Sehr ruhig (eine Runde = 24 s) und nur, solange man den Schreibtisch auch sieht.
+    // Hintergrund (Farbe, Bild, bewegte Venus) als eine Ebene – Widgets im Fluid-Stil
+    // zeigen diese Ebene weichgezeichnet hinter sich (Milchglas).
     Item {
-        id: wallAnim
-        objectName: "wallAnim"
-        readonly property var d: (typeof wallpaperAnim !== "undefined" && wallpaperAnim) ? wallpaperAnim : ({})
-        readonly property bool on: !!d.folder
-        readonly property real s: Math.max(root.width / 3840, root.height / 2160)
-        readonly property bool covered: {
-            tasks.revision
-            return tasks.largestWindowArea(root.screenName) > root.width * root.height * 0.85
-        }
-        readonly property bool running: on && root.visible && !covered
-        property real phase: 0
-        visible: on
-        x: (root.width - width) / 2
-        y: (root.height - height) / 2
-        width: 3840 * s
-        height: 2160 * s
-
-        NumberAnimation on phase {
-            from: 0; to: 1
-            duration: 24000
-            loops: Animation.Infinite
-            running: wallAnim.running
+        id: wallLayerItem
+        anchors.fill: parent
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.ground
         }
 
         Image {
-            id: wallGround
             anchors.fill: parent
-            source: wallAnim.on ? wallAnim.d.folder + "grund.svg" : ""
-            sourceSize: Qt.size(width, height)
+            source: wallpaperUrl
+            // Beim bewegten Hintergrund liegt dieselbe Szene in Ebenen darüber
+            visible: !(wallAnim.on && wallGround.status === Image.Ready)
+            fillMode: Image.PreserveAspectCrop
+            sourceSize.width: width
+            sourceSize.height: height
             asynchronous: true
+            smooth: true
+            cache: true
         }
-        // Wolken: zweite Lage mit verschobenen Schleiern, langsam überblendet
-        Image {
-            anchors.fill: parent
-            source: wallAnim.on ? wallAnim.d.folder + "wolken.svg" : ""
-            sourceSize: Qt.size(width, height)
-            asynchronous: true
-            opacity: 0.5 - 0.5 * Math.cos(2 * Math.PI * wallAnim.phase)
-        }
-        Repeater {
-            model: wallAnim.on ? wallAnim.d.stars : []
-            delegate: Rectangle {
-                required property var modelData
-                x: modelData.x * wallAnim.s - width / 2
-                y: modelData.y * wallAnim.s - height / 2
-                width: Math.max(1.5, modelData.r * 2 * wallAnim.s)
-                height: width
-                radius: width / 2
-                color: wallAnim.d.starColor || "#dce6ff"
-                opacity: modelData.o * (0.55 + 0.45 * Math.sin(2 * Math.PI * (wallAnim.phase * 6 * modelData.s + modelData.p)))
+
+        // „Vivid Venus“ bewegt sich: Wolken ziehen, die Rakete schwebt, Sterne funkeln.
+        // Sehr ruhig (eine Runde = 24 s) und nur, solange man den Schreibtisch auch sieht.
+        Item {
+            id: wallAnim
+            objectName: "wallAnim"
+            readonly property var d: (typeof wallpaperAnim !== "undefined" && wallpaperAnim) ? wallpaperAnim : ({})
+            readonly property bool on: !!d.folder
+            readonly property real s: Math.max(root.width / 3840, root.height / 2160)
+            readonly property bool covered: {
+                tasks.revision
+                return tasks.largestWindowArea(root.screenName) > root.width * root.height * 0.85
             }
-        }
-        // Rakete samt Spur schwebt in Flugrichtung vor und zurück
-        Image {
-            id: wallRocket
-            anchors.fill: parent
-            source: wallAnim.on ? wallAnim.d.folder + "rakete.svg" : ""
-            sourceSize: Qt.size(width, height)
-            asynchronous: true
-            readonly property real heading: ((wallAnim.d.rocket ? wallAnim.d.rocket.angle : 90) - 90) * Math.PI / 180
-            readonly property real bob: 18 * wallAnim.s * Math.sin(2 * Math.PI * wallAnim.phase * 2)
-            transform: Translate { x: wallRocket.bob * Math.cos(wallRocket.heading); y: wallRocket.bob * Math.sin(wallRocket.heading) }
+            readonly property bool running: on && root.visible && !covered
+            property real phase: 0
+            visible: on
+            x: (root.width - width) / 2
+            y: (root.height - height) / 2
+            width: 3840 * s
+            height: 2160 * s
+
+            NumberAnimation on phase {
+                from: 0; to: 1
+                duration: 24000
+                loops: Animation.Infinite
+                running: wallAnim.running
+            }
+
+            Image {
+                id: wallGround
+                anchors.fill: parent
+                source: wallAnim.on ? wallAnim.d.folder + "grund.svg" : ""
+                sourceSize: Qt.size(width, height)
+                asynchronous: true
+            }
+            // Wolken: zweite Lage mit verschobenen Schleiern, langsam überblendet
+            Image {
+                anchors.fill: parent
+                source: wallAnim.on ? wallAnim.d.folder + "wolken.svg" : ""
+                sourceSize: Qt.size(width, height)
+                asynchronous: true
+                opacity: 0.5 - 0.5 * Math.cos(2 * Math.PI * wallAnim.phase)
+            }
+            Repeater {
+                model: wallAnim.on ? wallAnim.d.stars : []
+                delegate: Rectangle {
+                    required property var modelData
+                    x: modelData.x * wallAnim.s - width / 2
+                    y: modelData.y * wallAnim.s - height / 2
+                    width: Math.max(1.5, modelData.r * 2 * wallAnim.s)
+                    height: width
+                    radius: width / 2
+                    color: wallAnim.d.starColor || "#dce6ff"
+                    opacity: modelData.o * (0.55 + 0.45 * Math.sin(2 * Math.PI * (wallAnim.phase * 6 * modelData.s + modelData.p)))
+                }
+            }
+            // Rakete samt Spur schwebt in Flugrichtung vor und zurück
+            Image {
+                id: wallRocket
+                anchors.fill: parent
+                source: wallAnim.on ? wallAnim.d.folder + "rakete.svg" : ""
+                sourceSize: Qt.size(width, height)
+                asynchronous: true
+                readonly property real heading: ((wallAnim.d.rocket ? wallAnim.d.rocket.angle : 90) - 90) * Math.PI / 180
+                readonly property real bob: 18 * wallAnim.s * Math.sin(2 * Math.PI * wallAnim.phase * 2)
+                transform: Translate { x: wallRocket.bob * Math.cos(wallRocket.heading); y: wallRocket.bob * Math.sin(wallRocket.heading) }
+            }
         }
     }
 
@@ -501,8 +560,8 @@ Item {
         height: content.implicitHeight + 24
         visible: root.widgetOnScreen(widgetKey) && source.enabled
         radius: 22
-        color: Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, Math.min(Theme.bar.a, 0.85))
-        border.color: Theme.hairline
+        color: "transparent"
+        GlassBackdrop { target: widget }
 
         WidgetGrip {
             anchors.left: parent.left
@@ -619,8 +678,8 @@ Item {
         x: homeX()
         y: homeY()
         radius: 22
-        color: Theme.bar
-        border.color: Theme.hairline
+        color: "transparent"
+        GlassBackdrop { target: extra }
         Loader {
             anchors.fill: parent
             anchors.leftMargin: 30
@@ -1075,9 +1134,8 @@ Item {
         width: stats.implicitWidth + 42
         height: stats.implicitHeight + 24
         radius: 22
-        color: Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, Math.min(Theme.bar.a, 0.85))
-        border.width: 1
-        border.color: Theme.hairline
+        color: "transparent"
+        GlassBackdrop { target: statsBox }
 
         WidgetGrip {
             anchors.left: parent.left
@@ -1470,9 +1528,12 @@ Item {
         width: shelf.items.length ? shelfRow.implicitWidth + 44 : emptyHint.implicitWidth + 64
         Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         radius: 22
-        color: Theme.bar
-        border.width: 1
-        border.color: dropHover ? Theme.accent : Theme.hairline
+        color: "transparent"
+        GlassBackdrop {
+            target: shelfBox
+            edge: shelfBox.dropHover ? Theme.accent : Theme.glassEdge
+            edgeWidth: shelfBox.dropHover ? 2 : 1
+        }
         scale: dropHover ? 1.04 : 1
         Behavior on scale { NumberAnimation { duration: 140 } }
 

@@ -39,3 +39,10 @@ def test_fluid_glas():
         qml = (ROOT / f"shell/creative_shell/qml/surfaces/{f}.qml").read_text(encoding="utf-8")
         assert "shell.setBlur(Window.window" in qml and "Theme.glass" in qml, f
     assert "blurEnabled=true" in (ROOT / "shell/kwin/kwinrc").read_text(encoding="utf-8")
+
+
+def test_widgets_glas():
+    qml = (ROOT / "shell/creative_shell/qml/surfaces/Wallpaper.qml").read_text(encoding="utf-8")
+    assert "component GlassBackdrop" in qml and "id: wallLayerItem" in qml and "import QtQuick.Effects" in qml
+    for target in ("widget", "extra", "statsBox", "shelfBox"):
+        assert f"target: {target}" in qml, target
