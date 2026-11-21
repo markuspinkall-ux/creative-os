@@ -240,12 +240,9 @@ RUN chmod 755 /usr/lib/creative-writer/creative-writer \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/writer-home XDG_RUNTIME_DIR=/tmp timeout 60 /usr/lib/creative-writer/creative-writer --selftest \
  && rm -rf /tmp/writer-home
 
-# Podcast nutzt dieselbe Qt-Multimedia-Laufzeit wie Player.
-COPY podcast/creative_podcast /usr/lib/creative-podcast/creative_podcast
-COPY podcast/bin/creative-podcast /usr/bin/creative-podcast
-COPY podcast/creative-podcast.desktop /usr/share/applications/creative-podcast.desktop
-COPY podcast/creative-podcast.svg /usr/share/icons/hicolor/scalable/apps/creative-podcast.svg
-RUN chmod 755 /usr/bin/creative-podcast
+# Podcast ist jetzt ein Reiter im Player. „creative-podcast“ öffnet für alte Verknüpfungen den Player dort.
+RUN printf '#!/bin/sh\nexec /usr/bin/creative-player --podcast "$@"\n' > /usr/bin/creative-podcast \
+ && chmod 755 /usr/bin/creative-podcast && rm -rf /usr/lib/creative-podcast /usr/share/applications/creative-podcast.desktop
 
 # Mail: Qt-Client (IMAP/SMTP) und Secret Service für die Passwörter.
 RUN dnf install -y libsecret && dnf clean all
@@ -807,6 +804,8 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-media/creative_media/qml/Main.qml \
         /usr/lib/creative-media/creative_media/qml/YtMusicView.qml \
         /usr/lib/creative-media/creative_media/qml/YtWeb.qml \
+        /usr/lib/creative-media/creative_media/qml/YtData.qml \
+        /usr/lib/creative-media/creative_media/qml/PodcastView.qml \
         /usr/lib/creative-media/creative_media/qml/PlayerBar.qml \
         /usr/lib/creative-taskmanager/creative_taskmanager/qml/Main.qml \
         /usr/lib/creative-gamelauncher/creative_gamelauncher/qml/Main.qml \
@@ -861,10 +860,7 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 
 # Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home
-# Podcast: QML-Oberfläche und Multimedia-Laufzeit laden.
 RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio /usr/bin/creative-cut --selftest
-RUN QT_QPA_PLATFORM=offscreen QT_AUDIO_BACKEND=pulseaudio HOME=/tmp/podcast-home timeout 30 /usr/bin/creative-podcast --selftest \
- && rm -rf /tmp/podcast-home
 # Broadcast: KI-Freistellung und Rauschfilter vorhanden?
 RUN XDG_RUNTIME_DIR=/tmp HOME=/tmp/bc-home timeout 120 /usr/bin/creative-broadcastd --selftest \
     || echo "BROADCAST-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/bc-home

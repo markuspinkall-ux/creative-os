@@ -42,7 +42,7 @@ NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop",   # B
 SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
     "creative-cut.desktop", "creative-ftp.desktop",
-    "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
+    "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop",
     "creative-writer.desktop", "gibeon-studio.desktop",
 }
 # Broadcast, Deck, Shots, Widgets, Pictures und 3D-Ansicht stehen nicht im Startmenü (NoDisplay):

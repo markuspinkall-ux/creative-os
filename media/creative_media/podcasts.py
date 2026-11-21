@@ -1,16 +1,25 @@
+"""Podcasts im Player (früher eigene App „Podcast“): suchen, abonnieren, Folgen laden und hören.
+
+Abos und heruntergeladene Folgen der früheren App werden übernommen (gleiche Einstellungen,
+gleicher Ordner). Abgespielt wird über den Player selbst (gemeinsame Wiedergabeleiste).
+"""
+
 import json
-import sys
 from pathlib import Path
 from threading import Thread
 
-from PySide6.QtCore import QObject, Property, QLockFile, QSettings, QStandardPaths, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QGuiApplication, QIcon
-from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtQuickControls2 import QQuickStyle
+from PySide6.QtCore import QObject, Property, QSettings, QStandardPaths, QUrl, Signal, Slot
 
-from . import feeds
+from . import podcast_feeds
 
-HERE = Path(__file__).resolve().parent
+
+def episodes_dir():
+    base = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.GenericDataLocation))
+    d = base / "Creative OS" / "Creative Podcast" / "episodes"
+    d.mkdir(parents=True, exist_ok=True)
+    for partial in d.glob("*.part"):
+        partial.unlink(missing_ok=True)
+    return d
 
 
 class Podcasts(QObject):
@@ -24,7 +33,8 @@ class Podcasts(QObject):
     def __init__(self, directory):
         super().__init__()
         self.directory = directory
-        self.settings = QSettings()
+        # dieselben Einstellungen wie die frühere Podcast-App: Abos und Downloads bleiben erhalten
+        self.settings = QSettings("Creative OS", "Creative Podcast")
         self.subscriptions = self.read("subscriptions")
         self.downloads = {key: item for key, item in self.read("downloads").items()
                           if Path(item["file"]).is_file()}
@@ -118,7 +128,7 @@ class Podcasts(QObject):
                 self.catalogueChanged.emit()
                 self.message = "" if result else "Keine Podcasts gefunden."
 
-        self.run(lambda: feeds.search(term), done, "Suche")
+        self.run(lambda: podcast_feeds.search(term), done, "Suche")
 
     @Slot("QVariantMap")
     def openShow(self, show):
@@ -135,7 +145,7 @@ class Podcasts(QObject):
                 self.playlistChanged.emit()
                 self.message = "" if self.episodes else "Dieser Feed enthält keine abspielbaren Folgen."
 
-        self.run(lambda: feeds.playlist(show), done, "Feed laden")
+        self.run(lambda: podcast_feeds.playlist(show), done, "Feed laden")
 
     @Slot(str)
     def openFeed(self, url):
@@ -168,7 +178,7 @@ class Podcasts(QObject):
                 self.message = "Folge heruntergeladen."
                 self.offlineChanged.emit()
 
-        self.run(lambda: feeds.download(episode, self.directory), done, "Download")
+        self.run(lambda: podcast_feeds.download(episode, self.directory), done, "Download")
 
     @Slot(str)
     def removeDownload(self, key):
@@ -189,44 +199,3 @@ class Podcasts(QObject):
         if saved and Path(saved["file"]).is_file():
             return QUrl.fromLocalFile(saved["file"])
         return QUrl(episode["url"])
-
-
-def main():
-    QQuickStyle.setStyle("Basic")
-    app = QGuiApplication(sys.argv)
-    app.setOrganizationName("Creative OS")
-    app.setApplicationName("Creative Podcast")
-    app.setDesktopFileName("creative-podcast")
-    app.setWindowIcon(QIcon.fromTheme("creative-podcast"))
-
-    data = Path(QStandardPaths.writableLocation(QStandardPaths.AppDataLocation))
-    data.mkdir(parents=True, exist_ok=True)
-    lock = QLockFile(str(data / "instance.lock"))
-    lock.setStaleLockTime(0)
-    if not lock.tryLock(0):
-        return 1
-    downloads = data / "episodes"
-    for partial in downloads.glob("*.part"):
-        partial.unlink(missing_ok=True)
-    podcasts = Podcasts(downloads)
-    engine = QQmlApplicationEngine()
-    for location in (
-        HERE.parent.parent / "shell/creative_shell/qml",
-        Path("/usr/lib/creative-shell/creative_shell/qml"),
-    ):
-        if (location / "Creative/qmldir").is_file():
-            engine.addImportPath(str(location))
-            break
-    engine.setInitialProperties({"podcasts": podcasts})
-    engine.load(QUrl.fromLocalFile(str(HERE / "qml/Main.qml")))
-    if not engine.rootObjects():
-        return 1
-    if "--selftest" in sys.argv:
-        QTimer.singleShot(200, app.quit)
-    result = app.exec()
-    del engine
-    return result
-
-
-if __name__ == "__main__":
-    sys.exit(main())

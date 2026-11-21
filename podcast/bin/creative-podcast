@@ -1,3 +1,0 @@
-#!/bin/sh
-export PYTHONPATH="/usr/lib/creative-podcast${PYTHONPATH:+:$PYTHONPATH}"
-exec python3 -m creative_podcast "$@"

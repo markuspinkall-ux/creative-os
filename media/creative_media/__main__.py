@@ -19,6 +19,7 @@ from .iptv import IptvModel
 from .library import LibraryModel
 from .settings import Settings
 from .ytmusic import YtMusicModel
+from .podcasts import Podcasts, episodes_dir
 from .nowplaying import NowPlayingWriter
 
 HERE = Path(__file__).resolve().parent
@@ -54,6 +55,8 @@ def _cli_message(argv):
     if "--ytmusic" in argv:
         i = argv.index("--ytmusic")
         return {"cmd": "ytplay", "q": argv[i + 1] if i + 1 < len(argv) else ""}
+    if "--podcast" in argv:
+        return {"cmd": "section", "s": "podcast"}
     if "--ytmusic-cmd" in argv:
         i = argv.index("--ytmusic-cmd")
         return {"cmd": argv[i + 1] if i + 1 < len(argv) else ""}
@@ -99,6 +102,7 @@ def main():
     videos = LibraryModel("video")
     iptv = IptvModel(settings)
     ytmusic = YtMusicModel()
+    podcasts = Podcasts(episodes_dir())
     nowplaying = NowPlayingWriter()
     app.aboutToQuit.connect(nowplaying.clear)
 
@@ -111,6 +115,7 @@ def main():
     ctx.setContextProperty("videos", videos)
     ctx.setContextProperty("iptv", iptv)
     ctx.setContextProperty("ytmusic", ytmusic)
+    ctx.setContextProperty("podcasts", podcasts)
     ctx.setContextProperty("nowplaying", nowplaying)
     ctx.setContextProperty("startFiles", files)
     ctx.setContextProperty("webEngineAvailable", web_ok)
@@ -139,6 +144,11 @@ def main():
             win.requestActivate()
         elif cmd in ("play", "pause", "toggle", "next", "prev", "stop"):
             ytmusic.send(cmd)
+        elif cmd == "section":
+            win.setProperty("section", m.get("s") or "music")
+            win.show()
+            win.raise_()
+            win.requestActivate()
         elif cmd == "raise":
             win.show()
             win.raise_()

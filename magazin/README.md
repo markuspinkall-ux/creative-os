@@ -3,7 +3,7 @@
 Liest Tests, Reviews, News und Artikel der Lieblingsseiten wie eine Zeitschrift.
 
 - **Quellen:** Name (z. B. „ComputerBase“), Adresse („golem.de“) oder RSS-Link eingeben –
-  der Feed wird auf der Seite gesucht (`web.discover`). Eigene Feed-Verwaltung, getrennt von Podcast.
+  der Feed wird auf der Seite gesucht (`web.discover`). Eigene Feed-Verwaltung, getrennt von den Podcasts im Player.
 - **Tägliche Ausgabe:** Jeder Artikel gehört zur Ausgabe seines Erscheinungstags. Abruf beim Start
   und alle 30 Minuten, solange die App offen ist (F5 = sofort). Archiv: 60 Tage, Gemerktes bleibt.
 - **Heft:** Titelseite, Inhaltsverzeichnis, je Rubrik Seiten mit vier Artikeln; Doppelseiten ab

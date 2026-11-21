@@ -16,7 +16,8 @@ Window {
     title: nowTitle.length > 0 ? nowTitle + " – Player" : "Player"
     color: Theme.surface
 
-    property string section: "music"          // music | ytmusic | videos | iptv
+    property string section: "music"          // music | ytmusic | podcast | videos | iptv
+    property string nowKey: ""                 // laufende Podcast-Folge
     property var queueModel: null              // music, videos oder iptv
     property int queueIndex: -1
     property string nowTitle: ""
@@ -29,6 +30,18 @@ Window {
     readonly property bool showVideoPage: section === "videos" && player.hasVideo && queueModel !== iptv
 
     // ---- Wiedergabe ---------------------------------------------------------------
+    // Podcast-Folgen: als Warteschlange in den Player übernehmen (gespeicherte Folgen spielen offline)
+    ListModel { id: podcastQueue }
+    function playPodcast(episodes, index) {
+        podcastQueue.clear()
+        for (let i = 0; i < episodes.length; i++) {
+            const e = episodes[i]
+            podcastQueue.append({ title: e.title || "", subtitle: e.show || e.date || "",
+                                  url: podcasts.playbackUrl(e).toString(), key: e.key || "" })
+        }
+        playFrom(podcastQueue, index)
+    }
+
     function playFrom(model, row) {
         ytmusic.send("pause")            // YouTube Music anhalten, wenn eigene Musik startet
         nowCover = ""
@@ -40,6 +53,7 @@ Window {
         queueIndex = row
         nowTitle = item.title
         nowSubtitle = item.subtitle
+        nowKey = model === podcastQueue ? item.key : ""
         player.source = item.url
         player.play()
         if (model === iptv)
@@ -201,6 +215,7 @@ Window {
                     model: [
                         { key: "music", label: "Musik", icon: "music" },
                         { key: "ytmusic", label: "YouTube Music", icon: "ytmusic" },
+                        { key: "podcast", label: "Podcasts", icon: "speaker" },
                         { key: "videos", label: "Videos", icon: "video" },
                         { key: "iptv", label: "IPTV", icon: "tv" }
                     ]
@@ -288,6 +303,12 @@ Window {
             YtMusicView {
                 anchors.fill: parent
                 visible: win.section === "ytmusic"
+            }
+
+            PodcastView {
+                anchors.fill: parent
+                visible: win.section === "podcast"
+                host: win
             }
 
             VideoView {
@@ -406,6 +427,12 @@ Window {
     Component.onCompleted: {
         if (startFiles.length > 0)
             playStartFile(startFiles[0])
+    }
+
+    // YouTube Music startet ein Lied → eigene Wiedergabe (Musik, Podcast, Video) anhalten
+    Connections {
+        target: ytmusic
+        function onOpenUrl(u) { if (win.playing) player.pause() }
     }
 
     // Taskleiste: „Gerade läuft“ (Interpret – Titel)
