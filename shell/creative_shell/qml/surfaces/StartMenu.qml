@@ -36,17 +36,26 @@ Item {
         }
     }
 
+    // Fluid-Design: Glasfläche mit runden Ecken und Lichtkante oben
     Rectangle {
         id: menu
-        x: 24
+        x: 8
         width: 380
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 10
-        radius: Theme.radiusMenu
+        radius: 30
         color: Theme.surface
-        border.color: Theme.hairline
+        border.color: Theme.light ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.14)
         border.width: 1
+
+        Rectangle {
+            x: menu.radius
+            y: 1
+            width: menu.width - 2 * menu.radius
+            height: 1
+            color: Qt.rgba(1, 1, 1, Theme.light ? 0.95 : 0.22)
+        }
         // leicht durchsichtig wie die Taskleiste (als Ganzes, damit Fußleiste und Fläche gleich wirken)
         layer.enabled: true
         layer.smooth: true
@@ -212,10 +221,19 @@ Item {
                 required property int folderCount
 
                 width: ListView.view.width
-                height: 44
-                radius: Theme.radiusRow
+                height: 46
+                radius: 16
                 color: rowMouse.pressed ? Theme.pressed
-                       : ((rowMouse.containsMouse || ListView.isCurrentItem) ? Theme.hover : "transparent")
+                       : ((rowMouse.containsMouse || ListView.isCurrentItem) ? Theme.tint(Theme.light ? 0.06 : 0.10) : "transparent")
+                // Auswahl als leuchtende Glasfläche: Lichtkante oben
+                Rectangle {
+                    visible: rowMouse.containsMouse || row.ListView.isCurrentItem
+                    x: 12
+                    y: 0
+                    width: parent.width - 24
+                    height: 1
+                    color: Qt.rgba(1, 1, 1, Theme.light ? 0.9 : 0.2)
+                }
 
                 // Ordner „Gibeon OS Suite“: kleine Vorschau der Apps darin
                 Rectangle {
@@ -336,10 +354,11 @@ Item {
 
             ScrollBar.vertical: ScrollBar {
                 policy: ScrollBar.AsNeeded
+                // Scrollbalken passend zum Design, beim Drüberfahren in Akzentfarbe
                 contentItem: Rectangle {
-                    implicitWidth: 4
-                    radius: 2
-                    color: Theme.tint(0.2)
+                    implicitWidth: 6
+                    radius: 3
+                    color: parent.hovered || parent.pressed ? Theme.accent : Theme.tint(Theme.light ? 0.22 : 0.28)
                 }
             }
 
@@ -608,7 +627,7 @@ Item {
             anchors.bottom: parent.bottom
             anchors.margins: 1
             height: 56
-            radius: Theme.radiusMenu - 1
+            radius: menu.radius - 1
             color: Theme.footer
 
             // eckige Oberkante, runde Unterkante

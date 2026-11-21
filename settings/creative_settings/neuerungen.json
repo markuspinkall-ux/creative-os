@@ -9,6 +9,7 @@
       "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“"
     ],
     "verbessert": [
+      "Neues Fluid-Design: Die Taskleiste geht jetzt über die ganze Breite bis an den Rand, ist schmaler und wirkt wie Glas mit feiner Lichtkante. Der Startknopf mit der Rakete ist rund und leuchtet sanft, bei offenem Startmenü stärker. Das Startmenü hat stark abgerundete Ecken und eine Lichtkante, die gewählte App erscheint als leuchtende Glasfläche, und der Scrollbalken passt zum Design. Das gilt im hellen und im dunklen Design",
       "Startmenü aufgeräumt: „Pictures“ und „3D-Ansicht“ stehen nicht mehr im Startmenü. Sie öffnen sich weiterhin automatisch, sobald du ein Bild oder eine 3D-Datei (.glb, .gltf) öffnest, zum Beispiel per Doppelklick in „Dateien“",
       "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten",
       "Widgets lassen sich jetzt direkt auf einen anderen Monitor ziehen: am Griff festhalten und einfach mit der Maus hinüberziehen. Ein Umriss zeigt, wo das Widget landet. Der Weg per Rechtsklick auf den Griff geht weiterhin"

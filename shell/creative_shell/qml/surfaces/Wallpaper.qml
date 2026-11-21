@@ -55,7 +55,7 @@ Item {
 
     property string screenName
     readonly property string iconDragFormat: "application/x-creative-desktop-icon"
-    readonly property int barSpace: 74
+    readonly property int barSpace: 52
 
     // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.
     property var fallbackPositions: ({})

@@ -48,7 +48,7 @@ from .shelf import ShelfModel
 from .messenger import MessengerModel
 
 QML_DIR = Path(__file__).resolve().parent / "qml"
-BAR_HEIGHT = 74       # 60 px Leiste + 14 px Abstand zum Bildschirmrand
+BAR_HEIGHT = 52       # Leiste über die ganze Breite, bündig am unteren Rand (Fluid-Design)
 POPUP_GAP = 10        # Abstand zwischen Leiste und Menü
 START_WIDTH = 24 + 380
 PANEL_WIDTH = 360 + 24

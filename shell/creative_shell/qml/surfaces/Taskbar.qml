@@ -8,21 +8,29 @@ Item {
 
     property string screenName
 
+    // Fluid-Design: Glasleiste über die ganze Breite, bündig am unteren Rand,
+    // oben eine feine Kante und darunter eine Lichtkante wie bei Glas.
     Rectangle {
         id: bar
         anchors {
             left: parent.left
             right: parent.right
             bottom: parent.bottom
-            leftMargin: 24
-            rightMargin: 24
-            bottomMargin: 14
         }
-        height: 60
-        radius: Theme.radiusBar
+        height: 52
+        radius: 0
         color: Theme.bar
-        border.color: Theme.hairline
-        border.width: 1
+
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; top: parent.top }
+            height: 1
+            color: Theme.hairline
+        }
+        Rectangle {
+            anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 1 }
+            height: 1
+            color: Qt.rgba(1, 1, 1, Theme.light ? 0.85 : 0.10)
+        }
 
         // Klick auf freie Fläche schließt offene Menüs
         MouseArea {
@@ -35,8 +43,8 @@ Item {
         Item {
             id: viz
             anchors.fill: parent
-            anchors.leftMargin: bar.radius - 4
-            anchors.rightMargin: bar.radius - 4
+            anchors.leftMargin: 4
+            anchors.rightMargin: 4
             anchors.topMargin: 6
             anchors.bottomMargin: 3
             enabled: false
