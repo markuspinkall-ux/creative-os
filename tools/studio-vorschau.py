@@ -61,8 +61,10 @@ check(abs(it["aspect"] - 2.0) < 0.01, "Seitenverhältnis des Bildes übernommen"
 s.moveItem(2, 0.04, 0.06, 0.25)
 check(abs(backend.item_height(it) - 0.25 * 16 / 9 / 2) < 1e-6, "Skalieren bleibt proportional")
 s._rebuild()
-time.sleep(1.5)
-app.processEvents()
+t0 = time.time()
+while s.mixer.frame() is None and time.time() - t0 < 8:
+    time.sleep(0.1)
+print(f"  erstes Bild nach {time.time() - t0:.1f} s")
 f = s.mixer.frame()
 check(f is not None, "Vorschau liefert Bilder")
 if f is None:
@@ -83,8 +85,14 @@ if f:
     b, g, r = px(0.6 + 0.12, 0.06 + 0.05)
     check(r > 200 and g > 160 and b < 120, "Verschieben wirkt sofort (ohne Neuaufbau)")
     # abgerundete Kamera: Ecke zeigt das Testbild darunter, Mitte die Kamera
+s.set("audio.mic.muted", True)
 s.addScene()
 check(s.cfg["scene"] == 1 and s._layout()[0] == {}, "neue Szene ist leer")
+s.set("audio.mic.muted", False)
+s.setScene(0)
+check(s.cfg["audio"]["mic"]["muted"] is True, "Szene merkt sich Stummschaltung")
+s.setScene(1)
+check(s.cfg["audio"]["mic"]["muted"] is False, "andere Szene, anderer Ton")
 s.setScene(0)
 check(len(s._layout()[0]) == 3, "Szenenwechsel zeigt wieder alle Quellen")
 s.duplicateScene(0)

@@ -261,7 +261,8 @@ def build_description(cfg, sources, audio, layout=None):
     w, h, fps = CANVAS.get(cfg.get("canvas"), CANVAS["1080p30"])
     pw, ph = PREVIEW
     layout = layout or {}
-    raw = f"video/x-raw,width={w},height={h},framerate={fps}/1"
+    # Mischpult rechnet in BGRA wie alle Zulieferer – keine Umrechnung je Quelle und für die Vorschau
+    raw = f"video/x-raw,format=BGRA,width={w},height={h},framerate={fps}/1"
     branches, pads, padprops = [], {}, ["sink_0::zorder=0"]
     n = 1
     for src in sources:

@@ -480,6 +480,9 @@ class Studio(QObject):
         if keys[0] == "audio" and keys[-1] in ("volume", "muted"):
             a = self.cfg["audio"][keys[1]]
             self.mixer.set_volume(keys[1], a["volume"], a["muted"])
+            # Lautstärke und Stumm gehören zur Szene (z. B. „Pause“: Mikrofon stumm)
+            self._scene().setdefault("audio", {})[keys[1]] = {"volume": a["volume"], "muted": a["muted"]}
+            self._save()
         elif keys[0] in SOURCE_KEYS:
             self._rebuild_timer.start()
         self.changed.emit()
@@ -685,8 +688,22 @@ class Studio(QObject):
         if 0 <= index < len(self.cfg["scenes"]) and index != self.cfg["scene"]:
             self.cfg["scene"] = index
             self._apply()
+            self._apply_scene_audio()
             self._save_later.start()
             self.changed.emit()
+
+    def _apply_scene_audio(self):
+        """Lautstärke/Stumm, die in der Szene gespeichert sind, übernehmen."""
+        for slot, a in (self._scene().get("audio") or {}).items():
+            if slot in self.cfg["audio"]:
+                cur = self.cfg["audio"][slot]
+                cur["volume"] = float(a.get("volume", cur["volume"]))
+                cur["muted"] = bool(a.get("muted", cur["muted"]))
+                self.mixer.set_volume(slot, cur["volume"], cur["muted"])
+        self.levelsChanged.emit()
+
+    def _audio_snapshot(self):
+        return {slot: {"volume": a["volume"], "muted": a["muted"]} for slot, a in self.cfg["audio"].items()}
 
     @Slot()
     def addScene(self):
@@ -694,7 +711,7 @@ class Studio(QObject):
         n = len(self.cfg["scenes"]) + 1
         while f"Szene {n}" in names:
             n += 1
-        self.cfg["scenes"].append({"name": f"Szene {n}", "items": []})
+        self.cfg["scenes"].append({"name": f"Szene {n}", "items": [], "audio": self._audio_snapshot()})
         self.cfg["scene"] = len(self.cfg["scenes"]) - 1
         self._apply()
         self._save()
