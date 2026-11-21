@@ -758,189 +758,51 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 10
 
-                    Heading { text: "Qualität" }
-                    Label2 { text: "Auflösung" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !win.locked
-                        options: [["720", "720p"], ["1080", "1080p"], ["1440", "1440p"], ["2160", "4K"]]
-                        value: String(st.canvasHeight || 1080)
-                        onPicked: (v) => studio.set("canvas", v + "p" + (st.canvasFps || 30))
-                    }
-                    Label2 { text: "Bilder pro Sekunde" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !win.locked
-                        options: [["24", "24"], ["25", "25"], ["30", "30"], ["50", "50"], ["60", "60"]]
-                        value: String(st.canvasFps || 30)
-                        onPicked: (v) => studio.set("canvas", (st.canvasHeight || 1080) + "p" + v)
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        visible: (st.canvasHeight || 1080) >= 1440
-                        text: "1440p und 4K brauchen viel Leistung – am besten mit Grafikkarte. Für den Stream unten verkleinern."
-                        color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
-                    }
-                    Label2 { text: "Stream-Ausgabe" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !st.live
-                        options: [["gleich", "Wie oben"], ["1080", "1080p"], ["936", "936p"], ["720", "720p"]]
-                        value: cfg.stream_res || "gleich"
-                        onPicked: (v) => studio.set("stream_res", v)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        visible: (st.canvasFps || 30) > 30
-                        Text { text: "Stream mit 30 Bildern/s (spart Bandbreite)"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-                        CSwitch { checked: cfg.stream_fps === "30"; enabled: !st.live; label: "Stream mit 30 Bildern/s"; onToggled: (v) => studio.set("stream_fps", v ? "30" : "gleich") }
-                    }
-                    Label2 { text: "Kodierer" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !win.locked
-                        options: [["auto", "Automatisch"], ["cpu", "Prozessor"]]
-                        value: cfg.encoder || "auto"
-                        onPicked: (v) => studio.set("encoder", v)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text { text: "Bitrate"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
-                        CSlider {
+                    Heading { text: "Live senden an" }
+                    Repeater {
+                        model: [["twitch", "Twitch"], ["youtube", "YouTube"], ["kick", "Kick"], ["tiktok", "TikTok"], ["custom", "Eigener Server"]]
+                        delegate: RowLayout {
+                            id: tg
+                            required property var modelData
+                            readonly property string key: modelData[0]
+                            readonly property bool ready: key === "twitch" ? !!((acc.twitch && acc.twitch.connected && acc.twitch.target) || cfg.twitch_key)
+                                                        : key === "youtube" ? !!((acc.youtube && acc.youtube.connected && acc.youtube.target) || cfg.youtube_key)
+                                                        : !!cfg[key + "_url"]
                             Layout.fillWidth: true
-                            from: 2500; to: 12000; stepSize: 500
-                            enabled: !win.locked
-                            value: cfg.kbps || 6000
-                            onMoved: studio.set("kbps", value)
+                            spacing: 8
+                            Rectangle { width: 8; height: 8; radius: 4; color: tg.ready ? Theme.ok : Theme.tint(0.25) }
+                            Column {
+                                Layout.fillWidth: true
+                                Text { text: tg.modelData[1]; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                                Text {
+                                    text: tg.ready ? "bereit" : "einrichten …"
+                                    color: tg.ready ? Theme.textMuted : Theme.accent
+                                    font.family: Theme.fontFamily; font.pixelSize: 11
+                                    MouseArea { anchors.fill: parent; enabled: !tg.ready; cursorShape: Qt.PointingHandCursor; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
+                                }
+                            }
+                            CSwitch { checked: !!(cfg.targets && cfg.targets[tg.key]); enabled: !st.live; label: tg.modelData[1]; onToggled: (v) => studio.set("targets." + tg.key, v) }
                         }
-                        Text { text: ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: "Alle Ziele bekommen dasselbe Bild – einmal kodiert. Twitch und Kick empfehlen bis 6 Mbit/s."
-                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                     }
 
                     Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
-                    Heading { text: "Ziele" }
-                    TargetRow { key: "twitch"; label: "Twitch"; note: acc.twitch && acc.twitch.connected ? (acc.twitch.target ? acc.twitch.name : "kein Stream-Schlüssel") : (cfg.twitch_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.twitch && !(acc.twitch && acc.twitch.connected)
-                        placeholderText: "Stream-Schlüssel (Twitch › Creator-Dashboard › Stream)"
-                        echoMode: TextInput.Password
-                        text: cfg.twitch_key || ""
-                        onEditingFinished: studio.set("twitch_key", text.trim())
+                    Heading { text: "Einstellungen" }
+                    Repeater {
+                        model: [
+                            ["Bild", (st.canvasHeight === 2160 ? "4K" : st.canvasHeight + "p") + " · " + st.canvasFps + " Bilder/s"],
+                            ["Stream", (cfg.stream_res && cfg.stream_res !== "gleich" ? cfg.stream_res + "p" : "wie Bild") + (cfg.stream_fps === "30" && st.canvasFps > 30 ? " · 30 Bilder/s" : "") + " · " + ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"],
+                            ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")],
+                            ["Kodierer", cfg.encoder === "cpu" ? "Prozessor" : (st.encoder || "Automatisch")]
+                        ]
+                        delegate: RowLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Text { text: modelData[0]; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.preferredWidth: 70 }
+                            Text { text: modelData[1]; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight }
+                        }
                     }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: !(acc.twitch && acc.twitch.connected)
-                        placeholderText: "Twitch-Kanalname (für Umfragen im Chat)"
-                        text: cfg.twitch_channel || ""
-                        onEditingFinished: studio.set("twitch_channel", text.trim())
-                    }
-                    TargetRow { key: "youtube"; label: "YouTube"; note: acc.youtube && acc.youtube.connected ? (acc.youtube.target ? acc.youtube.name : "keine Übertragung") : (cfg.youtube_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.youtube && !(acc.youtube && acc.youtube.connected)
-                        placeholderText: "Stream-Schlüssel (YouTube Studio › Livestream)"
-                        echoMode: TextInput.Password
-                        text: cfg.youtube_key || ""
-                        onEditingFinished: studio.set("youtube_key", text.trim())
-                    }
-                    TargetRow { key: "kick"; label: "Kick"; note: cfg.kick_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.kick
-                        placeholderText: "Stream-URL (Kick › Einstellungen › Stream-Schlüssel)"
-                        text: cfg.kick_url || ""
-                        onEditingFinished: studio.set("kick_url", text)
-                    }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.kick
-                        placeholderText: "Stream-Schlüssel"
-                        echoMode: TextInput.Password
-                        text: cfg.kick_key || ""
-                        onEditingFinished: studio.set("kick_key", text)
-                    }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.kick
-                        placeholderText: "Kanalname (für den Chat links)"
-                        text: cfg.kick_channel || ""
-                        onEditingFinished: studio.set("kick_channel", text)
-                    }
-                    TargetRow { key: "tiktok"; label: "TikTok"; note: cfg.tiktok_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.tiktok
-                        placeholderText: "Server-URL (TikTok LIVE Producer)"
-                        text: cfg.tiktok_url || ""
-                        onEditingFinished: studio.set("tiktok_url", text)
-                    }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.tiktok
-                        placeholderText: "Stream-Schlüssel"
-                        echoMode: TextInput.Password
-                        text: cfg.tiktok_key || ""
-                        onEditingFinished: studio.set("tiktok_key", text)
-                    }
-                    TargetRow { key: "custom"; label: "Eigener Server"; note: "RTMP" }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.custom
-                        placeholderText: "rtmp://server/app"
-                        text: cfg.custom_url || ""
-                        onEditingFinished: studio.set("custom_url", text)
-                    }
-                    Field {
-                        Layout.fillWidth: true
-                        visible: cfg.targets && cfg.targets.custom
-                        placeholderText: "Stream-Schlüssel"
-                        echoMode: TextInput.Password
-                        text: cfg.custom_key || ""
-                        onEditingFinished: studio.set("custom_key", text)
-                    }
-
-                    Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
-                    Heading { text: "Aufnahme" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !st.recording
-                        options: [["mp4", "MP4"], ["mkv", "MKV"]]
-                        value: cfg.format || "mp4"
-                        onPicked: (v) => studio.set("format", v)
-                    }
-                    Label2 { text: "Qualität · " + (st.recMbit || 12) + " Mbit/s" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: !st.recording
-                        options: [["normal", "Normal"], ["hoch", "Hoch"], ["sehr-hoch", "Sehr hoch"]]
-                        value: cfg.rec_quality || "normal"
-                        onPicked: (v) => studio.set("rec_quality", v)
-                    }
-                    Label2 { text: "Danach auf 4K hochskalieren" }
-                    Seg {
-                        Layout.fillWidth: true
-                        enabled: (st.canvasHeight || 1080) < 2160
-                        options: [["aus", "Aus"], ["schnell", "Schnell"], ["ki", "KI"]]
-                        value: cfg.upscale || "aus"
-                        onPicked: (v) => studio.set("upscale", v)
-                    }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        visible: cfg.upscale && cfg.upscale !== "aus"
-                        text: cfg.upscale === "ki"
-                              ? (st.kiOk ? "KI macht das Bild deutlich schärfer (z. B. Capture-Karte in 1080p → 4K), dauert aber länger als die Aufnahme selbst."
-                                         : "KI geht hier nicht (" + (st.kiWhy || "nur mit NVIDIA-Grafikkarte") + ") – Studio nimmt „Schnell“.")
-                              : "Klassisch hochgerechnet – geht schnell, schärft aber nichts nach."
-                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
-                    }
+                    CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
+                    CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
                     // laufendes Hochskalieren
                     Rectangle {
                         Layout.fillWidth: true
@@ -965,13 +827,6 @@ ApplicationWindow {
                                 Rectangle { width: parent.width * ((st.upscaleJob || {}).pct || 0) / 100; height: 6; radius: 3; color: Theme.accent }
                             }
                         }
-                    }
-                    CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
-                    Text {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: "Gespeichert unter Videos › Studio"
-                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                     }
                 }
             }
@@ -1097,6 +952,264 @@ ApplicationWindow {
                     CButton { text: "Abbrechen"; onClicked: { studio.cancelLogin(win.loginService); win.loginService = "" } }
                 }
                 Text { width: parent.width; wrapMode: Text.WordWrap; text: "Studio wartet, bis du bestätigt hast. Dein Passwort sieht Studio nicht."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            }
+        }
+    }
+
+    // ---------------- Einstellungen ----------------
+    Rectangle {
+        id: settingsDialog
+        objectName: "settingsDialog"
+        property bool open: false
+        property string tab: "bild"
+        anchors.fill: parent
+        visible: open
+        color: Qt.rgba(0, 0, 0, 0.5)
+        MouseArea { anchors.fill: parent; onClicked: settingsDialog.open = false }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 560
+            height: Math.min(parent.height - 60, 640)
+            radius: Theme.radiusMenu
+            color: Theme.surface
+            MouseArea { anchors.fill: parent }
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 24
+                spacing: 14
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text { text: "Einstellungen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true; Layout.fillWidth: true }
+                    IconBtn { icon: "close"; tip: "Schließen"; onClicked: settingsDialog.open = false }
+                }
+                Seg {
+                    Layout.fillWidth: true
+                    options: [["bild", "Bild"], ["stream", "Stream"], ["ziele", "Ziele"], ["aufnahme", "Aufnahme"]]
+                    value: settingsDialog.tab
+                    onPicked: (v) => settingsDialog.tab = v
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: win.locked
+                    wrapMode: Text.WordWrap
+                    text: "Während Stream oder Aufnahme lassen sich nur manche Einstellungen ändern."
+                    color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
+                }
+                Flickable {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    contentHeight: tabs.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                    ColumnLayout {
+                        id: tabs
+                        width: parent.width - 12
+                        spacing: 10
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: settingsDialog.tab === "bild"
+                            spacing: 10
+                            Label2 { text: "Auflösung" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !win.locked
+                                options: [["720", "720p"], ["1080", "1080p"], ["1440", "1440p"], ["2160", "4K"]]
+                                value: String(st.canvasHeight || 1080)
+                                onPicked: (v) => studio.set("canvas", v + "p" + (st.canvasFps || 30))
+                            }
+                            Label2 { text: "Bilder pro Sekunde" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !win.locked
+                                options: [["24", "24"], ["25", "25"], ["30", "30"], ["50", "50"], ["60", "60"]]
+                                value: String(st.canvasFps || 30)
+                                onPicked: (v) => studio.set("canvas", (st.canvasHeight || 1080) + "p" + v)
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                visible: (st.canvasHeight || 1080) >= 1440
+                                text: "1440p und 4K brauchen viel Leistung – am besten mit Grafikkarte. Für den Stream unten verkleinern."
+                                color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
+                            }
+                            Label2 { text: "Kodierer" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !win.locked
+                                options: [["auto", "Automatisch"], ["cpu", "Prozessor"]]
+                                value: cfg.encoder || "auto"
+                                onPicked: (v) => studio.set("encoder", v)
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: settingsDialog.tab === "stream"
+                            spacing: 10
+                            Label2 { text: "Stream-Ausgabe" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !st.live
+                                options: [["gleich", "Wie oben"], ["1080", "1080p"], ["936", "936p"], ["720", "720p"]]
+                                value: cfg.stream_res || "gleich"
+                                onPicked: (v) => studio.set("stream_res", v)
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: (st.canvasFps || 30) > 30
+                                Text { text: "Stream mit 30 Bildern/s (spart Bandbreite)"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                                CSwitch { checked: cfg.stream_fps === "30"; enabled: !st.live; label: "Stream mit 30 Bildern/s"; onToggled: (v) => studio.set("stream_fps", v ? "30" : "gleich") }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Bitrate"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                                CSlider {
+                                    Layout.fillWidth: true
+                                    from: 2500; to: 12000; stepSize: 500
+                                    enabled: !win.locked
+                                    value: cfg.kbps || 6000
+                                    onMoved: studio.set("kbps", value)
+                                }
+                                Text { text: ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: "Alle Ziele bekommen dasselbe Bild – einmal kodiert. Twitch und Kick empfehlen bis 6 Mbit/s."
+                                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: settingsDialog.tab === "ziele"
+                            spacing: 10
+                            TargetRow { key: "twitch"; label: "Twitch"; note: acc.twitch && acc.twitch.connected ? (acc.twitch.target ? acc.twitch.name : "kein Stream-Schlüssel") : (cfg.twitch_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.twitch && !(acc.twitch && acc.twitch.connected)
+                                placeholderText: "Stream-Schlüssel (Twitch › Creator-Dashboard › Stream)"
+                                echoMode: TextInput.Password
+                                text: cfg.twitch_key || ""
+                                onEditingFinished: studio.set("twitch_key", text.trim())
+                            }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: !(acc.twitch && acc.twitch.connected)
+                                placeholderText: "Twitch-Kanalname (für Umfragen im Chat)"
+                                text: cfg.twitch_channel || ""
+                                onEditingFinished: studio.set("twitch_channel", text.trim())
+                            }
+                            TargetRow { key: "youtube"; label: "YouTube"; note: acc.youtube && acc.youtube.connected ? (acc.youtube.target ? acc.youtube.name : "keine Übertragung") : (cfg.youtube_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.youtube && !(acc.youtube && acc.youtube.connected)
+                                placeholderText: "Stream-Schlüssel (YouTube Studio › Livestream)"
+                                echoMode: TextInput.Password
+                                text: cfg.youtube_key || ""
+                                onEditingFinished: studio.set("youtube_key", text.trim())
+                            }
+                            TargetRow { key: "kick"; label: "Kick"; note: cfg.kick_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.kick
+                                placeholderText: "Stream-URL (Kick › Einstellungen › Stream-Schlüssel)"
+                                text: cfg.kick_url || ""
+                                onEditingFinished: studio.set("kick_url", text)
+                            }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.kick
+                                placeholderText: "Stream-Schlüssel"
+                                echoMode: TextInput.Password
+                                text: cfg.kick_key || ""
+                                onEditingFinished: studio.set("kick_key", text)
+                            }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.kick
+                                placeholderText: "Kanalname (für den Chat links)"
+                                text: cfg.kick_channel || ""
+                                onEditingFinished: studio.set("kick_channel", text)
+                            }
+                            TargetRow { key: "tiktok"; label: "TikTok"; note: cfg.tiktok_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.tiktok
+                                placeholderText: "Server-URL (TikTok LIVE Producer)"
+                                text: cfg.tiktok_url || ""
+                                onEditingFinished: studio.set("tiktok_url", text)
+                            }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.tiktok
+                                placeholderText: "Stream-Schlüssel"
+                                echoMode: TextInput.Password
+                                text: cfg.tiktok_key || ""
+                                onEditingFinished: studio.set("tiktok_key", text)
+                            }
+                            TargetRow { key: "custom"; label: "Eigener Server"; note: "RTMP" }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.custom
+                                placeholderText: "rtmp://server/app"
+                                text: cfg.custom_url || ""
+                                onEditingFinished: studio.set("custom_url", text)
+                            }
+                            Field {
+                                Layout.fillWidth: true
+                                visible: cfg.targets && cfg.targets.custom
+                                placeholderText: "Stream-Schlüssel"
+                                echoMode: TextInput.Password
+                                text: cfg.custom_key || ""
+                                onEditingFinished: studio.set("custom_key", text)
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: settingsDialog.tab === "aufnahme"
+                            spacing: 10
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !st.recording
+                                options: [["mp4", "MP4"], ["mkv", "MKV"]]
+                                value: cfg.format || "mp4"
+                                onPicked: (v) => studio.set("format", v)
+                            }
+                            Label2 { text: "Qualität · " + (st.recMbit || 12) + " Mbit/s" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !st.recording
+                                options: [["normal", "Normal"], ["hoch", "Hoch"], ["sehr-hoch", "Sehr hoch"]]
+                                value: cfg.rec_quality || "normal"
+                                onPicked: (v) => studio.set("rec_quality", v)
+                            }
+                            Label2 { text: "Danach auf 4K hochskalieren" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: (st.canvasHeight || 1080) < 2160
+                                options: [["aus", "Aus"], ["schnell", "Schnell"], ["ki", "KI"]]
+                                value: cfg.upscale || "aus"
+                                onPicked: (v) => studio.set("upscale", v)
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                visible: cfg.upscale && cfg.upscale !== "aus"
+                                text: cfg.upscale === "ki"
+                                      ? (st.kiOk ? "KI macht das Bild deutlich schärfer (z. B. Capture-Karte in 1080p → 4K), dauert aber länger als die Aufnahme selbst."
+                                                 : "KI geht hier nicht (" + (st.kiWhy || "nur mit NVIDIA-Grafikkarte") + ") – Studio nimmt „Schnell“.")
+                                      : "Klassisch hochgerechnet – geht schnell, schärft aber nichts nach."
+                                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: "Gespeichert unter Videos › Studio"
+                                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -149,7 +149,16 @@ def shoot():
         print("Umfrage im Bild:", s.poll.state()["phase"], s.poll.state()["total"], "Stimmen")
     win = engine.rootObjects()[0]
     win.setProperty("selected", s.cfg["scenes"][0]["items"][1]["id"])
-    QTimer.singleShot(1200, lambda: (win.grabWindow().save(out), print("Foto:", out), app.quit()))
+    from PySide6.QtCore import QObject
+
+    def second():
+        dlg = win.findChild(QObject, "settingsDialog")
+        if dlg is not None:
+            dlg.setProperty("tab", "ziele")
+            dlg.setProperty("open", True)
+        out2 = out.replace(".png", "-einstellungen.png")
+        QTimer.singleShot(800, lambda: (win.grabWindow().save(out2), print("Foto:", out2), app.quit()))
+    QTimer.singleShot(1200, lambda: (win.grabWindow().save(out), print("Foto:", out), second()))
 
 
 if engine.rootObjects():
