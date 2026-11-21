@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Baut das Symbol-Design „CreativePorzellan“ aus „Creative“ (Graphit): helle Kachel,
-dunkle Striche, kräftigeres Blau – passend zum hellen Design Porzellan.
+dunkle Striche, ohne Blau – Kachelrand hellgrau, Akzente schiefergrau (passend zu Porzellan).
 
   porzellan-icons.py <Orbit-Theme-Ordner> <Ziel-Theme-Ordner> [<weitere SVGs …>]
 
@@ -20,7 +20,7 @@ MAP = {
     "#1c2029": "#eef2f8",
     "#dce6ff": "#1c2433",   # Striche/Schrift
     "#12151b": "#e9eef6",   # Aussparungen auf Akzentflächen
-    "#8fb3ff": "#3d6fe0",   # Akzent / Kachelrand
+    "#8fb3ff": "#5b6576",   # Akzent im Symbol: schiefergrau statt Blau
     "#ffb07a": "#d9773a",
     "#6fdcc0": "#1f9e7f",
     "#dce2ec": "#2a3448",
@@ -28,7 +28,13 @@ MAP = {
 PATTERN = re.compile("|".join(re.escape(k) for k in MAP), re.I)
 
 
+# Kachelrand (Rechteck mit Kachelfarbe): hellgrau statt Blau
+TILE_EDGE = "#d3d9e3"
+TILE_RECT = re.compile(r'<rect\b[^>]*fill="#232836"[^>]*>', re.I)
+
+
 def recolor(text):
+    text = TILE_RECT.sub(lambda m: re.sub(r'stroke="#8fb3ff"', f'stroke="{TILE_EDGE}"', m.group(0), flags=re.I), text)
     return PATTERN.sub(lambda m: MAP[m.group(0).lower()], text)
 
 

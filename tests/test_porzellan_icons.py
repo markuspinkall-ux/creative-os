@@ -15,7 +15,8 @@ def test_recolor_matches_light_shell_icons():
     mod = load()
     dark = (ROOT / "shell/creative_shell/qml/Creative/icons/lock.svg").read_text()
     light = (ROOT / "shell/creative_shell/qml/Creative/icons-light/lock.svg").read_text()
-    assert mod.recolor(dark) == light
+    # App-Symbole in Porzellan ohne Blau: Akzent schiefergrau statt #3d6fe0 (Shell-Symbole behalten Blau)
+    assert mod.recolor(dark) == light.replace("#3d6fe0", "#5b6576")
 
 
 def test_build_theme(tmp_path):
@@ -30,5 +31,6 @@ def test_build_theme(tmp_path):
     out = tmp_path / "CreativePorzellan"
     assert "Inherits=breeze,hicolor" in (out / "index.theme").read_text()
     assert "#ffffff" in (out / "apps/scalable/kcalc.svg").read_text()
-    assert "#3d6fe0" in (out / "apps/scalable/kcalc.svg").read_text()
+    kcalc = (out / "apps/scalable/kcalc.svg").read_text()
+    assert "#d3d9e3" in kcalc and "#3d6fe0" not in kcalc.lower()   # Kachelrand hellgrau, kein Blau
     assert "#1c2433" in (out / "apps/scalable/creative-writer.svg").read_text()

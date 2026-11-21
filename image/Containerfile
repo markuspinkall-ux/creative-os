@@ -675,7 +675,7 @@ COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.sv
 RUN for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
         rm -f /usr/share/icons/Creative/apps/scalable/$n.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; \
         cp /usr/share/icons/hicolor/scalable/apps/creative-obs.svg /usr/share/icons/Creative/apps/scalable/$n.svg; \
-        sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
+        sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#5b6576/gI; s/#dce6ff/#1c2433/gI' \
             /usr/share/icons/hicolor/scalable/apps/creative-obs.svg \
             > /usr/share/icons/CreativePorzellan/apps/scalable/$n.svg; \
     done \
