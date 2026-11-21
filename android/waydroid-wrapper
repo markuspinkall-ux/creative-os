@@ -3,6 +3,10 @@
 # Startet ein Benutzer Android (Sitzung, App, Oberfläche), läuft das Bild über den Fenster-Vermittler
 # gibeon-android-fenster: Er gibt Android-Fenstern den normalen Gibeon-Rahmen und das Tablet-Format.
 # Abschalten in „Android-Apps“ → Einstellungen. Klappt etwas nicht, geht es ohne Vermittler weiter.
+#
+# App starten, während Android noch nicht läuft: Waydroid würde dabei die ganze LineageOS-Oberfläche
+# öffnen und die App darin zeigen. Stattdessen startet Android hier unsichtbar im Hintergrund;
+# sobald es fertig hochgefahren ist, öffnet sich die App direkt als eigenes Fenster.
 REAL="@WAYDROID@"
 if [ "$(id -u)" -ne 0 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x /usr/libexec/gibeon-android-fenster ]; then
     case "${1:-} ${2:-}" in
@@ -11,5 +15,35 @@ if [ "$(id -u)" -ne 0 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x /usr/libexec/gi
                 export WAYLAND_DISPLAY="$disp"
             fi ;;
     esac
+fi
+
+laeuft() {
+    timeout 10 "$REAL" status 2>/dev/null | grep -q "Session:[[:space:]]*RUNNING"
+}
+
+hochgefahren() {
+    [ "$(timeout 10 "$REAL" prop get sys.boot_completed 2>/dev/null | tail -n 1 | tr -d '[:space:]')" = "1" ]
+}
+
+nutzer=""
+[ "$(id -u)" -ne 0 ] || [ -n "${GIBEON_WAYDROID_TEST:-}" ] && nutzer=1     # (Variable nur für Tests)
+if [ -n "$nutzer" ] && [ "${1:-}" = "app" ] && [ "${2:-}" = "launch" ] && [ -n "${3:-}" ] && ! laeuft; then
+    lock="${XDG_RUNTIME_DIR:-/tmp}/gibeon-android-start.lock"
+    (
+        # Mehrere Apps gleichzeitig angeklickt: nur einmal Android starten
+        command -v flock >/dev/null 2>&1 && flock -w 180 9
+        if ! laeuft; then
+            setsid "$REAL" session start >/dev/null 2>&1 < /dev/null &
+        fi
+        i=0
+        while [ "$i" -lt 180 ]; do
+            if laeuft && hochgefahren; then
+                sleep 1                     # Android-Startbildschirm kurz fertig werden lassen
+                break
+            fi
+            sleep 1
+            i=$((i + 1))
+        done
+    ) 9>"$lock"
 fi
 exec "$REAL" "$@"

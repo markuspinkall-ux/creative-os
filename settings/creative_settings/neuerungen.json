@@ -33,7 +33,8 @@
     ],
     "behoben": [
       "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt",
-      "Fehlermeldungen vor dem Systemstart („syntax error“, „Incorrect command“, „prohibited by secure boot policy“) beseitigt: die Startauswahl nutzte eine Schreibweise, die GRUB nicht kennt, und lud mit Secure Boot verbotene Zusatzmodule nach – verschwindet ab dem zweiten Start nach dem Update"
+      "Fehlermeldungen vor dem Systemstart („syntax error“, „Incorrect command“, „prohibited by secure boot policy“) beseitigt: die Startauswahl nutzte eine Schreibweise, die GRUB nicht kennt, und lud mit Secure Boot verbotene Zusatzmodule nach – verschwindet ab dem zweiten Start nach dem Update",
+      "Android-Apps: Die erste App nach dem Systemstart öffnet sich jetzt direkt als eigenes Fenster – Android (LineageOS) startet dafür unsichtbar im Hintergrund, statt die App erst in der ganzen LineageOS-Oberfläche zu zeigen"
     ]
   },
   {
