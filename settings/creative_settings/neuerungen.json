@@ -1,15 +1,17 @@
 [
   {
     "datum": "2026-11-21",
-    "titel": "Android-Apps mit normalem Fensterrahmen und im Tablet-Format, Startmenü aufgeräumt",
+    "titel": "Neu: Studio zum Aufnehmen und Streamen, Android-Apps mit Fensterrahmen, Startmenü aufgeräumt",
     "neu": [
+      "Neu: Studio – Aufnehmen und live streamen im Gibeon-Look, als Ersatz für OBS. Hauptbild ist dein Bildschirm, ein Fenster, eine Kamera oder die Capture-Karte, dazu die Kamera in einer Ecke. Mikrofon, Desktop-Ton und eine weitere Tonquelle haben Pegel, Lautstärke und Stumm. Aufnahmen landen als MP4 oder MKV unter Videos › Studio. Gestreamt wird zu Twitch, YouTube oder einem eigenen Server, auch gleichzeitig. Nach der Anmeldung bei Twitch oder YouTube erscheint links der Chat, und Titel und Kategorie lassen sich direkt ändern. Kodiert wird auf der Grafikkarte, wenn möglich. OBS bleibt vorerst zusätzlich installiert",
       "Android-Apps haben jetzt denselben Fensterrahmen wie alle anderen Fenster – mit der gewohnten Titelleiste, Minimieren, Maximieren und Schließen. Die kleine Android-Leiste oben im Fenster bleibt zusätzlich",
       "Android-Apps öffnen sich im Tablet-Format: groß im Querformat statt schmal wie auf einem Handy. Maximieren und Größe ziehen am Rahmen funktionieren, die App passt sich kurz nach dem Loslassen an. Apps, die nur hochkant gedacht sind, wirken dabei manchmal gestreckt",
       "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“"
     ],
     "verbessert": [
       "Startmenü aufgeräumt: „Pictures“ und „3D-Ansicht“ stehen nicht mehr im Startmenü. Sie öffnen sich weiterhin automatisch, sobald du ein Bild oder eine 3D-Datei (.glb, .gltf) öffnest, zum Beispiel per Doppelklick in „Dateien“",
-      "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten"
+      "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten",
+      "Widgets lassen sich jetzt direkt auf einen anderen Monitor ziehen: am Griff festhalten und einfach mit der Maus hinüberziehen. Ein Umriss zeigt, wo das Widget landet. Der Weg per Rechtsklick auf den Griff geht weiterhin"
     ]
   },
   {

@@ -504,6 +504,22 @@ RUN chmod 755 /usr/bin/creative-obs \
  && f=/usr/share/applications/com.obsproject.Studio.desktop; if [ -f "$f" ]; then \
       sed -i -E 's#^Exec=obs( |$)#Exec=creative-obs\1#; s#^TryExec=obs$#TryExec=creative-obs#' "$f"; grep -n "^Exec" "$f"; fi
 
+# Studio – eigenes Aufnehmen und Streamen (statt OBS): GStreamer-Mischpult, Bildschirm über das
+# Wayland-Portal, Kodieren auf der Grafikkarte (NVENC/VA-API) oder mit x264, Twitch/YouTube-Anmeldung.
+# Die Kennungen für Twitch/YouTube stehen in /usr/lib/gibeon-studio/dienste.json.
+RUN dnf install -y --skip-unavailable python3-dbus python3-gobject pipewire-gstreamer gstreamer1-plugins-good \
+        gstreamer1-plugins-bad-free gstreamer1-plugins-ugly gstreamer1-plugin-openh264 && dnf clean all
+COPY studio/gibeon_studio /usr/lib/gibeon-studio/gibeon_studio
+COPY capture/creative_capture/audio_routing.py /usr/lib/gibeon-studio/gibeon_studio/audio_routing.py
+COPY studio/dienste.json /usr/lib/gibeon-studio/dienste.json
+COPY studio/bin/gibeon-studio /usr/bin/gibeon-studio
+COPY studio/gibeon-studio.desktop /usr/share/applications/gibeon-studio.desktop
+COPY studio/gibeon-studio.svg /usr/share/icons/hicolor/scalable/apps/gibeon-studio.svg
+RUN chmod 755 /usr/bin/gibeon-studio \
+ && PYTHONPATH=/usr/lib/gibeon-studio python3 -c "from gibeon_studio import engine as e, gst; \
+print('Studio: Bild', e.video_encoder(), '· Ton', e.pick(e.AUDIO_ENCODERS), '· Bildschirm', gst.has('pipewiresrc'), \
+'· RTMP', gst.has('rtmp2sink') or gst.has('rtmpsink')); assert e.pick(e.AUDIO_ENCODERS) and e.video_encoder()"
+
 # ---------------------------------------------------------------------------
 # 8a2) Calculator – eigener Rechner (ersetzt KCalc)
 # ---------------------------------------------------------------------------
@@ -864,6 +880,9 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/wl-home timeout 60 
 # Benachrichtigungen: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/nt-home timeout 60 /usr/bin/creative-notifyd --selftest \
     || echo "BENACHRICHTIGUNGEN-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/nt-home
+# Studio: Mischpult nimmt 2 Sekunden mit Testbild auf, Oberfläche lädt?
+RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/studio-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
+        QTWEBENGINE_DISABLE_SANDBOX=1 timeout 90 /usr/bin/gibeon-studio --selftest && rm -rf /tmp/studio-home
 # Capture: Oberfläche lädt?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/cap-home timeout 60 /usr/bin/creative-capture --selftest \
     || echo "CAPTURE-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/cap-home

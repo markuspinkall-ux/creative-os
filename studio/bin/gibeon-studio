@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/usr/lib/gibeon-studio${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m gibeon_studio "$@"

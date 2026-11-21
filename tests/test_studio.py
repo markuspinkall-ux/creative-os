@@ -1,0 +1,153 @@
+"""Studio: Mischpult-Beschreibung, Aufnahme mit Testquellen (wenn GStreamer da ist) und Konten-Logik."""
+
+import os
+import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from unittest import mock
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "studio"))
+
+try:
+    from gibeon_studio import gst
+    gst.init()
+    HAVE_GST = gst.has("compositor") and gst.has("audiomixer") and gst.has("h264parse") and \
+        any(gst.has(f) for f, _ in __import__("gibeon_studio.engine", fromlist=["x"]).VIDEO_ENCODERS)
+except (OSError, RuntimeError):
+    HAVE_GST = False
+
+from gibeon_studio import engine, konten  # noqa: E402
+
+
+class Beschreibung(unittest.TestCase):
+    def test_kamera_ecken(self):
+        x, y, w, h = engine.cam_rect(1920, 1080, "unten-rechts", "mittel")
+        self.assertEqual((w, h), (576, 324))
+        self.assertEqual(x + w + 37, 1920)
+        x, y, _, _ = engine.cam_rect(1920, 1080, "oben-links", "klein")
+        self.assertEqual((x, y), (37, 37))
+
+    def test_quellen(self):
+        desc, size = engine.build_description(
+            {"canvas": "720p60"}, {"type": "video", "device": "/dev/video2"},
+            {"type": "video", "device": "/dev/video0", "corner": "oben-rechts", "size": "klein"},
+            {"mic": {"type": "mic", "device": "", "volume": 0.5}, "desktop": {"type": "desktop", "device": ""}})
+        self.assertEqual(size, (1280, 720, 60))
+        self.assertIn('v4l2src device="/dev/video2"', desc)
+        self.assertIn("sink_2::xpos=", desc)
+        self.assertIn("device=\"@DEFAULT_MONITOR@\"", desc)
+        self.assertIn("volume name=vol_mic volume=0.500", desc)
+        self.assertIn("level name=lvl_desktop", desc)
+
+    def test_bildschirm(self):
+        d = engine.video_source({"type": "screen", "fd": 7, "node": 42})
+        self.assertIn("pipewiresrc fd=7 path=42", d)
+        self.assertIsNone(engine.video_source({"type": "screen"}))
+
+    def test_anfuehrungszeichen(self):
+        self.assertEqual(engine._q('a"b'), '"a\\"b"')
+
+
+@unittest.skipUnless(HAVE_GST, "GStreamer fehlt")
+class Mischpult(unittest.TestCase):
+    def test_aufnahme_und_abgebrochener_stream(self):
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, {"type": "test"}, {"type": "test", "pattern": "ball"},
+                {"mic": {"type": "test"}, "desktop": {"type": "test", "freq": 880}})
+        try:
+            path = os.path.join(tempfile.mkdtemp(), "t.mp4")
+            time.sleep(0.6)
+            m.start_output("record", path, 2000, "mp4")
+            m.start_output("custom", "rtmp://127.0.0.1:9/app/key", 2000)
+            ended = {}
+            t = time.time()
+            while time.time() - t < 2.5:
+                for key, err, _ in m.poll():
+                    ended[key] = err
+                time.sleep(0.05)
+            self.assertIn("custom", ended)            # Stream ins Leere bricht ab …
+            self.assertIn("record", m.outputs)        # … die Aufnahme läuft weiter
+            self.assertGreater(m.levels.get("mic", -90), -60)
+            self.assertIsNotNone(m.frame())
+            m.stop_output("record")
+            t = time.time()
+            while m.outputs and time.time() - t < 10:
+                m.poll()
+                time.sleep(0.05)
+            self.assertFalse(m.outputs)
+            self.assertGreater(os.path.getsize(path), 20000)
+        finally:
+            m.stop()
+
+
+class Konten(unittest.TestCase):
+    def setUp(self):
+        self.saved = 0
+
+    def save(self):
+        self.saved += 1
+
+    def test_geraetecode_wartet_und_speichert(self):
+        acc = konten.Twitch({}, self.save, "abc")
+        answers = [
+            {"device_code": "d", "user_code": "ABCD-EFGH", "verification_uri": "https://www.twitch.tv/activate",
+             "interval": 0, "expires_in": 30},
+            konten.ApiError(400, {"message": "authorization_pending"}),
+            {"access_token": "tok", "refresh_token": "ref", "expires_in": 3600},
+            {"login": "markus", "user_id": "42"},
+        ]
+
+        def fake(method, url, data=None, headers=None, form=False):
+            a = answers.pop(0)
+            if isinstance(a, Exception):
+                raise a
+            return a
+
+        shown = []
+        with mock.patch.object(konten, "http", fake):
+            acc.login(lambda code, url: shown.append((code, url)))
+        self.assertEqual(shown, [("ABCD-EFGH", "https://www.twitch.tv/activate")])
+        self.assertEqual(acc.store["login"], "markus")
+        self.assertTrue(acc.connected)
+        self.assertEqual(acc.chat_url(), "https://www.twitch.tv/popout/markus/chat?darkpopout")
+
+    def test_abgelaufen_wird_aufgefrischt(self):
+        acc = konten.YouTube({"access_token": "alt", "refresh_token": "r", "expires_at": 0}, self.save, "id", "geheim")
+        with mock.patch.object(konten, "http", return_value={"access_token": "neu", "expires_in": 3600}) as h:
+            self.assertEqual(acc.token(), "neu")
+            self.assertEqual(h.call_args.args[2]["grant_type"], "refresh_token")
+
+    def test_ungueltige_anmeldung_meldet_ab(self):
+        acc = konten.YouTube({"access_token": "alt", "refresh_token": "r", "expires_at": 0}, self.save, "id", "geheim")
+        with mock.patch.object(konten, "http", side_effect=konten.ApiError(400, {"error": "invalid_grant"})):
+            with self.assertRaises(konten.ApiError):
+                acc.token()
+        self.assertFalse(acc.connected)
+
+    def test_youtube_stream_ziel(self):
+        acc = konten.YouTube({"access_token": "t", "expires_at": time.time() + 999}, self.save, "id", "s")
+        answers = [{"items": [{"id": "vid", "snippet": {"title": "T", "liveChatId": "c"},
+                               "contentDetails": {"boundStreamId": "s1"}}]},
+                   {"items": [{"cdn": {"ingestionInfo": {"ingestionAddress": "rtmp://a.rtmp.youtube.com/live2",
+                                                          "streamName": "abcd-1234"}}}]}]
+        with mock.patch.object(konten, "http", side_effect=lambda *a, **k: answers.pop(0)):
+            self.assertEqual(acc.stream_target(), "rtmp://a.rtmp.youtube.com/live2/abcd-1234")
+
+    def test_dienste_ohne_kennung(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": d}):
+            self.assertEqual(konten.services()["twitch_client_id"], "")
+
+
+class Abbild(unittest.TestCase):
+    def test_eingebaut(self):
+        cf = (ROOT / "image/Containerfile").read_text(encoding="utf-8")
+        for part in ("COPY studio/gibeon_studio", "/usr/bin/gibeon-studio --selftest", "pipewire-gstreamer"):
+            self.assertIn(part, cf)
+        self.assertIn('"gibeon-studio.desktop"', (ROOT / "shell/creative_shell/apps.py").read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    unittest.main()
