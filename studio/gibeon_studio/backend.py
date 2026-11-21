@@ -228,13 +228,17 @@ class Hub(QObject):
         self._lock = threading.Lock()
         self._img = QImage()
         self._waiting = False
+        self._sent = 0.0
 
     def push(self, img):
         with self._lock:
             self._img = img
-            if self._waiting:
+            now = time.monotonic()
+            # noch nicht abgeholt? Dann nicht stauen – außer es hängt (z. B. Vorschau gab es noch nicht)
+            if self._waiting and now - self._sent < 0.25:
                 return
             self._waiting = True
+            self._sent = now
         self.frame.emit()
 
     def take(self):

@@ -303,9 +303,9 @@ ApplicationWindow {
                 // an den Ecken ziehen zum Vergrößern/Verkleinern (Seitenverhältnis bleibt)
                 Item {
                     id: stage
-                    readonly property real fitW: Math.min(preview.width, preview.height * 16 / 9)
-                    x: preview.x + (preview.width - fitW) / 2
-                    y: preview.y + (preview.height - fitW * 9 / 16) / 2
+                    readonly property real fitW: preview ? Math.min(preview.width, preview.height * 16 / 9) : 0
+                    x: preview ? preview.x + (preview.width - fitW) / 2 : 0
+                    y: preview ? preview.y + (preview.height - fitW * 9 / 16) / 2 : 0
                     width: fitW
                     height: fitW * 9 / 16
                     readonly property real snap: 0.012
