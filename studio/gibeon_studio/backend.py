@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -955,8 +956,8 @@ class Studio(QObject):
         if field in ("url", "bw", "bh"):
             if field == "url":
                 url = str(value).strip()
-                if url and "://" not in url:
-                    url = "https://" + url
+                if url and not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", url):
+                    url = "https://" + url            # „streamelements.com/…“ → https://…
                 it["url"] = url
             else:
                 it[field] = max(64, min(3840, int(value or 0) // 2 * 2))
