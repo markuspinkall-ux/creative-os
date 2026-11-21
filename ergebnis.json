@@ -1,0 +1,113 @@
+{
+  "ok": true,
+  "checks": {
+    "zwei Tabs": true,
+    "Video-Tab aktiv": true,
+    "H.264 per MSE (Twitch/YouTube)": true,
+    "AAC per MSE": true,
+    "H.264 abspielbar": true,
+    "Testvideo läuft": true,
+    "Bilder werden flüssig dargestellt": true,
+    "Leiste hat Höhe": true,
+    "Menü öffnet sich": true,
+    "Menü schließt sich": true,
+    "Neuer Tab": true,
+    "Tab schließen": true,
+    "Geschlossenen Tab wiederherstellen": true,
+    "Lautsprecher nur bei Ton": true,
+    "Vorschläge aus dem Verlauf": true,
+    "Verstärker hängt sich ans Video": true,
+    "Video läuft mit Verstärker weiter": true,
+    "Tab wandert in neues Fenster": true,
+    "Video läuft im neuen Fenster weiter": true,
+    "Graphit als Standard": true,
+    "Porzellan wird übernommen": true,
+    "Akzentfarbe wird übernommen": true,
+    "Werbeblocker geladen": true,
+    "Werbeskript blockiert": true,
+    "Werbeflächen ausgeblendet": true,
+    "Zähler zählt": true,
+    "Videodaten ungeprüft durchgelassen": true,
+    "Seite erlauben lässt Werbung durch": true,
+    "Videoportale erkannt": true,
+    "Blocker auf YouTube und Twitch aus": true,
+    "Allgemeine Seiten weiter geblockt": true,
+    "Auf YouTube wieder einschaltbar": true,
+    "und wieder aus": true,
+    "Keine Seiten-Skripte auf YouTube (auch eingebettet)": true,
+    "Videowerbung-Skript nur auf Videoportalen": true,
+    "Videowerbung-Skript abschaltbar": true,
+    "Videowerbung-Skript läuft früh auf YouTube": true,
+    "Keine Werbedaten im YouTube-Player": true,
+    "Download per Link": true,
+    "Download per Link in neuem Fenster": true,
+    "Download per Blob": true,
+    "Download aus einer Web-App (blob, neues Fenster)": true
+  },
+  "video": {
+    "mseH264": true,
+    "mseH264Base": true,
+    "mseAac": true,
+    "mseVp9": true,
+    "mseAv1": true,
+    "canPlayH264": "probably",
+    "time": 4.962462,
+    "width": 1280,
+    "height": 720,
+    "error": 0,
+    "frames": 154,
+    "dropped": 0,
+    "paused": false
+  },
+  "layout": {
+    "chromeH": 115,
+    "overlay": false
+  },
+  "adblock": {
+    "blocked": 1,
+    "loaded": 0,
+    "ins": 0,
+    "banner": 0,
+    "inhalt": 18,
+    "count": 1
+  },
+  "adblockSchnell": 3,
+  "adblockErlaubt": {
+    "blocked": 0,
+    "loaded": 1
+  },
+  "online": {
+    "youtube": {
+      "time": 0,
+      "width": 0,
+      "height": 0,
+      "paused": true,
+      "frames": 0,
+      "dropped": 0,
+      "host": "www.youtube.com",
+      "hooked": true,
+      "adData": false,
+      "adShowing": false
+    },
+    "twitch": {
+      "time": 17.893631,
+      "width": 1280,
+      "height": 720,
+      "paused": false,
+      "frames": 1023,
+      "dropped": 1,
+      "host": "www.twitch.tv",
+      "hooked": false,
+      "adData": false,
+      "adShowing": false
+    }
+  },
+  "downloads": [
+    "probe-blob.txt",
+    "probe-fenster.txt",
+    "probe-link.txt"
+  ],
+  "appDownloads": [
+    "27462ae7-09d7-4b19-bb88-6ba3926f4393.gz"
+  ]
+}
