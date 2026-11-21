@@ -15,7 +15,7 @@ from PySide6.QtCore import Property, QObject, QSocketNotifier, Qt, QTimer, QUrl,
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QImageReader, QPainter
 from PySide6.QtQuick import QQuickPaintedItem
 
-from . import engine, konten
+from . import engine, geraete, konten
 
 try:
     from .audio_routing import matching_audio
@@ -88,7 +88,9 @@ def video_devices():
             name = (d / "name").read_text().strip()
         except OSError:
             continue
-        out.append({"id": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name)})
+        info = geraete.describe(d)
+        out.append({"id": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name),
+                    "capture": info["capture"], "elgato": info["elgato"]})
     return out
 
 
@@ -416,6 +418,7 @@ class Studio(QObject):
             "screenReady": self.screen is not None, "screenAsking": self._portal is not None and self.screen is None,
             "recFile": self.rec_file, "canvases": list(engine.CANVAS),
             "locked": self.live or self.recording, "outputDevices": self.output_list,
+            "unsupported": getattr(self, "unsupported", []),
             "scenes": [{"name": sc["name"], "count": len(sc["items"])} for sc in self.cfg["scenes"]],
             "scene": self.cfg["scene"], "items": self._items_state(),
         }
@@ -496,6 +499,10 @@ class Studio(QObject):
         self.video_list = video_devices()
         self.audio_list = audio_inputs()
         self.output_list = audio_outputs()
+        try:
+            self.unsupported = geraete.unsupported()
+        except OSError:
+            self.unsupported = []
         self.changed.emit()
 
     # ---- Bildschirm freigeben -----------------------------------------------------------------
@@ -618,7 +625,12 @@ class Studio(QObject):
         if k == "screen":
             return dict(self.screen, key=key) if self.screen else None
         if k in ("camera", "capture"):
-            return {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+            src = {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+            dev = next((d for d in self.video_list if d["id"] == it["device"]), {})
+            if k == "capture" or dev.get("capture"):
+                # Capture-Karten (z. B. Elgato): bestes Format fest einstellen, 1080p mit voller Bildrate
+                src["mode"] = geraete.capture_mode(it["device"])
+            return src
         if k == "image":
             img = self._image(it["file"])
             if not img:
@@ -770,8 +782,13 @@ class Studio(QObject):
             return -1
         used = {it.get("device") for it in items}
         devs = [d for d in self.video_list if d["id"] not in used] or self.video_list
-        # Kamera: am liebsten eine echte, sonst die virtuelle; Capture-Karte: eine, die keine Kamera ist
-        dev = next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
+        # Kamera: am liebsten eine echte Kamera; Capture-Karte: am liebsten eine Elgato bzw. Capture-Karte
+        if kind == "capture":
+            dev = next((d for d in devs if d.get("elgato")), None) or next((d for d in devs if d.get("capture")), None) \
+                or next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
+        else:
+            dev = next((d for d in devs if not d.get("virtual") and not d.get("capture")), None) \
+                or next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
         it = new_item(self.cfg, kind, device=dev["id"] if dev else "")
         if kind == "capture":
             items.insert(0, it)

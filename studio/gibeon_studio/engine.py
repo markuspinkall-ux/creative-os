@@ -77,6 +77,28 @@ def _q(text):
     return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+GST_FORMATS = {"NV12": "NV12", "YUYV": "YUY2", "UYVY": "UYVY", "YU12": "I420"}
+
+
+def _rate(fps):
+    """59.94 → 60000/1001, 60 → 60/1"""
+    for base in (24, 30, 60, 120):
+        if abs(fps - base * 1000 / 1001) < 0.02:
+            return f"{base * 1000}/1001"
+    return f"{int(round(fps))}/1"
+
+
+def mode_caps(mode):
+    """Feste Einstellung für v4l2src (Capture-Karten: z. B. 1080p60 NV12) – oder ""."""
+    if not mode:
+        return ""
+    size = f"width={int(mode['width'])},height={int(mode['height'])},framerate={_rate(float(mode['fps']))}"
+    if mode.get("format") == "MJPG":
+        return f" ! image/jpeg,{size} ! jpegdec"
+    fmt = GST_FORMATS.get(mode.get("format"))
+    return f" ! video/x-raw,format={fmt},{size}" if fmt else ""
+
+
 def video_source(src):
     """Beschreibung einer Bildquelle. src: {"type": "screen"|"video"|"test", …}"""
     t = src.get("type")
@@ -84,6 +106,9 @@ def video_source(src):
         return (f"pipewiresrc fd={int(src['fd'])} path={int(src['node'])} always-copy=true "
                 "keepalive-time=1000 do-timestamp=true")
     if t == "video" and src.get("device"):
+        caps = mode_caps(src.get("mode"))
+        if caps:
+            return f"v4l2src device={_q(src['device'])} do-timestamp=true{caps}"
         return f"v4l2src device={_q(src['device'])} do-timestamp=true ! decodebin"
     if t == "test":
         return f"videotestsrc is-live=true pattern={src.get('pattern', 'smpte')}"
@@ -175,11 +200,15 @@ class Feeder:
         self.retry_at = 0.0
         self.error = ""
         self.reported = False
+        self.no_mode = False            # feste Einstellung klappt nicht → GStreamer wählen lassen
         self.start()
 
     def start(self):
         w, h, fps = self.size
-        desc = feeder_description(self.src, w, h, fps)
+        src = self.src
+        if self.no_mode:
+            src = dict(src, mode=None)
+        desc = feeder_description(src, w, h, fps)
         try:
             self.pipe = gst.launch(desc)
         except (ValueError, TypeError) as e:
@@ -196,6 +225,11 @@ class Feeder:
         return gst.FLOW_OK
 
     def _failed(self, text):
+        if self.src.get("mode") and not self.no_mode:
+            self.no_mode = True             # gleich nochmal ohne feste Einstellung
+            self.close()
+            self.retry_at = time.monotonic() + 0.5
+            return
         self.close()
         self.error = text
         self.retry_at = time.monotonic() + self.RETRY

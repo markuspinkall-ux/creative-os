@@ -228,3 +228,65 @@ class Abbild(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Elgato(unittest.TestCase):
+    """Capture-Karten: bestes Format fest einstellen, Karten ohne Treiber erkennen."""
+
+    def test_format_auswahl(self):
+        from gibeon_studio import geraete
+        hd60x = [{"format": "YUYV", "width": 1920, "height": 1080, "fps": 60.0},
+                 {"format": "NV12", "width": 1920, "height": 1080, "fps": 60.0},
+                 {"format": "NV12", "width": 3840, "height": 2160, "fps": 30.0},
+                 {"format": "P010", "width": 3840, "height": 2160, "fps": 60.0}]
+        self.assertEqual(geraete.pick_capture_mode(hd60x), {"format": "NV12", "width": 1920, "height": 1080, "fps": 60.0})
+        camlink = [{"format": "NV12", "width": 3840, "height": 2160, "fps": 29.97},
+                   {"format": "YUYV", "width": 1920, "height": 1080, "fps": 59.94}]
+        self.assertEqual(geraete.pick_capture_mode(camlink)["fps"], 59.94)
+        self.assertIsNone(geraete.pick_capture_mode([]))
+
+    def test_caps(self):
+        self.assertEqual(engine.mode_caps({"format": "NV12", "width": 1920, "height": 1080, "fps": 59.94}),
+                         " ! video/x-raw,format=NV12,width=1920,height=1080,framerate=60000/1001")
+        self.assertIn("image/jpeg", engine.mode_caps({"format": "MJPG", "width": 1920, "height": 1080, "fps": 60}))
+        self.assertIn("format=YUY2", engine.video_source({"type": "video", "device": "/dev/video3",
+                                                          "mode": {"format": "YUYV", "width": 1920, "height": 1080, "fps": 60}}))
+
+    def test_karte_ohne_treiber(self):
+        from gibeon_studio import geraete
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            usb = root / "bus/usb/devices/2-1"
+            usb.mkdir(parents=True)
+            (usb / "idVendor").write_text("0fd9\n")
+            (usb / "product").write_text("Game Capture HD60 S\n")
+            deck = root / "bus/usb/devices/2-2"                 # Stream Deck: kein Capture-Gerät
+            deck.mkdir(parents=True)
+            (deck / "idVendor").write_text("0fd9\n")
+            (deck / "product").write_text("Stream Deck MK.2\n")
+            pci = root / "bus/pci/devices/0000:05:00.0"
+            pci.mkdir(parents=True)
+            (pci / "vendor").write_text("0x1cfa\n")
+            (pci / "device").write_text("0x000e\n")
+            (root / "class/video4linux").mkdir(parents=True)
+            with mock.patch.object(geraete, "SYS", root):
+                msgs = geraete.unsupported()
+        self.assertEqual(len(msgs), 2)
+        self.assertTrue(msgs[0].startswith("Game Capture HD60 S:"))
+        self.assertIn("4K60 Pro MK.2", msgs[1])
+
+
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class FesteEinstellung(unittest.TestCase):
+    def test_rueckfall_ohne_format(self):
+        f = engine.Feeder("k", {"type": "video", "device": "/dev/video-nicht-da",
+                                "mode": {"format": "NV12", "width": 1920, "height": 1080, "fps": 60}}, None, (1280, 720, 30))
+        try:
+            for _ in range(20):
+                f.poll()
+                if f.no_mode:
+                    break
+                time.sleep(0.05)
+            self.assertTrue(f.no_mode)            # klappt nicht → nochmal ohne feste Einstellung
+        finally:
+            f.stop()

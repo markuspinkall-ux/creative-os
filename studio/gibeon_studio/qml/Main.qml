@@ -586,6 +586,26 @@ ApplicationWindow {
                         CButton { Layout.fillWidth: true; text: "+ Capture-Karte"; onClicked: selectAt(studio.addSource("capture")) }
                         CButton { Layout.fillWidth: true; text: "+ Bild"; onClicked: imagePicker.open() }
                     }
+                    // Elgato-Karten ohne Treiber: lieber klar sagen als still nichts zeigen
+                    Repeater {
+                        model: st.unsupported || []
+                        delegate: Rectangle {
+                            required property string modelData
+                            Layout.fillWidth: true
+                            implicitHeight: unsupText.implicitHeight + 18
+                            radius: Theme.radiusRow
+                            color: Qt.rgba(0.95, 0.55, 0.2, 0.14)
+                            border.color: Qt.rgba(0.95, 0.55, 0.2, 0.5)
+                            Text {
+                                id: unsupText
+                                anchors.fill: parent
+                                anchors.margins: 9
+                                wrapMode: Text.WordWrap
+                                text: modelData
+                                color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 11
+                            }
+                        }
+                    }
 
                     // Einstellungen der ausgewählten Quelle
                     ColumnLayout {
