@@ -16,7 +16,7 @@ from PySide6.QtCore import Property, QObject, QProcess, QSocketNotifier, Qt, QTi
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QImageReader, QPainter
 from PySide6.QtQuick import QQuickPaintedItem
 
-from . import engine, geraete, konten
+from . import engine, geraete, konten, umfrage
 
 try:
     from .audio_routing import matching_audio
@@ -56,6 +56,12 @@ DEFAULTS = {
     "rec_quality": "normal",         # normal | hoch | sehr-hoch
     "encoder": "auto",               # auto (Grafikkarte, wenn möglich) | cpu
     "upscale": "aus",                # aus | schnell | ki
+    # Umfragen: Kanal zum Mitlesen (ohne Anmeldung), eigenes CSS, zuletzt benutzte Einstellungen
+    "twitch_channel": "",
+    "poll_css": umfrage.DEFAULT_CSS,
+    "poll_duration": 60,
+    "poll_show": 20,
+    "poll_native": False,
     "targets": {"twitch": True, "youtube": True, "kick": False, "tiktok": False, "custom": False},
     "custom_url": "",
     "custom_key": "",
@@ -76,7 +82,7 @@ SOURCE_KEYS = ("canvas", "audio")
 INGEST = {"twitch": "rtmp://ingest.global-contribute.live-video.net/app",
           "youtube": "rtmp://a.rtmp.youtube.com/live2"}
 KINDS = {"screen": "Bildschirm", "camera": "Kamera", "capture": "Capture-Karte", "image": "Bild",
-         "browser": "Browserquelle", "test": "Test"}
+         "browser": "Browserquelle", "umfrage": "Umfrage", "test": "Test"}
 
 
 def user_dir(kind, fallback):
@@ -222,6 +228,8 @@ def item_key(item):
         return f"image:{item['file']}" if item.get("file") else None
     if k == "test":
         return f"test:{item['id']}"
+    if k == "umfrage":
+        return "umfrage"
     if k == "browser":
         # gleiche Seite in gleicher Größe = eine Quelle, auch über mehrere Szenen
         return f"web:{item.get('bw', 800)}x{item.get('bh', 600)}:{item['url']}" if item.get("url") else None
@@ -326,6 +334,7 @@ class Studio(QObject):
     loginCode = Signal(str, str, str)             # Dienst, Code, Adresse
     categories = Signal(str, "QVariantList")      # Dienst, Treffer
     _async = Signal(object)                       # Ergebnis aus einem Hintergrund-Thread
+    pollUpdate = Signal(str)                      # [Zustand, CSS] als JSON für die Umfrage-Einblendung
 
     def __init__(self, selftest=False, parent=None):
         super().__init__(parent)
@@ -346,6 +355,10 @@ class Studio(QObject):
         self.audio_list = []
         self.output_list = []
         self.upscale_queue = []
+        self.poll = None
+        self.chat_reader = None
+        self._poll_timer = QTimer(self, interval=500, timeout=self._poll_tick)
+        self._poll_votes_at = 0.0
         self.upscale_job = None
         self.ki_ok, self.ki_why = False, ""
         self._images = {}                         # Datei → (png, b, h)
@@ -474,6 +487,8 @@ class Studio(QObject):
             "upscaleJob": {k: v for k, v in self.upscale_job.items() if k != "proc"} if self.upscale_job else {},
             "upscaleQueue": len(self.upscale_queue),
             "webSources": self._web_sources(),
+            "poll": self.poll.state() if self.poll else {}, "pollChannel": self._poll_channel(),
+            "twitchConnected": self.accounts["twitch"].connected,
             "locked": self.live or self.recording, "outputDevices": self.output_list,
             "unsupported": getattr(self, "unsupported", []),
             "sinkDevices": [{"id": d["id"][:-len(".monitor")] if d["id"] else "", "name": d["name"]} for d in self.output_list],
@@ -741,7 +756,7 @@ class Studio(QObject):
             return {"key": key, "type": "image", "file": img[0], "w": img[1], "h": img[2]}
         if k == "test":
             return {"key": key, "type": "test", "pattern": it.get("pattern", "smpte"), "green": bool(it.get("green"))}
-        if k == "browser":
+        if k in ("browser", "umfrage"):
             return {"key": key, "type": "browser", "w": it.get("bw", 800), "h": it.get("bh", 600)}
         return None
 
@@ -1215,10 +1230,12 @@ class Studio(QObject):
         seen, out = set(), []
         for sc in self.cfg["scenes"]:
             for it in sc["items"]:
-                key = item_key(it) if it["kind"] == "browser" else None
+                key = item_key(it) if it["kind"] in ("browser", "umfrage") else None
                 if key and key not in seen:
                     seen.add(key)
-                    out.append({"key": key, "url": it["url"], "w": it.get("bw", 800), "h": it.get("bh", 600)})
+                    url = QUrl.fromLocalFile(str(HERE / "umfrage.html")).toString() if key == "umfrage" else it["url"]
+                    out.append({"key": key, "url": url, "w": it.get("bw", 800), "h": it.get("bh", 600),
+                                "poll": key == "umfrage"})
         return out
 
     @Slot(str, QImage)
@@ -1230,6 +1247,137 @@ class Studio(QObject):
         data = bytes(img.constBits())[: w * h * 4] if img.bytesPerLine() == w * 4 else b"".join(
             bytes(img.constScanLine(y))[: w * 4] for y in range(h))
         self.mixer.push_web(key, data, w, h)
+
+    # ---- Umfragen -------------------------------------------------------------------------------------
+    def _poll_channel(self):
+        tw = self.accounts["twitch"]
+        return tw.login_name if tw.connected and tw.login_name else self.cfg["twitch_channel"].strip().lstrip("@#")
+
+    def _poll_hint(self):
+        n = len(self.poll.options) if self.poll else 0
+        return "Abstimmen: " + ", ".join(str(i + 1) for i in range(n)) + " in den Chat schreiben"
+
+    def _push_poll(self):
+        st = self.poll.state(self._poll_hint()) if self.poll else {"phase": "vorbei"}
+        self.pollUpdate.emit(json.dumps([st, self.cfg["poll_css"]]))
+
+    @Slot()
+    def pollRefresh(self):
+        self._push_poll()
+
+    @Slot(str, "QVariantList", int, int, bool)
+    def startPoll(self, question, options, duration, show, native):
+        opts = [str(o).strip() for o in options if str(o).strip()]
+        if not question.strip() or len(opts) < 2:
+            self.toast.emit("Bitte eine Frage und mindestens zwei Antworten eintragen.")
+            return
+        if self.poll and self.poll.phase() == "laeuft":
+            self.toast.emit("Es läuft schon eine Umfrage.")
+            return
+        self.cfg.update(poll_duration=int(duration), poll_show=int(show), poll_native=bool(native))
+        # Einblendung in die aktive Szene, falls sie dort noch fehlt (oben links, frei verschiebbar)
+        items = self._scene()["items"]
+        if not any(it["kind"] == "umfrage" for it in items):
+            it = new_item(self.cfg, "umfrage", bw=600, bh=440, aspect=600 / 440, w=0.30, name="Umfrage")
+            it["x"], it["y"] = 0.02, 0.05
+            items.append(it)
+            self._structure()
+        self._save()
+        self.poll = umfrage.Poll(question, opts, duration, show)
+        channel = self._poll_channel()
+        if channel:
+            if not self.chat_reader or self.chat_reader.channel != channel.lower():
+                if self.chat_reader:
+                    self.chat_reader.stop()
+                self.chat_reader = umfrage.ChatReader(channel, self._chat_vote)
+        else:
+            self.toast.emit("Trage unter „Ziele › Twitch“ deinen Kanalnamen ein – dann zählt Studio die Stimmen im Chat.")
+        tw = self.accounts["twitch"]
+        if tw.connected:
+            poll = self.poll
+            nums = " · ".join(f"{i + 1} = {o}" for i, o in enumerate(opts))
+            self._bg(lambda: self.twitch_chat.send(f"📊 Umfrage: {question.strip()} – {nums} – schreib die Nummer in den Chat! ({int(duration)} s)"),
+                     None, lambda m: None)
+            if native:
+                def done(pid, poll=poll):
+                    poll.twitch_poll = pid
+
+                def fail(_m):
+                    self.toast.emit("Twitch-Umfrage geht nur für Affiliates/Partner – abgestimmt wird im Chat.")
+                self._bg(lambda: tw.create_poll(question.strip(), opts, duration), done, fail)
+        self._poll_timer.start()
+        self._push_poll()
+        self.changed.emit()
+
+    def _chat_vote(self, user, text):
+        # Hintergrund-Thread des Chat-Lesers
+        if self.poll and self.poll.vote(user, text):
+            self._async.emit(self._poll_changed)
+
+    def _poll_changed(self):
+        self._push_poll()
+        self.changed.emit()
+
+    def _poll_tick(self):
+        p = self.poll
+        if not p:
+            self._poll_timer.stop()
+            return
+        tw = self.accounts["twitch"]
+        if p.twitch_poll and not p.ended and time.monotonic() - self._poll_votes_at > 3:
+            self._poll_votes_at = time.monotonic()
+
+            def got(v, p=p):
+                if len(v) == len(p.extra):
+                    p.extra = v
+            self._bg(lambda: tw.poll_votes(p.twitch_poll), got, lambda m: None)
+        if not p.ended and p.remaining() == 0:
+            self._finish_poll()
+        elif p.phase() == "vorbei":
+            self._poll_timer.stop()
+            if self.chat_reader:
+                self.chat_reader.stop()
+                self.chat_reader = None
+        self._push_poll()
+        self.changed.emit()
+
+    def _finish_poll(self):
+        p = self.poll
+        if not p or p.ended:
+            return
+        p.ended = time.monotonic()
+        tw = self.accounts["twitch"]
+        if tw.connected:
+            if p.twitch_poll:
+                self._bg(lambda: tw.end_poll(p.twitch_poll), None, lambda m: None)
+            self._bg(lambda: self.twitch_chat.send("📊 " + p.result_text()), None, lambda m: None)
+        self.toast.emit(p.result_text())
+
+    @Slot()
+    def endPoll(self):
+        """Umfrage vorzeitig beenden – das Ergebnis wird wie gewohnt angezeigt."""
+        self._finish_poll()
+        self._push_poll()
+        self.changed.emit()
+
+    @Slot()
+    def hidePoll(self):
+        if self.poll:
+            self._finish_poll()
+            self.poll.show_result = 0
+        self._push_poll()
+        self.changed.emit()
+
+    @Slot(str)
+    def setPollCss(self, css):
+        self.cfg["poll_css"] = css
+        self._save()
+        self._push_poll()
+
+    @Slot()
+    def resetPollCss(self):
+        self.setPollCss(umfrage.DEFAULT_CSS)
+        self.changed.emit()
 
     # ---- 4K nach der Aufnahme --------------------------------------------------------------------
     def _check_ki(self):
@@ -1478,6 +1626,8 @@ class Studio(QObject):
         while self.mixer.outputs and time.monotonic() < deadline:
             self.mixer.poll()
             time.sleep(0.05)
+        if self.chat_reader:
+            self.chat_reader.stop()
         self.mixer.stop()
         for slot in list(self.mixer.monitors):
             self.mixer.set_monitor(slot, False)

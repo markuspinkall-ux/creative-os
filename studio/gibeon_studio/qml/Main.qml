@@ -719,6 +719,11 @@ ApplicationWindow {
                 }
                 IconBtn { icon: "plus"; tip: "Neue Szene"; onClicked: { win.selected = ""; studio.addScene() } }
                 Item { Layout.fillWidth: true }
+                CButton {
+                    text: st.poll && st.poll.phase === "laeuft" ? "Umfrage · " + Math.floor(st.poll.remaining / 60) + ":" + String(st.poll.remaining % 60).padStart(2, "0") : "Umfrage"
+                    primary: !!(st.poll && st.poll.phase === "laeuft")
+                    onClicked: pollDialog.open = true
+                }
                 Text {
                     text: "Strg+1 … 9 wechselt die Szene"
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
@@ -828,6 +833,13 @@ ApplicationWindow {
                         echoMode: TextInput.Password
                         text: cfg.twitch_key || ""
                         onEditingFinished: studio.set("twitch_key", text.trim())
+                    }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: !(acc.twitch && acc.twitch.connected)
+                        placeholderText: "Twitch-Kanalname (für Umfragen im Chat)"
+                        text: cfg.twitch_channel || ""
+                        onEditingFinished: studio.set("twitch_channel", text.trim())
                     }
                     TargetRow { key: "youtube"; label: "YouTube"; note: acc.youtube && acc.youtube.connected ? (acc.youtube.target ? acc.youtube.name : "keine Übertragung") : (cfg.youtube_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
                     Field {
@@ -1015,6 +1027,13 @@ ApplicationWindow {
                 settings.javascriptCanOpenWindows: false
                 settings.playbackRequiresUserGesture: false
                 Connections { target: win; function onWebReloadChanged() { wv.reload() } }
+                // Umfrage-Einblendung: Zustand und eigenes CSS hineinreichen
+                Connections {
+                    target: studio
+                    enabled: !!wv.modelData.poll
+                    function onPollUpdate(js) { wv.runJavaScript("window.gibeonUmfrage && window.gibeonUmfrage.apply(null, " + js + ")") }
+                }
+                onLoadingChanged: (info) => { if (wv.modelData.poll && info.status === WebEngineView.LoadSucceededStatus) studio.pollRefresh() }
                 Timer {
                     interval: Math.round(1000 / Math.min(30, st.canvasFps || 30))
                     running: true
@@ -1078,6 +1097,190 @@ ApplicationWindow {
                     CButton { text: "Abbrechen"; onClicked: { studio.cancelLogin(win.loginService); win.loginService = "" } }
                 }
                 Text { width: parent.width; wrapMode: Text.WordWrap; text: "Studio wartet, bis du bestätigt hast. Dein Passwort sieht Studio nicht."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            }
+        }
+    }
+
+    // ---------------- Umfrage ----------------
+    Rectangle {
+        id: pollDialog
+        property bool open: false
+        property var answers: ["", ""]
+        property int duration: cfg.poll_duration || 60
+        property int show: cfg.poll_show || 20
+        property bool css: false
+        readonly property var p: st.poll || ({})
+        readonly property bool running: p.phase === "laeuft"
+        anchors.fill: parent
+        visible: open
+        color: Qt.rgba(0, 0, 0, 0.5)
+        MouseArea { anchors.fill: parent; onClicked: pollDialog.open = false }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 520
+            height: Math.min(parent.height - 60, pollCol.implicitHeight + 48)
+            radius: Theme.radiusMenu
+            color: Theme.surface
+            MouseArea { anchors.fill: parent }
+            Flickable {
+                anchors.fill: parent
+                anchors.margins: 24
+                contentHeight: pollCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                ColumnLayout {
+                    id: pollCol
+                    width: parent.width
+                    spacing: 10
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Umfrage"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true; Layout.fillWidth: true }
+                        IconBtn { icon: "close"; tip: "Schließen"; onClicked: pollDialog.open = false }
+                    }
+
+                    // --- läuft gerade / Ergebnis ---
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: pollDialog.p.phase === "laeuft" || pollDialog.p.phase === "ergebnis"
+                        spacing: 8
+                        Text { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: pollDialog.p.question || ""; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 15; font.bold: true }
+                        Repeater {
+                            model: pollDialog.p.options || []
+                            delegate: Rectangle {
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                height: 36; radius: 10
+                                color: Theme.raised
+                                clip: true
+                                Rectangle { width: parent.width * modelData.pct / 100; height: parent.height; color: Theme.tint(modelData.lead ? 0.22 : 0.12); Behavior on width { NumberAnimation { duration: 300 } } }
+                                Text { anchors.verticalCenter: parent.verticalCenter; x: 12; text: (index + 1) + "  " + modelData.text; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                                Text { anchors.verticalCenter: parent.verticalCenter; anchors.right: parent.right; anchors.rightMargin: 12; text: modelData.votes + " · " + modelData.pct + " %"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                            }
+                        }
+                        Text {
+                            text: pollDialog.running ? "Noch " + Math.floor(pollDialog.p.remaining / 60) + ":" + String(pollDialog.p.remaining % 60).padStart(2, "0") + " · " + pollDialog.p.total + " Stimmen · Kanal: " + (st.pollChannel || "–")
+                                                     : "Ergebnis · " + pollDialog.p.total + " Stimmen"
+                            color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+                        }
+                        RowLayout {
+                            spacing: 8
+                            CButton { visible: pollDialog.running; text: "Jetzt beenden"; onClicked: studio.endPoll() }
+                            CButton { text: "Ausblenden"; onClicked: studio.hidePoll() }
+                        }
+                        Divider { Layout.fillWidth: true; Layout.topMargin: 4 }
+                    }
+
+                    // --- neue Umfrage ---
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: !pollDialog.running
+                        spacing: 8
+                        Field { id: pollQuestion; Layout.fillWidth: true; placeholderText: "Frage, z. B. Welches Spiel als Nächstes?" }
+                        Repeater {
+                            model: pollDialog.answers.length
+                            delegate: RowLayout {
+                                required property int index
+                                Layout.fillWidth: true
+                                spacing: 6
+                                Text { text: String(index + 1); color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13; Layout.preferredWidth: 14 }
+                                Field {
+                                    Layout.fillWidth: true
+                                    placeholderText: "Antwort " + (index + 1)
+                                    text: pollDialog.answers[index]
+                                    onTextEdited: { const a = pollDialog.answers.slice(); a[index] = text; pollDialog.answers = a }
+                                }
+                                IconBtn {
+                                    width: 30; height: 30; icon: "close"; tip: "Antwort entfernen"
+                                    visible: pollDialog.answers.length > 2
+                                    onClicked: { const a = pollDialog.answers.slice(); a.splice(index, 1); pollDialog.answers = a }
+                                }
+                            }
+                        }
+                        CButton {
+                            visible: pollDialog.answers.length < 5
+                            text: "+ Antwort"
+                            onClicked: pollDialog.answers = pollDialog.answers.concat([""])
+                        }
+                        Label2 { text: "Dauer" }
+                        Seg {
+                            Layout.fillWidth: true
+                            options: [["30", "30 s"], ["60", "1 min"], ["120", "2 min"], ["300", "5 min"], ["600", "10 min"]]
+                            value: String(pollDialog.duration)
+                            onPicked: (v) => pollDialog.duration = parseInt(v)
+                        }
+                        Label2 { text: "Ergebnis danach zeigen" }
+                        Seg {
+                            Layout.fillWidth: true
+                            options: [["10", "10 s"], ["20", "20 s"], ["30", "30 s"], ["60", "1 min"]]
+                            value: String(pollDialog.show)
+                            onPicked: (v) => pollDialog.show = parseInt(v)
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: !!st.twitchConnected
+                            Column {
+                                Layout.fillWidth: true
+                                Text { text: "Auch als Twitch-Umfrage"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                                Text { text: "Nur für Affiliates und Partner – sonst wird im Chat abgestimmt"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                            }
+                            CSwitch { id: pollNative; checked: !!cfg.poll_native; label: "Auch als Twitch-Umfrage" }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: st.pollChannel ? "Abgestimmt wird im Twitch-Chat von „" + st.pollChannel + "“ mit 1, 2, 3 … – jede Person zählt einmal."
+                                                 : "Trage unter „Ziele › Twitch“ deinen Kanalnamen ein oder melde dich an – dann zählt Studio die Stimmen im Chat."
+                            color: st.pollChannel ? Theme.textMuted : Theme.flame
+                            font.family: Theme.fontFamily; font.pixelSize: 11
+                        }
+                        CButton {
+                            Layout.fillWidth: true
+                            primary: true
+                            text: "Umfrage starten"
+                            onClicked: {
+                                studio.startPoll(pollQuestion.text, pollDialog.answers, pollDialog.duration, pollDialog.show, pollNative.checked)
+                            }
+                        }
+                    }
+
+                    // --- Aussehen (CSS) ---
+                    Divider { Layout.fillWidth: true; Layout.topMargin: 4 }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Aussehen (CSS)"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true; Layout.fillWidth: true }
+                        CButton { text: pollDialog.css ? "Zuklappen" : "Bearbeiten"; onClicked: pollDialog.css = !pollDialog.css }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        visible: pollDialog.css
+                        implicitHeight: 200
+                        radius: Theme.radiusRow
+                        color: Theme.raised
+                        ScrollView {
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            TextArea {
+                                id: cssEdit
+                                text: cfg.poll_css || ""
+                                color: Theme.text
+                                font.family: "monospace"
+                                font.pixelSize: 12
+                                wrapMode: TextArea.NoWrap
+                                background: null
+                                selectByMouse: true
+                                onTextChanged: if (activeFocus) cssTimer.restart()
+                                Timer { id: cssTimer; interval: 400; onTriggered: studio.setPollCss(cssEdit.text) }
+                            }
+                        }
+                    }
+                    RowLayout {
+                        visible: pollDialog.css
+                        spacing: 8
+                        CButton { text: "Standard wiederherstellen"; onClicked: { studio.resetPollCss(); cssEdit.text = cfg.poll_css } }
+                        Text { text: "Änderungen sieht man sofort in der Vorschau."; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                    }
+                }
             }
         }
     }
@@ -1389,7 +1592,7 @@ ApplicationWindow {
             spacing: 4
             SvgIcon {
                 name: sr.item.kind === "screen" ? "pc" : sr.item.kind === "image" ? "image" : sr.item.kind === "capture" ? "capture"
-                      : sr.item.kind === "browser" ? "browser" : "video"
+                      : sr.item.kind === "browser" ? "browser" : sr.item.kind === "umfrage" ? "list" : "video"
                 size: 16
                 opacity: sr.item.hidden ? 0.4 : 1
             }

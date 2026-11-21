@@ -145,12 +145,19 @@ def web_check():
 
 def shoot():
     web_check()
+    if s.poll:
+        print("Umfrage im Bild:", s.poll.state()["phase"], s.poll.state()["total"], "Stimmen")
     win = engine.rootObjects()[0]
     win.setProperty("selected", s.cfg["scenes"][0]["items"][1]["id"])
     QTimer.singleShot(1200, lambda: (win.grabWindow().save(out), print("Foto:", out), app.quit()))
 
 
 if engine.rootObjects():
+    s.startPoll("Welches Spiel spielen wir als Nächstes?", ["Mario Kart", "Zelda", "Tetris"], 120, 20, False)
+    for i, v in enumerate("1121321112"):
+        s.poll.vote(f"zuschauer{i}", v)
+    check(s.poll.state()["total"] == 10 and any(i["kind"] == "umfrage" for i in s.cfg["scenes"][0]["items"]),
+          "Umfrage gestartet, Einblendung in der Szene, Stimmen gezählt")
     s.addScene()
     s.renameScene(1, "Pause")
     s.setScene(0)

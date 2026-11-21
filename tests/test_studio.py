@@ -464,3 +464,33 @@ class Browserquelle(unittest.TestCase):
             self.assertEqual(px(0.4, 0.2), (255, 255, 255))  # durchsichtiger Teil zeigt das Bild darunter
         finally:
             m.stop()
+
+
+class Umfragen(unittest.TestCase):
+    def test_abstimmen(self):
+        from gibeon_studio import umfrage
+        p = umfrage.Poll("Welches Spiel?", ["Mario Kart", "Zelda", "", "Tetris"], 60, 20)
+        self.assertEqual(p.options, ["Mario Kart", "Zelda", "Tetris"])
+        self.assertTrue(p.vote("anna", "1"))
+        self.assertTrue(p.vote("ben", "!vote 2"))
+        self.assertTrue(p.vote("cem", "tetris"))
+        self.assertTrue(p.vote("anna", "2"))              # umentschieden: letzte Stimme zählt
+        self.assertFalse(p.vote("dora", "7"))             # gibt es nicht
+        self.assertFalse(p.vote("emil", "ich finde 2 gut"))
+        st = p.state()
+        self.assertEqual([o["votes"] for o in st["options"]], [0, 2, 1])
+        self.assertEqual(st["total"], 3)
+        self.assertEqual([o["pct"] for o in st["options"]], [0, 67, 33])
+        self.assertTrue(st["options"][1]["lead"])
+        self.assertEqual(st["phase"], "laeuft")
+        p.ended = time.monotonic()
+        self.assertEqual(p.state()["phase"], "ergebnis")
+        self.assertFalse(p.vote("fritz", "1"))           # nach dem Ende zählt nichts mehr
+        self.assertIn("Zelda: 67 %", p.result_text())
+        p.ended -= 30
+        self.assertEqual(p.state()["phase"], "vorbei")
+
+    def test_einblendung_vorhanden(self):
+        html = (ROOT / "studio/gibeon_studio/umfrage.html").read_text(encoding="utf-8")
+        for part in ("window.gibeonUmfrage", 'id="eigen"', ".umfrage", ".antwort", ".fuellung", "background: transparent"):
+            self.assertIn(part, html)
