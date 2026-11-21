@@ -168,16 +168,15 @@ if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kreadconfig6 >/dev/nul
     fi
 fi
 
-# Katalog „Eigene Apps“ (z. B. Engine) einmal einrichten – erscheint in „Software“.
-# Entfernt der Benutzer ihn später selbst, bleibt er entfernt (Merker-Datei).
-mark="${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/eigene-apps-katalog"
+# Engine ist aus Gibeon OS entfernt (Nov. 2026): installierte Engine und den Katalog „Eigene Apps“,
+# der nur für sie da war, einmal entfernen. Eigene Spiele-Projekte im Ordner „Engine“ bleiben liegen.
+mark="${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/engine-entfernt"
 if [ ! -e "$mark" ] && command -v flatpak >/dev/null 2>&1; then
     (
-        if flatpak remote-add --user --if-not-exists creative-eigene-apps \
-            https://raw.githubusercontent.com/markuspinkall-ux/creative-os/flatpak-repo/creative-eigene-apps.flatpakrepo \
-            >/dev/null 2>&1; then
-            mkdir -p "$(dirname "$mark")" && touch "$mark"
-        fi
+        flatpak uninstall --user -y --noninteractive org.creativeos.Engine >/dev/null 2>&1
+        flatpak remote-delete --user --force creative-eigene-apps >/dev/null 2>&1
+        rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/eigene-apps-katalog"
+        mkdir -p "$(dirname "$mark")" && touch "$mark"
     ) &
 fi
 

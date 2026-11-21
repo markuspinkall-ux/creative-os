@@ -41,13 +41,14 @@ NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop",   # B
                  "gibeon-android.desktop"}                                    # Android-Apps ebenso
 SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
-    "creative-cut.desktop", "org.creativeos.Engine.desktop", "creative-ftp.desktop",
+    "creative-cut.desktop", "creative-ftp.desktop",
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
     "creative-writer.desktop",
 }
-# Broadcast, Deck, Shots und Widgets stehen nicht im Startmenü (NoDisplay): Broadcast und Deck leben
-# im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den Schreibtisch.
-OLD_PREFIX = "Creative "        # alte Namen (z. B. ältere Engine-Flatpaks) ohne „Creative“ anzeigen
+# Broadcast, Deck, Shots, Widgets, Pictures und 3D-Ansicht stehen nicht im Startmenü (NoDisplay):
+# Broadcast und Deck leben im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den
+# Schreibtisch, Pictures und 3D-Ansicht öffnen sich beim Doppelklick auf ein Bild bzw. eine .glb-Datei.
+OLD_PREFIX = "Creative "        # alte Namen ohne „Creative“ anzeigen
 
 
 def is_creative(entry):

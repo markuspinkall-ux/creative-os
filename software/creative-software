@@ -98,7 +98,6 @@ DEMO = [
     ("com.github.tchx84.Flatseal", "Flatseal", "Rechte von Apps verwalten", "Utility"),
     ("io.missioncenter.MissionCenter", "Mission Center", "Systemauslastung ansehen", "System"),
 ]
-OWN_REMOTE = "creative-eigene-apps"
 ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}")
 PALETTE = ["#4f78ad", "#7a4e8c", "#2f7a6b", "#9a5b3c", "#5a6b2f", "#8c3e52", "#3c6f9a", "#6b5a43"]
 
@@ -843,7 +842,7 @@ class AppDetails(QDialog):
 # ---- Hauptfenster -----------------------------------------------------------------------------
 
 class Store(QWidget):
-    SECTIONS = ("Entdecken", "Meine Apps", "Updates", "Eigene Apps")
+    SECTIONS = ("Entdecken", "Meine Apps", "Updates")
 
     def __init__(self, preview=False):
         super().__init__()
@@ -860,8 +859,6 @@ class Store(QWidget):
         self.infos = {r[0]: {"category": category_of({r[3]}), "name": None, "summary": None, "icon": None,
                              "thumb": None} for r in DEMO} if preview else {}
         self.apps = {}
-        self.own_catalog = {}
-        self.own_remote = False
         self.installed = {}
         self.updates = set()
         self.remote_scope = "user" if preview else None
@@ -899,7 +896,6 @@ class Store(QWidget):
         menu = QMenu(more)
         menu.addAction("Paket öffnen …", self.open_package)
         menu.addAction("Flatpak-Link öffnen …", self.open_ref)
-        self.add_source = menu.addAction("Eigenen Katalog hinzufügen …", self.add_catalog)
         menu.addSeparator()
         self.refresh = menu.addAction("Katalog aktualisieren", self.scan)
         more.setMenu(menu)
@@ -947,7 +943,7 @@ class Store(QWidget):
         self.home.setWidget(home_inner)
         self.stack.addWidget(self.home)
 
-        # Listenansicht: Kategorie, Suche, Meine Apps, Updates, Eigene Apps
+        # Listenansicht: Kategorie, Suche, Meine Apps, Updates
         listing = QWidget()
         lv = QVBoxLayout(listing)
         lv.setContentsMargins(0, 0, 0, 0)
@@ -1002,7 +998,7 @@ class Store(QWidget):
 
     def app(self, app_id, row=None, scope=None):
         """Alle Angaben zu einer App an einer Stelle (Katalog + Appstream + Installationsstand)."""
-        row = row or self.catalog.get(app_id) or self.own_catalog.get(app_id)
+        row = row or self.catalog.get(app_id)
         info = self.infos.get(app_id, {})
         app = self.apps.get(app_id)
         if app is None:
@@ -1015,8 +1011,7 @@ class Store(QWidget):
         installed = next((s for s in ("user", "system") if (s, app_id) in self.installed), None)
         app["installed"] = installed
         app["update"] = bool(installed and (installed, app_id) in self.updates)
-        app["own"] = app_id in self.own_catalog
-        app["scope"] = installed or scope or (("user" if app["own"] else self.remote_scope))
+        app["scope"] = installed or scope or self.remote_scope
         return app
 
     def catalog_apps(self):
@@ -1117,22 +1112,16 @@ class Store(QWidget):
         if section == "Meine Apps":
             return apps, "INSTALLIERT", "Meine Apps", f"{len(apps)} Apps auf diesem Rechner", plain, \
                 "Noch keine Apps aus dem Katalog installiert."
-        if section == "Updates":
-            return apps, "AKTUALISIERUNGEN", "Updates", \
-                (f"{len(apps)} Apps können aktualisiert werden" if apps else "Alles aktuell"), plain, \
-                "Alle Apps sind auf dem neuesten Stand."
-        return apps, "EIGENER KATALOG", "Eigene Apps", "Apps aus deinem eigenen Flatpak-Katalog", plain, (
-            "Füge über ⋯ → „Eigenen Katalog hinzufügen“ einen signierten Flatpak-Katalog hinzu, "
-            "um deine Apps hier anzubieten." if not self.own_remote else "Der eigene Katalog ist leer.")
+        return apps, "AKTUALISIERUNGEN", "Updates", \
+            (f"{len(apps)} Apps können aktualisiert werden" if apps else "Alles aktuell"), plain, \
+            "Alle Apps sind auf dem neuesten Stand."
 
     def section_apps(self, section):
         if section == "Meine Apps":
             apps = [self.app(app_id, row, scope) for (scope, app_id), row in self.installed.items()]
-        elif section == "Updates":
+        else:
             apps = [self.app(app_id, row, scope) for (scope, app_id), row in self.installed.items()
                     if (scope, app_id) in self.updates]
-        else:
-            apps = [self.app(app_id, row, "user") for app_id, row in self.own_catalog.items()]
         unique = {a["id"]: a for a in apps}
         return sorted(unique.values(), key=lambda a: a["name"].casefold())
 
@@ -1230,18 +1219,6 @@ class Store(QWidget):
 
     def user_remotes_loaded(self, code, data):
         self.find_remote("user", code, data)
-        self.own_remote = code == 0 and OWN_REMOTE in data.splitlines()
-        self.add_source.setEnabled(not self.own_remote)
-        if self.own_remote:
-            self.command(["remote-ls", "--user", "--app", "--columns=application,name,description",
-                          OWN_REMOTE], self.own_catalog_loaded)
-        elif code == 0:
-            self.own_catalog = {}
-        self.render()
-
-    def own_catalog_loaded(self, code, data):
-        if code == 0:
-            self.own_catalog = catalog_rows(data)
         self.render()
 
     def installed_loaded(self, scope, code, data):
@@ -1348,21 +1325,6 @@ Verwende nur Quellen, denen du vertraust."""
         if QMessageBox.question(self, "Paket installieren", question) == QMessageBox.StandardButton.Yes:
             self.transact(["install", "--user", "--noninteractive", "--assumeyes", flag, source], name)
 
-    def add_catalog(self):
-        if self.preview or self.operation or self.own_remote:
-            return
-        url = self.ask_url("Eigenen Katalog hinzufügen", ".flatpakrepo")
-        if not url:
-            return
-        question = f"""Diese Quelle als eigenen Katalog hinzufügen?
-
-{url}
-
-Vertraue der Quelle nur, wenn du den Betreiber kennst."""
-        if QMessageBox.question(self, "Eigene Apps", question) == QMessageBox.StandardButton.Yes:
-            self.transact(["remote-add", "--user", "--if-not-exists", OWN_REMOTE, url], "Eigene Apps")
-            self.select("Eigene Apps")
-
     def apply(self, verb, app):
         app_id, name = app["id"], app["name"]
         scope = app.get("installed") if verb != "install" else app.get("scope")
@@ -1380,7 +1342,7 @@ Vertraue der Quelle nur, wenn du den Betreiber kennst."""
             return
         args = [verb, f"--{scope}", "--noninteractive", "--assumeyes"]
         if verb == "install":
-            args.append(OWN_REMOTE if app.get("own") and app_id not in self.catalog else "flathub")
+            args.append("flathub")
         args.append(app_id)
         self.transact(args, name)
 

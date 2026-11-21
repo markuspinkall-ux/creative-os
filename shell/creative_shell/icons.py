@@ -30,7 +30,6 @@ ALIASES = {
     "obs-tray": "com.obsproject.Studio",
     "obs-tray-active": "com.obsproject.Studio",
     "com.obsproject.studio-tray": "com.obsproject.Studio",
-    "creative-engine": "org.creativeos.Engine",
 }
 
 

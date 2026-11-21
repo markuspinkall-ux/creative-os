@@ -653,11 +653,6 @@ COPY theme /tmp/creative-theme
 RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creative/icons \
         sh /tmp/creative-theme/install.sh \
  && rm -rf /tmp/creative-theme
-# Engine (Flatpak aus „Eigene Apps“): Symbol aus dem Gibeon-Design hat Vorrang
-COPY engine/flatpak/org.creativeos.Engine.svg /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg
-RUN sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#3d6fe0/gI; s/#dce6ff/#1c2433/gI' \
-        /usr/share/icons/Creative/apps/scalable/org.creativeos.Engine.svg \
-        > /usr/share/icons/CreativePorzellan/apps/scalable/org.creativeos.Engine.svg
 # OBS Studio: Symbol im Gibeon-Stil (wie alle Apps) – ersetzt das Original überall
 # (Startmenü, Taskleiste, Tray, Titelleiste), auch bei der Flatpak-Version von OBS
 COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.svg
