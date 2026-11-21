@@ -672,10 +672,11 @@ RUN SKIP_DNF=1 CREATIVE_ICONS=/usr/lib/creative-shell/creative_shell/qml/Creativ
 # OBS Studio: Symbol im Gibeon-Stil (wie alle Apps) – ersetzt das Original überall
 # (Startmenü, Taskleiste, Tray, Titelleiste), auch bei der Flatpak-Version von OBS
 COPY obs/creative-obs.svg /usr/share/icons/hicolor/scalable/apps/creative-obs.svg
-RUN for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
+RUN /usr/libexec/gibeon-round-icons /usr/share/icons/hicolor/scalable/apps/creative-obs.svg \
+ && for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
         rm -f /usr/share/icons/Creative/apps/scalable/$n.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; \
         cp /usr/share/icons/hicolor/scalable/apps/creative-obs.svg /usr/share/icons/Creative/apps/scalable/$n.svg; \
-        sed -e 's/#232836/#ffffff/gI; s/#8fb3ff/#5b6576/gI; s/#dce6ff/#1c2433/gI' \
+        sed -e 's/#232836/#edf0f5/gI; s/#8fb3ff/#5b6576/gI; s/#dce6ff/#1c2433/gI' \
             /usr/share/icons/hicolor/scalable/apps/creative-obs.svg \
             > /usr/share/icons/CreativePorzellan/apps/scalable/$n.svg; \
     done \

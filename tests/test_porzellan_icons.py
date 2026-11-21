@@ -30,7 +30,19 @@ def test_build_theme(tmp_path):
     mod.main(src, tmp_path / "CreativePorzellan", [extra])
     out = tmp_path / "CreativePorzellan"
     assert "Inherits=breeze,hicolor" in (out / "index.theme").read_text()
-    assert "#ffffff" in (out / "apps/scalable/kcalc.svg").read_text()
+    assert "#edf0f5" in (out / "apps/scalable/kcalc.svg").read_text()      # runde Fläche zartes Grau
     kcalc = (out / "apps/scalable/kcalc.svg").read_text()
     assert "#d3d9e3" in kcalc and "#3d6fe0" not in kcalc.lower()   # Kachelrand hellgrau, kein Blau
     assert "#1c2433" in (out / "apps/scalable/creative-writer.svg").read_text()
+
+
+def test_runde_symbole():
+    spec = importlib.util.spec_from_file_location("round_icons", ROOT / "theme" / "icons" / "round-icons.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    tile = (ROOT / "studio" / "gibeon-studio.svg").read_text()
+    out = mod.roundify(tile)
+    assert '<circle cx="32" cy="32" r="29" fill="#232836"/>' in out and "<rect x=\"4\"" not in out
+    assert "#8fb3ff" not in out.lower() and "#ffb07a" not in out.lower()     # nur Schriftfarbe
+    glyph = (ROOT / "shell/creative_shell/qml/Creative/icons/lock.svg").read_text()
+    assert mod.roundify(glyph) == glyph                                    # Strichsymbole bleiben

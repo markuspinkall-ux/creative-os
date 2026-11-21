@@ -115,6 +115,10 @@ sh icons/build-icon-theme.sh "$ICONS" /usr/share/icons/Creative
 python3 icons/tile-icons.py /usr/share/icons/Creative/apps/scalable
 python3 icons/tile-icons.py --inplace /usr/share/icons/hicolor/scalable/apps/creative-*.svg
 # Dasselbe hell für Porzellan (helle Kachel, dunkle Striche) – Umschalten in Einstellungen → Darstellung
+# Schlicht und rund: Kachel → runde Fläche ohne Rand, Symbol in Schriftfarbe (wie Android-Apps)
+python3 icons/round-icons.py /usr/share/icons/Creative/apps/scalable/*.svg \
+    /usr/share/icons/hicolor/scalable/apps/creative-*.svg /usr/share/icons/hicolor/scalable/apps/gibeon-*.svg
+install -Dm755 icons/round-icons.py /usr/libexec/gibeon-round-icons
 # Porzellan ohne Blau: Kachelrand hellgrau, Akzente schiefergrau (auch Android-Apps und Studio)
 python3 icons/porzellan-icons.py /usr/share/icons/Creative /usr/share/icons/CreativePorzellan \
     /usr/share/icons/hicolor/scalable/apps/creative-*.svg /usr/share/icons/hicolor/scalable/apps/gibeon-*.svg

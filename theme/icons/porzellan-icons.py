@@ -16,7 +16,7 @@ from pathlib import Path
 
 # Graphit → Porzellan (wie icons → icons-light, dazu die Kachelfarben)
 MAP = {
-    "#232836": "#ffffff",   # Kachel
+    "#232836": "#edf0f5",   # runde Fläche (früher Kachel): zartes Grau
     "#1c2029": "#eef2f8",
     "#dce6ff": "#1c2433",   # Striche/Schrift
     "#12151b": "#e9eef6",   # Aussparungen auf Akzentflächen

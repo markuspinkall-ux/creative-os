@@ -28,11 +28,20 @@ Item {
         color: mouse.pressed ? Theme.pressed : ((mouse.containsMouse || root.active) ? Theme.hover : "transparent")
     }
 
+    // eigene Gibeon-Symbole: runde Fläche wie die App-Symbole (schlicht, wie Android-Apps)
+    Rectangle {
+        anchors.centerIn: parent
+        visible: root.icon.length > 0
+        width: 30
+        height: 30
+        radius: 15
+        color: Theme.light ? "#edf0f5" : "#232836"
+    }
     SvgIcon {
         anchors.centerIn: parent
         visible: root.icon.length > 0
         name: root.icon
-        size: 22
+        size: 17
     }
 
     // Graphit-Kachel aus dem Gibeon-Symbolthema (wie im Startmenü)
