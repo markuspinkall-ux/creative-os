@@ -480,11 +480,12 @@ class Sender:
         else:
             sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
             sink = f"{sinkf} name=out location={_q(target)}"
-        desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 "
-                f"! flvmux name=mux streamable=true ! {sink}  "
+        # Pads ausdrücklich benennen: ohne Caps beim Aufbau wüsste flvmux sonst nicht, was Bild und was Ton ist
+        desc = (f"flvmux name=mux streamable=true ! {sink}  "
+                f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.video  "
                 f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.")
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.audio")
         self.pipe = gst.launch(desc)
         self.v = gst.bin_by_name(self.pipe, b"v")
         self.a = gst.bin_by_name(self.pipe, b"a")
