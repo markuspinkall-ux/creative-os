@@ -29,6 +29,11 @@ ApplicationWindow {
     property string categoryId: ""
     property string categoryName: ""
     property var categoryHits: []
+    property string selected: ""                 // ausgewählte Quelle (id) in der aktiven Szene
+    property int renaming: -1                    // Szene, deren Namen gerade bearbeitet wird
+    readonly property var items: st.items || []
+    readonly property int selIndex: items.findIndex(i => i.id === win.selected)
+    readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
     readonly property string redLive: "#e5484d"
 
     onClosing: (close) => {
@@ -62,6 +67,16 @@ ApplicationWindow {
         }
     }
     onAccChanged: syncTitle()
+
+    // Strg+1 … Strg+9: Szene wechseln
+    Repeater {
+        model: 9
+        delegate: Item {
+            required property int index
+            Shortcut { sequence: "Ctrl+" + (index + 1); onActivated: studio.setScene(index) }
+        }
+    }
+    Shortcut { sequence: "Delete"; enabled: win.selIndex >= 0 && !(win.activeFocusItem && win.activeFocusItem.cursorPosition !== undefined); onActivated: { studio.removeItem(win.selIndex); win.selected = "" } }
 
     RowLayout {
         anchors.fill: parent
@@ -283,10 +298,127 @@ ApplicationWindow {
                     anchors.fill: parent
                     anchors.margins: 1
                 }
+
+                // Bearbeiten direkt im Bild: Quelle anklicken, ziehen zum Verschieben,
+                // an den Ecken ziehen zum Vergrößern/Verkleinern (Seitenverhältnis bleibt)
+                Item {
+                    id: stage
+                    readonly property real fitW: preview ? Math.min(preview.width, preview.height * 16 / 9) : 0
+                    x: preview ? preview.x + (preview.width - fitW) / 2 : 0
+                    y: preview ? preview.y + (preview.height - fitW * 9 / 16) / 2 : 0
+                    width: fitW
+                    height: fitW * 9 / 16
+                    readonly property real snap: 0.012
+
+                    function snapX(x, w) {
+                        for (const t of [0, 1 - w, (1 - w) / 2])
+                            if (Math.abs(x - t) < snap) return t
+                        return x
+                    }
+                    function snapY(y, h) {
+                        for (const t of [0, 1 - h, (1 - h) / 2])
+                            if (Math.abs(y - t) < snap) return t
+                        return y
+                    }
+
+                    MouseArea { anchors.fill: parent; onPressed: win.selected = "" }
+
+                    Repeater {
+                        model: win.items
+                        delegate: Item {
+                            id: box
+                            required property var modelData
+                            required property int index
+                            readonly property bool sel: win.selected === modelData.id
+                            readonly property real ratio: modelData.h / Math.max(0.0001, modelData.w)
+                            visible: modelData.ok && !modelData.hidden
+                            z: index + 1
+                            x: modelData.x * stage.width
+                            y: modelData.y * stage.height
+                            width: modelData.w * stage.width
+                            height: modelData.h * stage.height
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                radius: box.modelData.round ? Math.min(width, height) * 0.14 : 0
+                                border.width: box.sel ? 2 : (body.containsMouse ? 1 : 0)
+                                border.color: box.sel ? Theme.accent : Qt.rgba(1, 1, 1, 0.55)
+                            }
+                            Rectangle {
+                                visible: box.sel
+                                x: 6; y: 6
+                                width: selName.implicitWidth + 14; height: 22; radius: 6
+                                color: Theme.accent
+                                Text { id: selName; anchors.centerIn: parent; text: box.modelData.label; color: Theme.accentText; font.family: Theme.fontFamily; font.pixelSize: 11; font.bold: true }
+                            }
+
+                            MouseArea {
+                                id: body
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                                property real sx; property real sy; property real ox; property real oy
+                                onPressed: (m) => {
+                                    win.selected = box.modelData.id
+                                    const p = mapToItem(stage, m.x, m.y)
+                                    sx = p.x; sy = p.y; ox = box.modelData.x; oy = box.modelData.y
+                                }
+                                onPositionChanged: (m) => {
+                                    if (!pressed) return
+                                    const p = mapToItem(stage, m.x, m.y)
+                                    const w = box.modelData.w, h = box.modelData.h
+                                    const nx = stage.snapX(ox + (p.x - sx) / stage.width, w)
+                                    const ny = stage.snapY(oy + (p.y - sy) / stage.height, h)
+                                    studio.moveItem(box.index, nx, ny, w)
+                                }
+                                onDoubleClicked: studio.fillItem(box.index)
+                            }
+
+                            // Ecken: proportional skalieren, die gegenüberliegende Ecke bleibt stehen
+                            Repeater {
+                                model: box.sel ? [[0, 0], [1, 0], [0, 1], [1, 1]] : []
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    readonly property int cx: modelData[0]
+                                    readonly property int cy: modelData[1]
+                                    width: 14; height: 14; radius: 4
+                                    x: cx * box.width - width / 2
+                                    y: cy * box.height - height / 2
+                                    color: "white"
+                                    border.color: Theme.accent
+                                    border.width: 2
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        anchors.margins: -6
+                                        cursorShape: (parent.cx === parent.cy) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor
+                                        property real ax; property real ay
+                                        onPressed: {
+                                            const d = box.modelData
+                                            ax = parent.cx ? d.x : d.x + d.w          // Gegenecke in Anteilen
+                                            ay = parent.cy ? d.y : d.y + d.h
+                                        }
+                                        onPositionChanged: (m) => {
+                                            if (!pressed) return
+                                            const p = mapToItem(stage, m.x, m.y)
+                                            const fx = p.x / stage.width, fy = p.y / stage.height
+                                            // Breite aus der Maus – waagrecht oder senkrecht, was weiter reicht
+                                            const w = Math.max(0.03, Math.max(Math.abs(fx - ax), Math.abs(fy - ay) / box.ratio))
+                                            const h = w * box.ratio
+                                            const nx = parent.cx ? ax : ax - w
+                                            const ny = parent.cy ? ay : ay - h
+                                            studio.moveItem(box.index, nx, ny, w)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 Column {
                     anchors.centerIn: parent
                     spacing: 12
-                    visible: cfg.main && cfg.main.type === "screen" && !st.screenReady
+                    visible: win.items.some(i => i.kind === "screen") && !st.screenReady
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: st.screenAsking ? "Wähle im Fenster von KDE aus, was Studio zeigen soll." : "Noch kein Bildschirm gewählt."
@@ -330,6 +462,74 @@ ApplicationWindow {
                 }
             }
 
+            // Szenen
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                Text { text: "Szenen"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true; rightPadding: 4 }
+                Repeater {
+                    model: st.scenes || []
+                    delegate: Rectangle {
+                        id: chipScene
+                        required property var modelData
+                        required property int index
+                        readonly property bool cur: index === st.scene
+                        implicitHeight: 36
+                        implicitWidth: (win.renaming === index ? 160 : sceneLabel.implicitWidth) + 30
+                        radius: Theme.radiusRow
+                        color: cur ? Theme.accent : (sca.containsMouse ? Theme.hover : Theme.surface)
+                        border.color: cur ? "transparent" : Theme.hairline
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                        Text {
+                            id: sceneLabel
+                            visible: win.renaming !== chipScene.index
+                            anchors.centerIn: parent
+                            text: chipScene.modelData.name
+                            color: chipScene.cur ? Theme.accentText : Theme.text
+                            font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: chipScene.cur
+                        }
+                        MouseArea {
+                            id: sca
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (m) => {
+                                if (m.button === Qt.RightButton) { sceneMenu.popup(); return }
+                                win.selected = ""
+                                studio.setScene(chipScene.index)
+                            }
+                            onDoubleClicked: win.renaming = chipScene.index
+                        }
+                        TextField {
+                            visible: win.renaming === chipScene.index
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            text: chipScene.modelData.name
+                            color: Theme.accentText
+                            font.family: Theme.fontFamily; font.pixelSize: 13
+                            background: Item {}
+                            onVisibleChanged: if (visible) { forceActiveFocus(); selectAll() }
+                            onAccepted: { studio.renameScene(chipScene.index, text); win.renaming = -1 }
+                            onActiveFocusChanged: if (!activeFocus && visible) { studio.renameScene(chipScene.index, text); win.renaming = -1 }
+                            Keys.onEscapePressed: win.renaming = -1
+                        }
+                        Menu {
+                            id: sceneMenu
+                            MenuItem { text: "Umbenennen"; onTriggered: win.renaming = chipScene.index }
+                            MenuItem { text: "Duplizieren"; onTriggered: studio.duplicateScene(chipScene.index) }
+                            MenuItem { text: "Löschen"; enabled: (st.scenes || []).length > 1; onTriggered: studio.removeScene(chipScene.index) }
+                        }
+                    }
+                }
+                IconBtn { icon: "plus"; tip: "Neue Szene"; onClicked: { win.selected = ""; studio.addScene() } }
+                Item { Layout.fillWidth: true }
+                Text {
+                    text: "Strg+1 … 9 wechselt die Szene"
+                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                }
+            }
+
             // Tonmischer
             RowLayout {
                 Layout.fillWidth: true
@@ -358,73 +558,72 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 10
 
-                    Heading { text: "Hauptbild" }
-                    Seg {
+                    Heading { text: "Quellen in „" + ((st.scenes || [])[st.scene] || {name: ""}).name + "“" }
+                    Text {
                         Layout.fillWidth: true
-                        enabled: !win.locked
-                        options: [["screen", "Bildschirm"], ["video", "Kamera / Capture"], ["none", "Keins"]]
-                        value: cfg.main ? cfg.main.type : "screen"
-                        onPicked: (v) => studio.set("main.type", v)
+                        wrapMode: Text.WordWrap
+                        text: win.items.length ? "In der Vorschau anklicken und ziehen. An den Ecken größer oder kleiner ziehen, Doppelklick füllt das Bild."
+                                               : "Diese Szene ist noch leer – füge unten eine Quelle hinzu."
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                     }
-                    CButton {
-                        Layout.fillWidth: true
-                        visible: cfg.main && cfg.main.type === "screen"
-                        enabled: !win.locked
-                        text: st.screenReady ? "Anderen Bildschirm wählen" : "Bildschirm wählen"
-                        onClicked: studio.chooseScreen()
+                    // vorne liegende Quellen stehen oben
+                    Repeater {
+                        model: win.items.slice().reverse()
+                        delegate: SourceRow {
+                            required property var modelData
+                            required property int index
+                            item: modelData
+                            pos: win.items.length - 1 - index
+                        }
                     }
-                    Pick {
+                    GridLayout {
                         Layout.fillWidth: true
-                        visible: cfg.main && cfg.main.type === "video"
-                        enabled: !win.locked
-                        items: st.videoDevices || []
-                        current: cfg.main ? cfg.main.device : ""
-                        empty: "Keine Kamera gefunden"
-                        onChosen: (id) => studio.set("main.device", id)
+                        columns: 2
+                        columnSpacing: 6
+                        rowSpacing: 6
+                        CButton { Layout.fillWidth: true; text: "+ Bildschirm"; onClicked: selectAt(studio.addSource("screen")) }
+                        CButton { Layout.fillWidth: true; text: "+ Kamera"; onClicked: selectAt(studio.addSource("camera")) }
+                        CButton { Layout.fillWidth: true; text: "+ Capture-Karte"; onClicked: selectAt(studio.addSource("capture")) }
+                        CButton { Layout.fillWidth: true; text: "+ Bild"; onClicked: imagePicker.open() }
                     }
 
-                    Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
-                    RowLayout {
+                    // Einstellungen der ausgewählten Quelle
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        Heading { text: "Kamera einblenden"; Layout.fillWidth: true }
-                        CSwitch { checked: !!(cfg.cam && cfg.cam.on); enabled: !win.locked; label: "Kamera einblenden"; onToggled: (v) => studio.set("cam.on", v) }
-                    }
-                    Pick {
-                        Layout.fillWidth: true
-                        visible: cfg.cam && cfg.cam.on
-                        enabled: !win.locked
-                        items: st.videoDevices || []
-                        current: cfg.cam ? cfg.cam.device : ""
-                        empty: "Keine Kamera gefunden"
-                        onChosen: (id) => studio.set("cam.device", id)
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        visible: cfg.cam && cfg.cam.on
-                        spacing: 12
-                        // Ecke wählen: kleines Bild mit vier Punkten
-                        Rectangle {
-                            width: 96; height: 54; radius: 8
-                            color: Theme.raised
-                            Repeater {
-                                model: ["oben-links", "oben-rechts", "unten-links", "unten-rechts"]
-                                delegate: Rectangle {
-                                    required property string modelData
-                                    readonly property bool sel: cfg.cam && cfg.cam.corner === modelData
-                                    width: 26; height: 15; radius: 4
-                                    x: modelData.indexOf("links") >= 0 ? 6 : parent.width - width - 6
-                                    y: modelData.indexOf("oben") >= 0 ? 6 : parent.height - height - 6
-                                    color: sel ? Theme.accent : (cm.containsMouse ? Theme.tint(0.2) : Theme.tint(0.1))
-                                    MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; enabled: !win.locked; cursorShape: Qt.PointingHandCursor; onClicked: studio.set("cam.corner", modelData) }
-                                }
-                            }
-                        }
-                        Seg {
+                        visible: !!win.selItem
+                        spacing: 8
+                        Divider { Layout.fillWidth: true; Layout.topMargin: 4 }
+                        Heading { text: win.selItem ? win.selItem.label : "" }
+                        Pick {
                             Layout.fillWidth: true
+                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
                             enabled: !win.locked
-                            options: [["klein", "S"], ["mittel", "M"], ["gross", "L"]]
-                            value: cfg.cam ? cfg.cam.size : "mittel"
-                            onPicked: (v) => studio.set("cam.size", v)
+                            items: st.videoDevices || []
+                            current: win.selItem ? win.selItem.device : ""
+                            empty: "Keine Kamera gefunden"
+                            onChosen: (id) => { if (win.selIndex >= 0 && id !== win.selItem.device) studio.setItem(win.selIndex, "device", id) }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                            Text { text: "Abgerundete Ecken"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; Layout.fillWidth: true }
+                            CSwitch { checked: !!(win.selItem && win.selItem.round); label: "Abgerundete Ecken"; onToggled: (v) => studio.setItem(win.selIndex, "round", v) }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: !!win.selItem && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                            Column {
+                                Layout.fillWidth: true
+                                Text { text: "Grünen Hintergrund entfernen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
+                                Text { text: "Für Greenscreen und die Gibeon Kamera"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+                            }
+                            CSwitch { checked: !!(win.selItem && win.selItem.green); label: "Grünen Hintergrund entfernen"; onToggled: (v) => studio.setItem(win.selIndex, "green", v) }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            CButton { Layout.fillWidth: true; text: "Bildfüllend"; onClicked: studio.fillItem(win.selIndex) }
+                            CButton { Layout.fillWidth: true; danger: true; text: "Entfernen"; onClicked: { studio.removeItem(win.selIndex); win.selected = "" } }
                         }
                     }
 
@@ -518,6 +717,18 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    function selectAt(pos) {
+        if (pos >= 0 && pos < win.items.length)
+            win.selected = win.items[pos].id
+    }
+
+    ImagePicker {
+        id: imagePicker
+        title: "Bild für die Szene wählen"
+        acceptText: "Einfügen"
+        onAccepted: (url) => win.selectAt(studio.addImage(url.toString()))
     }
 
     // ---------------- Anmeldung (Gerätecode) ----------------
@@ -815,13 +1026,47 @@ ApplicationWindow {
             }
             Pick {
                 Layout.fillWidth: true
-                visible: strip.slot !== "desktop"
                 enabled: !win.locked
-                items: (strip.slot === "mic" ? [{ id: "", name: "Standard-Mikrofon" }] : []).concat(st.audioDevices || [])
+                items: strip.slot === "desktop" ? (st.outputDevices || [])
+                       : (strip.slot === "mic" ? [{ id: "", name: "Standard-Mikrofon" }] : []).concat(st.audioDevices || [])
                 current: strip.a.device || ""
                 empty: "Kein Gerät"
                 onChosen: (id) => studio.set("audio." + strip.slot + ".device", id)
             }
+        }
+    }
+
+    component SourceRow: Rectangle {
+        id: sr
+        property var item
+        property int pos
+        readonly property bool sel: win.selected === item.id
+        Layout.fillWidth: true
+        implicitHeight: 42
+        radius: Theme.radiusRow
+        color: sel ? Theme.tint(0.12) : (srm.containsMouse ? Theme.hover : Theme.raised)
+        MouseArea { id: srm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.selected = sr.item.id }
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 4
+            spacing: 4
+            SvgIcon {
+                name: sr.item.kind === "screen" ? "pc" : sr.item.kind === "image" ? "image" : sr.item.kind === "capture" ? "capture" : "video"
+                size: 16
+                opacity: sr.item.hidden ? 0.4 : 1
+            }
+            Text {
+                Layout.fillWidth: true
+                leftPadding: 6
+                text: sr.item.label + (sr.item.ok ? "" : " – kein Gerät")
+                elide: Text.ElideRight
+                color: sr.item.hidden ? Theme.textMuted : Theme.text
+                font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: sr.sel
+            }
+            IconBtn { width: 28; height: 28; icon: "up"; tip: "Nach vorne"; visible: sr.sel && sr.pos < win.items.length - 1; onClicked: studio.orderItem(sr.pos, 1) }
+            IconBtn { width: 28; height: 28; icon: "up"; turn: 180; tip: "Nach hinten"; visible: sr.sel && sr.pos > 0; onClicked: studio.orderItem(sr.pos, -1) }
+            CSwitch { checked: !sr.item.hidden; label: sr.item.hidden ? "Einblenden" : "Ausblenden"; onToggled: (v) => studio.setItem(sr.pos, "hidden", !v) }
         }
     }
 

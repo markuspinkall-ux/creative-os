@@ -255,9 +255,9 @@ def pop(bus):
     return typ, src_name, text
 
 
-def pull_frame(appsink):
+def pull_frame(appsink, blocking=False):
     """Neuestes Vorschaubild als (bytes, breite, höhe) oder None."""
-    s = pull_sample(appsink, 0)
+    s = pull_sample_blocking(appsink) if blocking else pull_sample(appsink, 0)
     if not s:
         return None
     try:
@@ -336,5 +336,69 @@ def forward_sample(appsink, appsrc, start, caps_done):
             oh.dts = max(0, oh.dts - start)
         appsrc_push_buffer(appsrc, out)              # übernimmt den Puffer
         return caps_done, pts
+    finally:
+        mini_unref(s)
+
+
+# ---- Abgerundete Ecken (cairooverlay) und Pads im laufenden Betrieb -------------------------------
+DRAW_CB = ctypes.CFUNCTYPE(None, P, P, U64, U64, P)
+signal_connect_any = _fn(gobj, "g_signal_connect_data", ctypes.c_ulong, P, S, P, P, P, ctypes.c_int)
+pad_get_name = object_name
+try:
+    cairo = _load("cairo", "libcairo.so.2")
+    c_set_operator = _fn(cairo, "cairo_set_operator", None, P, ctypes.c_int)
+    c_set_fill_rule = _fn(cairo, "cairo_set_fill_rule", None, P, ctypes.c_int)
+    c_rectangle = _fn(cairo, "cairo_rectangle", None, P, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double)
+    c_new_sub_path = _fn(cairo, "cairo_new_sub_path", None, P)
+    c_arc = _fn(cairo, "cairo_arc", None, P, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double)
+    c_close_path = _fn(cairo, "cairo_close_path", None, P)
+    c_fill = _fn(cairo, "cairo_fill", None, P)
+except OSError:
+    cairo = None
+
+
+def clear_corners(cr, w, h, r):
+    """Ecken außerhalb eines abgerundeten Rechtecks durchsichtig machen."""
+    import math
+    r = max(0.0, min(r, w / 2, h / 2))
+    if r <= 0 or not cairo:
+        return
+    c_set_operator(cr, 0)                 # CAIRO_OPERATOR_CLEAR
+    c_set_fill_rule(cr, 1)                # EVEN_ODD: außen minus innen
+    c_rectangle(cr, 0, 0, w, h)
+    c_new_sub_path(cr)
+    c_arc(cr, w - r, r, r, -math.pi / 2, 0)
+    c_arc(cr, w - r, h - r, r, 0, math.pi / 2)
+    c_arc(cr, r, h - r, r, math.pi / 2, math.pi)
+    c_arc(cr, r, r, r, math.pi, 1.5 * math.pi)
+    c_close_path(cr)
+    c_fill(cr)
+
+
+def connect_draw(overlay, fn):
+    """fn(cairo_t) für jedes Bild von cairooverlay (GStreamer-Thread)."""
+    cb = DRAW_CB(lambda _el, cr, _ts, _dur, _u: fn(cr))
+    with _lock:
+        _keep.append(cb)
+    return signal_connect_any(overlay, b"draw", ctypes.cast(cb, P), None, None, 0)
+
+
+def pad_name(pad):
+    return name_of(pad)
+
+
+def relay_sample(appsink, appsrc):
+    """Ein Bild von einer Zuliefer-Pipeline ins Mischpult geben. Die Zeit setzt das Mischpult
+    selbst (appsrc do-timestamp), deshalb werden die Zeitstempel gelöscht."""
+    s = pull_sample_blocking(appsink)
+    if not s:
+        return
+    try:
+        if appsrc is None:
+            return
+        out = buffer_copy(sample_buffer(s))
+        head = ctypes.cast(out, ctypes.POINTER(_BufferHead)).contents
+        head.pts = head.dts = head.duration = NONE_TIME
+        appsrc_push_buffer(appsrc, out)
     finally:
         mini_unref(s)

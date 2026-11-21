@@ -1,0 +1,41 @@
+name: Studio prüfen
+# Mischpult (GStreamer), Szenen, Bilder, abgerundete Kamera und ein Foto der Oberfläche.
+# Fotos landen im Branch „studio-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [studio/**, tools/studio-vorschau.py, tests/test_studio.py, .github/workflows/studio-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: studio-pruefung-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation \
+            gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav
+          pip install -q PySide6 pytest
+      - name: Tests
+        run: python3 -m pytest -q tests/test_studio.py
+      - name: Studio mit Testquellen und Fotos
+        env:
+          QT_QUICK_BACKEND: software
+        run: |
+          mkdir -p vorschau
+          timeout 60 python3 tools/studio-vorschau.py vorschau/studio-graphit.png graphit
+          timeout 60 python3 tools/studio-vorschau.py vorschau/studio-porzellan.png porzellan
+      - name: Ablegen
+        if: always()
+        run: |
+          cd vorschau && git init -q -b studio-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" studio-fotos
