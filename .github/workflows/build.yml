@@ -145,7 +145,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Art, Writer, ChatGPT, Podcast und Magazin im fertigen Abbild prüfen
+      - name: Art, Writer, Podcast und Magazin im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -158,8 +158,6 @@ jobs:
               /usr/bin/creative-art --selftest
               echo "Starte Orbit-Writer-Selbsttest"
               /usr/bin/creative-writer --selftest
-              echo "Prüfe offizielle ChatGPT-App"
-              rpm -q chatgpt
               /usr/bin/creative-claude --selftest
               /usr/bin/creative-software --selftest
               echo "Starte Orbit-Magazin-Selbsttest"

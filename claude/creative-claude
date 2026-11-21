@@ -1,8 +1,5 @@
 #!/usr/bin/python3
-"""Claude für Gibeon OS: Webchat und lokale Systemdiagnose mit Claude Code.
-
-ChatGPT ist die offizielle App von OpenAI (RPM im Abbild) und nutzt dieses Skript nicht mehr.
-"""
+"""Claude für Gibeon OS: Webchat und lokale Systemdiagnose mit Claude Code."""
 
 import shutil
 import sys

@@ -267,7 +267,7 @@ class TrayItems(QObject):
         """Symbol in dieser Reihenfolge suchen (wie KDE):
         1. IconName im eigenen IconThemePath des Programms
         2. IconName im Icon-Theme
-        3. IconPixmap – die Bilddaten selbst (Electron-Apps wie ChatGPT, Slack, Element)"""
+        3. IconPixmap – die Bilddaten selbst (Electron-Apps wie Discord, Slack, Element)"""
         name, theme_path = r["IconName"], r["IconThemePath"]
         icon = find_in_theme_path(name, theme_path)
         if not icon and name and (os.path.isabs(name) and os.path.exists(name) or QIcon.hasThemeIcon(name)):

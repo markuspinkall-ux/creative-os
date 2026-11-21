@@ -153,7 +153,6 @@
 <script>
   const DEFAULT_TILES = [
     { name: "Claude", url: "https://claude.ai/", mono: "C" },
-    { name: "ChatGPT", url: "https://chatgpt.com/", mono: "GPT" },
     { name: "YouTube", url: "https://www.youtube.com/", mono: "YT" },
     { name: "Twitch", url: "https://www.twitch.tv/", mono: "TW" },
     { name: "Wikipedia", url: "https://de.wikipedia.org/" },
@@ -165,7 +164,8 @@
   function load() {
     try {
       const t = JSON.parse(localStorage.getItem(KEY));
-      if (Array.isArray(t)) return t;
+      // ChatGPT ist aus Gibeon OS entfernt – alte gespeicherte Kachel mit aufräumen
+      if (Array.isArray(t)) return t.filter(x => !/chatgpt\.com/i.test((x && x.url) || ""));
     } catch (e) { /* Speicher nicht verfügbar */ }
     return DEFAULT_TILES.slice();
   }

@@ -180,4 +180,26 @@ if [ ! -e "$mark" ] && command -v flatpak >/dev/null 2>&1; then
     ) &
 fi
 
+# ChatGPT ist aus Gibeon OS entfernt: Verknüpfung aus Taskleiste und Startmenü nehmen
+mark="${XDG_DATA_HOME:-$HOME/.local/share}/creative-os/chatgpt-entfernt"
+if [ ! -e "$mark" ]; then
+    rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/creative-chatgpt.desktop" \
+          "${XDG_DATA_HOME:-$HOME/.local/share}/applications/chatgpt.desktop"
+    cfg="${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/shell.json"
+    if [ -f "$cfg" ] && command -v python3 >/dev/null 2>&1; then
+        python3 - "$cfg" <<'PY' || true
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as f:
+    data = json.load(f)
+apps = data.get("taskbarApps")
+if isinstance(apps, list) and "creative-chatgpt.desktop" in apps:
+    data["taskbarApps"] = [a for a in apps if a != "creative-chatgpt.desktop"]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+PY
+    fi
+    mkdir -p "$(dirname "$mark")" && touch "$mark"
+fi
+
 exit 0

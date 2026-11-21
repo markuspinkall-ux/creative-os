@@ -1,7 +1,7 @@
 # Startseite des Browsers
 
 - **Startseite** (`startpage/`): Uhr, Begrüßung, Suche, Kacheln zum Anheften
-  (Claude, ChatGPT, YouTube, Twitch …) – „Kacheln bearbeiten“ zum Entfernen/Hinzufügen.
+  (Claude, YouTube, Twitch …) – „Kacheln bearbeiten“ zum Entfernen/Hinzufügen.
   Liegt unter `/usr/share/creative-os/startpage/` und ist Start- und Neuer-Tab-Seite des
   Browsers (`webbrowser/`).
 - Firefox (falls jemand ihn nachinstalliert): dieselbe Startseite über `firefox-policies.json`.
