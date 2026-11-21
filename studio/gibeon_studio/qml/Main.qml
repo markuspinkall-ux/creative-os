@@ -743,8 +743,24 @@ ApplicationWindow {
 
                     Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
                     Heading { text: "Ziele" }
-                    TargetRow { key: "twitch"; label: "Twitch"; note: !acc.twitch || !acc.twitch.connected ? "nicht angemeldet" : (acc.twitch.target ? acc.twitch.name : "kein Stream-Schlüssel") }
-                    TargetRow { key: "youtube"; label: "YouTube"; note: !acc.youtube || !acc.youtube.connected ? "nicht angemeldet" : (acc.youtube.target ? acc.youtube.name : "keine Übertragung") }
+                    TargetRow { key: "twitch"; label: "Twitch"; note: acc.twitch && acc.twitch.connected ? (acc.twitch.target ? acc.twitch.name : "kein Stream-Schlüssel") : (cfg.twitch_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.twitch && !(acc.twitch && acc.twitch.connected)
+                        placeholderText: "Stream-Schlüssel (Twitch › Creator-Dashboard › Stream)"
+                        echoMode: TextInput.Password
+                        text: cfg.twitch_key || ""
+                        onEditingFinished: studio.set("twitch_key", text.trim())
+                    }
+                    TargetRow { key: "youtube"; label: "YouTube"; note: acc.youtube && acc.youtube.connected ? (acc.youtube.target ? acc.youtube.name : "keine Übertragung") : (cfg.youtube_key ? "Stream-Schlüssel eingetragen" : "anmelden oder Schlüssel eintragen") }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.youtube && !(acc.youtube && acc.youtube.connected)
+                        placeholderText: "Stream-Schlüssel (YouTube Studio › Livestream)"
+                        echoMode: TextInput.Password
+                        text: cfg.youtube_key || ""
+                        onEditingFinished: studio.set("youtube_key", text.trim())
+                    }
                     TargetRow { key: "kick"; label: "Kick"; note: cfg.kick_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
                     Field {
                         Layout.fillWidth: true

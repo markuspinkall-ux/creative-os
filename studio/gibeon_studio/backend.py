@@ -53,6 +53,9 @@ DEFAULTS = {
     "custom_url": "",
     "custom_key": "",
     # Kick und TikTok: Server-Adresse und Stream-Schlüssel aus dem jeweiligen Dashboard
+    # Twitch/YouTube ohne Anmeldung: nur den Stream-Schlüssel eintragen (Server ist bekannt)
+    "twitch_key": "",
+    "youtube_key": "",
     "kick_url": "",
     "kick_key": "",
     "kick_channel": "",
@@ -62,6 +65,9 @@ DEFAULTS = {
     "chat_open": True,
 }
 SOURCE_KEYS = ("canvas", "audio")
+# Standard-Server, wenn jemand nur den Stream-Schlüssel einträgt
+INGEST = {"twitch": "rtmp://ingest.global-contribute.live-video.net/app",
+          "youtube": "rtmp://a.rtmp.youtube.com/live2"}
 KINDS = {"screen": "Bildschirm", "camera": "Kamera", "capture": "Capture-Karte", "image": "Bild", "test": "Test"}
 
 
@@ -1109,8 +1115,12 @@ class Studio(QObject):
         out = []
         t = self.cfg["targets"]
         for name in ("twitch", "youtube"):
-            if t[name] and self.accounts[name].connected and self.targets[name]:
-                out.append((name, self.targets[name]))
+            if not t[name]:
+                continue
+            if self.accounts[name].connected and self.targets[name]:
+                out.append((name, self.targets[name]))          # angemeldet: Schlüssel holt Studio selbst
+            elif self.cfg[f"{name}_key"].strip():
+                out.append((name, f"{INGEST[name]}/{self.cfg[f'{name}_key'].strip()}"))
         for name in ("kick", "tiktok", "custom"):
             url = self.cfg[f"{name}_url"].strip().rstrip("/")
             if t[name] and url:
@@ -1127,8 +1137,8 @@ class Studio(QObject):
             return
         targets = self._wanted_targets()
         if not targets:
-            self.toast.emit("Wohin soll gestreamt werden? Melde dich bei Twitch oder YouTube an "
-                            "oder trage unter „Ziele“ Kick, TikTok oder einen eigenen Server ein.")
+            self.toast.emit("Wohin soll gestreamt werden? Schalte unter „Ziele“ ein Ziel ein und trage den "
+                            "Stream-Schlüssel ein – oder melde dich bei Twitch bzw. YouTube an.")
             return
         self.live_since = time.monotonic()
         self._start_live(targets)

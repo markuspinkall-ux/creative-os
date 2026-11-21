@@ -101,6 +101,15 @@ s.removeScene(1)
 s.removeScene(1)
 check(len(s.cfg["scenes"]) == 1, "Szenen löschen")
 check(backend.audio_outputs()[0]["name"] == "Standard-Ausgabe", "Desktop-Ton: Auswahl beginnt mit Standard-Ausgabe")
+s.set("twitch_key", "live_123")
+s.set("youtube_key", "abcd-efgh")
+s.set("targets.kick", True)
+s.set("kick_url", "rtmps://kick.example/app")
+s.set("kick_key", "sk_1")
+wanted = dict(s._wanted_targets())
+check(wanted.get("twitch") == "rtmp://ingest.global-contribute.live-video.net/app/live_123"
+      and wanted.get("youtube") == "rtmp://a.rtmp.youtube.com/live2/abcd-efgh"
+      and wanted.get("kick") == "rtmps://kick.example/app/sk_1", "Multistream: Twitch/YouTube per Schlüssel + Kick")
 
 # ---- Oberfläche --------------------------------------------------------------------------------
 qmlRegisterType(backend.Preview, "Studio", 1, 0, "Preview")
