@@ -2,7 +2,10 @@
 
 Aufbau
   Mischpult (läuft, solange Studio offen ist)
-    Hauptbild (Bildschirm / Kamera / Capture-Karte) + Kamera-Einblendung → compositor → Vorschau
+    Alle Bildquellen aller Szenen (Bildschirm, Kameras, Capture-Karten, Bilder) → compositor → Vorschau.
+    Eine Szene ist nur eine Anordnung: Szenenwechsel, Verschieben und Größe ändern setzen die
+    Pad-Eigenschaften des Mischpults im laufenden Betrieb – ohne Ruckler, auch während des Streams.
+    Kameras laufen durch ein cairooverlay, das bei Bedarf die Ecken durchsichtig macht.
     Mikrofon, Desktop-Ton, weitere Tonquelle → je Lautstärke + Pegel → audiomixer
     Bild und Ton gehen zusätzlich an zwei appsinks („vout“, „aout“).
   Ausgänge (je eine eigene Pipeline: Aufnahme, Twitch, YouTube, eigener Server)
@@ -108,35 +111,180 @@ def cam_rect(canvas_w, canvas_h, corner, size):
     return x, y, w, h
 
 
-def build_description(cfg, main_src, cam_src, audio):
-    """Text-Beschreibung des Mischpults. audio: {slot: quellen-dict} (nur eingeschaltete)."""
+ROUND = 0.14            # Eckenradius im Verhältnis zur kürzeren Seite
+IMAGE_MAX = 2560        # größere Bilder werden beim Laden verkleinert
+
+
+def _even(v):
+    return max(2, int(round(v)) // 2 * 2)
+
+
+def source_branch(src, w, h, fps, n):
+    """Beschreibung eines Bildzweigs bis vor das Mischpult (ohne „! mix.sink_n“) oder None.
+    Kameras bekommen ein cairooverlay „round_n“ für abgerundete Ecken."""
+    t = src.get("type")
+    raw = f"width={w},height={h},pixel-aspect-ratio=1/1,framerate={fps}/1"
+    if t == "image":
+        # Studio legt jedes Bild vorher als PNG ab (beliebige Formate, passende Größe) – pngdec reicht
+        f = src.get("file")
+        if not f:
+            return None
+        iw, ih = _even(src.get("w", w)), _even(src.get("h", h))
+        return (f"filesrc location={_q(f)} ! pngdec ! videoconvert n-threads=0 ! videoscale n-threads=0 "
+                f"! video/x-raw,format=BGRA,width={iw},height={ih},pixel-aspect-ratio=1/1 "
+                f"! imagefreeze is-live=true ! video/x-raw,framerate={fps}/1 ! queue max-size-buffers=3 leaky=downstream")
+    if t not in ("screen", "video", "test") or not video_source(src):
+        return None
+    # Kameras, Capture-Karten und Bildschirm laufen in einer eigenen kleinen Pipeline (Feeder) und
+    # kommen über appsrc ins Mischpult: hakt eine Kamera (z. B. die virtuelle, wenn gerade nichts
+    # liefert), läuft das Mischpult weiter.
+    return (f"appsrc name=feed_{n} is-live=true do-timestamp=true format=time block=false max-bytes=0 "
+            f"caps={_q('video/x-raw,format=BGRA,' + raw)} "
+            f"! queue max-size-buffers=2 leaky=downstream ! cairooverlay name=round_{n} "
+            f"! queue max-size-buffers=2 leaky=downstream")
+
+
+def feeder_description(src, w, h, fps):
+    """Zuliefer-Pipeline einer Bildquelle bis appsink „out“ (BGRA in Mischpultgröße).
+    src["green"]: grünen Hintergrund durchsichtig machen (z. B. „Gibeon Kamera“ mit Greenscreen)."""
+    desc = video_source(src)
+    if not desc:
+        return None
+    raw = f"video/x-raw,format=BGRA,width={w},height={h},pixel-aspect-ratio=1/1,framerate={fps}/1"
+    chain = "videoconvert n-threads=0 ! "
+    if src.get("type") in ("video", "test"):
+        if src.get("green") and gst.has("alpha"):
+            chain += "alpha method=green angle=24 noise-level=3 black-sensitivity=80 white-sensitivity=80 ! videoconvert n-threads=0 ! "
+        if gst.has("aspectratiocrop"):
+            chain += "aspectratiocrop aspect-ratio=16/9 ! "
+    return (f"{desc} ! {chain}videoscale n-threads=0 add-borders=true ! videorate ! {raw} "
+            f"! appsink name=out max-buffers=2 drop=true sync=false emit-signals=true")
+
+
+class Feeder:
+    """Eigene Pipeline je Kamera / Capture-Karte / Bildschirm. Fällt sie aus, versucht Studio es
+    nach ein paar Sekunden neu – das Mischpult (und ein laufender Stream) bleibt unberührt."""
+
+    RETRY = 4.0
+
+    def __init__(self, key, src, appsrc, size):
+        self.key, self.src, self.appsrc = key, src, appsrc
+        self.size = size
+        self.pipe = self.sink = self.bus = None
+        self.handler = None
+        self.retry_at = 0.0
+        self.error = ""
+        self.reported = False
+        self.start()
+
+    def start(self):
+        w, h, fps = self.size
+        desc = feeder_description(self.src, w, h, fps)
+        try:
+            self.pipe = gst.launch(desc)
+        except (ValueError, TypeError) as e:
+            self._failed(str(e))
+            return
+        self.sink = gst.bin_by_name(self.pipe, b"out")
+        self.bus = gst.get_bus(self.pipe)
+        self.handler = gst.connect_new_sample(self.sink, self._on_sample)
+        if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
+            self._failed("lässt sich nicht starten")
+
+    def _on_sample(self, sink):
+        gst.relay_sample(sink, self.appsrc)
+        return gst.FLOW_OK
+
+    def _failed(self, text):
+        self.close()
+        self.error = text
+        self.retry_at = time.monotonic() + self.RETRY
+
+    def poll(self):
+        """Meldungen abholen; Fehlertext beim ersten Ausfall, sonst None."""
+        if not self.pipe:
+            if self.retry_at and time.monotonic() >= self.retry_at:
+                self.retry_at = 0.0
+                self.start()
+            return self._report()
+        while self.bus:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            typ, _src, text = m
+            if typ in (gst.MSG_ERROR, gst.MSG_EOS):
+                self._failed(text.split(" | ")[0] if typ == gst.MSG_ERROR else "beendet")
+                break
+        if self.pipe:
+            self.reported = False
+        return self._report()
+
+    def _report(self):
+        if self.error and not self.reported:
+            self.reported = True
+            return self.error
+        return None
+
+    def close(self):
+        if self.pipe:
+            if self.handler:
+                gst.signal_disconnect(self.sink, self.handler)
+                self.handler = None
+            gst.set_state(self.pipe, gst.STATE_NULL)
+            for el in (self.sink, self.bus, self.pipe):
+                if el:
+                    gst.object_unref(el)
+        self.pipe = self.sink = self.bus = None
+
+    def stop(self):
+        self.retry_at = 0.0
+        self.close()
+        if self.appsrc:
+            gst.object_unref(self.appsrc)
+            self.appsrc = None
+
+
+def pad_props(rect, z):
+    """Pad-Eigenschaften des Mischpults für ein Rechteck (x, y, b, h) – None = ausgeblendet."""
+    if not rect:
+        return {"alpha": 0.0}
+    x, y, rw, rh = rect
+    return {"xpos": int(x), "ypos": int(y), "width": _even(rw), "height": _even(rh), "zorder": int(z), "alpha": 1.0}
+
+
+def build_description(cfg, sources, audio, layout=None):
+    """Text-Beschreibung des Mischpults.
+    sources: [{"key": …, "type": "screen"|"video"|"image"|"test", …}] – jede Quelle einmal.
+    layout: {key: (x, y, b, h, z)} in Pixeln – was nicht drinsteht, ist unsichtbar.
+    audio: {slot: quellen-dict} (nur eingeschaltete).
+    Rückgabe: (Beschreibung, (b, h, fps), {key: padname})."""
     w, h, fps = CANVAS.get(cfg.get("canvas"), CANVAS["1080p30"])
     pw, ph = PREVIEW
+    layout = layout or {}
     raw = f"video/x-raw,width={w},height={h},framerate={fps}/1"
+    branches, pads, padprops = [], {}, ["sink_0::zorder=0"]
+    n = 1
+    for src in sources:
+        d = source_branch(src, w, h, fps, n)
+        if not d:
+            continue
+        key = src["key"]
+        pads[key] = f"sink_{n}"
+        L = layout.get(key)
+        props = pad_props(L[:4] if L else None, L[4] if L else 0)
+        padprops += [f"sink_{n}::{k}={v}" for k, v in props.items()]
+        branches.append(f"{d} ! mix.sink_{n}")
+        n += 1
     parts = [
-        f"compositor name=mix background=black sink_0::zorder=0 sink_1::zorder=1 sink_2::zorder=2 "
+        f"compositor name=mix background=black {' '.join(padprops)} "
         f"! {raw} ! tee name=vt allow-not-linked=true",
-        f"vt. ! queue leaky=downstream max-size-buffers=2 max-size-bytes=0 max-size-time=0 ! videoconvert "
-        f"! videoscale ! video/x-raw,format=BGRA,width={pw},height={ph} "
-        f"! appsink name=preview max-buffers=1 drop=true sync=false",
+        f"vt. ! queue leaky=downstream max-size-buffers=2 max-size-bytes=0 max-size-time=0 ! videoconvert n-threads=0 "
+        f"! videoscale n-threads=0 ! video/x-raw,format=BGRA,width={pw},height={ph} "
+        f"! appsink name=preview max-buffers=1 drop=true sync=false emit-signals=true",
         f"vt. ! queue leaky=downstream max-size-buffers=4 max-size-bytes=0 max-size-time=0 "
         f"! appsink name=vout max-buffers=4 drop=true sync=false emit-signals=true",
         f"videotestsrc is-live=true pattern=black ! {raw} ! mix.sink_0",
-    ]
-    desc = video_source(main_src) if main_src else None
-    if desc:
-        parts.append(f"{desc} ! videoconvert ! videoscale add-borders=true ! videorate "
-                     f"! video/x-raw,width={w},height={h},pixel-aspect-ratio=1/1,framerate={fps}/1 "
-                     f"! queue max-size-buffers=3 leaky=downstream ! mix.sink_1")
-    desc = video_source(cam_src) if cam_src else None
-    if desc:
-        x, y, cw, ch = cam_rect(w, h, cam_src.get("corner", "unten-rechts"), cam_src.get("size", "mittel"))
-        parts[0] = parts[0].replace("sink_2::zorder=2",
-                                    f"sink_2::zorder=2 sink_2::xpos={x} sink_2::ypos={y} "
-                                    f"sink_2::width={cw} sink_2::height={ch}")
-        parts.append(f"{desc} ! videoconvert ! videoscale add-borders=true ! videorate "
-                     f"! video/x-raw,width={cw},height={ch},pixel-aspect-ratio=1/1,framerate={fps}/1 "
-                     f"! queue max-size-buffers=3 leaky=downstream ! mix.sink_2")
+    ] + branches
     parts += [
         f"audiomixer name=amix ! {AUDIO_CAPS} ! tee name=at allow-not-linked=true",
         f"at. ! queue leaky=downstream max-size-time=1000000000 ! appsink name=aout max-buffers=50 "
@@ -152,7 +300,7 @@ def build_description(cfg, main_src, cam_src, audio):
                      f"! volume name=vol_{slot} volume={vol:.3f} mute={'true' if src.get('muted') else 'false'} "
                      f"! level name=lvl_{slot} interval=50000000 post-messages=true "
                      f"! queue max-size-time=500000000 leaky=downstream ! amix.")
-    return "  ".join(parts), (w, h, fps)
+    return "  ".join(parts), (w, h, fps), pads
 
 
 LEVEL_RE = re.compile(r"peak=\([A-Za-z]+\)[{<]([^}>]*)[}>]")
@@ -186,7 +334,7 @@ class Output:
             sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
             mux, sink = "flvmux name=mux streamable=true", f"{sinkf} name=out location={_q(target)}"
         desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert "
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
                 f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc "
                 f"! queue ! {mux} ! {sink}  "
                 f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
@@ -276,33 +424,145 @@ class Mixer:
         self.levels = {}
         self.errors = []
         self.outputs = {}
+        self.pads = {}                  # Quelle → Pad-Name am Mischpult
+        self.feeders = {}               # Quelle → Feeder (Kameras, Bildschirm)
+        self.on_frame = None            # fn(bytes, b, h) – jedes Vorschaubild, sobald es fertig ist
+        self.last_frame = None
+        self.rounds = {}                # Pad-Name → Eckenradius (Anteil), 0 = eckig
+        self._overlays = []
         self._handlers = []
         self._lock = threading.Lock()
 
     # ---- Aufbau ----------------------------------------------------------------------------
-    def build(self, cfg, main_src, cam_src, audio):
+    def build(self, cfg, sources, audio, layout=None, rounds=None):
         if self.outputs:
             raise RuntimeError("Während Aufnahme oder Stream lassen sich die Quellen nicht tauschen.")
         self.stop()
-        desc, self.size = build_description(cfg, main_src, cam_src, audio)
+        self.cfg = cfg
+        desc, self.size, pads = build_description(cfg, sources, audio, layout)
         try:
             self.pipe = gst.launch(desc)
         except ValueError:
-            # z. B. Kamera oder Bildschirm nicht verfügbar → ohne Hauptbild/Kamera weiter
-            if main_src or cam_src:
-                self.errors.append("Eine Bildquelle ist gerade nicht verfügbar.")
-                desc, self.size = build_description(cfg, None, None, audio)
-                self.pipe = gst.launch(desc)
-            else:
+            # z. B. Kamera, Bild oder Bildschirm nicht verfügbar → einzeln prüfen, Kaputtes weglassen
+            if not sources:
                 raise
+            good = [s for s in sources if self._branch_ok(s)]
+            self.errors.append("Eine Bildquelle ist gerade nicht verfügbar.")
+            desc, self.size, pads = build_description(cfg, good, audio, layout)
+            self.pipe = gst.launch(desc)
+        self.pads = pads
         self.bus = gst.get_bus(self.pipe)
         self.preview = gst.bin_by_name(self.pipe, b"preview")
         self.vout = gst.bin_by_name(self.pipe, b"vout")
         self.aout = gst.bin_by_name(self.pipe, b"aout")
         self._handlers = [(self.vout, gst.connect_new_sample(self.vout, self._on_video)),
-                          (self.aout, gst.connect_new_sample(self.aout, self._on_audio))]
+                          (self.aout, gst.connect_new_sample(self.aout, self._on_audio)),
+                          (self.preview, gst.connect_new_sample(self.preview, self._on_preview))]
+        self.rounds = {}
+        for key, pad in pads.items():
+            self._hook_round(pad)
+        by_key = {s["key"]: s for s in sources}
+        for key, pad in pads.items():
+            feed = gst.bin_by_name(self.pipe, f"feed_{pad[5:]}".encode())
+            if feed:
+                self.feeders[key] = Feeder(key, by_key[key], feed, self.size)
+        self.set_rounds(rounds or {})
         self.levels = {slot: -90.0 for slot in audio}
         gst.set_state(self.pipe, gst.STATE_PLAYING)
+
+    def _branch_ok(self, src):
+        w, h, fps = CANVAS.get(self.cfg.get("canvas"), CANVAS["1080p30"])
+        d = source_branch(src, w, h, fps, 1)
+        if not d:
+            return False
+        try:
+            el = gst.launch(d.replace("name=round_1", "") + " ! fakesink")
+        except ValueError:
+            return False
+        ok = gst.set_state(el, gst.STATE_PAUSED) != 0
+        gst.set_state(el, gst.STATE_NULL)
+        gst.object_unref(el)
+        return ok
+
+    def _hook_round(self, pad):
+        el = gst.bin_by_name(self.pipe, f"round_{pad[5:]}".encode())
+        if not el:
+            return
+        w, h = self.size[0], self.size[1]
+
+        def draw(cr, pad=pad):
+            r = self.rounds.get(pad, 0.0)
+            if r > 0:
+                gst.clear_corners(cr, w, h, r * min(w, h))
+        self._overlays.append((el, gst.connect_draw(el, draw)))
+
+    # ---- Anordnung im laufenden Betrieb (Szenen, Verschieben, Größe) ------------------------
+    def apply_layout(self, layout):
+        """layout: {key: (x, y, b, h, z)} – alles andere wird ausgeblendet."""
+        if not self.pipe:
+            return
+        mix = gst.bin_by_name(self.pipe, b"mix")
+        if not mix:
+            return
+        try:
+            for key, pad_name in self.pads.items():
+                pad = gst.static_pad(mix, pad_name.encode())
+                if not pad:
+                    continue
+                L = layout.get(key)
+                for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
+                    gst.set_prop(pad, k, v)
+                gst.object_unref(pad)
+        finally:
+            gst.object_unref(mix)
+
+    def set_rounds(self, rounds):
+        """rounds: {key: anteil} – Ecken der Kameras."""
+        self.rounds = {self.pads[k]: float(v) for k, v in rounds.items() if k in self.pads}
+
+    def add_live(self, src, layout=None):
+        """Neue Bildquelle in das laufende Mischpult hängen (z. B. Bild während des Streams)."""
+        if not self.pipe or src["key"] in self.pads:
+            return False
+        w, h, fps = self.size
+        n = 100 + len(self.pads)
+        d = source_branch(src, w, h, fps, n)
+        if not d:
+            return False
+        try:
+            branch = gst.make_bin(d)
+        except ValueError:
+            return False
+        mix = gst.bin_by_name(self.pipe, b"mix")
+        pad = gst.request_pad(mix, b"sink_%u")
+        L = (layout or {}).get(src["key"])
+        for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
+            gst.set_prop(pad, k, v)
+        gst.bin_add(self.pipe, branch)
+        out = gst.static_pad(branch, b"src")
+        ok = gst.pad_link(out, pad) == 0
+        gst.object_unref(out)
+        name = gst.pad_name(pad)
+        gst.object_unref(pad)
+        gst.object_unref(mix)
+        if not ok:
+            gst.bin_remove(self.pipe, branch)
+            return False
+        self.pads[src["key"]] = name
+        feed = gst.bin_by_name(branch, f"feed_{n}".encode())
+        if feed:
+            self.feeders[src["key"]] = Feeder(src["key"], src, feed, self.size)
+        el = gst.bin_by_name(branch, f"round_{n}".encode())
+        if el:
+            wv, hv = w, h
+
+            def draw(cr, pad=name):
+                r = self.rounds.get(pad, 0.0)
+                if r > 0:
+                    gst.clear_corners(cr, wv, hv, r * min(wv, hv))
+            self._overlays.append((el, gst.connect_draw(el, draw)))
+        gst.sync_state(branch)
+        return True
 
     def stop(self):
         for out in list(self.outputs.values()):
@@ -313,11 +573,20 @@ class Mixer:
             for el, h in self._handlers:
                 gst.signal_disconnect(el, h)
             self._handlers = []
+            for f in self.feeders.values():
+                f.stop()
+            self.feeders = {}
+            for el, h in self._overlays:
+                gst.signal_disconnect(el, h)
+                gst.object_unref(el)
+            self._overlays = []
+            self.pads = {}
             gst.set_state(self.pipe, gst.STATE_NULL)
             for el in (self.preview, self.vout, self.aout, self.bus, self.pipe):
                 if el:
                     gst.object_unref(el)
         self.pipe = self.bus = self.preview = self.vout = self.aout = None
+        self.last_frame = None
 
     # ---- Daten an die Ausgänge (GStreamer-Thread) ----------------------------------------
     def _on_video(self, sink):
@@ -327,6 +596,15 @@ class Mixer:
             gst.forward_sample(sink, None, 0, True)
             return gst.FLOW_OK
         self._fan_out(sink, outs, video=True)
+        return gst.FLOW_OK
+
+    def _on_preview(self, sink):
+        # Vorschau im Takt der Bilder (statt mit einem Zeitgeber abholen) – läuft gleichmäßig
+        f = gst.pull_frame(sink, blocking=True)
+        if f:
+            self.last_frame = f
+            if self.on_frame:
+                self.on_frame(*f)
         return gst.FLOW_OK
 
     def _on_audio(self, sink):
@@ -371,7 +649,7 @@ class Mixer:
             gst.object_unref(el)
 
     def frame(self):
-        return gst.pull_frame(self.preview) if self.preview else None
+        return self.last_frame if self.pipe else None
 
     def poll(self):
         """Meldungen verarbeiten. Liefert [(schlüssel, fehler)] beendeter Ausgänge."""
@@ -388,6 +666,10 @@ class Mixer:
                         self.levels[src[4:]] = max(-90.0, max(vals))
             elif typ == gst.MSG_ERROR:
                 self.errors.append(f"{src}: {text.split(' | ')[0]}")
+        for key, f in list(self.feeders.items()):
+            err = f.poll()
+            if err:
+                self.errors.append(f"feeder:{f.src.get('type')}: {err}")
         finished = []
         for key, out in list(self.outputs.items()):
             if out.poll():

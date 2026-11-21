@@ -6,7 +6,11 @@
       "Neu: Studio – Aufnehmen und live streamen im Gibeon-Look, als Ersatz für OBS. Hauptbild ist dein Bildschirm, ein Fenster, eine Kamera oder die Capture-Karte, dazu die Kamera in einer Ecke. Mikrofon, Desktop-Ton und eine weitere Tonquelle haben Pegel, Lautstärke und Stumm. Aufnahmen landen als MP4 oder MKV unter Videos › Studio. Gestreamt wird zu Twitch, YouTube oder einem eigenen Server, auch gleichzeitig. Nach der Anmeldung bei Twitch oder YouTube erscheint links der Chat, und Titel und Kategorie lassen sich direkt ändern. Kodiert wird auf der Grafikkarte, wenn möglich. OBS bleibt vorerst zusätzlich installiert",
       "Android-Apps haben jetzt denselben Fensterrahmen wie alle anderen Fenster – mit der gewohnten Titelleiste, Minimieren, Maximieren und Schließen. Die kleine Android-Leiste oben im Fenster bleibt zusätzlich",
       "Android-Apps öffnen sich im Tablet-Format: groß im Querformat statt schmal wie auf einem Handy. Maximieren und Größe ziehen am Rahmen funktionieren, die App passt sich kurz nach dem Loslassen an. Apps, die nur hochkant gedacht sind, wirken dabei manchmal gestreckt",
-      "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“"
+      "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“",
+      "Studio: Szenen – beliebig viele anlegen, umbenennen, duplizieren und mit einem Klick (oder Strg+1 … 9) wechseln, ohne Ruckler auch während des Streams",
+      "Studio: Bilder frei im Bild platzieren – ziehen zum Verschieben, an den Ecken proportional größer oder kleiner ziehen, Doppelklick füllt das Bild",
+      "Studio: Kamera ist beim Einblenden automatisch abgerundet; bei der Gibeon Kamera wird der grüne Hintergrund automatisch entfernt",
+      "Studio: Desktop-Ton – die Tonquelle (Lautsprecher, Kopfhörer, Headset) ist jetzt wählbar"
     ],
     "verbessert": [
       "Neues Fluid-Design wie in der Vorschau: Oben gibt es jetzt eine Leiste aus zwei Glasfeldern. Links sitzt der Tray mit WLAN, Lautstärke, Bluetooth, Tastatur (DE) und den Symbolen von Steam, Discord, Messenger & Co. – ein Klick öffnet den Schnellzugriff direkt darunter. In der Mitte steht „Gibeon OS“, rechts Uhrzeit, Datum und bei Laptops der Akku – ein Klick öffnet den Kalender. Die Taskleiste unten geht über die ganze Breite bis an den Rand, ist schmaler und wirkt wie Glas mit Lichtkante; rechts sitzt der Papierkorb. Der Startknopf mit der Rakete ist rund und leuchtet sanft, bei offenem Startmenü stärker. Das Startmenü hat stark abgerundete Ecken und eine Lichtkante, die gewählte App erscheint als leuchtende Glasfläche, und der Scrollbalken passt zum Design. Widgets und Schreibtisch-Symbole bleiben unter der oberen Leiste. Gilt für Graphit und Porzellan",
@@ -15,7 +19,12 @@
       "Widgets im Fluid-Stil: Uhr, Wetter, RSS, Notizen, Twitch, Akku, KI, Leistungsanzeige und Ablage zeigen den Hintergrund jetzt weichgezeichnet hinter sich – wie Milchglas – mit hellem Rand und Lichtkante",
       "Startmenü aufgeräumt: „Pictures“ und „3D-Ansicht“ stehen nicht mehr im Startmenü. Sie öffnen sich weiterhin automatisch, sobald du ein Bild oder eine 3D-Datei (.glb, .gltf) öffnest, zum Beispiel per Doppelklick in „Dateien“",
       "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten",
-      "Widgets lassen sich jetzt direkt auf einen anderen Monitor ziehen: am Griff festhalten und einfach mit der Maus hinüberziehen. Ein Umriss zeigt, wo das Widget landet. Der Weg per Rechtsklick auf den Griff geht weiterhin"
+      "Widgets lassen sich jetzt direkt auf einen anderen Monitor ziehen: am Griff festhalten und einfach mit der Maus hinüberziehen. Ein Umriss zeigt, wo das Widget landet. Der Weg per Rechtsklick auf den Griff geht weiterhin",
+      "ChatGPT ist komplett aus Gibeon OS entfernt – aus Taskleiste, Startmenü und den Kacheln der Browser-Startseite",
+      "Studio: Vorschau läuft flüssig im Takt des Bildes; Kameras und Bildschirm laufen getrennt, eine hakende Kamera reißt Vorschau, Aufnahme und Stream nicht mehr mit"
+    ],
+    "behoben": [
+      "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt"
     ]
   },
   {

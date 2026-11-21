@@ -31,16 +31,29 @@ class Beschreibung(unittest.TestCase):
         self.assertEqual((x, y), (37, 37))
 
     def test_quellen(self):
-        desc, size = engine.build_description(
-            {"canvas": "720p60"}, {"type": "video", "device": "/dev/video2"},
-            {"type": "video", "device": "/dev/video0", "corner": "oben-rechts", "size": "klein"},
-            {"mic": {"type": "mic", "device": "", "volume": 0.5}, "desktop": {"type": "desktop", "device": ""}})
+        desc, size, pads = engine.build_description(
+            {"canvas": "720p60"},
+            [{"key": "video:/dev/video2", "type": "video", "device": "/dev/video2"},
+             {"key": "image:/a.png", "type": "image", "file": "/tmp/a.png", "w": 400, "h": 200}],
+            {"mic": {"type": "mic", "device": "", "volume": 0.5},
+             "desktop": {"type": "desktop", "device": "alsa_output.usb.monitor"}},
+            {"image:/a.png": (10, 20, 300, 150, 2)})
         self.assertEqual(size, (1280, 720, 60))
-        self.assertIn('v4l2src device="/dev/video2"', desc)
-        self.assertIn("sink_2::xpos=", desc)
-        self.assertIn("device=\"@DEFAULT_MONITOR@\"", desc)
+        self.assertEqual(pads, {"video:/dev/video2": "sink_1", "image:/a.png": "sink_2"})
+        self.assertIn("appsrc name=feed_1", desc)               # Kamera kommt über einen Feeder
+        self.assertIn("cairooverlay name=round_1", desc)         # … und kann abgerundet werden
+        self.assertIn("sink_1::alpha=0.0", desc)                 # nicht in der Szene → unsichtbar
+        self.assertIn("sink_2::xpos=10 sink_2::ypos=20 sink_2::width=300 sink_2::height=150", desc)
+        self.assertIn('device="alsa_output.usb.monitor"', desc)  # gewählte Desktop-Tonquelle
         self.assertIn("volume name=vol_mic volume=0.500", desc)
         self.assertIn("level name=lvl_desktop", desc)
+
+    def test_feeder_gruen(self):
+        d = engine.feeder_description({"type": "video", "device": "/dev/video42", "green": True}, 1920, 1080, 30)
+        self.assertIn('v4l2src device="/dev/video42"', d)
+        if engine.gst.has("alpha"):
+            self.assertIn("alpha method=green", d)
+        self.assertNotIn("alpha method", engine.feeder_description({"type": "video", "device": "/dev/video0"}, 1920, 1080, 30))
 
     def test_bildschirm(self):
         d = engine.video_source({"type": "screen", "fd": 7, "node": 42})
@@ -51,12 +64,76 @@ class Beschreibung(unittest.TestCase):
         self.assertEqual(engine._q('a"b'), '"a\\"b"')
 
 
+HAVE_MIX = False
+try:
+    HAVE_MIX = gst.has("compositor") and gst.has("cairooverlay") and gst.has("imagefreeze") and gst.has("pngdec")
+except NameError:
+    pass
+
+
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class Szenen(unittest.TestCase):
+    """Anordnung im laufenden Betrieb, abgerundete Ecken, Grünschlüssel, ausfallende Kamera."""
+
+    def px(self, m, x, y):
+        time.sleep(0.35)
+        d, w, h = m.frame()
+        i = (int(y * h) * w + int(x * w)) * 4
+        return tuple(d[i:i + 3])          # B, G, R
+
+    def test_anordnung(self):
+        import struct
+        import zlib
+        png = os.path.join(tempfile.mkdtemp(), "g.png")
+        raw = b"".join(b"\x00" + b"\x00\xff\x00" * 64 for _ in range(32))
+
+        def ch(t, d):
+            return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        with open(png, "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + ch(b"IHDR", struct.pack(">IIBBBBB", 64, 32, 8, 2, 0, 0, 0))
+                    + ch(b"IDAT", zlib.compress(raw)) + ch(b"IEND", b""))
+        m = engine.Mixer()
+        lay = {"bg": (0, 0, 1280, 720, 1), "cam": (640, 360, 640, 360, 2)}
+        m.build({"canvas": "720p30"},
+                [{"key": "bg", "type": "test", "pattern": "white"}, {"key": "cam", "type": "test", "pattern": "red"},
+                 {"key": "img", "type": "image", "file": png, "w": 64, "h": 32},
+                 {"key": "gs", "type": "test", "pattern": "green", "green": True},
+                 {"key": "weg", "type": "video", "device": "/dev/video-gibt-es-nicht"}],
+                {}, lay, {"cam": 0.2})
+        try:
+            time.sleep(1.0)
+            self.assertEqual(self.px(m, 0.502, 0.503), (255, 255, 255))       # Ecke der Kamera: rund → weiß
+            self.assertEqual(self.px(m, 0.75, 0.75)[2] > 240, True)           # Mitte: rot
+            lay["img"] = (0, 0, 640, 320, 3)
+            m.apply_layout(lay)
+            self.assertEqual(self.px(m, 0.1, 0.1), (0, 255, 0))
+            lay["img"] = (0, 400, 320, 160, 3)                                 # verschieben
+            m.apply_layout(lay)
+            self.assertEqual(self.px(m, 0.1, 0.1), (255, 255, 255))
+            lay["gs"] = (0, 0, 640, 360, 4)                                    # Grün wird durchsichtig
+            m.apply_layout(lay)
+            self.assertEqual(self.px(m, 0.2, 0.2), (255, 255, 255))
+            t = time.time()
+            while time.time() - t < 1:
+                m.poll()
+                time.sleep(0.05)
+            self.assertTrue(any(e.startswith("feeder:video") for e in m.errors))   # Kamera fehlt …
+            self.assertIsNotNone(m.frame())                                         # … Mischpult läuft
+            self.assertTrue(m.add_live({"key": "neu", "type": "image", "file": png, "w": 64, "h": 32},
+                                       {"neu": (960, 0, 320, 160, 9)}))
+            time.sleep(0.6)
+            self.assertEqual(self.px(m, 0.85, 0.1), (0, 255, 0))
+        finally:
+            m.stop()
+
+
 @unittest.skipUnless(HAVE_GST, "GStreamer fehlt")
 class Mischpult(unittest.TestCase):
     def test_aufnahme_und_abgebrochener_stream(self):
         m = engine.Mixer()
-        m.build({"canvas": "720p30"}, {"type": "test"}, {"type": "test", "pattern": "ball"},
-                {"mic": {"type": "test"}, "desktop": {"type": "test", "freq": 880}})
+        m.build({"canvas": "720p30"}, [{"key": "a", "type": "test"}, {"key": "b", "type": "test", "pattern": "ball"}],
+                {"mic": {"type": "test"}, "desktop": {"type": "test", "freq": 880}},
+                {"a": (0, 0, 1280, 720, 1), "b": (800, 400, 400, 225, 2)}, {"b": engine.ROUND})
         try:
             path = os.path.join(tempfile.mkdtemp(), "t.mp4")
             time.sleep(0.6)

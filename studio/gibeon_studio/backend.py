@@ -1,6 +1,7 @@
 """Studio – Verbindung zwischen Oberfläche (QML), Mischpult, Bildschirmfreigabe und Konten."""
 
 import copy
+import hashlib
 import json
 import os
 import socket
@@ -10,8 +11,8 @@ import threading
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Property, QObject, QSocketNotifier, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices, QImage, QPainter
+from PySide6.QtCore import Property, QObject, QSocketNotifier, Qt, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QColor, QDesktopServices, QImage, QImageReader, QPainter
 from PySide6.QtQuick import QQuickPaintedItem
 
 from . import engine, konten
@@ -28,9 +29,16 @@ except ImportError:                                  # Entwicklung: Datei liegt 
 
 HERE = Path(__file__).resolve().parent
 CFG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "gibeon-studio" / "studio.json"
+CACHE = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "gibeon-studio" / "bilder"
+CANVAS_ASPECT = 16 / 9
 DEFAULTS = {
     "canvas": "1080p30",
     "kbps": 6000,
+    # Szenen: je eine Anordnung der Quellen. x, y, w als Anteil der Bildbreite/-höhe, Höhe aus aspect.
+    "scenes": [],
+    "scene": 0,
+    "next_id": 1,
+    # alte Einstellungen (vor den Szenen) – werden einmal in „Szene 1“ übernommen
     "main": {"type": "screen", "device": ""},
     "cam": {"on": False, "device": "", "corner": "unten-rechts", "size": "mittel"},
     "audio": {
@@ -45,7 +53,8 @@ DEFAULTS = {
     "screen_token": "",
     "chat_open": True,
 }
-SOURCE_KEYS = ("canvas", "main", "cam", "audio")
+SOURCE_KEYS = ("canvas", "audio")
+KINDS = {"screen": "Bildschirm", "camera": "Kamera", "capture": "Capture-Karte", "image": "Bild", "test": "Test"}
 
 
 def user_dir(kind, fallback):
@@ -79,8 +88,32 @@ def video_devices():
             name = (d / "name").read_text().strip()
         except OSError:
             continue
-        out.append({"id": f"/dev/{d.name}", "name": name or d.name})
+        out.append({"id": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name)})
     return out
+
+
+def is_virtual(name):
+    return any(k in (name or "") for k in ("Gibeon Kamera", "Orbit Kamera", "Creative Kamera"))
+
+
+def broadcast_green():
+    """Broadcast auf grünen Hintergrund stellen – Studio stellt ihn dann durchsichtig."""
+    path = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os" / "broadcast.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    if not isinstance(data, dict) or data.get("effect") == "green":
+        return False
+    data["effect"] = "green"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        return False
+    return True
 
 
 def audio_inputs():
@@ -93,9 +126,121 @@ def audio_inputs():
             for s in data if s.get("name") and not s["name"].endswith(".monitor")]
 
 
+def audio_outputs():
+    """Ausgänge, deren Ton Studio mitschneiden kann (Monitor der Lautsprecher/Kopfhörer)."""
+    try:
+        r = subprocess.run(["pactl", "-f", "json", "list", "sinks"], capture_output=True, text=True, timeout=3)
+        data = json.loads(r.stdout) if r.returncode == 0 else []
+    except (OSError, ValueError, subprocess.SubprocessError):
+        data = []
+    out = [{"id": "", "name": "Standard-Ausgabe"}]
+    out += [{"id": s["name"] + ".monitor", "name": s.get("description") or s["name"]}
+            for s in data if s.get("name")]
+    return out
+
+
+def migrate(cfg):
+    """Alte Einstellungen (Hauptbild + Kamera-Ecke) → „Szene 1“."""
+    if cfg["scenes"]:
+        return False
+    items = []
+    m, c = cfg["main"], cfg["cam"]
+    if m["type"] == "screen":
+        items.append(new_item(cfg, "screen"))
+    elif m["type"] == "video" and m["device"]:
+        items.append(new_item(cfg, "capture", device=m["device"]))
+    if c["on"] and c["device"]:
+        x, y, w, _h = engine.cam_rect(1920, 1080, c["corner"], c["size"])
+        items.append(new_item(cfg, "camera", device=c["device"], x=x / 1920, y=y / 1080, w=w / 1920))
+    cfg["scenes"] = [{"name": "Szene 1", "items": items}]
+    cfg["scene"] = 0
+    return True
+
+
+def new_item(cfg, kind, **kw):
+    """Neue Quelle für eine Szene. Kameras starten abgerundet unten rechts, alles andere füllt das Bild."""
+    item = {"id": f"q{cfg['next_id']}", "kind": kind, "device": "", "file": "", "name": "",
+            "x": 0.0, "y": 0.0, "w": 1.0, "aspect": CANVAS_ASPECT, "round": False, "hidden": False}
+    cfg["next_id"] += 1
+    if kind == "camera":
+        # 30 % breit, unten rechts mit etwas Rand, abgerundet (Höhe = Breite, weil beide 16:9 sind)
+        item.update(x=1 - 0.30 - 0.02, y=1 - 0.30 - 0.035, w=0.30, round=True)
+    item.update(kw)
+    return item
+
+
+def item_height(item):
+    """Höhe als Anteil der Bildhöhe."""
+    return item["w"] * CANVAS_ASPECT / max(0.01, item.get("aspect") or CANVAS_ASPECT)
+
+
+def item_key(item):
+    k = item.get("kind")
+    if k == "screen":
+        return "screen"
+    if k in ("camera", "capture"):
+        return f"video:{item['device']}" if item.get("device") else None
+    if k == "image":
+        return f"image:{item['file']}" if item.get("file") else None
+    if k == "test":
+        return f"test:{item['id']}"
+    return None
+
+
+def image_png(path, limit=engine.IMAGE_MAX):
+    """Bild (jedes Format, das Qt lesen kann) als PNG im Zwischenspeicher: (png, breite, höhe) oder None."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    tag = hashlib.sha1(f"{path}|{st.st_mtime_ns}|{st.st_size}|{limit}".encode()).hexdigest()[:20]
+    out = CACHE / f"{tag}.png"
+    if out.exists():
+        r = QImageReader(str(out))
+        size = r.size()
+        if size.isValid():
+            return str(out), size.width(), size.height()
+    r = QImageReader(path)
+    r.setAutoTransform(True)
+    img = r.read()
+    if img.isNull():
+        return None
+    if max(img.width(), img.height()) > limit:
+        img = img.scaled(limit, limit, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    w, h = img.width() // 2 * 2, img.height() // 2 * 2
+    img = img.copy(0, 0, max(2, w), max(2, h)).convertToFormat(QImage.Format.Format_ARGB32)
+    try:
+        CACHE.mkdir(parents=True, exist_ok=True)
+        if not img.save(str(out), "PNG"):
+            return None
+    except OSError:
+        return None
+    return str(out), img.width(), img.height()
+
+
 class Hub(QObject):
-    """Verteilt Vorschaubilder an alle Vorschau-Flächen."""
-    frame = Signal(QImage)
+    """Verteilt Vorschaubilder an alle Vorschau-Flächen. Kommt der Hauptthread nicht hinterher,
+    wird nur das neueste Bild gezeigt (kein Stau, keine Verzögerung)."""
+    frame = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self._lock = threading.Lock()
+        self._img = QImage()
+        self._waiting = False
+
+    def push(self, img):
+        with self._lock:
+            self._img = img
+            if self._waiting:
+                return
+            self._waiting = True
+        self.frame.emit()
+
+    def take(self):
+        with self._lock:
+            self._waiting = False
+            return self._img
 
 
 HUB = Hub()
@@ -105,13 +250,17 @@ class Preview(QQuickPaintedItem):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._img = QImage()
+        # Auf der Grafikkarte zeichnen – deutlich flüssiger als in den Arbeitsspeicher
+        self.setRenderTarget(QQuickPaintedItem.RenderTarget.FramebufferObject)
+        self.setOpaquePainting(True)
         HUB.frame.connect(self._on_frame)
 
-    def _on_frame(self, img):
-        self._img = img
+    def _on_frame(self):
+        self._img = HUB.take()
         self.update()
 
     def paint(self, painter):
+        painter.fillRect(self.boundingRect(), QColor("#0b0d12"))
         if self._img.isNull():
             return
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -150,6 +299,15 @@ class Studio(QObject):
         self._screen_wanted = False
         self.video_list = []
         self.audio_list = []
+        self.output_list = []
+        self._images = {}                         # Datei → (png, b, h)
+        if selftest:
+            # Selbsttest beim Bauen: Testbild, abgerundete Test-Kamera mit Grünschlüssel, ein Bild
+            self.cfg["scenes"] = [{"name": "Test", "items": [
+                new_item(self.cfg, "test", pattern="smpte"),
+                new_item(self.cfg, "test", pattern="ball", x=0.68, y=0.665, w=0.30, round=True, green=True)]}]
+        elif migrate(self.cfg):
+            self._save()
         self.levels = {}
         self.status = ""
         self.error = ""
@@ -172,16 +330,16 @@ class Studio(QObject):
         self.twitch_chat = konten.TwitchChat(self.accounts["twitch"])
         self._async.connect(self._run_async)
         self._rebuild_timer = QTimer(self, singleShot=True, interval=350, timeout=self._rebuild)
-        self._frames = QTimer(self, interval=33, timeout=self._pull_frame)
+        self._save_later = QTimer(self, singleShot=True, interval=600, timeout=self._save)
+        self.mixer.on_frame = self._on_frame
         self._poll = QTimer(self, interval=100, timeout=self._poll_engine)
         self._clock = QTimer(self, interval=1000, timeout=self.changed.emit)
         self.refreshDevices()
-        self._frames.start()
         self._poll.start()
         self._clock.start()
         if selftest:
             return
-        if self.cfg["main"]["type"] == "screen":
+        if self._wants_screen():
             self._screen_wanted = True
             self._start_portal()
         self._rebuild()
@@ -252,9 +410,25 @@ class Studio(QObject):
             "liveTargets": [t for t, _ in self.live_targets], "encoder": self.encoder or engine.video_encoder()[1]
             if engine.video_encoder() else "kein Kodierer", "status": self.status, "error": self.error,
             "screenReady": self.screen is not None, "screenAsking": self._portal is not None and self.screen is None,
-            "recFile": self.rec_file, "canvases": list(engine.CANVAS), "corners": list(engine.CORNERS),
-            "locked": self.live or self.recording,
+            "recFile": self.rec_file, "canvases": list(engine.CANVAS),
+            "locked": self.live or self.recording, "outputDevices": self.output_list,
+            "scenes": [{"name": sc["name"], "count": len(sc["items"])} for sc in self.cfg["scenes"]],
+            "scene": self.cfg["scene"], "items": self._items_state(),
         }
+
+    def _items_state(self):
+        names = {d["id"]: d["name"] for d in self.video_list}
+        out = []
+        for it in self._scene()["items"]:
+            label = it.get("name") or {
+                "screen": "Bildschirm", "image": Path(it.get("file") or "Bild").name,
+            }.get(it["kind"]) or names.get(it.get("device")) or KINDS.get(it["kind"], it["kind"])
+            out.append({"id": it["id"], "kind": it["kind"], "label": label, "device": it.get("device", ""),
+                        "x": it["x"], "y": it["y"], "w": it["w"], "h": item_height(it),
+                        "round": it.get("round", False), "green": it.get("green", False),
+                        "hidden": it.get("hidden", False), "ok": item_key(it) is not None,
+                        "virtual": is_virtual(names.get(it.get("device"), ""))})
+        return out
 
     state = Property("QVariantMap", lambda self: self._state(), notify=changed)
     levelMap = Property("QVariantMap", lambda self: dict(self.levels), notify=levelsChanged)
@@ -307,17 +481,6 @@ class Studio(QObject):
             a = self.cfg["audio"][keys[1]]
             self.mixer.set_volume(keys[1], a["volume"], a["muted"])
         elif keys[0] in SOURCE_KEYS:
-            if path == "main.type":
-                self._screen_wanted = value == "screen"
-                if self._screen_wanted and self.screen is None:
-                    self._start_portal()
-                elif not self._screen_wanted:
-                    self._stop_portal()
-            if path == "main.device" and self.cfg["main"]["type"] == "video" and not self.cfg["audio"]["extra"]["device"]:
-                match = matching_audio(value, self.audio_list)
-                if match:
-                    self.cfg["audio"]["extra"].update(on=True, device=match)
-                    self._save()
             self._rebuild_timer.start()
         self.changed.emit()
 
@@ -325,6 +488,7 @@ class Studio(QObject):
     def refreshDevices(self):
         self.video_list = video_devices()
         self.audio_list = audio_inputs()
+        self.output_list = audio_outputs()
         self.changed.emit()
 
     # ---- Bildschirm freigeben -----------------------------------------------------------------
@@ -338,8 +502,8 @@ class Studio(QObject):
         self._save()
         self._stop_portal()
         self.screen = None
-        if self.cfg["main"]["type"] != "screen":
-            self.cfg["main"]["type"] = "screen"
+        if not self._wants_screen():
+            self._scene()["items"].insert(0, new_item(self.cfg, "screen"))
             self._save()
         self._screen_wanted = True
         self._start_portal()
@@ -397,7 +561,7 @@ class Studio(QObject):
         if info.get("token"):
             self.cfg["screen_token"] = info["token"]
             self._save()
-        self._rebuild_timer.start()
+        self._structure()
         self.changed.emit()
 
     def _stop_portal(self):
@@ -422,21 +586,52 @@ class Studio(QObject):
                 pass
             self.screen = None
 
-    # ---- Mischpult ------------------------------------------------------------------------------
+    # ---- Szenen und Quellen ------------------------------------------------------------------------
+    def _scene(self):
+        sc = self.cfg["scenes"]
+        if not sc:
+            sc.append({"name": "Szene 1", "items": []})
+        self.cfg["scene"] = max(0, min(self.cfg["scene"], len(sc) - 1))
+        return sc[self.cfg["scene"]]
+
+    def _wants_screen(self):
+        return any(it["kind"] == "screen" for sc in self.cfg["scenes"] for it in sc["items"])
+
+    def _image(self, path):
+        if path not in self._images:
+            self._images[path] = image_png(path)
+        return self._images[path]
+
+    def _src_of(self, it):
+        """Quelle fürs Mischpult zu einem Szenen-Eintrag (oder None)."""
+        key = item_key(it)
+        if not key:
+            return None
+        k = it["kind"]
+        if k == "screen":
+            return dict(self.screen, key=key) if self.screen else None
+        if k in ("camera", "capture"):
+            return {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+        if k == "image":
+            img = self._image(it["file"])
+            if not img:
+                return None
+            return {"key": key, "type": "image", "file": img[0], "w": img[1], "h": img[2]}
+        if k == "test":
+            return {"key": key, "type": "test", "pattern": it.get("pattern", "smpte"), "green": bool(it.get("green"))}
+        return None
+
     def _sources(self):
-        if self.selftest:
-            return ({"type": "test"}, {"type": "test", "pattern": "ball", "corner": "unten-rechts", "size": "klein"},
-                    {"mic": {"type": "test", "freq": 440}, "desktop": {"type": "test", "freq": 660}})
-        m = self.cfg["main"]
-        main = None
-        if m["type"] == "screen":
-            main = self.screen
-        elif m["type"] == "video" and m["device"]:
-            main = {"type": "video", "device": m["device"]}
-        c = self.cfg["cam"]
-        cam = None
-        if c["on"] and c["device"] and not (m["type"] == "video" and m["device"] == c["device"]):
-            cam = {"type": "video", "device": c["device"], "corner": c["corner"], "size": c["size"]}
+        seen, out = set(), []
+        for sc in self.cfg["scenes"]:
+            for it in sc["items"]:
+                src = self._src_of(it)
+                if src and src["key"] not in seen:
+                    # Grünschlüssel gilt für die Quelle: an, sobald ein Eintrag ihn will
+                    seen.add(src["key"])
+                    out.append(src)
+                elif src and src.get("green"):
+                    next(o for o in out if o["key"] == src["key"])["green"] = True
         audio = {}
         for slot, a in self.cfg["audio"].items():
             if not a["on"]:
@@ -445,28 +640,253 @@ class Studio(QObject):
                 continue
             audio[slot] = {"type": "device" if slot == "extra" else slot, "device": a["device"],
                            "volume": a["volume"], "muted": a["muted"]}
-        return main, cam, audio
+        if self.selftest:
+            audio = {"mic": {"type": "test", "freq": 440}, "desktop": {"type": "test", "freq": 660}}
+        return out, audio
 
+    def _layout(self):
+        """Anordnung der aktiven Szene in Pixeln + Ecken: ({key: (x, y, b, h, z)}, {key: radius})."""
+        W, H, _fps = engine.CANVAS.get(self.cfg["canvas"], engine.CANVAS["1080p30"])
+        layout, rounds = {}, {}
+        for z, it in enumerate(self._scene()["items"], start=1):
+            key = item_key(it)
+            if not key or it.get("hidden") or key in layout:
+                continue
+            layout[key] = (it["x"] * W, it["y"] * H, it["w"] * W, item_height(it) * H, z)
+            rounds[key] = engine.ROUND if it.get("round") else 0.0
+        return layout, rounds
+
+    def _apply(self):
+        layout, rounds = self._layout()
+        self.mixer.apply_layout(layout)
+        self.mixer.set_rounds(rounds)
+
+    def _structure(self):
+        """Quellen haben sich geändert: neu aufbauen – oder während Stream/Aufnahme live nachladen."""
+        if self._wants_screen() != self._screen_wanted:
+            self._screen_wanted = self._wants_screen()
+            if self._screen_wanted and self.screen is None:
+                self._start_portal()
+        if self.live or self.recording:
+            layout, _r = self._layout()
+            sources, _a = self._sources()
+            for src in sources:
+                if src["key"] not in self.mixer.pads and not self.mixer.add_live(src, layout):
+                    self.toast.emit("Diese Quelle lässt sich erst nach Stream oder Aufnahme einbauen.")
+            self._dirty = True
+            self._apply()
+        else:
+            self._rebuild_timer.start()
+        self._save()
+        self.changed.emit()
+
+    @Slot(int)
+    def setScene(self, index):
+        if 0 <= index < len(self.cfg["scenes"]) and index != self.cfg["scene"]:
+            self.cfg["scene"] = index
+            self._apply()
+            self._save_later.start()
+            self.changed.emit()
+
+    @Slot()
+    def addScene(self):
+        names = {sc["name"] for sc in self.cfg["scenes"]}
+        n = len(self.cfg["scenes"]) + 1
+        while f"Szene {n}" in names:
+            n += 1
+        self.cfg["scenes"].append({"name": f"Szene {n}", "items": []})
+        self.cfg["scene"] = len(self.cfg["scenes"]) - 1
+        self._apply()
+        self._save()
+        self.changed.emit()
+
+    @Slot(int)
+    def duplicateScene(self, index):
+        if not 0 <= index < len(self.cfg["scenes"]):
+            return
+        sc = copy.deepcopy(self.cfg["scenes"][index])
+        sc["name"] = sc["name"] + " (Kopie)"
+        for it in sc["items"]:
+            it["id"] = f"q{self.cfg['next_id']}"
+            self.cfg["next_id"] += 1
+        self.cfg["scenes"].insert(index + 1, sc)
+        self.cfg["scene"] = index + 1
+        self._apply()
+        self._save()
+        self.changed.emit()
+
+    @Slot(int, str)
+    def renameScene(self, index, name):
+        name = name.strip()
+        if 0 <= index < len(self.cfg["scenes"]) and name:
+            self.cfg["scenes"][index]["name"] = name[:40]
+            self._save()
+            self.changed.emit()
+
+    @Slot(int)
+    def removeScene(self, index):
+        sc = self.cfg["scenes"]
+        if len(sc) <= 1 or not 0 <= index < len(sc):
+            self.toast.emit("Eine Szene braucht Studio mindestens.")
+            return
+        sc.pop(index)
+        if self.cfg["scene"] >= index:
+            self.cfg["scene"] = max(0, self.cfg["scene"] - 1)
+        self._structure()
+
+    @Slot(str, result=int)
+    def addSource(self, kind):
+        """Bildschirm, Kamera oder Capture-Karte zur aktiven Szene. Rückgabe: Platz in der Liste."""
+        items = self._scene()["items"]
+        if kind == "screen":
+            for i, it in enumerate(items):
+                if it["kind"] == "screen":
+                    return i
+            items.insert(0, new_item(self.cfg, "screen"))
+            self._structure()
+            return 0
+        if kind not in ("camera", "capture"):
+            return -1
+        used = {it.get("device") for it in items}
+        devs = [d for d in self.video_list if d["id"] not in used] or self.video_list
+        # Kamera: am liebsten eine echte, sonst die virtuelle; Capture-Karte: eine, die keine Kamera ist
+        dev = next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
+        it = new_item(self.cfg, kind, device=dev["id"] if dev else "")
+        if kind == "capture":
+            items.insert(0, it)
+            pos = 0
+        else:
+            items.append(it)
+            pos = len(items) - 1
+        self._device_chosen(it)
+        self._structure()
+        return pos
+
+    @Slot(str, result=int)
+    def addImage(self, url):
+        path = QUrl(url).toLocalFile() if url.startswith("file:") else url
+        img = image_png(path)
+        if not img:
+            self.toast.emit("Dieses Bild lässt sich nicht öffnen.")
+            return -1
+        self._images[path] = img
+        aspect = img[1] / max(1, img[2])
+        # so groß wie es passt, höchstens 40 % breit bzw. 50 % hoch, mittig
+        w = min(0.40, 0.50 * aspect / CANVAS_ASPECT)
+        it = new_item(self.cfg, "image", file=path, aspect=aspect, w=w)
+        it["x"] = (1 - w) / 2
+        it["y"] = (1 - item_height(it)) / 2
+        items = self._scene()["items"]
+        items.append(it)
+        self._structure()
+        return len(items) - 1
+
+    def _device_chosen(self, it):
+        name = next((d["name"] for d in self.video_list if d["id"] == it.get("device")), "")
+        if is_virtual(name):
+            # Gibeon Kamera (Broadcast): grünen Hintergrund durchsichtig machen, Person freigestellt zeigen
+            it["green"] = True
+            it["round"] = False
+            if broadcast_green():
+                self.toast.emit("Broadcast zeigt jetzt einen grünen Hintergrund – Studio blendet ihn aus.")
+        elif it["kind"] == "capture" and not self.cfg["audio"]["extra"]["device"]:
+            match = matching_audio(it.get("device", ""), self.audio_list)
+            if match:
+                self.cfg["audio"]["extra"].update(on=True, device=match)
+
+    def _item(self, index):
+        items = self._scene()["items"]
+        return items[index] if 0 <= index < len(items) else None
+
+    @Slot(int, str, "QVariant")
+    def setItem(self, index, field, value):
+        it = self._item(index)
+        if not it or field not in ("device", "round", "hidden", "green", "name"):
+            return
+        if field == "device":
+            it["device"] = str(value)
+            it["green"] = False
+            if it["kind"] == "camera":
+                it["round"] = True
+            self._device_chosen(it)
+            self._structure()
+            return
+        it[field] = bool(value) if field != "name" else str(value)
+        if field == "green":
+            self._structure() if not (self.live or self.recording) else self._apply()
+            if value:
+                broadcast_green()
+            return
+        self._apply()
+        self._save_later.start()
+        self.changed.emit()
+
+    @Slot(int, float, float, float)
+    def moveItem(self, index, x, y, w):
+        """Verschieben / Größe ändern (Anteile der Bildbreite/-höhe) – sofort im Bild, auch live."""
+        it = self._item(index)
+        if not it:
+            return
+        it["w"] = max(0.03, min(4.0, w))
+        h = item_height(it)
+        it["x"] = max(-it["w"] + 0.03, min(0.97, x))
+        it["y"] = max(-h + 0.03, min(0.97, y))
+        self._apply()
+        self._save_later.start()
+        self.changed.emit()
+
+    @Slot(int)
+    def fillItem(self, index):
+        """Bildfüllend einpassen (Seitenverhältnis bleibt)."""
+        it = self._item(index)
+        if not it:
+            return
+        a = it.get("aspect") or CANVAS_ASPECT
+        w = 1.0 if a >= CANVAS_ASPECT else a / CANVAS_ASPECT
+        self.moveItem(index, (1 - w) / 2, (1 - w * CANVAS_ASPECT / a) / 2, w)
+
+    @Slot(int, int, result=int)
+    def orderItem(self, index, delta):
+        """Nach vorne (+1) oder hinten (-1). Rückgabe: neuer Platz."""
+        items = self._scene()["items"]
+        j = index + delta
+        if not (0 <= index < len(items) and 0 <= j < len(items)):
+            return index
+        items[index], items[j] = items[j], items[index]
+        self._apply()
+        self._save_later.start()
+        self.changed.emit()
+        return j
+
+    @Slot(int)
+    def removeItem(self, index):
+        items = self._scene()["items"]
+        if 0 <= index < len(items):
+            items.pop(index)
+            self._structure()
+
+    # ---- Mischpult ------------------------------------------------------------------------------
     def _rebuild(self):
         if self.live or self.recording:
             return
-        main, cam, audio = self._sources()
+        self._dirty = False
+        sources, audio = self._sources()
+        layout, rounds = self._layout()
         try:
-            self.mixer.build(self.cfg, main, cam, audio)
+            self.mixer.build(self.cfg, sources, audio, layout, rounds)
             self.error = ""
         except (ValueError, RuntimeError) as e:
             self.error = f"Studio konnte die Quellen nicht starten: {e}"
         self.levels = dict(self.mixer.levels)
         self.changed.emit()
 
-    def _pull_frame(self):
-        f = self.mixer.frame()
-        if f:
-            data, w, h = f
-            img = QImage(data, w, h, w * 4, QImage.Format.Format_ARGB32).copy()
-            HUB.frame.emit(img)
+    def _on_frame(self, data, w, h):
+        # GStreamer-Thread: Bild kopieren, das Signal bringt es in den Hauptthread
+        HUB.push(QImage(data, w, h, w * 4, QImage.Format.Format_ARGB32).copy())
 
     def _poll_engine(self):
+        if getattr(self, "_dirty", False) and not (self.live or self.recording) and not self.mixer.outputs:
+            self._rebuild()
         for key, err, out in self.mixer.poll():
             # Grafikkarten-Kodierer klappt nicht (z. B. alle NVENC-Plätze belegt) → mit Prozessor neu
             if err and out.gpu and time.monotonic() - out.started < 6 and not out.stopping:
@@ -686,7 +1106,6 @@ class Studio(QObject):
     # ---- Ende -----------------------------------------------------------------------------------------
     @Slot()
     def shutdown(self):
-        self._frames.stop()
         self._poll.stop()
         for key in list(self.mixer.outputs):
             self.mixer.stop_output(key)
@@ -703,8 +1122,16 @@ class Studio(QObject):
 
     # ---- Selbsttest (beim Bauen des Systems) -------------------------------------------------------
     def run_selftest(self, out_path):
-        main, cam, audio = self._sources()
-        self.mixer.build(self.cfg, main, cam, audio)
+        img = QImage(320, 180, QImage.Format.Format_ARGB32)
+        img.fill(QColor("#2a6fdb"))
+        png = os.path.join(os.path.dirname(out_path), "studio-test.png")
+        img.save(png, "PNG")
+        if self.addImage(png) < 0:
+            return False, "Bild lässt sich nicht einbauen"
+        self.moveItem(2, 0.05, 0.05, 0.2)
+        sources, audio = self._sources()
+        layout, rounds = self._layout()
+        self.mixer.build(self.cfg, sources, audio, layout, rounds)
         time.sleep(0.8)
         out = self.mixer.start_output("record", out_path, 2000, "mp4")
         time.sleep(2.5)
@@ -730,6 +1157,11 @@ def _target_label(key):
 
 def _nice_error(text):
     low = text.lower()
+    if low.startswith("feeder:video"):
+        return ("Eine Kamera liefert gerade kein Bild – Studio versucht es weiter. "
+                "Für die Gibeon Kamera muss Broadcast laufen.")
+    if low.startswith("feeder:screen"):
+        return "Die Bildschirmfreigabe liefert gerade kein Bild – Studio versucht es weiter."
     if "v4l2" in low or "video" in low and "device" in low:
         return "Kamera oder Capture-Karte antwortet nicht – ist sie angeschlossen oder in einem anderen Programm offen?"
     if "pulse" in low:
