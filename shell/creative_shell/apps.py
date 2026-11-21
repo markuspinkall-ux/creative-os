@@ -43,7 +43,7 @@ SUITE = {
     "creative-art.desktop", "creative-capture.desktop", "creative-3d.desktop",
     "creative-cut.desktop", "creative-ftp.desktop",
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop", "creative-podcast.desktop",
-    "creative-writer.desktop",
+    "creative-writer.desktop", "gibeon-studio.desktop",
 }
 # Broadcast, Deck, Shots, Widgets, Pictures und 3D-Ansicht stehen nicht im Startmenü (NoDisplay):
 # Broadcast und Deck leben im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den

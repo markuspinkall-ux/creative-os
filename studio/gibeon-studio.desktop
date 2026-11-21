@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Studio
+GenericName=Aufnehmen und Streamen
+Comment=Bildschirm, Kamera und Capture-Karte aufnehmen oder live zu Twitch und YouTube streamen
+Keywords=Studio;Stream;Streamen;Twitch;YouTube;Aufnahme;Aufnehmen;Live;OBS;Bildschirmaufnahme;
+Exec=gibeon-studio
+Icon=gibeon-studio
+Terminal=false
+Categories=AudioVideo;Video;Recorder;
+StartupWMClass=gibeon-studio
