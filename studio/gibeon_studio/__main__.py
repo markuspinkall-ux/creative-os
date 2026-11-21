@@ -7,7 +7,8 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SERVER = f"gibeon-studio-{os.getuid()}"
+# Fester Pfad, damit auch das Stream Deck (Deck) Studio erreicht: eine Textzeile je Befehl
+SERVER = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "gibeon-studio.sock")
 
 
 def _raise_running():
@@ -16,7 +17,7 @@ def _raise_running():
     sock.connectToServer(SERVER)
     if not sock.waitForConnected(400):
         return False
-    sock.write(b"raise")
+    sock.write(b"raise\n")
     sock.waitForBytesWritten(400)
     return True
 
@@ -72,8 +73,23 @@ def main():
 
     def on_conn():
         c = server.nextPendingConnection()
-        if c is not None:
-            c.readyRead.connect(lambda: (win.show(), win.raise_(), win.requestActivate()))
+        if c is None:
+            return
+
+        def read():
+            while c.canReadLine() or c.bytesAvailable():
+                line = bytes(c.readLine()).decode("utf-8", "replace").strip()
+                if not line:
+                    break
+                if line == "raise":
+                    win.show(), win.raise_(), win.requestActivate()
+                    answer = "ok"
+                else:
+                    answer = studio.command(line)
+                c.write((answer + "\n").encode())
+                c.flush()
+        c.readyRead.connect(read)
+        c.disconnected.connect(c.deleteLater)
 
     server.newConnection.connect(on_conn)
     app.aboutToQuit.connect(studio.shutdown)

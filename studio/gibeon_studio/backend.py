@@ -15,7 +15,7 @@ from PySide6.QtCore import Property, QObject, QSocketNotifier, Qt, QTimer, QUrl,
 from PySide6.QtGui import QColor, QDesktopServices, QImage, QImageReader, QPainter
 from PySide6.QtQuick import QQuickPaintedItem
 
-from . import engine, konten
+from . import engine, geraete, konten
 
 try:
     from .audio_routing import matching_audio
@@ -42,14 +42,22 @@ DEFAULTS = {
     "main": {"type": "screen", "device": ""},
     "cam": {"on": False, "device": "", "corner": "unten-rechts", "size": "mittel"},
     "audio": {
-        "mic": {"on": True, "device": "", "volume": 1.0, "muted": False},
-        "desktop": {"on": True, "device": "", "volume": 1.0, "muted": False},
-        "extra": {"on": False, "device": "", "volume": 1.0, "muted": False},
+        "mic": {"on": True, "device": "", "volume": 1.0, "muted": False, "listen": False},
+        "desktop": {"on": True, "device": "", "volume": 1.0, "muted": False, "listen": False},
+        "extra": {"on": False, "device": "", "volume": 1.0, "muted": False, "listen": False},
     },
+    # Mithören (z. B. Capture-Karte über Kopfhörer): Ausgabegerät, "" = Standard-Ausgabe
+    "monitor_device": "",
     "format": "mp4",
-    "targets": {"twitch": True, "youtube": True, "custom": False},
+    "targets": {"twitch": True, "youtube": True, "kick": False, "tiktok": False, "custom": False},
     "custom_url": "",
     "custom_key": "",
+    # Kick und TikTok: Server-Adresse und Stream-Schlüssel aus dem jeweiligen Dashboard
+    "kick_url": "",
+    "kick_key": "",
+    "kick_channel": "",
+    "tiktok_url": "",
+    "tiktok_key": "",
     "screen_token": "",
     "chat_open": True,
 }
@@ -77,9 +85,23 @@ def merge(base, data):
     return out
 
 
+def stable_paths():
+    """/dev/videoN → feste Kennung (/dev/v4l/by-id/…, sonst by-path). Die Nummer N kann sich nach
+    Neustart oder Umstecken ändern, die Kennung nicht – so bleibt die Capture-Karte in der Szene."""
+    out = {}
+    for kind in ("by-path", "by-id"):          # by-id gewinnt (enthält Hersteller und Seriennummer)
+        for link in sorted(Path("/dev/v4l", kind).glob("*video-index0")):
+            try:
+                out[os.path.realpath(link)] = str(link)
+            except OSError:
+                pass
+    return out
+
+
 def video_devices():
     """Kameras und Capture-Karten: (Gerät, Name)."""
     out = []
+    stable = stable_paths()
     root = Path("/sys/class/video4linux")
     for d in sorted(root.glob("video*"), key=lambda p: int(p.name[5:]) if p.name[5:].isdigit() else 999):
         try:
@@ -88,7 +110,9 @@ def video_devices():
             name = (d / "name").read_text().strip()
         except OSError:
             continue
-        out.append({"id": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name)})
+        info = geraete.describe(d)
+        out.append({"id": stable.get(f"/dev/{d.name}", f"/dev/{d.name}"), "node": f"/dev/{d.name}", "name": name or d.name, "virtual": is_virtual(name),
+                    "capture": info["capture"], "elgato": info["elgato"]})
     return out
 
 
@@ -311,6 +335,7 @@ class Studio(QObject):
                 new_item(self.cfg, "test", pattern="smpte"),
                 new_item(self.cfg, "test", pattern="ball", x=0.68, y=0.665, w=0.30, round=True, green=True)]}]
         elif migrate(self.cfg):
+            self._first_start = not CFG.exists()
             self._save()
         self.levels = {}
         self.status = ""
@@ -340,6 +365,9 @@ class Studio(QObject):
         self._clock = QTimer(self, interval=1000, timeout=self.changed.emit)
         self.refreshDevices()
         self._poll.start()
+        self._devwatch = QTimer(self, interval=4000, timeout=self._watch_devices)
+        if not selftest:
+            self._devwatch.start()
         self._clock.start()
         if selftest:
             return
@@ -406,6 +434,10 @@ class Studio(QObject):
                 "chat": self._chat_url(name), "target": bool(self.targets[name]),
                 "busy": self.busy.get(name, ""),
             }
+        kick = self.cfg["kick_channel"].strip().lstrip("@")
+        acc["kick"] = {"configured": True, "connected": bool(kick), "name": kick, "title": "", "category": "",
+                       "categoryId": "", "chat": f"https://kick.com/popout/{kick}/chat" if kick else "",
+                       "target": bool(self.cfg["kick_url"].strip()), "busy": ""}
         return {
             "cfg": self.cfg, "videoDevices": self.video_list, "audioDevices": self.audio_list,
             "accounts": acc, "live": self.live, "recording": self.recording,
@@ -416,6 +448,10 @@ class Studio(QObject):
             "screenReady": self.screen is not None, "screenAsking": self._portal is not None and self.screen is None,
             "recFile": self.rec_file, "canvases": list(engine.CANVAS),
             "locked": self.live or self.recording, "outputDevices": self.output_list,
+            "unsupported": getattr(self, "unsupported", []),
+            "sinkDevices": [{"id": d["id"][:-len(".monitor")] if d["id"] else "", "name": d["name"]} for d in self.output_list],
+            "monitorEcho": self._monitor_echo(),
+            "upload": self._upload_health(),
             "scenes": [{"name": sc["name"], "count": len(sc["items"])} for sc in self.cfg["scenes"]],
             "scene": self.cfg["scene"], "items": self._items_state(),
         }
@@ -475,12 +511,16 @@ class Studio(QObject):
         if old == value:
             return
         if keys[0] in SOURCE_KEYS and self.live or keys[0] in SOURCE_KEYS and self.recording:
-            if not (keys[0] == "audio" and keys[-1] in ("volume", "muted")):
+            if not (keys[0] == "audio" and keys[-1] in ("volume", "muted", "listen")):
                 self.toast.emit("Quellen lassen sich während Aufnahme oder Stream nicht tauschen.")
                 self.changed.emit()
                 return
         node[keys[-1]] = value
         self._save()
+        if keys[0] == "audio" and keys[-1] == "listen" or path == "monitor_device":
+            self._apply_monitors()
+            self.changed.emit()
+            return
         if keys[0] == "audio" and keys[-1] in ("volume", "muted"):
             a = self.cfg["audio"][keys[1]]
             self.mixer.set_volume(keys[1], a["volume"], a["muted"])
@@ -496,7 +536,47 @@ class Studio(QObject):
         self.video_list = video_devices()
         self.audio_list = audio_inputs()
         self.output_list = audio_outputs()
+        try:
+            self.unsupported = geraete.unsupported()
+        except OSError:
+            self.unsupported = []
+        self._stable_devices()
+        if getattr(self, "_first_start", False):
+            self._first_start = False
+            self._capture_scene()
         self.changed.emit()
+
+    def _stable_devices(self):
+        """Ältere Einträge mit /dev/videoN auf die feste Kennung umstellen."""
+        by_node = {d["node"]: d["id"] for d in self.video_list}
+        changed = False
+        for sc in self.cfg["scenes"]:
+            for it in sc["items"]:
+                dev = it.get("device") or ""
+                if dev in by_node and by_node[dev] != dev:
+                    it["device"] = by_node[dev]
+                    changed = True
+        if changed:
+            self._save()
+
+    def _capture_scene(self):
+        """Erster Start mit angeschlossener Capture-Karte (z. B. Elgato): gleich eine fertige Szene dafür."""
+        card = next((d for d in self.video_list if d.get("elgato")), None) or \
+            next((d for d in self.video_list if d.get("capture") and not d.get("virtual")), None)
+        if not card or any(sc["name"] == "Capture-Karte" for sc in self.cfg["scenes"]):
+            return
+        it = new_item(self.cfg, "capture", device=card["id"])
+        self.cfg["scenes"].append({"name": "Capture-Karte", "items": [it]})
+        self._device_chosen(it)
+        self._save()
+
+    def _watch_devices(self):
+        """Alle paar Sekunden: neu angesteckte Kameras/Karten erkennen (Studio verbindet sich dann
+        von selbst wieder – die Szene kennt die Karte ja an ihrer festen Kennung)."""
+        before = [(d["id"], d["node"]) for d in self.video_list]
+        vids = video_devices()
+        if [(d["id"], d["node"]) for d in vids] != before:
+            self.refreshDevices()
 
     # ---- Bildschirm freigeben -----------------------------------------------------------------
     @Slot()
@@ -618,7 +698,12 @@ class Studio(QObject):
         if k == "screen":
             return dict(self.screen, key=key) if self.screen else None
         if k in ("camera", "capture"):
-            return {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+            src = {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+            dev = next((d for d in self.video_list if d["id"] == it["device"]), {})
+            if k == "capture" or dev.get("capture"):
+                # Capture-Karten (z. B. Elgato): bestes Format fest einstellen, 1080p mit voller Bildrate
+                src["mode"] = geraete.capture_mode(it["device"])
+            return src
         if k == "image":
             img = self._image(it["file"])
             if not img:
@@ -646,7 +731,7 @@ class Studio(QObject):
             if slot == "extra" and not a["device"]:
                 continue
             audio[slot] = {"type": "device" if slot == "extra" else slot, "device": a["device"],
-                           "volume": a["volume"], "muted": a["muted"]}
+                           "volume": a["volume"], "muted": a["muted"], "monitorable": slot == "extra"}
         if self.selftest:
             audio = {"mic": {"type": "test", "freq": 440}, "desktop": {"type": "test", "freq": 660}}
         return out, audio
@@ -770,8 +855,13 @@ class Studio(QObject):
             return -1
         used = {it.get("device") for it in items}
         devs = [d for d in self.video_list if d["id"] not in used] or self.video_list
-        # Kamera: am liebsten eine echte, sonst die virtuelle; Capture-Karte: eine, die keine Kamera ist
-        dev = next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
+        # Kamera: am liebsten eine echte Kamera; Capture-Karte: am liebsten eine Elgato bzw. Capture-Karte
+        if kind == "capture":
+            dev = next((d for d in devs if d.get("elgato")), None) or next((d for d in devs if d.get("capture")), None) \
+                or next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
+        else:
+            dev = next((d for d in devs if not d.get("virtual") and not d.get("capture")), None) \
+                or next((d for d in devs if not d.get("virtual")), devs[0] if devs else None)
         it = new_item(self.cfg, kind, device=dev["id"] if dev else "")
         if kind == "capture":
             items.insert(0, it)
@@ -811,7 +901,7 @@ class Studio(QObject):
             if broadcast_green():
                 self.toast.emit("Broadcast zeigt jetzt einen grünen Hintergrund – Studio blendet ihn aus.")
         elif it["kind"] == "capture" and not self.cfg["audio"]["extra"]["device"]:
-            match = matching_audio(it.get("device", ""), self.audio_list)
+            match = matching_audio(os.path.realpath(it.get("device", "")), self.audio_list)
             if match:
                 self.cfg["audio"]["extra"].update(on=True, device=match)
 
@@ -899,7 +989,45 @@ class Studio(QObject):
         except (ValueError, RuntimeError) as e:
             self.error = f"Studio konnte die Quellen nicht starten: {e}"
         self.levels = dict(self.mixer.levels)
+        self._apply_monitors()
         self.changed.emit()
+
+    def _apply_monitors(self):
+        """Mithören wie eingestellt (Kopfhörer) – läuft unabhängig von Stream und Aufnahme."""
+        if self.selftest:
+            return
+        for slot in ("extra",):                    # nur die weitere Tonquelle (Capture-Karte) – das Mikrofon
+            a = self.cfg["audio"][slot]             # würdest du doppelt hören
+            want = a["listen"] and a["on"]
+            mon = self.mixer.monitors.get(slot)
+            if want and mon and getattr(mon, "device", None) == self.cfg["monitor_device"]:
+                continue
+            if not want and not mon:
+                continue
+            try:
+                self.mixer.set_monitor(slot, want, self.cfg["monitor_device"])
+                if want:
+                    self.mixer.monitors[slot].device = self.cfg["monitor_device"]
+            except (RuntimeError, ValueError) as e:
+                self.toast.emit(str(e))
+
+    def _upload_health(self):
+        """Ampel je Stream-Ziel: [{key, label, state, backlog}]."""
+        enc = self.mixer.outputs.get("live")
+        if not enc or not hasattr(enc, "health"):
+            return []
+        return [{"key": k, "label": _target_label(k), "state": st, "backlog": round(b, 1)}
+                for k, (st, b) in enc.health().items()]
+
+    def _monitor_echo(self):
+        """Hörst du die Capture-Karte über dasselbe Gerät mit, das „Desktop-Ton“ aufnimmt, landet sie
+        doppelt im Stream (einmal direkt, einmal über den Desktop-Ton)."""
+        a = self.cfg["audio"]
+        if not (a["extra"]["listen"] and a["extra"]["on"] and a["desktop"]["on"]):
+            return False
+        dev = self.cfg["monitor_device"]
+        desk = a["desktop"]["device"]
+        return (not desk and not dev) or desk == f"{dev}.monitor"
 
     def _on_frame(self, data, w, h):
         # GStreamer-Thread: Bild kopieren, das Signal bringt es in den Hauptthread
@@ -908,9 +1036,13 @@ class Studio(QObject):
     def _poll_engine(self):
         if getattr(self, "_dirty", False) and not (self.live or self.recording) and not self.mixer.outputs:
             self._rebuild()
+        restart_live = []
         for key, err, out in self.mixer.poll():
             # Grafikkarten-Kodierer klappt nicht (z. B. alle NVENC-Plätze belegt) → mit Prozessor neu
-            if err and out.gpu and time.monotonic() - out.started < 6 and not out.stopping:
+            if err and out.gpu and time.monotonic() - out.started < 6 and out.kind == "live" and out.error:
+                restart_live += [(t, u) for t, u in self.live_targets if t == key]
+                continue
+            if err and out.gpu and time.monotonic() - out.started < 6 and not out.stopping and key == "record":
                 try:
                     again = self.mixer.start_output(key, out.target, out.kbps, out.fmt, cpu_only=True)
                     self.encoder = again.encoder_name
@@ -928,6 +1060,12 @@ class Studio(QObject):
                 self.live_targets = [(t, u) for t, u in self.live_targets if t != key]
                 if err:
                     self.toast.emit(f"{_target_label(key)}: Stream abgebrochen – {err}")
+            self.changed.emit()
+        if restart_live and "live" not in self.mixer.outputs:
+            if self._start_live(restart_live, cpu_only=True):
+                self.toast.emit("Die Grafikkarte kodiert gerade nicht – Studio nimmt den Prozessor.")
+            else:
+                self.live_targets = []
             self.changed.emit()
         while self.mixer.errors:
             e = self.mixer.errors.pop(0)
@@ -973,10 +1111,11 @@ class Studio(QObject):
         for name in ("twitch", "youtube"):
             if t[name] and self.accounts[name].connected and self.targets[name]:
                 out.append((name, self.targets[name]))
-        if t["custom"] and self.cfg["custom_url"].strip():
-            url = self.cfg["custom_url"].strip().rstrip("/")
-            key = self.cfg["custom_key"].strip()
-            out.append(("custom", f"{url}/{key}" if key else url))
+        for name in ("kick", "tiktok", "custom"):
+            url = self.cfg[f"{name}_url"].strip().rstrip("/")
+            if t[name] and url:
+                key = self.cfg[f"{name}_key"].strip()
+                out.append((name, f"{url}/{key}" if key else url))
         return out
 
     @Slot()
@@ -989,20 +1128,25 @@ class Studio(QObject):
         targets = self._wanted_targets()
         if not targets:
             self.toast.emit("Wohin soll gestreamt werden? Melde dich bei Twitch oder YouTube an "
-                            "oder trage unter „Ziele“ einen eigenen Server ein.")
+                            "oder trage unter „Ziele“ Kick, TikTok oder einen eigenen Server ein.")
             return
-        started = []
-        for key, url in targets:
-            try:
-                out = self.mixer.start_output(key, url, self.cfg["kbps"])
-                self.encoder = out.encoder_name
-                started.append((key, url))
-            except (RuntimeError, ValueError) as e:
-                self.toast.emit(f"{_target_label(key)}: {e}")
-        if started:
-            self.live_targets = started
-            self.live_since = time.monotonic()
+        self.live_since = time.monotonic()
+        self._start_live(targets)
         self.changed.emit()
+
+    def _start_live(self, targets, cpu_only=False):
+        """Multistream: einmal kodieren, an alle Ziele gleichzeitig senden."""
+        try:
+            enc = self.mixer.start_live(dict(targets), self.cfg["kbps"], cpu_only)
+        except (RuntimeError, ValueError) as e:
+            self.toast.emit(f"Live startet nicht: {e}")
+            return False
+        self.encoder = enc.encoder_name
+        self.live_targets = [(k, u) for k, u in targets if k in enc.senders]
+        for key, err in enc.finished:
+            self.toast.emit(f"{_target_label(key)}: {err}")
+        enc.finished.clear()
+        return True
 
     # ---- Konten --------------------------------------------------------------------------------------
     @Slot(str)
@@ -1124,6 +1268,35 @@ class Studio(QObject):
                 return
             self._bg(lambda: self.accounts["youtube"].send_chat(chat, text))
 
+    # ---- Fernsteuerung (Stream Deck über Deck) ------------------------------------------------------
+    @Slot(str, result=str)
+    def command(self, line):
+        """„live“, „aufnahme“, „szene <Name oder Nummer>“, „naechste“, „stumm mic|desktop|extra“."""
+        cmd, _sp, arg = line.strip().partition(" ")
+        arg = arg.strip()
+        if cmd == "live":
+            self.toggleLive()
+        elif cmd == "aufnahme":
+            self.toggleRecord()
+        elif cmd == "szene":
+            names = [sc["name"].casefold() for sc in self.cfg["scenes"]]
+            if arg.casefold() in names:
+                index = names.index(arg.casefold())
+            elif arg.isdigit() and 1 <= int(arg) <= len(names):
+                index = int(arg) - 1
+            else:
+                return f"fehler Die Szene „{arg}“ gibt es in Studio nicht."
+            self.setScene(index)
+        elif cmd == "naechste":
+            n = len(self.cfg["scenes"])
+            if n:
+                self.setScene((self.cfg["scene"] + 1) % n)
+        elif cmd == "stumm" and arg in self.cfg["audio"]:
+            self.set(f"audio.{arg}.muted", not self.cfg["audio"][arg]["muted"])
+        else:
+            return "fehler Unbekannter Befehl"
+        return "ok"
+
     # ---- Ende -----------------------------------------------------------------------------------------
     @Slot()
     def shutdown(self):
@@ -1135,6 +1308,8 @@ class Studio(QObject):
             self.mixer.poll()
             time.sleep(0.05)
         self.mixer.stop()
+        for slot in list(self.mixer.monitors):
+            self.mixer.set_monitor(slot, False)
         self._stop_portal()
 
     @Slot(result=bool)
@@ -1173,7 +1348,8 @@ def _clock(sec):
 
 
 def _target_label(key):
-    return {"twitch": "Twitch", "youtube": "YouTube", "custom": "Eigener Server", "record": "Aufnahme"}.get(key, key)
+    return {"twitch": "Twitch", "youtube": "YouTube", "kick": "Kick", "tiktok": "TikTok", "custom": "Eigener Server",
+            "record": "Aufnahme"}.get(key, key)
 
 
 def _nice_error(text):
@@ -1185,6 +1361,8 @@ def _nice_error(text):
         return "Die Bildschirmfreigabe liefert gerade kein Bild – Studio versucht es weiter."
     if "v4l2" in low or "video" in low and "device" in low:
         return "Kamera oder Capture-Karte antwortet nicht – ist sie angeschlossen oder in einem anderen Programm offen?"
+    if low.startswith("monitor:"):
+        return "Mithören ist ausgefallen – sind die Kopfhörer noch angeschlossen?"
     if "pulse" in low:
         return "Eine Tonquelle ist nicht verfügbar."
     if "pipewire" in low:

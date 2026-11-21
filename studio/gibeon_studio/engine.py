@@ -77,6 +77,28 @@ def _q(text):
     return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+GST_FORMATS = {"NV12": "NV12", "YUYV": "YUY2", "UYVY": "UYVY", "YU12": "I420"}
+
+
+def _rate(fps):
+    """59.94 → 60000/1001, 60 → 60/1"""
+    for base in (24, 30, 60, 120):
+        if abs(fps - base * 1000 / 1001) < 0.02:
+            return f"{base * 1000}/1001"
+    return f"{int(round(fps))}/1"
+
+
+def mode_caps(mode):
+    """Feste Einstellung für v4l2src (Capture-Karten: z. B. 1080p60 NV12) – oder ""."""
+    if not mode:
+        return ""
+    size = f"width={int(mode['width'])},height={int(mode['height'])},framerate={_rate(float(mode['fps']))}"
+    if mode.get("format") == "MJPG":
+        return f" ! image/jpeg,{size} ! jpegdec"
+    fmt = GST_FORMATS.get(mode.get("format"))
+    return f" ! video/x-raw,format={fmt},{size}" if fmt else ""
+
+
 def video_source(src):
     """Beschreibung einer Bildquelle. src: {"type": "screen"|"video"|"test", …}"""
     t = src.get("type")
@@ -84,6 +106,9 @@ def video_source(src):
         return (f"pipewiresrc fd={int(src['fd'])} path={int(src['node'])} always-copy=true "
                 "keepalive-time=1000 do-timestamp=true")
     if t == "video" and src.get("device"):
+        caps = mode_caps(src.get("mode"))
+        if caps:
+            return f"v4l2src device={_q(src['device'])} do-timestamp=true{caps}"
         return f"v4l2src device={_q(src['device'])} do-timestamp=true ! decodebin"
     if t == "test":
         return f"videotestsrc is-live=true pattern={src.get('pattern', 'smpte')}"
@@ -175,11 +200,15 @@ class Feeder:
         self.retry_at = 0.0
         self.error = ""
         self.reported = False
+        self.no_mode = False            # feste Einstellung klappt nicht → GStreamer wählen lassen
         self.start()
 
     def start(self):
         w, h, fps = self.size
-        desc = feeder_description(self.src, w, h, fps)
+        src = self.src
+        if self.no_mode:
+            src = dict(src, mode=None)
+        desc = feeder_description(src, w, h, fps)
         try:
             self.pipe = gst.launch(desc)
         except (ValueError, TypeError) as e:
@@ -196,6 +225,11 @@ class Feeder:
         return gst.FLOW_OK
 
     def _failed(self, text):
+        if self.src.get("mode") and not self.no_mode:
+            self.no_mode = True             # gleich nochmal ohne feste Einstellung
+            self.close()
+            self.retry_at = time.monotonic() + 0.5
+            return
         self.close()
         self.error = text
         self.retry_at = time.monotonic() + self.RETRY
@@ -297,7 +331,14 @@ def build_description(cfg, sources, audio, layout=None):
         if not d:
             continue
         vol = max(0.0, min(2.0, float(src.get("volume", 1.0))))
-        parts.append(f"{d} ! audioconvert ! audioresample ! {AUDIO_CAPS} "
+        # Mithören (Kopfhörer): Abzweig vor der Lautstärke → appsink; die Wiedergabe läuft in einer
+        # eigenen kleinen Pipeline (Monitor) und lässt sich jederzeit an- und abschalten
+        tap = ""
+        if src.get("monitorable"):
+            tap = f"! tee name=tee_{slot} allow-not-linked=true ! queue max-size-time=200000000 leaky=downstream "
+            parts.append(f"tee_{slot}. ! queue max-size-time=100000000 leaky=downstream "
+                         f"! appsink name=mon_{slot} emit-signals=true sync=false max-buffers=4 drop=true")
+        parts.append(f"{d} ! audioconvert ! audioresample ! {AUDIO_CAPS} {tap}"
                      f"! volume name=vol_{slot} volume={vol:.3f} mute={'true' if src.get('muted') else 'false'} "
                      f"! level name=lvl_{slot} interval=50000000 post-messages=true "
                      f"! queue max-size-time=500000000 leaky=downstream ! amix.")
@@ -326,7 +367,18 @@ class Output:
         if not venc or not aenc:
             raise RuntimeError("Kein passender Kodierer für Bild oder Ton gefunden.")
         self.encoder_name = venc[1]
-        if kind == "record":
+        if kind == "live":
+            # Multistream: einmal kodieren, Ergebnis an alle Ziele (Sender) verteilen
+            mux = sink = None
+            desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
+                    f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc,alignment=au "
+                    f"! appsink name=vo emit-signals=true sync=false max-buffers=0  "
+                    f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
+                    f"! audioresample ! {aenc} name=aenc ! aacparse "
+                    f"! appsink name=ao emit-signals=true sync=false max-buffers=0")
+        elif kind == "record":
             if fmt == "mkv":
                 mux, sink = "matroskamux name=mux", f"filesink location={_q(target)}"
             else:
@@ -334,13 +386,14 @@ class Output:
         else:
             sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
             mux, sink = "flvmux name=mux streamable=true", f"{sinkf} name=out location={_q(target)}"
-        desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
-                f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc "
-                f"! queue ! {mux} ! {sink}  "
-                f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
-                f"! audioresample ! {aenc} name=aenc ! aacparse ! queue ! mux.")
+        if mux:
+            desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
+                    f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc "
+                    f"! queue ! {mux} ! {sink}  "
+                    f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
+                    f"! audioresample ! {aenc} name=aenc ! aacparse ! queue ! mux.")
         self.pipe = gst.launch(desc)
         configure_video_encoder(gst.bin_by_name(self.pipe, b"venc"), venc[0], kbps, fps)
         gst.set_prop(gst.bin_by_name(self.pipe, b"aenc"), "bitrate", 160000)
@@ -348,8 +401,12 @@ class Output:
         self.a = gst.bin_by_name(self.pipe, b"a")
         self.bus = gst.get_bus(self.pipe)
         self.lock = threading.Lock()
+        self._setup()
         if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
             raise RuntimeError("Der Ausgang ließ sich nicht starten.")
+
+    def _setup(self):
+        pass
 
     def take(self, sample, video):
         """Ein Stück (Bild oder Ton) aus dem Mischpult übernehmen – läuft im GStreamer-Thread."""
@@ -414,6 +471,225 @@ class Output:
             self.pipe = self.v = self.a = self.bus = None
 
 
+class Monitor:
+    """Mithören über Kopfhörer: Ton aus dem Mischpult → eigene Wiedergabe-Pipeline.
+    Kurze Puffer, damit der Ton kaum hinterherhängt; ein Fehler hier stört Stream und Aufnahme nicht."""
+
+    def __init__(self, device=""):
+        dev = f" device={_q(device)}" if device else ""
+        sink = "pulsesink" if gst.has("pulsesink") else "autoaudiosink"
+        extra = (f'{dev} sync=false buffer-time=40000 latency-time=10000 client-name="Studio (Mithören)"'
+                 if sink == "pulsesink" else " sync=false")
+        self.pipe = gst.launch(f"appsrc name=src is-live=true do-timestamp=true format=time block=false "
+                               f"caps={_q(AUDIO_CAPS)} ! queue max-size-time=100000000 leaky=downstream "
+                               f"! audioconvert ! audioresample ! {sink} name=out{extra}")
+        self.src = gst.bin_by_name(self.pipe, b"src")
+        self.bus = gst.get_bus(self.pipe)
+        self.lock = threading.Lock()
+        self.error = ""
+        if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
+            self.close()
+            raise RuntimeError("Mithören lässt sich nicht starten.")
+
+    def push(self, sink):
+        with self.lock:
+            gst.relay_sample(sink, self.src)
+
+    def poll(self):
+        while self.bus:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            if m[0] == gst.MSG_ERROR:
+                self.error = m[2].split(" | ")[0]
+                self.close()
+                return False
+        return self.pipe is not None
+
+    def close(self):
+        with self.lock:
+            if self.pipe:
+                gst.set_state(self.pipe, gst.STATE_NULL)
+                for el in (self.src, self.bus, self.pipe):
+                    if el:
+                        gst.object_unref(el)
+            self.pipe = self.src = self.bus = None
+
+
+class Sender:
+    """Ein Stream-Ziel beim Multistream: fertig kodiertes Bild/Ton → FLV → RTMP(S).
+    Eigene Pipeline: bricht ein Ziel ab, laufen die anderen weiter."""
+
+    def __init__(self, key, target):
+        self.key, self.target = key, target
+        self.error = ""
+        self.done = False
+        self.stopping = False
+        self.caps = {True: False, False: False}
+        self.lock = threading.Lock()
+        if target.startswith("file://"):                     # für Tests: in eine Datei statt ins Netz
+            sink = f"filesink location={_q(target[7:])}"
+        else:
+            sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
+            sink = f"{sinkf} name=out location={_q(target)}"
+        # Pads ausdrücklich benennen: ohne Caps beim Aufbau wüsste flvmux sonst nicht, was Bild und was Ton ist
+        desc = (f"flvmux name=mux streamable=true ! {sink}  "
+                f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                f"! queue name=vq max-size-time=30000000000 max-size-bytes=0 max-size-buffers=0 ! mux.video  "
+                f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.audio")
+        self.pipe = gst.launch(desc)
+        self.v = gst.bin_by_name(self.pipe, b"v")
+        self.a = gst.bin_by_name(self.pipe, b"a")
+        self.vq = gst.bin_by_name(self.pipe, b"vq")
+        self.bus = gst.get_bus(self.pipe)
+        self.backlog = 0.0               # Sekunden Bild, die noch aufs Hochladen warten
+        self._peak = []                  # (zeit, rückstau) der letzten Sekunden
+        if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
+            self.close()
+            raise RuntimeError("Das Ziel ließ sich nicht starten.")
+
+    def health(self):
+        """Wie gut kommt der Upload hinterher? „gut“, „wackelig“ oder „schlecht“ (+ Rückstau in s).
+        Kommt die Leitung nicht nach, staut sich fertig kodiertes Bild vor dem Senden."""
+        with self.lock:
+            if not self.pipe:
+                return "schlecht", 0.0
+            q = gst.get_u64(self.vq, "current-level-time") / gst.SECOND
+            pending = gst.get_u64(self.v, "current-level-bytes")
+        now = time.monotonic()
+        self._peak = [(t, b) for t, b in self._peak if now - t < 3] + [(now, q)]
+        self.backlog = max(b for _t, b in self._peak) + pending / 1_000_000   # grob: 1 MB ≈ 1 s bei 8 Mbit/s
+        if self.backlog < 0.7:
+            return "gut", self.backlog
+        if self.backlog < 2.5:
+            return "wackelig", self.backlog
+        return "schlecht", self.backlog
+
+    def push(self, sample, video):
+        with self.lock:
+            if self.done or self.stopping or not self.pipe:
+                return
+            src = self.v if video else self.a
+            if not self.caps[video]:
+                caps = gst.sample_caps(sample)
+                if not caps:
+                    return
+                gst.appsrc_set_caps(src, caps)
+                self.caps[video] = True
+            gst.appsrc_push_buffer(src, gst.buffer_copy(gst.sample_buffer(sample)))
+
+    def finish(self):
+        with self.lock:
+            if self.stopping or not self.pipe:
+                return
+            self.stopping = True
+            self.stop_at = time.monotonic()
+            gst.appsrc_eos(self.v)
+            gst.appsrc_eos(self.a)
+
+    def poll(self):
+        while self.bus and not self.done:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            typ, _src, text = m
+            if typ == gst.MSG_EOS:
+                self.done = True
+            elif typ == gst.MSG_ERROR:
+                self.error = text.split(" | ")[0]
+                self.done = True
+        if self.stopping and not self.done and time.monotonic() - self.stop_at > 8:
+            self.done = True
+        if self.done:
+            self.close()
+        return self.done
+
+    def close(self):
+        with self.lock:
+            if self.pipe:
+                gst.set_state(self.pipe, gst.STATE_NULL)
+                for el in (self.v, self.a, self.vq, self.bus, self.pipe):
+                    if el:
+                        gst.object_unref(el)
+                self.pipe = self.v = self.a = self.vq = self.bus = None
+
+
+class LiveEncoder(Output):
+    """Multistream: Mischpult → ein Kodierer → alle Ziele (Twitch, YouTube, Kick, TikTok, eigener Server).
+    Spart bei mehreren Zielen viel Leistung; jedes Ziel hat trotzdem seine eigene Pipeline."""
+
+    def __init__(self, targets, fps, kbps, cpu_only=False):
+        self.senders = {}
+        self.finished = []
+        self._pending = dict(targets)
+        super().__init__("live", "", fps, kbps, "flv", cpu_only)
+
+    def _setup(self):
+        for key, url in self._pending.items():
+            try:
+                self.senders[key] = Sender(key, url)
+            except (RuntimeError, ValueError) as e:
+                self.finished.append((key, str(e)))
+        if not self.senders:
+            raise RuntimeError(self.finished[0][1] if self.finished else "Kein Ziel")
+        self.vo = gst.bin_by_name(self.pipe, b"vo")
+        self.ao = gst.bin_by_name(self.pipe, b"ao")
+        self._h = [(self.vo, gst.connect_new_sample(self.vo, lambda s: self._out(s, True))),
+                   (self.ao, gst.connect_new_sample(self.ao, lambda s: self._out(s, False)))]
+
+    def _out(self, sink, video):
+        s = gst.pull_sample_blocking(sink)
+        if s:
+            try:
+                for snd in list(self.senders.values()):
+                    snd.push(s, video)
+            finally:
+                gst.mini_unref(s)
+        return gst.FLOW_OK
+
+    def health(self):
+        """{ziel: (zustand, rückstau)} aller laufenden Ziele."""
+        return {key: snd.health() for key, snd in list(self.senders.items())}
+
+    def stop_target(self, key):
+        snd = self.senders.get(key)
+        if snd:
+            snd.finish()
+
+    def poll(self):
+        """True, sobald alles beendet ist. Beendete Ziele landen in self.finished."""
+        while self.bus and not self.done:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            typ, _src, text = m
+            if typ == gst.MSG_EOS:
+                self.done = True
+            elif typ == gst.MSG_ERROR:
+                self.error = text.split(" | ")[0]
+                self.done = True
+        if self.done:
+            for snd in self.senders.values():
+                snd.finish()
+        for key, snd in list(self.senders.items()):
+            if snd.poll():
+                self.finished.append((key, snd.error or (self.error if self.done else "")))
+                del self.senders[key]
+        if not self.senders and not self.stopping:
+            self.stop()                                  # letztes Ziel weg → Kodierer beenden
+        if self.stopping and not self.done and time.monotonic() - self.stop_at > 8:
+            self.done = True
+        if self.done and not self.senders:
+            for el, h in getattr(self, "_h", []):
+                gst.signal_disconnect(el, h)
+                gst.object_unref(el)
+            self._h = []
+            self.close()
+            return True
+        return False
+
+
 class Mixer:
     """Das Mischpult. Wird bei geänderten Quellen neu aufgebaut (nicht während Aufnahme/Stream)."""
 
@@ -428,6 +704,8 @@ class Mixer:
         self.pads = {}                  # Quelle → Pad-Name am Mischpult
         self.feeders = {}               # Quelle → Feeder (Kameras, Bildschirm)
         self.on_frame = None            # fn(bytes, b, h) – jedes Vorschaubild, sobald es fertig ist
+        self.monitors = {}              # Tonquelle → Monitor (Mithören über Kopfhörer)
+        self.monitor_device = ""
         self.last_frame = None
         self.rounds = {}                # Pad-Name → Eckenradius (Anteil), 0 = eckig
         self._overlays = []
@@ -469,7 +747,28 @@ class Mixer:
                 self.feeders[key] = Feeder(key, by_key[key], feed, self.size)
         self.set_rounds(rounds or {})
         self.levels = {slot: -90.0 for slot in audio}
+        for slot in audio:
+            tap = gst.bin_by_name(self.pipe, f"mon_{slot}".encode())
+            if tap:
+                self._handlers.append((tap, gst.connect_new_sample(tap, lambda s, slot=slot: self._on_monitor(s, slot))))
+                gst.object_unref(tap)
         gst.set_state(self.pipe, gst.STATE_PLAYING)
+
+    def _on_monitor(self, sink, slot):
+        mon = self.monitors.get(slot)
+        if mon:
+            mon.push(sink)
+        else:
+            gst.relay_sample(sink, None)            # nur abholen, damit nichts staut
+        return gst.FLOW_OK
+
+    def set_monitor(self, slot, on, device=""):
+        """Mithören an/aus – sofort, ohne das Mischpult neu aufzubauen."""
+        old = self.monitors.pop(slot, None)
+        if old:
+            old.close()
+        if on:
+            self.monitors[slot] = Monitor(device)
 
     def _branch_ok(self, src):
         w, h, fps = CANVAS.get(self.cfg.get("canvas"), CANVAS["1080p30"])
@@ -640,6 +939,17 @@ class Mixer:
         out = self.outputs.get(key)
         if out:
             out.stop()
+        elif "live" in self.outputs and key in self.outputs["live"].senders:
+            self.outputs["live"].stop_target(key)
+
+    def start_live(self, targets, kbps, cpu_only=False):
+        """Multistream an alle Ziele {schlüssel: adresse}. Rückgabe: der Kodierer."""
+        if not self.pipe:
+            raise RuntimeError("Studio ist noch nicht bereit.")
+        enc = LiveEncoder(targets, self.size[2], kbps, cpu_only)
+        with self._lock:
+            self.outputs["live"] = enc
+        return enc
 
     # ---- Einstellungen im laufenden Betrieb -------------------------------------------------
     def set_volume(self, slot, volume, muted):
@@ -667,13 +977,27 @@ class Mixer:
                         self.levels[src[4:]] = max(-90.0, max(vals))
             elif typ == gst.MSG_ERROR:
                 self.errors.append(f"{src}: {text.split(' | ')[0]}")
+        for slot, mon in list(self.monitors.items()):
+            if not mon.poll():
+                self.monitors.pop(slot, None)
+                self.errors.append(f"monitor:{slot}: {mon.error}")
         for key, f in list(self.feeders.items()):
             err = f.poll()
             if err:
                 self.errors.append(f"feeder:{f.src.get('type')}: {err}")
         finished = []
         for key, out in list(self.outputs.items()):
-            if out.poll():
+            done = out.poll()
+            if isinstance(out, LiveEncoder):
+                # beim Multistream meldet jedes Ziel einzeln
+                while out.finished:
+                    target, err = out.finished.pop(0)
+                    finished.append((target, err, out))
+                if done:
+                    with self._lock:
+                        self.outputs.pop(key, None)
+                continue
+            if done:
                 with self._lock:
                     self.outputs.pop(key, None)
                 finished.append((key, out.error, out))

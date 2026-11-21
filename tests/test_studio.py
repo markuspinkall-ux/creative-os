@@ -127,8 +127,71 @@ class Szenen(unittest.TestCase):
             m.stop()
 
 
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class Mithoeren(unittest.TestCase):
+    def test_capture_ton_kommt_beim_mithoeren_an(self):
+        class Fake:
+            n = 0
+
+            def push(self, sink):
+                engine.gst.relay_sample(sink, None)
+                Fake.n += 1
+
+            def poll(self):
+                return True
+
+            def close(self):
+                pass
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, [], {"extra": {"type": "test", "monitorable": True},
+                                           "mic": {"type": "test"}}, {}, {})
+        try:
+            self.assertIn("mon_extra", engine.build_description({}, [], {"extra": {"type": "test", "monitorable": True}})[0])
+            self.assertNotIn("mon_mic", engine.build_description({}, [], {"mic": {"type": "test"}})[0])
+            m.monitors["extra"] = Fake()
+            time.sleep(0.8)
+            m.poll()
+            self.assertGreater(Fake.n, 5)
+            self.assertGreater(m.levels.get("extra", -90), -60)        # Stream-Ton läuft weiter
+        finally:
+            m.stop()
+
+
 @unittest.skipUnless(HAVE_GST, "GStreamer fehlt")
 class Mischpult(unittest.TestCase):
+    def test_multistream_einmal_kodiert(self):
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, [{"key": "a", "type": "test"}], {"mic": {"type": "test"}},
+                {"a": (0, 0, 1280, 720, 1)}, {})
+        try:
+            d = tempfile.mkdtemp()
+            time.sleep(0.6)
+            enc = m.start_live({"twitch": f"file://{d}/t.flv", "kick": f"file://{d}/k.flv",
+                                "custom": "rtmp://127.0.0.1:9/app/key"}, 2000)
+            self.assertEqual(sorted(enc.senders), ["custom", "kick", "twitch"])
+            ended = {}
+            t = time.time()
+            while time.time() - t < 3:
+                for key, err, _ in m.poll():
+                    ended[key] = err
+                time.sleep(0.05)
+            self.assertIn("custom", ended)                     # ein Ziel bricht ab …
+            self.assertEqual(sorted(enc.senders), ["kick", "twitch"])   # … die anderen senden weiter
+            health = enc.health()
+            self.assertEqual(health["kick"][0], "gut")              # Datei schreibt schnell genug
+            m.stop_output("live")
+            t = time.time()
+            while m.outputs and time.time() - t < 10:
+                for key, err, _ in m.poll():
+                    ended[key] = err
+                time.sleep(0.05)
+            self.assertFalse(m.outputs)
+            self.assertEqual(ended.get("kick"), "")
+            for name in ("t.flv", "k.flv"):
+                self.assertGreater(os.path.getsize(os.path.join(d, name)), 20000, name)
+        finally:
+            m.stop()
+
     def test_aufnahme_und_abgebrochener_stream(self):
         m = engine.Mixer()
         m.build({"canvas": "720p30"}, [{"key": "a", "type": "test"}, {"key": "b", "type": "test", "pattern": "ball"}],
@@ -228,3 +291,117 @@ class Abbild(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Elgato(unittest.TestCase):
+    """Capture-Karten: bestes Format fest einstellen, Karten ohne Treiber erkennen."""
+
+    def test_format_auswahl(self):
+        from gibeon_studio import geraete
+        hd60x = [{"format": "YUYV", "width": 1920, "height": 1080, "fps": 60.0},
+                 {"format": "NV12", "width": 1920, "height": 1080, "fps": 60.0},
+                 {"format": "NV12", "width": 3840, "height": 2160, "fps": 30.0},
+                 {"format": "P010", "width": 3840, "height": 2160, "fps": 60.0}]
+        self.assertEqual(geraete.pick_capture_mode(hd60x), {"format": "NV12", "width": 1920, "height": 1080, "fps": 60.0})
+        camlink = [{"format": "NV12", "width": 3840, "height": 2160, "fps": 29.97},
+                   {"format": "YUYV", "width": 1920, "height": 1080, "fps": 59.94}]
+        self.assertEqual(geraete.pick_capture_mode(camlink)["fps"], 59.94)
+        self.assertIsNone(geraete.pick_capture_mode([]))
+
+    def test_caps(self):
+        self.assertEqual(engine.mode_caps({"format": "NV12", "width": 1920, "height": 1080, "fps": 59.94}),
+                         " ! video/x-raw,format=NV12,width=1920,height=1080,framerate=60000/1001")
+        self.assertIn("image/jpeg", engine.mode_caps({"format": "MJPG", "width": 1920, "height": 1080, "fps": 60}))
+        self.assertIn("format=YUY2", engine.video_source({"type": "video", "device": "/dev/video3",
+                                                          "mode": {"format": "YUYV", "width": 1920, "height": 1080, "fps": 60}}))
+
+    def test_karte_ohne_treiber(self):
+        from gibeon_studio import geraete
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            usb = root / "bus/usb/devices/2-1"
+            usb.mkdir(parents=True)
+            (usb / "idVendor").write_text("0fd9\n")
+            (usb / "product").write_text("Game Capture HD60 S\n")
+            deck = root / "bus/usb/devices/2-2"                 # Stream Deck: kein Capture-Gerät
+            deck.mkdir(parents=True)
+            (deck / "idVendor").write_text("0fd9\n")
+            (deck / "product").write_text("Stream Deck MK.2\n")
+            pci = root / "bus/pci/devices/0000:05:00.0"
+            pci.mkdir(parents=True)
+            (pci / "vendor").write_text("0x1cfa\n")
+            (pci / "device").write_text("0x000e\n")
+            (root / "class/video4linux").mkdir(parents=True)
+            with mock.patch.object(geraete, "SYS", root):
+                msgs = geraete.unsupported()
+        self.assertEqual(len(msgs), 2)
+        self.assertTrue(msgs[0].startswith("Game Capture HD60 S:"))
+        self.assertIn("4K60 Pro MK.2", msgs[1])
+
+
+@unittest.skipUnless(HAVE_MIX, "GStreamer fehlt")
+class FesteEinstellung(unittest.TestCase):
+    def test_rueckfall_ohne_format(self):
+        f = engine.Feeder("k", {"type": "video", "device": "/dev/video-nicht-da",
+                                "mode": {"format": "NV12", "width": 1920, "height": 1080, "fps": 60}}, None, (1280, 720, 30))
+        try:
+            for _ in range(20):
+                f.poll()
+                if f.no_mode:
+                    break
+                time.sleep(0.05)
+            self.assertTrue(f.no_mode)            # klappt nicht → nochmal ohne feste Einstellung
+        finally:
+            f.stop()
+
+
+class StreamDeck(unittest.TestCase):
+    """Deck-Tasten für Studio: Befehle, Beispielseite, Umstellung der alten OBS-Seite."""
+
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "deck"))
+
+    def test_befehle(self):
+        from creative_deck import studio
+        self.assertEqual(studio.command("szene", "Pause"), "szene Pause")
+        self.assertEqual(studio.command("mikrofon"), "stumm mic")
+        self.assertEqual(studio.command("live"), "live")
+        with self.assertRaises(studio.StudioError):
+            studio.command("szene", "")
+
+    def test_studio_antwortet(self):
+        import socket
+        import threading
+        from creative_deck import studio
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": d}):
+            srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            srv.bind(studio.socket_path())
+            srv.listen(1)
+            got = []
+
+            def serve():
+                c, _ = srv.accept()
+                got.append(c.recv(100).decode())
+                c.sendall(b"fehler Die Szene gibt es nicht\n")
+                c.close()
+            t = threading.Thread(target=serve)
+            t.start()
+            with self.assertRaises(studio.StudioError) as cm:
+                studio.run("szene", "Gibtsnicht", start=False)
+            t.join(2)
+            srv.close()
+        self.assertEqual(got, ["szene Gibtsnicht\n"])
+        self.assertIn("gibt es nicht", str(cm.exception))
+
+    def test_alte_obs_seite_wird_studio(self):
+        from creative_deck import config
+        cfg = config.default_config()
+        cfg["seiten"][1] = {"name": "OBS", "tasten": config.old_obs_page()}
+        cfg["seiten"][0]["tasten"]["4"]["text"] = "OBS"
+        cfg = config._to_studio(cfg)
+        self.assertEqual(cfg["seiten"][1]["name"], "Studio")
+        self.assertEqual(cfg["seiten"][1]["tasten"]["1"]["aktion"], {"typ": "studio", "was": "live"})
+        self.assertEqual(cfg["seiten"][0]["tasten"]["4"]["text"], "Studio")
+        # selbst angepasste OBS-Seite bleibt, wie sie ist
+        cfg["seiten"][1] = {"name": "OBS", "tasten": {"0": config._key("X", "", {"typ": "obs", "was": "stream"})}}
+        self.assertEqual(config._to_studio(cfg)["seiten"][1]["name"], "OBS")

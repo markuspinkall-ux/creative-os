@@ -571,11 +571,12 @@ ApplicationWindow {
                     Flow {
                         width: parent.width
                         spacing: 6
-                        visible: ["medien", "lautstaerke", "obs", "helligkeit"].indexOf(win.act.typ) >= 0
+                        visible: ["medien", "lautstaerke", "obs", "studio", "helligkeit"].indexOf(win.act.typ) >= 0
                         Repeater {
                             model: win.act.typ === "medien" ? [["play-pause", "Abspielen/Pause"], ["weiter", "Nächster Titel"], ["zurueck", "Voriger Titel"], ["stopp", "Stopp"]]
                                  : win.act.typ === "lautstaerke" ? [["lauter", "Lauter"], ["leiser", "Leiser"], ["stumm", "Ton aus/an"]]
                                  : win.act.typ === "obs" ? [["aufnahme", "Aufnahme"], ["stream", "Stream"], ["pause", "Aufnahme pausieren"], ["replay", "Replay speichern"], ["replay-an", "Replay-Puffer"], ["szene", "Szene wechseln"], ["stumm", "Quelle stumm"]]
+                                 : win.act.typ === "studio" ? [["live", "Live gehen"], ["aufnahme", "Aufnahme"], ["szene", "Szene wechseln"], ["naechste", "Nächste Szene"], ["mikrofon", "Mikrofon stumm"], ["desktop", "Desktop-Ton stumm"]]
                                  : win.act.typ === "helligkeit" ? [["hoch", "Heller"], ["runter", "Dunkler"]] : []
                             delegate: Chip {
                                 required property var modelData
@@ -584,6 +585,13 @@ ApplicationWindow {
                                 onClicked: deck.setActionField("was", modelData[0])
                             }
                         }
+                    }
+                    Field {
+                        visible: win.act.typ === "studio" && win.act.was === "szene"
+                        width: parent.width
+                        placeholderText: "Name der Szene wie in Studio (oder 1, 2, 3 …)"
+                        text: win.act.name || ""
+                        onTextEdited: deck.setActionField("name", text)
                     }
                     Field {
                         visible: win.act.typ === "obs" && (win.act.was === "szene" || win.act.was === "stumm")
