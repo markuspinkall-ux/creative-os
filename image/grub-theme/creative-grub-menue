@@ -46,7 +46,14 @@ else
 $BEGIN
 # Startauswahl nur auf Esc. Ging ein Update-Start schief (greenboot-Zähler läuft ab),
 # erscheint sie von selbst, damit man die vorherige Version wählen kann.
-if [ -n "\${boot_counter}" ] && [ "\${boot_counter}" -lt 2 ]; then
+# (GRUB kennt keine verknüpften Bedingungen – deshalb zwei verschachtelte Abfragen.)
+set creative_auswahl=versteckt
+if [ -n "\${boot_counter}" ]; then
+    if [ "\${boot_counter}" -lt 2 ]; then
+        set creative_auswahl=zeigen
+    fi
+fi
+if [ "\${creative_auswahl}" = "zeigen" ]; then
     set timeout_style=menu
     set timeout=10
 else

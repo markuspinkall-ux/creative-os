@@ -31,7 +31,8 @@
       "Studio: Quellen jetzt links über dem schmaleren Chat (einklappbar); die Capture-Karte bleibt in der Szene gespeichert – auch wenn sie nach Neustart oder Umstecken eine andere Gerätenummer bekommt, und Studio verbindet sich beim Anstecken von selbst. Beim ersten Start mit Capture-Karte gibt es gleich eine fertige Szene „Capture-Karte“"
     ],
     "behoben": [
-      "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt"
+      "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt",
+      "Fehlermeldungen vor dem Systemstart („syntax error“, „Incorrect command“, „prohibited by secure boot policy“) beseitigt: die Startauswahl nutzte eine Schreibweise, die GRUB nicht kennt, und lud mit Secure Boot verbotene Zusatzmodule nach – verschwindet ab dem zweiten Start nach dem Update"
     ]
   },
   {

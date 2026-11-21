@@ -55,6 +55,13 @@ echo "Skript: ok (an, zweimal, aus, aus bleibt beim Start aus, wieder an)"
 export CREATIVE_GRUB_ZEIGEN="$W/etc/startauswahl-zeigen"
 sh image/grub-theme/creative-grub-menue
 grep -q "set timeout_style=hidden" "$BOOT/user.cfg" || { echo "FEHLER: Startauswahl nicht versteckt"; exit 1; }
+# GRUB-Syntax prüfen: echte Startfehler („syntax error“, „Incorrect command“) fallen hier auf
+grub2-script-check "$BOOT/user.cfg" || { echo "FEHLER: user.cfg hat GRUB-Syntaxfehler"; exit 1; }
+grub2-script-check image/netinstall/grub-theme/grub-snippet.cfg || { echo "FEHLER: ISO-Startmenü hat GRUB-Syntaxfehler"; exit 1; }
+! grep -v '^[[:space:]]*#' "$BOOT/user.cfg" | grep -qE '&&|\|\|' || { echo "FEHLER: GRUB kennt kein && oder ||"; exit 1; }
+# Secure Boot: auf UEFI keine Module von der Platte nachladen
+awk '/^[[:space:]]*#/{next} /grub_platform" != "efi"/{inside=1} inside&&/^    fi/{inside=0} /insmod|background_image/&&!inside{print; bad=1} END{exit bad}' image/grub-theme/grub-snippet.cfg \
+    || { echo "FEHLER: insmod/background_image auch bei UEFI (Secure Boot verbietet das)"; exit 1; }
 cp "$BOOT/user.cfg" "$W/user.versteckt"
 sh image/grub-theme/creative-grub-menue auto
 cmp "$BOOT/user.cfg" "$W/user.versteckt" || { echo "FEHLER: auto schreibt doppelt"; exit 1; }
