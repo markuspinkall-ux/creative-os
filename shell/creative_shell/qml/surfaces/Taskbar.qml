@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import Creative
 
 // Die Taskleiste: links Startmenü und Apps, Mitte „Gerade läuft“, rechts der Papierkorb.
@@ -7,6 +8,14 @@ Item {
     id: root
 
     property string screenName
+
+    // Fluid-Glas: KWin zeichnet den Hintergrund hinter der Leiste weich
+    function updateBlur() {
+        shell.setBlur(Window.window, [{ x: bar.x, y: bar.y, w: bar.width, h: bar.height, r: 0 }])
+    }
+    Component.onCompleted: Qt.callLater(updateBlur)
+    onWidthChanged: Qt.callLater(updateBlur)
+    onHeightChanged: Qt.callLater(updateBlur)
 
     // Fluid-Design: Glasleiste über die ganze Breite, bündig am unteren Rand,
     // oben eine feine Kante und darunter eine Lichtkante wie bei Glas.
@@ -19,17 +28,17 @@ Item {
         }
         height: 52
         radius: 0
-        color: Theme.bar
+        color: shell.blurAvailable ? Theme.glass : Theme.glassSolid
 
         Rectangle {
             anchors { left: parent.left; right: parent.right; top: parent.top }
             height: 1
-            color: Theme.hairline
+            color: Theme.glassEdge
         }
         Rectangle {
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 1 }
             height: 1
-            color: Qt.rgba(1, 1, 1, Theme.light ? 0.85 : 0.10)
+            color: Theme.glassShine
         }
 
         // Klick auf freie Fläche schließt offene Menüs

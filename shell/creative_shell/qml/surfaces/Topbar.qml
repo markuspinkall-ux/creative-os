@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import Creative
 
 // Obere Leiste (Fluid-Design): links der Tray – WLAN, Ton, Bluetooth, Tastatur und die
@@ -9,20 +10,31 @@ Item {
 
     property string screenName
 
+    // Fluid-Glas: nur unter den beiden Feldern weichzeichnen
+    function updateBlur() {
+        shell.setBlur(Window.window, [
+            { x: left.x, y: left.y, w: left.width, h: left.height, r: 17 },
+            { x: right.x, y: right.y, w: right.width, h: right.height, r: 17 }
+        ])
+    }
+    Component.onCompleted: Qt.callLater(updateBlur)
+    onWidthChanged: Qt.callLater(updateBlur)
+
     // Glas-Feld: durchscheinend, feine Kante, Lichtkante oben
     component Pill: Rectangle {
         property bool lit: false
         height: 34
         radius: 17
-        color: lit ? Qt.rgba(Theme.bar.r, Theme.bar.g, Theme.bar.b, 0.98) : Theme.bar
-        border.color: Theme.light ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.12)
+        readonly property color base: shell.blurAvailable ? Theme.glass : Theme.glassSolid
+        color: lit ? Qt.rgba(base.r, base.g, base.b, Math.min(1, base.a + 0.18)) : base
+        border.color: Theme.glassEdge
         border.width: 1
         Rectangle {
             x: parent.radius
             y: 1
             width: parent.width - 2 * parent.radius
             height: 1
-            color: Qt.rgba(1, 1, 1, Theme.light ? 0.95 : 0.18)
+            color: Theme.glassShine
         }
     }
 
@@ -38,6 +50,7 @@ Item {
         x: 14
         y: 10
         width: leftRow.implicitWidth + 28
+        onWidthChanged: Qt.callLater(root.updateBlur)
         lit: leftMouse.containsMouse || shell.quickPanelOpenOn === root.screenName
 
         MouseArea {
@@ -294,6 +307,8 @@ Item {
         anchors.rightMargin: 14
         y: 10
         width: rightRow.implicitWidth + 28
+        onWidthChanged: Qt.callLater(root.updateBlur)
+        onXChanged: Qt.callLater(root.updateBlur)
         lit: rightMouse.containsMouse
 
         MouseArea {

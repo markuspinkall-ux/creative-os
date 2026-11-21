@@ -24,6 +24,12 @@ QtObject {
     readonly property color raised: light ? "#eef1f6" : "#232836"
     readonly property color bar: light ? Qt.rgba(1, 1, 1, 0.86) : Qt.rgba(26 / 255, 30 / 255, 38 / 255, 0.94)
     readonly property color track: light ? "#cdd5e2" : "#3a4252"
+    // Fluid-Glas: durchscheinend; KWin zeichnet den Hintergrund dahinter weich.
+    // Ohne Weichzeichnen (glassSolid) etwas dichter, damit Schrift lesbar bleibt.
+    readonly property color glass: light ? Qt.rgba(1, 1, 1, 0.52) : Qt.rgba(28 / 255, 33 / 255, 46 / 255, 0.50)
+    readonly property color glassSolid: light ? Qt.rgba(1, 1, 1, 0.82) : Qt.rgba(26 / 255, 30 / 255, 40 / 255, 0.86)
+    readonly property color glassEdge: light ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.13)
+    readonly property color glassShine: light ? Qt.rgba(1, 1, 1, 0.95) : Qt.rgba(1, 1, 1, 0.20)
 
     // Schrift: eine einheitliche Farbe (Graphit: weiß-blau, Porzellan: dunkles Blaugrau)
     readonly property color text: light ? "#1c2433" : "#dce6ff"

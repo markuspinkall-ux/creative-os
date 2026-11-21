@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
@@ -10,7 +11,13 @@ Item {
     property string screenName
 
     // Wird beim Öffnen aufgerufen
+    // Fluid-Glas unter dem Menü
+    function updateBlur() {
+        shell.setBlur(Window.window, [{ x: menu.x, y: menu.y, w: menu.width, h: menu.height, r: menu.radius }])
+    }
+
     function opened() {
+        Qt.callLater(updateBlur)
         apps.closeFolder()
         search.text = ""
         powerMenu.visible = false
@@ -45,8 +52,9 @@ Item {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 10
         radius: 30
-        color: Theme.surface
-        border.color: Theme.light ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.14)
+        color: shell.blurAvailable ? Qt.rgba(Theme.glass.r, Theme.glass.g, Theme.glass.b, Theme.light ? 0.62 : 0.62)
+                                   : Theme.glassSolid
+        border.color: Theme.glassEdge
         border.width: 1
 
         Rectangle {
@@ -54,12 +62,10 @@ Item {
             y: 1
             width: menu.width - 2 * menu.radius
             height: 1
-            color: Qt.rgba(1, 1, 1, Theme.light ? 0.95 : 0.22)
+            color: Theme.glassShine
         }
-        // leicht durchsichtig wie die Taskleiste (als Ganzes, damit Fußleiste und Fläche gleich wirken)
-        layer.enabled: true
-        layer.smooth: true
-        opacity: Theme.bar.a
+        // Fluid-Glas: durchscheinend, KWin zeichnet den Hintergrund dahinter weich
+        onHeightChanged: Qt.callLater(root.updateBlur)
 
         TextField {
             id: search
@@ -84,7 +90,7 @@ Item {
             selectByMouse: true
             background: Rectangle {
                 radius: 21
-                color: Theme.ground
+                color: Qt.rgba(Theme.ground.r, Theme.ground.g, Theme.ground.b, 0.55)
                 border.color: Theme.accent
                 border.width: 1.5
             }
@@ -628,7 +634,7 @@ Item {
             anchors.margins: 1
             height: 56
             radius: menu.radius - 1
-            color: Theme.footer
+            color: "transparent"
 
             // eckige Oberkante, runde Unterkante
             Rectangle {
@@ -636,7 +642,7 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: parent.radius
-                color: Theme.footer
+                color: "transparent"
             }
             Divider {
                 anchors.left: parent.left

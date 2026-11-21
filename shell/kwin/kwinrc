@@ -9,6 +9,12 @@ Meta=org.creativeos.Shell,/Shell,org.creativeos.Shell,toggleStartMenu
 creative-tasksEnabled=true
 # Maximierte Fenster: kleiner Abstand rundum (auch zur Taskleiste) und runde Ecken
 creative-abstandEnabled=true
+# Fluid-Glas: Hintergrund hinter Leisten und Startmenü weichzeichnen
+blurEnabled=true
+
+[Effect-blur]
+BlurStrength=10
+NoiseStrength=0
 
 [org.kde.kdecoration2]
 # Fensterrahmen: KWin-Standard (Breeze, sauber gezeichnet) in Graphit-Farben aus kdeglobals.

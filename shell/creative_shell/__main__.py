@@ -19,6 +19,7 @@ from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuickControls2 import QQuickStyle
 
 from . import config
+from . import glas
 from .apps import AppModel
 from .brightness import BrightnessModel
 from .volume import VolumeModel
@@ -542,6 +543,13 @@ class ShellController(QObject):
     # Widgets mit gedrückter Maustaste auf einen anderen Monitor ziehen: Während des Ziehens zeigt
     # der Zielmonitor einen Umriss („Geist“), beim Loslassen wandert das Widget dorthin.
     widgetGhost = Property("QVariantMap", lambda self: dict(self._widget_ghost), notify=widgetGhostChanged)
+
+    # Fluid-Glas: KWin zeichnet hinter Leisten und Startmenü weich (siehe glas.py)
+    blurAvailable = Property(bool, lambda self: glas.available(), constant=True)
+
+    @Slot(QObject, "QVariantList")
+    def setBlur(self, window, rects):
+        glas.set_blur(window, rects)
 
     @Slot("QVariantMap")
     def setWidgetGhost(self, ghost):
