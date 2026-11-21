@@ -43,8 +43,9 @@ pods = Podcasts(episodes_dir())
 engine = QQmlApplicationEngine()
 engine.addImportPath(str(ROOT / "shell" / "creative_shell" / "qml"))
 ctx = engine.rootContext()
-for k, v in dict(settings=settings, music=LibraryModel("music"), videos=LibraryModel("video"), iptv=IptvModel(settings),
-                 ytmusic=ytm, podcasts=pods, nowplaying=NowPlayingWriter(), startFiles=[], webEngineAvailable=True).items():
+KEEP = dict(settings=settings, music=LibraryModel("music"), videos=LibraryModel("video"), iptv=IptvModel(settings),
+            ytmusic=ytm, podcasts=pods, nowplaying=NowPlayingWriter(), startFiles=[], webEngineAvailable=True)
+for k, v in KEEP.items():       # Verweise behalten, sonst räumt Python die Objekte weg
     ctx.setContextProperty(k, v)
 engine.load(QUrl.fromLocalFile(str(ROOT / "media" / "creative_media" / "qml" / "Main.qml")))
 if not engine.rootObjects():

@@ -28,6 +28,7 @@ WebEngineView {
         "if(bar&&!t){var te=bar.querySelector('.title');t=te?(te.getAttribute('title')||te.textContent||'').trim():'';}" +
         "if(bar&&!ar){var be=bar.querySelector('.byline');ar=be?((be.getAttribute('title')||be.textContent||'').split('•')[0]).trim():'';}" +
         "if(bar&&!art){var im=bar.querySelector('img');art=im?im.src:'';}" +
+        "if(art&&!/ytimg|googleusercontent|ggpht|\\.(jpe?g|png|webp)/i.test(art))art='';" +
         "var pl=!!(v&&!v.paused&&!v.ended);" +
         // Werbung? (nur erkennen – sie läuft ganz normal weiter)
         "var mp=document.querySelector('#movie_player');" +
