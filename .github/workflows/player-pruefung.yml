@@ -1,0 +1,37 @@
+name: Player prüfen
+# YouTube Music (eigene Kacheln/Suche über die offizielle Seite) und Podcasts im Player, mit Fotos.
+# Fotos landen im Branch „player-fotos“.
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [media/**, tools/player-vorschau.py, .github/workflows/player-pruefung.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: player-pruefung-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation \
+            libnss3 libxcomposite1 libxdamage1 libxrandr2 libxkbfile1 libxtst6 libasound2t64 gstreamer1.0-plugins-good
+          pip install -q PySide6
+      - name: Player starten, YouTube Music und Podcasts
+        env:
+          QT_QUICK_BACKEND: software
+        run: |
+          mkdir -p player-fotos
+          timeout 180 python3 tools/player-vorschau.py player-fotos
+      - name: Ablegen
+        if: always()
+        run: |
+          cd player-fotos && git init -q -b player-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" player-fotos

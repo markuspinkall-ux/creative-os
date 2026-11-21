@@ -110,7 +110,7 @@ jobs:
             case "$path" in
               # Diese beiden Build-Dateien ändern das Grundsystem nicht.
               .github/workflows/build.yml|image/install-app-update.sh) ;;
-              art/*|writer/*|podcast/*|magazin/*|tests/test_magazin.py|settings/creative_settings/*|settings/bin/creative-mariadb-setup|theme/apps/creative-apps-sync) ;;
+              art/*|writer/*|magazin/*|tests/test_magazin.py|settings/creative_settings/*|settings/bin/creative-mariadb-setup|theme/apps/creative-apps-sync) ;;
               *) echo "$path erfordert einen vollständigen Build."; exit 0 ;;
             esac
           done < "$RUNNER_TEMP/app-update-paths"
@@ -145,7 +145,7 @@ jobs:
             -t localhost/creative-os:${{ matrix.variant }}-build \
             .
 
-      - name: Art, Writer, Podcast und Magazin im fertigen Abbild prüfen
+      - name: Art, Writer und Magazin im fertigen Abbild prüfen
         timeout-minutes: 2
         run: |
           # Ein eigener Job-Schritt zeigt Fehler der Laufzeit und des Programms getrennt vom Abbildbau.
@@ -161,8 +161,7 @@ jobs:
               /usr/bin/creative-claude --selftest
               /usr/bin/creative-software --selftest
               echo "Starte Orbit-Magazin-Selbsttest"
-              /usr/bin/creative-magazin --selftest
-              exec /usr/bin/creative-podcast --selftest
+              exec /usr/bin/creative-magazin --selftest
             '; then
             echo "App-Selbsttests bestanden"
           else

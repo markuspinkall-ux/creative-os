@@ -1,10 +1,14 @@
-"""YouTube Music im Player – über die offizielle Webseite.
+"""YouTube Music im Player – über die offizielle Webseite, mit eigener Oberfläche.
 
-Abgespielt wird ausschließlich im offiziellen YouTube-Music-Player
-(music.youtube.com, eingebettet). Es wird nichts heruntergeladen und keine
-inoffizielle Schnittstelle benutzt. Die Favoriten sind Lesezeichen: Titel,
-Interpret, Vorschaubild und die Video-ID, damit ein Klick das Lied wieder im
-offiziellen Player öffnet.
+Abgespielt wird ausschließlich im offiziellen YouTube-Music-Player (music.youtube.com,
+eingebettet, unsichtbar im Hintergrund). Es wird nichts heruntergeladen, keine Werbung
+unterdrückt und keine inoffizielle Schnittstelle benutzt.
+
+Zwei unsichtbare Webansichten mit derselben Anmeldung:
+  Player – spielt das Lied (Werbung ist zu hören, das Video wird nicht gezeigt)
+  Daten  – öffnet Startseite, Charts und Suche und liest die angezeigten Kacheln/Treffer aus,
+           damit der Player sie als eigene Kacheln und Liste zeigen kann (ohne Ton)
+Die Favoriten sind Lesezeichen: Titel, Interpret, Vorschaubild und Adresse.
 """
 
 import json
@@ -74,9 +78,20 @@ class YtMusicModel(QAbstractListModel):
     openUrl = Signal(str)            # → Webansicht lädt diese Seite
     command = Signal(str)            # → Webansicht: play | pause | toggle | next | prev | stop
 
+    browse = Signal(str)             # → Datenansicht lädt diese Seite (Startseite, Charts, Suche)
+    listsChanged = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._favs = load_favorites()
+        self._shelves = []           # Startseite/Charts: [{title, items: [{title, subtitle, thumb, url}]}]
+        self._results = []           # Suchtreffer: [{title, subtitle, thumb, url, videoId}]
+        self._view = "home"          # home | charts | search
+        self._query = ""
+        self._loading = False
+        self._consent = False        # Google-Zustimmungsseite / Anmeldung nötig
+        self._last_url = ""          # zuletzt gewünschte Seite für den Player (falls er erst entsteht)
+        self._last_browse = ""
         self._now = {}               # gerade laufendes Lied (von der Webseite gemeldet)
         self._playing = False
         self._autoplay = False
@@ -135,17 +150,17 @@ class YtMusicModel(QAbstractListModel):
     @Slot(str)
     def playFavorite(self, vid):
         self._autoplay = False
-        self.openUrl.emit(watch_url(vid))
+        self._go(watch_url(vid))
 
     @Slot(str)
     def search(self, query):
         self._autoplay = False
-        self.openUrl.emit(search_url(query))
+        self._go(search_url(query))
 
     def search_and_play(self, query):
         """Sprachassistent: suchen und das erste Ergebnis im offiziellen Player starten."""
         self._autoplay = True
-        self.openUrl.emit(search_url(query))
+        self._go(search_url(query))
 
     @Slot(result=bool)
     def takeAutoplay(self):
@@ -157,11 +172,93 @@ class YtMusicModel(QAbstractListModel):
         """Die Webseite meldet alle 2 s, was gerade läuft (Titel, Interpret, Bild)."""
         info = dict(info or {})
         now = {"title": info.get("title") or "", "artist": info.get("artist") or "",
-               "thumb": info.get("thumb") or "", "videoId": info.get("videoId") or ""}
+               "thumb": info.get("thumb") or "", "videoId": info.get("videoId") or "",
+               "ad": bool(info.get("ad")), "skip": bool(info.get("skip")),
+               "pos": float(info.get("pos") or 0), "dur": float(info.get("dur") or 0)}
         playing = bool(info.get("playing"))
         if now != self._now or playing != self._playing:
             self._now, self._playing = now, playing
             self.changed.emit()
+
+    def _go(self, url):
+        self._last_url = url
+        self.openUrl.emit(url)
+
+    def _browse(self, url):
+        self._last_browse = url
+        self.browse.emit(url)
+
+    # ---- eigene Oberfläche: Kacheln, Suche, Abspielen ---------------------------------------------
+    @Slot()
+    def loadHome(self):
+        self._view, self._loading = "home", True
+        self.listsChanged.emit()
+        self._browse(HOME)
+
+    @Slot()
+    def loadCharts(self):
+        self._view, self._loading = "charts", True
+        self.listsChanged.emit()
+        self._browse(CHARTS)
+
+    @Slot(str)
+    def find(self, query):
+        query = query.strip()
+        if not query:
+            return
+        self._view, self._query, self._loading, self._results = "search", query, True, []
+        self.listsChanged.emit()
+        self._browse(search_url(query))
+
+    @Slot("QVariantList")
+    def receiveShelves(self, shelves):
+        """Datenansicht: Kachelreihen der Startseite/Charts (aus der offiziellen Seite gelesen)."""
+        out = []
+        for sh in shelves or []:
+            items = [dict(i) for i in (sh.get("items") or []) if i.get("url") and i.get("title")]
+            if items:
+                out.append({"title": sh.get("title") or "", "items": items[:20]})
+        self._shelves, self._loading = out, False
+        self.listsChanged.emit()
+
+    @Slot("QVariantList")
+    def receiveResults(self, results):
+        seen, out = set(), []
+        for r in results or []:
+            if r.get("url") and r.get("title") and r["url"] not in seen:
+                seen.add(r["url"])
+                out.append(dict(r))
+        self._results, self._loading = out[:60], False
+        self.listsChanged.emit()
+
+    @Slot(bool)
+    def setConsent(self, needed):
+        if needed != self._consent:
+            self._consent = needed
+            self.listsChanged.emit()
+
+    @Slot(str)
+    def playUrl(self, url):
+        """Kachel oder Treffer abspielen (Lied, Playlist, Album – im offiziellen Player)."""
+        if url:
+            self._autoplay = "watch?" not in url      # Album/Künstler: dort auf „Abspielen“ drücken
+            self._go(url)
+
+    @Slot("QVariantMap")
+    def toggleFavorite(self, item):
+        vid = item.get("videoId") or ""
+        if not vid:
+            return
+        if self._is_fav(vid):
+            self.removeFavorite(vid)
+            return
+        self.beginInsertRows(QModelIndex(), 0, 0)
+        self._favs.insert(0, {"title": item.get("title", ""), "artist": item.get("subtitle", "") or item.get("artist", ""),
+                              "thumb": item.get("thumb", ""), "videoId": vid, "duration": ""})
+        self.endInsertRows()
+        save_favorites(self._favs)
+        self.changed.emit()
+        self.listsChanged.emit()
 
     @Slot(str)
     def send(self, cmd):
@@ -177,3 +274,17 @@ class YtMusicModel(QAbstractListModel):
     nowVideo = Property(str, lambda self: self._now.get("videoId", ""), notify=changed)
     playing = Property(bool, lambda self: self._playing, notify=changed)
     currentFavorite = Property(bool, lambda self: self._is_fav(self._now.get("videoId", "")), notify=changed)
+    lastUrl = Property(str, lambda self: self._last_url, notify=changed)
+    lastBrowse = Property(str, lambda self: self._last_browse, notify=listsChanged)
+    adPlaying = Property(bool, lambda self: bool(self._now.get("ad")), notify=changed)
+    canSkip = Property(bool, lambda self: bool(self._now.get("skip")), notify=changed)
+    position = Property(float, lambda self: self._now.get("pos", 0.0), notify=changed)
+    duration = Property(float, lambda self: self._now.get("dur", 0.0), notify=changed)
+    shelves = Property("QVariantList", lambda self: self._shelves, notify=listsChanged)
+    results = Property("QVariantList", lambda self: self._results, notify=listsChanged)
+    view = Property(str, lambda self: self._view, notify=listsChanged)
+    query = Property(str, lambda self: self._query, notify=listsChanged)
+    loading = Property(bool, lambda self: self._loading, notify=listsChanged)
+    needsConsent = Property(bool, lambda self: self._consent, notify=listsChanged)
+    favorites = Property("QVariantList", lambda self: [dict(f, url=watch_url(f["videoId"]), subtitle=f.get("artist", ""))
+                                                       for f in self._favs], notify=changed)

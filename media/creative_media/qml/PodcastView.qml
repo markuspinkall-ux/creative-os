@@ -1,55 +1,14 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import QtMultimedia
 import Creative
 
-ApplicationWindow {
-    id: window
-    width: 1020
-    height: 670
-    minimumWidth: 740
-    minimumHeight: 460
-    visible: true
-    color: Theme.ground
-    title: "Podcast"
-
-    required property QtObject podcasts
+// Podcasts im Player (früher eigene App): Entdecken, Abos, Downloads.
+// Abgespielt wird über die Wiedergabeleiste des Players.
+Item {
+    id: root
+    property var host: null
     property string section: "discover"
-    property var queue: []
-    property int current: -1
-    readonly property string nowPlaying: current >= 0 ? queue[current].title : ""
-    readonly property bool playing: player.playbackState === MediaPlayer.PlayingState
-
-    function start(episodes, index) {
-        if (index < 0 || index >= episodes.length)
-            return
-        queue = episodes
-        current = index
-        playbackError.text = ""
-        player.stop()
-        player.source = podcasts.playbackUrl(queue[current])
-        player.play()
-    }
-
-    function time(ms) {
-        const seconds = Math.floor(ms / 1000)
-        const minutes = Math.floor(seconds / 60)
-        return minutes + ":" + String(seconds % 60).padStart(2, "0")
-    }
-
-    MediaPlayer {
-        id: player
-        audioOutput: AudioOutput {}
-        onMediaStatusChanged: {
-            if (mediaStatus === MediaPlayer.EndOfMedia)
-                window.start(window.queue, window.current + 1)
-        }
-        onErrorOccurred: (error, errorString) => {
-            if (error !== MediaPlayer.NoError)
-                playbackError.text = "Wiedergabe fehlgeschlagen: " + errorString
-        }
-    }
 
     component Heading: Label {
         color: Theme.text
@@ -70,32 +29,32 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
+        anchors.margins: 24
         spacing: 12
 
         RowLayout {
             Layout.fillWidth: true
-            Heading { text: "Podcast"; Layout.fillWidth: true }
+            Heading { text: "Podcasts"; Layout.fillWidth: true }
             CButton {
                 text: "Entdecken"
-                primary: window.section === "discover"
-                onClicked: window.section = "discover"
+                primary: root.section === "discover"
+                onClicked: root.section = "discover"
             }
             CButton {
                 text: "Abos"
-                primary: window.section === "following"
-                onClicked: window.section = "following"
+                primary: root.section === "following"
+                onClicked: root.section = "following"
             }
             CButton {
                 text: "Downloads"
-                primary: window.section === "offline"
-                onClicked: window.section = "offline"
+                primary: root.section === "offline"
+                onClicked: root.section = "offline"
             }
         }
 
         RowLayout {
             Layout.fillWidth: true
-            visible: window.section === "discover"
+            visible: root.section === "discover"
             TextField {
                 id: searchField
                 Layout.fillWidth: true
@@ -123,7 +82,7 @@ ApplicationWindow {
         }
 
         RowLayout {
-            visible: window.section === "discover"
+            visible: root.section === "discover"
             Repeater {
                 model: ["Nachrichten", "Wissen", "Comedy", "Gaming", "Sport"]
                 CButton {
@@ -153,7 +112,7 @@ ApplicationWindow {
                 Layout.preferredWidth: 270
                 Layout.minimumWidth: 205
                 Layout.fillHeight: true
-                visible: window.section !== "offline"
+                visible: root.section !== "offline"
                 color: Theme.surface
                 radius: Theme.radiusMenu
 
@@ -163,7 +122,7 @@ ApplicationWindow {
                     anchors.margins: 10
                     clip: true
                     spacing: 4
-                    model: window.section === "following" ? podcasts.following : podcasts.catalogue
+                    model: root.section === "following" ? podcasts.following : podcasts.catalogue
                     ScrollBar.vertical: ScrollBar {}
                     delegate: ItemDelegate {
                         id: showRow
@@ -189,7 +148,7 @@ ApplicationWindow {
                     Hint {
                         anchors.centerIn: parent
                         visible: shows.count === 0
-                        text: window.section === "following" ? "Du folgst noch keinem Podcast." : "Wähle ein Thema oder suche."
+                        text: root.section === "following" ? "Du folgst noch keinem Podcast." : "Wähle ein Thema oder suche."
                     }
                 }
             }
@@ -208,16 +167,16 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Heading {
                             Layout.fillWidth: true
-                            text: window.section === "offline" ? "Offline hören" : (podcasts.selected.title || "Folgen")
+                            text: root.section === "offline" ? "Offline hören" : (podcasts.selected.title || "Folgen")
                         }
                         CButton {
-                            visible: window.section !== "offline" && !!podcasts.selected.url
+                            visible: root.section !== "offline" && !!podcasts.selected.url
                             enabled: !podcasts.loading
                             text: podcasts.followed ? "Entfolgen" : "Folgen"
                             onClicked: podcasts.toggleFollow()
                         }
                         CButton {
-                            visible: window.section !== "offline" && !!podcasts.selected.url
+                            visible: root.section !== "offline" && !!podcasts.selected.url
                             enabled: !podcasts.loading
                             text: "Aktualisieren"
                             onClicked: podcasts.openShow(podcasts.selected)
@@ -230,7 +189,7 @@ ApplicationWindow {
                         Layout.fillHeight: true
                         clip: true
                         spacing: 4
-                        model: window.section === "offline" ? podcasts.offline : podcasts.playlist
+                        model: root.section === "offline" ? podcasts.offline : podcasts.playlist
                         ScrollBar.vertical: ScrollBar {}
                         delegate: Rectangle {
                             id: episodeRow
@@ -241,7 +200,7 @@ ApplicationWindow {
                             width: ListView.view.width - 8
                             height: 56
                             radius: Theme.radiusRow
-                            color: window.current >= 0 && window.queue[window.current].key === modelData.key
+                            color: root.host && root.host.nowKey === modelData.key
                                    ? Theme.raised : Theme.subtle
                             RowLayout {
                                 anchors.fill: parent
@@ -257,12 +216,12 @@ ApplicationWindow {
                                     }
                                     Hint {
                                         Layout.fillWidth: true
-                                        text: window.section === "offline" ? episodeRow.modelData.show : episodeRow.modelData.date
+                                        text: root.section === "offline" ? episodeRow.modelData.show : episodeRow.modelData.date
                                     }
                                 }
                                 CButton {
                                     text: "Abspielen"
-                                    onClicked: window.start(episodes.model, episodeRow.index)
+                                    onClicked: root.host.playPodcast(episodes.model, episodeRow.index)
                                 }
                                 CButton {
                                     text: episodeRow.downloading ? "Lädt …" : (episodeRow.downloaded ? "Löschen" : "Download")
@@ -280,7 +239,7 @@ ApplicationWindow {
                         Hint {
                             anchors.centerIn: parent
                             visible: episodes.count === 0
-                            text: window.section === "offline" ? "Keine Folgen heruntergeladen."
+                            text: root.section === "offline" ? "Keine Folgen heruntergeladen."
                                   : podcasts.selected.url ? "Keine Folgen verfügbar." : "Öffne einen Podcast für seine Playlist."
                         }
                     }
@@ -288,47 +247,5 @@ ApplicationWindow {
             }
         }
 
-        Hint {
-            id: playbackError
-            Layout.fillWidth: true
-            visible: text.length > 0
-            color: Theme.flame
-        }
-
-        Hint {
-            Layout.fillWidth: true
-            text: window.nowPlaying || "Keine Wiedergabe"
-            color: Theme.text
-            font.bold: true
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            CButton {
-                text: "Zurück"
-                enabled: window.current > 0
-                onClicked: window.start(window.queue, window.current - 1)
-            }
-            CButton {
-                text: window.playing ? "Pause" : "Play"
-                primary: true
-                enabled: window.current >= 0
-                onClicked: window.playing ? player.pause() : player.play()
-            }
-            CButton {
-                text: "Weiter"
-                enabled: window.current >= 0 && window.current + 1 < window.queue.length
-                onClicked: window.start(window.queue, window.current + 1)
-            }
-            Hint { text: window.time(player.position) }
-            Slider {
-                Layout.fillWidth: true
-                to: Math.max(1, player.duration)
-                value: player.position
-                enabled: player.seekable
-                onMoved: player.position = value
-            }
-            Hint { text: window.time(player.duration) }
-        }
     }
 }

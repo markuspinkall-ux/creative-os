@@ -22,7 +22,7 @@ done
 shot "einstellungen-neuerungen" /usr/bin/creative-settings --neuerungen
 shot "writer-beispiel" /usr/bin/creative-writer --beispiel
 for app in art writer cut ftp 3d software notes mail claude iso broadcast pictures \
-           taskmanager magazin podcast player calculator welcome files obs; do
+           taskmanager magazin player calculator welcome files obs; do
     bin="/usr/bin/creative-$app"
     [ -x "$bin" ] || bin="/usr/lib/creative-$app/creative-$app"
     shot "$app" "$bin"

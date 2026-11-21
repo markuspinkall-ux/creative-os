@@ -1,24 +1,18 @@
 import QtQuick
 import QtWebEngine
 
-// Die offizielle YouTube-Music-Webseite, eingebettet in den Player.
-// Anmeldung (z. B. YouTube Premium) bleibt gespeichert.
+// Die offizielle YouTube-Music-Webseite als Player (meist unsichtbar: man hört nur die Musik,
+// auch Werbung bleibt hörbar – das Video wird nicht gezeigt). Anmeldung bleibt gespeichert.
 WebEngineView {
     id: web
 
-    url: ytmusic.home
+    Component.onCompleted: url = ytmusic.lastUrl || ytmusic.home   // einmalig, keine Bindung (sonst Neuladen)
     backgroundColor: "#141a26"
     settings.playbackRequiresUserGesture: false
     settings.fullScreenSupportEnabled: true
     settings.localStorageEnabled: true
     settings.javascriptCanOpenWindows: false
 
-    profile: WebEngineProfile {
-        storageName: "creative-ytmusic"
-        offTheRecord: false
-        persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
-        httpCacheType: WebEngineProfile.DiskHttpCache
-    }
 
     // Was läuft gerade? (Titel, Interpret, Bild – für Herz und Favoriten)
     readonly property string nowJs: "(function(){" +
@@ -35,18 +29,29 @@ WebEngineView {
         "if(bar&&!ar){var be=bar.querySelector('.byline');ar=be?((be.getAttribute('title')||be.textContent||'').split('•')[0]).trim():'';}" +
         "if(bar&&!art){var im=bar.querySelector('img');art=im?im.src:'';}" +
         "var pl=!!(v&&!v.paused&&!v.ended);" +
+        // Werbung? (nur erkennen – sie läuft ganz normal weiter)
+        "var mp=document.querySelector('#movie_player');" +
+        "var ad=!!(mp&&mp.classList&&mp.classList.contains('ad-showing'))||!!document.querySelector('.ytp-ad-player-overlay,.ytp-ad-player-overlay-layout');" +
+        "var sk=document.querySelector('.ytp-ad-skip-button,.ytp-ad-skip-button-modern,.ytp-skip-ad-button');" +
+        "var skip=!!(sk&&sk.offsetParent!==null);" +
+        "var pos=v?v.currentTime:0,dur=v&&isFinite(v.duration)?v.duration:0;" +
         "if(!v){var pb=document.querySelector('#play-pause-button');var lb=pb?(pb.getAttribute('aria-label')||pb.getAttribute('title')||''):'';pl=/pause/i.test(lb);}" +
-        "return {title:t,artist:ar,thumb:art,videoId:id,playing:pl};})()"
+        "return {title:t,artist:ar,thumb:art,videoId:id,playing:pl,ad:ad,skip:skip,pos:pos,dur:dur};})()"
 
     function command(c) {
-        const js = {
+        let js = {
             play: "document.querySelector('video')&&document.querySelector('video').play()",
             pause: "document.querySelector('video')&&document.querySelector('video').pause()",
             stop: "document.querySelector('video')&&document.querySelector('video').pause()",
             toggle: "(function(){var b=document.querySelector('#play-pause-button');if(b)b.click();})()",
             next: "(function(){var b=document.querySelector('.next-button');if(b)b.click();})()",
-            prev: "(function(){var b=document.querySelector('.previous-button');if(b)b.click();})()"
+            prev: "(function(){var b=document.querySelector('.previous-button');if(b)b.click();})()",
+            // „Überspringen“ nur, wenn YouTube es anbietet – auf Wunsch der Person (Knopf im Player)
+            skip: "(function(){var b=document.querySelector('.ytp-ad-skip-button,.ytp-ad-skip-button-modern,.ytp-skip-ad-button');if(b)b.click();})()"
         }[c]
+        if (!js && c.indexOf("seek:") === 0)
+            js = "(function(){var v=document.querySelector('video');var mp=document.querySelector('#movie_player');" +
+                 "if(v&&!(mp&&mp.classList.contains('ad-showing')))v.currentTime=" + parseFloat(c.slice(5)) + ";})()"
         if (js)
             web.runJavaScript(js)
     }
@@ -54,6 +59,9 @@ WebEngineView {
     // Sprachassistent „spiel …“: erstes Suchergebnis im offiziellen Player starten
     property int autoTries: 0
     readonly property string firstResultJs: "(function(){" +
+        // Album/Playlist/Künstler: „Abspielen“ im Kopf der Seite; Suche: erster Treffer
+        "var p=document.querySelector('ytmusic-responsive-header-renderer ytmusic-play-button-renderer,ytmusic-detail-header-renderer ytmusic-play-button-renderer,ytmusic-immersive-header-renderer ytmusic-play-button-renderer,ytmusic-visual-header-renderer ytmusic-play-button-renderer');" +
+        "if(p){p.click();return true;}" +
         "var a=document.querySelector('ytmusic-card-shelf-renderer a[href*=\"watch?v=\"]')||" +
         "document.querySelector('ytmusic-shelf-renderer a[href*=\"watch?v=\"]');" +
         "if(a){a.click();return true;}return false;})()"

@@ -10,7 +10,7 @@ Alle von Gibeon OS selbst entwickelten Programme und Bestandteile stehen unter d
 
 Dazu gehören insbesondere Shell (Taskleiste, Startmenü, Schreibtisch, Ablage),
 Systemsteuerung, Browser, Broadcast, Capture, Deck, Player, Notes, Calculator,
-Pictures, Shots, Writer, Art, Cut, Mail, Magazin, Podcast, Iso, Taskmanager, Dateien,
+Pictures, Shots, Writer, Art, Cut, Mail, Magazin, Iso, Taskmanager, Dateien,
 Game Launcher, Widgets, Willkommens-Assistent, Benachrichtigungen, Datensicherung,
 Mein Server, die Gibeon-Symbole, Hintergrundbilder, das Graphit- und Porzellan-Design sowie
 die Bau- und Installations-Skripte.
