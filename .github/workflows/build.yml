@@ -74,6 +74,9 @@ jobs:
       - name: Mail – Nachrichten, Anhänge und Antworten prüfen
         run: python3 -m unittest tests/test_mail.py
 
+      - name: Android-Apps – Fenster-Vermittler (Rahmen, Tablet-Format) prüfen
+        run: python3 -m unittest tests/test_android.py tests/test_android_fenster.py
+
       - name: Update-Center – Fortschritt und Restzeit prüfen
         run: python3 -m unittest tests/test_updateprogress.py tests/test_neuerungen.py
 

@@ -1,0 +1,133 @@
+#!/usr/bin/python3 -I
+"""Android-Fenster – Größe einstellen (läuft über pkexec mit Administratorrechten).
+
+Der Fenster-Vermittler (gibeon-android-fenster) schreibt Befehle zeilenweise auf stdin:
+
+    tablet <paket>                    neues Fenster aufs Tablet-Querformat stellen
+    groesse <paket> <breite> <höhe>   Fenstergröße in Bildschirmpunkten (z. B. nach Maximieren)
+
+Mehr kann dieses Programm nicht: Es ändert nur die Größe von Android-Fenstern.
+"""
+
+import re
+import subprocess
+import sys
+
+PKG = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+$")
+SIZE = re.compile(r"(\d+)x(\d+)")
+TABLET_W = 0.72          # Anteil der Bildschirmbreite
+TABLET_MAX_H = 0.86      # höchstens dieser Anteil der Bildschirmhöhe
+MIN = 240
+
+# Sucht die Aufgabe (Task) der App in Androids Liste der letzten Apps.
+INFO = r"""pkg='%s'
+dumpsys activity recents 2>/dev/null | {
+  cur=""
+  while IFS= read -r l; do
+    case "$l" in
+      *"Task{"*)
+        cur=$(echo "$l" | sed -E 's/.*Task\{[0-9a-f]+ #([0-9]+).*/\1/')
+        case "$l" in *":$pkg "*|*":$pkg}"*) echo "@@task $cur"; break ;; esac ;;
+      *"realActivity="*"$pkg/"*|*"origActivity="*"$pkg/"*)
+        if [ -n "$cur" ]; then echo "@@task $cur"; break; fi ;;
+    esac
+  done
+}
+echo "@@size $(wm size | tail -n 1)"
+echo "@@scale $(getprop waydroid.display_scale)"
+echo "@@resizable $(settings get global force_resizable_activities)"
+"""
+
+
+def log(text):
+    print(text, flush=True)
+
+
+def shell(script, timeout=25):
+    try:
+        r = subprocess.run(["waydroid", "shell"], input=script, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as e:
+        log(f"waydroid shell: {e}")
+        return ""
+    return r.stdout
+
+
+def info(pkg):
+    out = shell(INFO % pkg)
+    task = size = None
+    scale = 1.0
+    resizable = False
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("@@task ") and line[7:].isdigit():
+            task = int(line[7:])
+        elif line.startswith("@@size "):
+            m = SIZE.search(line)
+            if m:
+                size = (int(m.group(1)), int(m.group(2)))
+        elif line.startswith("@@scale "):
+            try:
+                scale = float(line[8:]) or 1.0
+            except ValueError:
+                scale = 1.0
+        elif line.startswith("@@resizable "):
+            resizable = line[12:].strip() == "1"
+    return task, size, scale, resizable
+
+
+def bounds_tablet(w, h):
+    tw = int(w * TABLET_W)
+    th = tw * 10 // 16
+    if th > h * TABLET_MAX_H:
+        th = int(h * TABLET_MAX_H)
+        tw = th * 16 // 10
+    tw, th = min(tw, w), min(th, h)
+    return centered(w, h, tw, th)
+
+
+def bounds_size(w, h, pw, ph):
+    return centered(w, h, max(MIN, min(pw, w)), max(MIN, min(ph, h)))
+
+
+def centered(w, h, tw, th):
+    left, top = max(0, (w - tw) // 2), max(0, (h - th) // 2)
+    return left, top, left + tw, top + th
+
+
+def resize(pkg, want=None):
+    task, size, scale, resizable = info(pkg)
+    if task is None or size is None:
+        log(f"{pkg}: kein Android-Fenster gefunden")
+        return
+    if want is None:
+        b = bounds_tablet(*size)
+    else:
+        b = bounds_size(*size, round(want[0] * scale), round(want[1] * scale))
+    script = ""
+    if not resizable:     # sonst lassen sich viele Handy-Apps nicht größer ziehen
+        script += "settings put global force_resizable_activities 1\n"
+    script += "am task resize %d %d %d %d %d\n" % (task, *b)
+    out = shell(script).strip()
+    log(f"{pkg}: Aufgabe {task} → {b[2] - b[0]}×{b[3] - b[1]}" + (f" ({out})" if out else ""))
+
+
+def main():
+    for raw in sys.stdin:
+        parts = raw.split()
+        try:
+            if len(parts) == 2 and parts[0] == "tablet" and PKG.match(parts[1]):
+                resize(parts[1])
+            elif (len(parts) == 4 and parts[0] == "groesse" and PKG.match(parts[1])
+                  and parts[2].isdigit() and parts[3].isdigit()):
+                w, h = int(parts[2]), int(parts[3])
+                if 0 < w <= 20000 and 0 < h <= 20000:
+                    resize(parts[1], (w, h))
+            else:
+                log(f"unbekannter Befehl: {raw.strip()[:80]}")
+        except Exception as e:      # ein Fehler bei einer App darf den Rest nicht stoppen
+            log(f"Fehler: {e}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

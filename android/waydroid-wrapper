@@ -1,0 +1,15 @@
+#!/bin/sh
+# Gibeon OS: waydroid mit Fensterrahmen.
+# Startet ein Benutzer Android (Sitzung, App, Oberfläche), läuft das Bild über den Fenster-Vermittler
+# gibeon-android-fenster: Er gibt Android-Fenstern den normalen Gibeon-Rahmen und das Tablet-Format.
+# Abschalten in „Android-Apps“ → Einstellungen. Klappt etwas nicht, geht es ohne Vermittler weiter.
+REAL="@WAYDROID@"
+if [ "$(id -u)" -ne 0 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x /usr/libexec/gibeon-android-fenster ]; then
+    case "${1:-} ${2:-}" in
+        "session start"*|"app launch"*|show-full-ui*|first-launch*)
+            if disp=$(/usr/libexec/gibeon-android-fenster --ensure 2>/dev/null) && [ -n "$disp" ]; then
+                export WAYLAND_DISPLAY="$disp"
+            fi ;;
+    esac
+fi
+exec "$REAL" "$@"

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fenster-Vermittler für Android-Apps (Gibeon-Rahmen, Tablet-Format) – siehe gibeon_android/fenster.py
+export PYTHONPATH="/usr/lib/gibeon-android${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m gibeon_android.fenster "$@"

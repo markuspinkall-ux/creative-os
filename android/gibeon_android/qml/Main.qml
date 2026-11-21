@@ -317,6 +317,20 @@ Window {
                 Column {
                     width: parent.width
                     spacing: 12
+                    Text { text: "Fenster"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 16; font.bold: true }
+                    OptionRow {
+                        title: "Fensterrahmen wie bei allen Fenstern"
+                        text: "Android-Apps bekommen dieselbe Titelleiste wie alle anderen Fenster – mit Minimieren, Maximieren und Schließen. Die kleine Android-Leiste im Fenster bleibt zusätzlich. Gilt ab dem nächsten Start von Android."
+                        checked: android.frame
+                        onToggled: (v) => android.setFrame(v)
+                    }
+                    OptionRow {
+                        title: "Im Tablet-Format öffnen"
+                        text: "Neue Android-Fenster öffnen sich groß im Querformat wie auf einem Tablet statt schmal wie auf einem Handy. Apps, die nur hochkant gedacht sind, wirken dabei manchmal gestreckt."
+                        checked: android.tablet
+                        onToggled: (v) => android.setTablet(v)
+                    }
+                    Divider { width: parent.width }
                     InfoRow { label: "Grafik"; value: android.graphicsText; warn: android.graphics !== "hw" }
                     Row {
                         spacing: 8
@@ -412,6 +426,29 @@ Window {
             text: parent.value
             color: parent.warn ? Theme.flame : Theme.textMuted
             font.family: Theme.fontFamily; font.pixelSize: 12
+        }
+    }
+
+    component OptionRow: Row {
+        id: opt
+        property string title
+        property string text
+        property bool checked
+        signal toggled(bool value)
+        width: parent ? parent.width : 0
+        spacing: 16
+        Column {
+            width: parent.width - 16 - optSwitch.width
+            spacing: 3
+            Text { width: parent.width; text: opt.title; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true; wrapMode: Text.WordWrap }
+            Text { width: parent.width; text: opt.text; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; wrapMode: Text.WordWrap }
+        }
+        CSwitch {
+            id: optSwitch
+            anchors.verticalCenter: parent.verticalCenter
+            checked: opt.checked
+            label: opt.title
+            onToggled: (v) => opt.toggled(v)
         }
     }
 
