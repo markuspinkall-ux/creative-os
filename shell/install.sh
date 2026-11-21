@@ -34,9 +34,9 @@ rm -rf /usr/share/kwin/scripts/creative-tasks /usr/share/kwin/scripts/creative-a
 mkdir -p /usr/share/kwin/scripts
 cp -r kwin/creative-tasks kwin/creative-abstand /usr/share/kwin/scripts/
 
-# Web-Apps als eigene Fenster (Claude); ChatGPT startet die offizielle App von OpenAI
+# Web-Apps als eigene Fenster (Claude)
 install -Dm755 webapps/creative-webapp /usr/bin/creative-webapp
-for app in claude chatgpt; do
+for app in claude; do
     install -Dm644 "webapps/creative-$app.desktop" "/usr/share/applications/creative-$app.desktop"
     install -Dm644 "creative_shell/qml/Creative/icons/$app.svg" "/usr/share/icons/hicolor/scalable/apps/creative-$app.svg"
 done

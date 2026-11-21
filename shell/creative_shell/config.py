@@ -77,12 +77,6 @@ DEFAULTS = {
             "match": ["creative-claude", "brave-claude.ai"],
         },
         {
-            "icon": "chatgpt",
-            "candidates": ["creative-chatgpt.desktop"],
-            # Offizielle OpenAI-App (Electron); Fensterkennung je nach Version.
-            "match": ["chatgpt", "com.openai", "openai", "codex", "creative-chatgpt"],
-        },
-        {
             "icon": "whatsapp",
             "candidates": ["creative-whatsapp.desktop"],
             "match": ["creative-whatsapp", "brave-web.whatsapp.com"],

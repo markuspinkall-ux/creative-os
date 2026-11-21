@@ -48,6 +48,11 @@ SUITE = {
 # Broadcast, Deck, Shots, Widgets, Pictures und 3D-Ansicht stehen nicht im Startmenü (NoDisplay):
 # Broadcast und Deck leben im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den
 # Schreibtisch, Pictures und 3D-Ansicht öffnen sich beim Doppelklick auf ein Bild bzw. eine .glb-Datei.
+# Diese Apps stehen nie im Startmenü und nie im Ordner – auch wenn irgendwo noch eine ältere
+# Desktop-Datei ohne NoDisplay liegt (z. B. eine lokale Kopie unter ~/.local/share/applications).
+ALWAYS_HIDDEN = {"creative-widgets.desktop", "creative-pictures.desktop", "creative-3dansicht.desktop",
+                 "creative-broadcast.desktop", "creative-deck.desktop", "creative-shots.desktop",
+                 "creative-chatgpt.desktop"}
 OLD_PREFIX = "Creative "        # alte Namen ohne „Creative“ anzeigen
 
 
@@ -150,7 +155,7 @@ def parse_desktop_file(path, desktop_id, langs):
         s.get("Exec", ""),
         s.get("Terminal", "").lower() == "true",
     )
-    entry.hidden = no_display
+    entry.hidden = no_display or desktop_id in ALWAYS_HIDDEN
     return entry
 
 

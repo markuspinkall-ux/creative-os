@@ -100,3 +100,18 @@ def test_3d_ansicht_nur_als_standard_app():
     assert "NoDisplay=true" in _main_section("viewer3d/creative-3dansicht.desktop")
     cf = (ROOT / "image/Containerfile").read_text(encoding="utf-8")
     assert "model/gltf-binary=creative-3dansicht.desktop" in cf
+
+
+def test_chatgpt_komplett_entfernt():
+    for rel in ("image/Containerfile", "shell/install.sh", "shell/creative_shell/config.py",
+                "theme/apps/creative-apps-sync", ".github/workflows/build.yml"):
+        assert "chatgpt" not in (ROOT / rel).read_text(encoding="utf-8").lower(), rel
+    assert not (ROOT / "shell/webapps/creative-chatgpt.desktop").exists()
+    assert "chatgpt-entfernt" in (ROOT / "theme/apps/creative-theme-user").read_text(encoding="utf-8")
+
+
+def test_widgets_nie_im_suite_ordner():
+    src = (ROOT / "shell/creative_shell/apps.py").read_text(encoding="utf-8")
+    hidden = src.split("ALWAYS_HIDDEN = {", 1)[1].split("}", 1)[0]
+    assert '"creative-widgets.desktop"' in hidden
+    assert "desktop_id in ALWAYS_HIDDEN" in src
