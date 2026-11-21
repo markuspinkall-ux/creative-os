@@ -112,6 +112,7 @@ class ShellController(QObject):
     taskTipChanged = Signal()
     screensChanged = Signal()
     widgetScreensChanged = Signal()
+    widgetGhostChanged = Signal()
 
     def __init__(self, app, engine, use_layer_shell):
         super().__init__()
@@ -137,6 +138,7 @@ class ShellController(QObject):
         self._primary_name = ""      # Hauptbildschirm laut KWin
         self._primary_proc = None
         self._last_auto_close = ("", 0.0)
+        self._widget_ghost = {}
         self._widget_screens = {
             key: name for key, name in config.load()["desktopWidgetScreens"].items()
             if key in DESKTOP_WIDGETS and isinstance(name, str) and name
@@ -503,6 +505,34 @@ class ShellController(QObject):
             return "Die Monitor-Auswahl konnte nicht gespeichert werden."
         self._widget_screens = targets
         self.widgetScreensChanged.emit()
+        return ""
+
+    # Widgets mit gedrückter Maustaste auf einen anderen Monitor ziehen: Während des Ziehens zeigt
+    # der Zielmonitor einen Umriss („Geist“), beim Loslassen wandert das Widget dorthin.
+    widgetGhost = Property("QVariantMap", lambda self: dict(self._widget_ghost), notify=widgetGhostChanged)
+
+    @Slot("QVariantMap")
+    def setWidgetGhost(self, ghost):
+        ghost = dict(ghost or {})
+        if ghost != self._widget_ghost:
+            self._widget_ghost = ghost
+            self.widgetGhostChanged.emit()
+
+    @Slot(str, result="QVariantMap")
+    def screenGeometry(self, name):
+        for screen in QGuiApplication.screens():
+            if screen.name() == name:
+                g = screen.geometry()
+                return {"x": g.x(), "y": g.y(), "width": g.width(), "height": g.height()}
+        return {}
+
+    @Slot(float, float, result=str)
+    def screenAt(self, x, y):
+        """Monitor unter einem Punkt in Desktop-Koordinaten (nur Monitore mit Schreibtisch)."""
+        for screen in QGuiApplication.screens():
+            g = screen.geometry()
+            if g.x() <= x < g.x() + g.width() and g.y() <= y < g.y() + g.height():
+                return screen.name() if screen.name() in self._surfaces else ""
         return ""
 
     # Schreibtisch-Symbole erscheinen nur auf dem Hauptbildschirm

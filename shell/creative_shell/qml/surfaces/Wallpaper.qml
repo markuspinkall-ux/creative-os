@@ -92,6 +92,80 @@ Item {
             source.setPos(x, y)
     }
 
+    // ---- Widget auf einen anderen Monitor ziehen ----------------------------------------------
+    // Beim Ziehen am Griff bekommt diese Fläche die Maus auch außerhalb ihres Monitors (Wayland).
+    // Liegt der Zeiger über einem anderen Monitor, zeigt der dort einen Umriss; beim Loslassen
+    // wandert das Widget an genau diese Stelle (Position bleibt wie gewohnt gespeichert).
+    function crossTarget(item, handle, mouse) {
+        const p = handle.mapToItem(root, mouse.x, mouse.y)
+        if (p.x >= 0 && p.y >= 0 && p.x < root.width && p.y < root.height)
+            return null
+        const here = shell.screenGeometry(root.screenName)
+        if (here.width === undefined)
+            return null
+        const gx = here.x + p.x, gy = here.y + p.y
+        const name = shell.screenAt(gx, gy)
+        if (!name || name === root.screenName)
+            return null
+        const g = shell.screenGeometry(name)
+        const grab = handle.mapToItem(item, mouse.x, mouse.y)
+        const maxX = Math.max(8, g.width - item.width - 8)
+        const maxY = Math.max(8, g.height - root.barSpace - item.height - 8)
+        const x = Math.max(8, Math.min(maxX, gx - g.x - grab.x))
+        const y = Math.max(8, Math.min(maxY, gy - g.y - grab.y))
+        return { screen: name, x: x, y: y, nx: maxX > 8 ? (x - 8) / (maxX - 8) : 0,
+                 ny: maxY > 8 ? (y - 8) / (maxY - 8) : 0 }
+    }
+
+    function crossDragMove(key, item, handle, mouse) {
+        const t = crossTarget(item, handle, mouse)
+        item.opacity = t ? 0.35 : 1
+        if (t)
+            shell.setWidgetGhost({ key: key, screen: t.screen, x: t.x, y: t.y, w: item.width, h: item.height })
+        else if (shell.widgetGhost.key === key)
+            shell.setWidgetGhost({})
+    }
+
+    // true = Widget ist auf einen anderen Monitor gewandert
+    function crossDragDrop(key, item, handle, mouse, setPos) {
+        const t = crossTarget(item, handle, mouse)
+        item.opacity = 1
+        shell.setWidgetGhost({})
+        if (!t)
+            return false
+        setPos(t.nx, t.ny)
+        const err = shell.setWidgetScreen(key, t.screen)
+        if (err) {
+            console.warn(err)
+            return false
+        }
+        const positions = Object.assign({}, root.fallbackPositions)
+        delete positions[key]
+        root.fallbackPositions = positions
+        return true
+    }
+
+    function crossDragCancel(key, item) {
+        item.opacity = 1
+        if (shell.widgetGhost.key === key)
+            shell.setWidgetGhost({})
+    }
+
+    // Umriss des Widgets, das gerade von einem anderen Monitor hierher gezogen wird
+    Rectangle {
+        z: 50
+        readonly property var g: shell.widgetGhost
+        visible: g.screen === root.screenName
+        x: g.x || 0
+        y: g.y || 0
+        width: g.w || 0
+        height: g.h || 0
+        radius: 22
+        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
+        border.color: Theme.accent
+        border.width: 2
+    }
+
     function openMonitorMenu(key, x, y) {
         monitorMenu.widgetKey = key
         monitorMenu.openAt(x, y)
@@ -443,11 +517,14 @@ Item {
                 drag.minimumY: 8
                 drag.maximumX: widget.maxX
                 drag.maximumY: widget.maxY
-                onReleased: {
-                    if (drag.active) root.saveWidgetPosition(widget.widgetKey, widget.source, widget)
+                onPositionChanged: (mouse) => { if (pressed) root.crossDragMove(widget.widgetKey, widget, handle, mouse) }
+                onReleased: (mouse) => {
+                    const moved = root.crossDragDrop(widget.widgetKey, widget, handle, mouse,
+                                                     (x, y) => widget.source.setPos(x, y))
+                    if (!moved && drag.active) root.saveWidgetPosition(widget.widgetKey, widget.source, widget)
                     widget.restorePosition()
                 }
-                onCanceled: widget.restorePosition()
+                onCanceled: { root.crossDragCancel(widget.widgetKey, widget); widget.restorePosition() }
             }
             MonitorGripMenu { widgetKey: widget.widgetKey }
         }
@@ -566,12 +643,14 @@ Item {
                 drag.minimumY: 8
                 drag.maximumX: extra.maxX
                 drag.maximumY: extra.maxY
-                onReleased: {
-                    if (drag.active)
+                onPositionChanged: (mouse) => { if (pressed) root.crossDragMove(extra.key, extra, extraGrip, mouse) }
+                onReleased: (mouse) => {
+                    const moved = root.crossDragDrop(extra.key, extra, extraGrip, mouse, (x, y) => extra.setPos(x, y))
+                    if (!moved && drag.active)
                         root.saveWidgetPosition(extra.key, extra, extra)
                     extra.restorePosition()
                 }
-                onCanceled: extra.restorePosition()
+                onCanceled: { root.crossDragCancel(extra.key, extra); extra.restorePosition() }
             }
             MonitorGripMenu { widgetKey: extra.key }
         }
@@ -1013,11 +1092,13 @@ Item {
                 drag.maximumX: statsBox.maxX
                 drag.minimumY: 8
                 drag.maximumY: statsBox.maxY
-                onReleased: {
-                    if (drag.active) root.saveWidgetPosition("stats", desktopStats, statsBox)
+                onPositionChanged: (mouse) => { if (pressed) root.crossDragMove("stats", statsBox, statsMove, mouse) }
+                onReleased: (mouse) => {
+                    const moved = root.crossDragDrop("stats", statsBox, statsMove, mouse, (x, y) => desktopStats.setPos(x, y))
+                    if (!moved && drag.active) root.saveWidgetPosition("stats", desktopStats, statsBox)
                     statsBox.restoreBindings()
                 }
-                onCanceled: statsBox.restoreBindings()
+                onCanceled: { root.crossDragCancel("stats", statsBox); statsBox.restoreBindings() }
             }
             MonitorGripMenu { widgetKey: "stats" }
         }
