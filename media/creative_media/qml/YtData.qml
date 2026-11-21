@@ -36,9 +36,11 @@ WebEngineView {
         "var results=[];var top=document.querySelector('ytmusic-card-shelf-renderer');" +
         "if(top){var a=top.querySelector('a[href*=\"watch?v=\"]')||top.querySelector('a.yt-simple-endpoint[href]');var u=a?a.href:'';" +
         "results.push({title:T(top,'.title'),subtitle:T(top,'.subtitle'),thumb:I(top,V(u)),url:u,videoId:V(u)});}" +
-        "document.querySelectorAll('ytmusic-shelf-renderer ytmusic-responsive-list-item-renderer').forEach(function(it){results.push(row(it));});" +
+        "if(location.pathname.indexOf('/search')===0)document.querySelectorAll('ytmusic-responsive-list-item-renderer').forEach(function(it){var r=row(it);if(r.url)results.push(r);});" +
         // nach unten blättern, damit die Seite weitere Reihen und Bilder nachlädt
         "window.scrollBy(0,900);" +
+        // Kachelreihen seitlich weiterblättern, damit auch die Bilder rechts nachgeladen werden
+        "document.querySelectorAll('ytmusic-carousel-shelf-renderer #items').forEach(function(c){c.scrollLeft+=700;});" +
         "return {consent:false,shelves:shelves,results:results,search:location.pathname.indexOf('/search')===0};})()"
 
     function read() {
@@ -56,7 +58,8 @@ WebEngineView {
             else
                 ytmusic.receiveShelves(r.shelves)
             // fertig, sobald sich nichts mehr ändert (oder nach ein paar Versuchen)
-            if ((json === data.lastJson && json.length > 2) || data.tries > 10)
+            const enough = r.search ? r.results.length > 3 || data.tries > 6 : true
+            if ((json === data.lastJson && json.length > 2 && enough) || data.tries > 14)
                 reader.stop()
             data.lastJson = json
         })

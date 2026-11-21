@@ -10,6 +10,7 @@ import Creative
 // Werbung ist zu hören, aber nicht zu sehen; bietet YouTube „Überspringen“ an, gibt es dafür einen Knopf.
 Item {
     id: root
+    objectName: "ytView"
     property string tab: "home"          // home | charts | search | favs
     property bool showPage: false        // offizielle Seite zeigen (Anmeldung, Zustimmung)
     readonly property bool started: ytmusic.nowTitle.length > 0 || ytmusic.adPlaying

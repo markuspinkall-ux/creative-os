@@ -83,7 +83,15 @@ step(25000, lambda: (print(f"YouTube Music: {len(ytm.shelves)} Kachelreihen, "
                            f"{sum(len(s['items']) for s in ytm.shelves)} Kacheln, Zustimmung nötig: {ytm.needsConsent}"),
                      [print("  ·", s["title"], "–", ", ".join(i["title"] for i in s["items"][:4])) for s in ytm.shelves[:4]],
                      shot("player-ytmusic.png")))
-step(500, lambda: ytm.find("Queen Bohemian Rhapsody"))
+def suchen():
+    from PySide6.QtCore import QObject
+    v = win.findChild(QObject, "ytView")
+    if v is not None:
+        v.setProperty("tab", "search")
+    ytm.find("Queen Bohemian Rhapsody")
+
+
+step(500, suchen)
 step(15000, lambda: (print(f"Suche: {len(ytm.results)} Treffer"),
                      [print("  ·", r["title"], "|", r["subtitle"][:60], "|", r["videoId"]) for r in ytm.results[:5]],
                      shot("player-ytmusic-suche.png")))
