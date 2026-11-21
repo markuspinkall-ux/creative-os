@@ -47,9 +47,15 @@ DEFAULTS = {
         "extra": {"on": False, "device": "", "volume": 1.0, "muted": False},
     },
     "format": "mp4",
-    "targets": {"twitch": True, "youtube": True, "custom": False},
+    "targets": {"twitch": True, "youtube": True, "kick": False, "tiktok": False, "custom": False},
     "custom_url": "",
     "custom_key": "",
+    # Kick und TikTok: Server-Adresse und Stream-Schlüssel aus dem jeweiligen Dashboard
+    "kick_url": "",
+    "kick_key": "",
+    "kick_channel": "",
+    "tiktok_url": "",
+    "tiktok_key": "",
     "screen_token": "",
     "chat_open": True,
 }
@@ -426,6 +432,10 @@ class Studio(QObject):
                 "chat": self._chat_url(name), "target": bool(self.targets[name]),
                 "busy": self.busy.get(name, ""),
             }
+        kick = self.cfg["kick_channel"].strip().lstrip("@")
+        acc["kick"] = {"configured": True, "connected": bool(kick), "name": kick, "title": "", "category": "",
+                       "categoryId": "", "chat": f"https://kick.com/popout/{kick}/chat" if kick else "",
+                       "target": bool(self.cfg["kick_url"].strip()), "busy": ""}
         return {
             "cfg": self.cfg, "videoDevices": self.video_list, "audioDevices": self.audio_list,
             "accounts": acc, "live": self.live, "recording": self.recording,
@@ -979,9 +989,13 @@ class Studio(QObject):
     def _poll_engine(self):
         if getattr(self, "_dirty", False) and not (self.live or self.recording) and not self.mixer.outputs:
             self._rebuild()
+        restart_live = []
         for key, err, out in self.mixer.poll():
             # Grafikkarten-Kodierer klappt nicht (z. B. alle NVENC-Plätze belegt) → mit Prozessor neu
-            if err and out.gpu and time.monotonic() - out.started < 6 and not out.stopping:
+            if err and out.gpu and time.monotonic() - out.started < 6 and out.kind == "live" and out.error:
+                restart_live += [(t, u) for t, u in self.live_targets if t == key]
+                continue
+            if err and out.gpu and time.monotonic() - out.started < 6 and not out.stopping and key == "record":
                 try:
                     again = self.mixer.start_output(key, out.target, out.kbps, out.fmt, cpu_only=True)
                     self.encoder = again.encoder_name
@@ -999,6 +1013,12 @@ class Studio(QObject):
                 self.live_targets = [(t, u) for t, u in self.live_targets if t != key]
                 if err:
                     self.toast.emit(f"{_target_label(key)}: Stream abgebrochen – {err}")
+            self.changed.emit()
+        if restart_live and "live" not in self.mixer.outputs:
+            if self._start_live(restart_live, cpu_only=True):
+                self.toast.emit("Die Grafikkarte kodiert gerade nicht – Studio nimmt den Prozessor.")
+            else:
+                self.live_targets = []
             self.changed.emit()
         while self.mixer.errors:
             e = self.mixer.errors.pop(0)
@@ -1044,10 +1064,11 @@ class Studio(QObject):
         for name in ("twitch", "youtube"):
             if t[name] and self.accounts[name].connected and self.targets[name]:
                 out.append((name, self.targets[name]))
-        if t["custom"] and self.cfg["custom_url"].strip():
-            url = self.cfg["custom_url"].strip().rstrip("/")
-            key = self.cfg["custom_key"].strip()
-            out.append(("custom", f"{url}/{key}" if key else url))
+        for name in ("kick", "tiktok", "custom"):
+            url = self.cfg[f"{name}_url"].strip().rstrip("/")
+            if t[name] and url:
+                key = self.cfg[f"{name}_key"].strip()
+                out.append((name, f"{url}/{key}" if key else url))
         return out
 
     @Slot()
@@ -1060,20 +1081,25 @@ class Studio(QObject):
         targets = self._wanted_targets()
         if not targets:
             self.toast.emit("Wohin soll gestreamt werden? Melde dich bei Twitch oder YouTube an "
-                            "oder trage unter „Ziele“ einen eigenen Server ein.")
+                            "oder trage unter „Ziele“ Kick, TikTok oder einen eigenen Server ein.")
             return
-        started = []
-        for key, url in targets:
-            try:
-                out = self.mixer.start_output(key, url, self.cfg["kbps"])
-                self.encoder = out.encoder_name
-                started.append((key, url))
-            except (RuntimeError, ValueError) as e:
-                self.toast.emit(f"{_target_label(key)}: {e}")
-        if started:
-            self.live_targets = started
-            self.live_since = time.monotonic()
+        self.live_since = time.monotonic()
+        self._start_live(targets)
         self.changed.emit()
+
+    def _start_live(self, targets, cpu_only=False):
+        """Multistream: einmal kodieren, an alle Ziele gleichzeitig senden."""
+        try:
+            enc = self.mixer.start_live(dict(targets), self.cfg["kbps"], cpu_only)
+        except (RuntimeError, ValueError) as e:
+            self.toast.emit(f"Live startet nicht: {e}")
+            return False
+        self.encoder = enc.encoder_name
+        self.live_targets = [(k, u) for k, u in targets if k in enc.senders]
+        for key, err in enc.finished:
+            self.toast.emit(f"{_target_label(key)}: {err}")
+        enc.finished.clear()
+        return True
 
     # ---- Konten --------------------------------------------------------------------------------------
     @Slot(str)
@@ -1273,7 +1299,8 @@ def _clock(sec):
 
 
 def _target_label(key):
-    return {"twitch": "Twitch", "youtube": "YouTube", "custom": "Eigener Server", "record": "Aufnahme"}.get(key, key)
+    return {"twitch": "Twitch", "youtube": "YouTube", "kick": "Kick", "tiktok": "TikTok", "custom": "Eigener Server",
+            "record": "Aufnahme"}.get(key, key)
 
 
 def _nice_error(text):

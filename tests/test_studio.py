@@ -129,6 +129,37 @@ class Szenen(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_GST, "GStreamer fehlt")
 class Mischpult(unittest.TestCase):
+    def test_multistream_einmal_kodiert(self):
+        m = engine.Mixer()
+        m.build({"canvas": "720p30"}, [{"key": "a", "type": "test"}], {"mic": {"type": "test"}},
+                {"a": (0, 0, 1280, 720, 1)}, {})
+        try:
+            d = tempfile.mkdtemp()
+            time.sleep(0.6)
+            enc = m.start_live({"twitch": f"file://{d}/t.flv", "kick": f"file://{d}/k.flv",
+                                "custom": "rtmp://127.0.0.1:9/app/key"}, 2000)
+            self.assertEqual(sorted(enc.senders), ["custom", "kick", "twitch"])
+            ended = {}
+            t = time.time()
+            while time.time() - t < 3:
+                for key, err, _ in m.poll():
+                    ended[key] = err
+                time.sleep(0.05)
+            self.assertIn("custom", ended)                     # ein Ziel bricht ab …
+            self.assertEqual(sorted(enc.senders), ["kick", "twitch"])   # … die anderen senden weiter
+            m.stop_output("live")
+            t = time.time()
+            while m.outputs and time.time() - t < 10:
+                for key, err, _ in m.poll():
+                    ended[key] = err
+                time.sleep(0.05)
+            self.assertFalse(m.outputs)
+            self.assertEqual(ended.get("kick"), "")
+            for name in ("t.flv", "k.flv"):
+                self.assertGreater(os.path.getsize(os.path.join(d, name)), 20000, name)
+        finally:
+            m.stop()
+
     def test_aufnahme_und_abgebrochener_stream(self):
         m = engine.Mixer()
         m.build({"canvas": "720p30"}, [{"key": "a", "type": "test"}, {"key": "b", "type": "test", "pattern": "ball"}],

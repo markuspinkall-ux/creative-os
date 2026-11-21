@@ -216,12 +216,12 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         spacing: 6
                         Repeater {
-                            model: ["twitch", "youtube"]
+                            model: ["twitch", "youtube"].concat(acc.kick && acc.kick.connected ? ["kick"] : [])
                             delegate: Pill {
                                 required property string modelData
                                 Layout.fillWidth: true
-                                text: modelData === "twitch" ? "Twitch" : "YouTube"
-                                dot: modelData === "twitch" ? "#9f7aea" : "#ff4e45"
+                                text: modelData === "twitch" ? "Twitch" : modelData === "kick" ? "Kick" : "YouTube"
+                                dot: modelData === "twitch" ? "#9f7aea" : modelData === "kick" ? "#53fc18" : "#ff4e45"
                                 checked: win.chatTab === modelData
                                 onClicked: win.chatTab = modelData
                             }
@@ -274,7 +274,7 @@ ApplicationWindow {
                                     color: Theme.textMuted
                                     font.family: Theme.fontFamily
                                     font.pixelSize: 13
-                                    text: !parent.parent.parent.a.connected
+                                    text: win.chatTab === "kick" ? "Kick-Chat wird geladen …" : !parent.parent.parent.a.connected
                                           ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
                                           : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
                                 }
@@ -298,7 +298,8 @@ ApplicationWindow {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 6
-                        enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
+                        visible: win.chatTab !== "kick"            // bei Kick schreibst du direkt im Chat oben
+                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
                         opacity: enabled ? 1 : 0.5
                         Field {
                             id: chatInput
@@ -560,7 +561,7 @@ ApplicationWindow {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.margins: 12
-                    text: (st.live ? (st.liveTargets || []).map(t => t === "twitch" ? "Twitch" : t === "youtube" ? "YouTube" : "Eigener Server").join(" · ") + "  ·  " : "") + st.encoder
+                    text: (st.live ? (st.liveTargets || []).map(t => ({ twitch: "Twitch", youtube: "YouTube", kick: "Kick", tiktok: "TikTok" })[t] || "Eigener Server").join(" · ") + "  ·  " : "") + st.encoder
                     color: Qt.rgba(0.86, 0.9, 1, 0.55)
                     font.family: Theme.fontFamily
                     font.pixelSize: 11
@@ -697,7 +698,7 @@ ApplicationWindow {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: "Twitch empfiehlt bis 6 Mbit/s, YouTube verträgt mehr."
+                        text: "Alle Ziele bekommen dasselbe Bild – einmal kodiert. Twitch und Kick empfehlen bis 6 Mbit/s."
                         color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                     }
 
@@ -705,6 +706,45 @@ ApplicationWindow {
                     Heading { text: "Ziele" }
                     TargetRow { key: "twitch"; label: "Twitch"; note: !acc.twitch || !acc.twitch.connected ? "nicht angemeldet" : (acc.twitch.target ? acc.twitch.name : "kein Stream-Schlüssel") }
                     TargetRow { key: "youtube"; label: "YouTube"; note: !acc.youtube || !acc.youtube.connected ? "nicht angemeldet" : (acc.youtube.target ? acc.youtube.name : "keine Übertragung") }
+                    TargetRow { key: "kick"; label: "Kick"; note: cfg.kick_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.kick
+                        placeholderText: "Stream-URL (Kick › Einstellungen › Stream-Schlüssel)"
+                        text: cfg.kick_url || ""
+                        onEditingFinished: studio.set("kick_url", text)
+                    }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.kick
+                        placeholderText: "Stream-Schlüssel"
+                        echoMode: TextInput.Password
+                        text: cfg.kick_key || ""
+                        onEditingFinished: studio.set("kick_key", text)
+                    }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.kick
+                        placeholderText: "Kanalname (für den Chat links)"
+                        text: cfg.kick_channel || ""
+                        onEditingFinished: studio.set("kick_channel", text)
+                    }
+                    TargetRow { key: "tiktok"; label: "TikTok"; note: cfg.tiktok_url ? "Stream-Schlüssel eingetragen" : "Server und Schlüssel eintragen" }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.tiktok
+                        placeholderText: "Server-URL (TikTok LIVE Producer)"
+                        text: cfg.tiktok_url || ""
+                        onEditingFinished: studio.set("tiktok_url", text)
+                    }
+                    Field {
+                        Layout.fillWidth: true
+                        visible: cfg.targets && cfg.targets.tiktok
+                        placeholderText: "Stream-Schlüssel"
+                        echoMode: TextInput.Password
+                        text: cfg.tiktok_key || ""
+                        onEditingFinished: studio.set("tiktok_key", text)
+                    }
                     TargetRow { key: "custom"; label: "Eigener Server"; note: "RTMP" }
                     Field {
                         Layout.fillWidth: true

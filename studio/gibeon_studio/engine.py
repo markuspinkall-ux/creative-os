@@ -360,7 +360,18 @@ class Output:
         if not venc or not aenc:
             raise RuntimeError("Kein passender Kodierer für Bild oder Ton gefunden.")
         self.encoder_name = venc[1]
-        if kind == "record":
+        if kind == "live":
+            # Multistream: einmal kodieren, Ergebnis an alle Ziele (Sender) verteilen
+            mux = sink = None
+            desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
+                    f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc,alignment=au "
+                    f"! appsink name=vo emit-signals=true sync=false max-buffers=0  "
+                    f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
+                    f"! audioresample ! {aenc} name=aenc ! aacparse "
+                    f"! appsink name=ao emit-signals=true sync=false max-buffers=0")
+        elif kind == "record":
             if fmt == "mkv":
                 mux, sink = "matroskamux name=mux", f"filesink location={_q(target)}"
             else:
@@ -368,13 +379,14 @@ class Output:
         else:
             sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
             mux, sink = "flvmux name=mux streamable=true", f"{sinkf} name=out location={_q(target)}"
-        desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
-                f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc "
-                f"! queue ! {mux} ! {sink}  "
-                f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
-                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
-                f"! audioresample ! {aenc} name=aenc ! aacparse ! queue ! mux.")
+        if mux:
+            desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
+                    f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc "
+                    f"! queue ! {mux} ! {sink}  "
+                    f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                    f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
+                    f"! audioresample ! {aenc} name=aenc ! aacparse ! queue ! mux.")
         self.pipe = gst.launch(desc)
         configure_video_encoder(gst.bin_by_name(self.pipe, b"venc"), venc[0], kbps, fps)
         gst.set_prop(gst.bin_by_name(self.pipe, b"aenc"), "bitrate", 160000)
@@ -382,8 +394,12 @@ class Output:
         self.a = gst.bin_by_name(self.pipe, b"a")
         self.bus = gst.get_bus(self.pipe)
         self.lock = threading.Lock()
+        self._setup()
         if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
             raise RuntimeError("Der Ausgang ließ sich nicht starten.")
+
+    def _setup(self):
+        pass
 
     def take(self, sample, video):
         """Ein Stück (Bild oder Ton) aus dem Mischpult übernehmen – läuft im GStreamer-Thread."""
@@ -446,6 +462,155 @@ class Output:
                 if el:
                     gst.object_unref(el)
             self.pipe = self.v = self.a = self.bus = None
+
+
+class Sender:
+    """Ein Stream-Ziel beim Multistream: fertig kodiertes Bild/Ton → FLV → RTMP(S).
+    Eigene Pipeline: bricht ein Ziel ab, laufen die anderen weiter."""
+
+    def __init__(self, key, target):
+        self.key, self.target = key, target
+        self.error = ""
+        self.done = False
+        self.stopping = False
+        self.caps = {True: False, False: False}
+        self.lock = threading.Lock()
+        if target.startswith("file://"):                     # für Tests: in eine Datei statt ins Netz
+            sink = f"filesink location={_q(target[7:])}"
+        else:
+            sinkf = "rtmp2sink" if gst.has("rtmp2sink") else "rtmpsink"
+            sink = f"{sinkf} name=out location={_q(target)}"
+        desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 "
+                f"! flvmux name=mux streamable=true ! {sink}  "
+                f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
+                f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! mux.")
+        self.pipe = gst.launch(desc)
+        self.v = gst.bin_by_name(self.pipe, b"v")
+        self.a = gst.bin_by_name(self.pipe, b"a")
+        self.bus = gst.get_bus(self.pipe)
+        if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
+            self.close()
+            raise RuntimeError("Das Ziel ließ sich nicht starten.")
+
+    def push(self, sample, video):
+        with self.lock:
+            if self.done or self.stopping or not self.pipe:
+                return
+            src = self.v if video else self.a
+            if not self.caps[video]:
+                caps = gst.sample_caps(sample)
+                if not caps:
+                    return
+                gst.appsrc_set_caps(src, caps)
+                self.caps[video] = True
+            gst.appsrc_push_buffer(src, gst.buffer_copy(gst.sample_buffer(sample)))
+
+    def finish(self):
+        with self.lock:
+            if self.stopping or not self.pipe:
+                return
+            self.stopping = True
+            self.stop_at = time.monotonic()
+            gst.appsrc_eos(self.v)
+            gst.appsrc_eos(self.a)
+
+    def poll(self):
+        while self.bus and not self.done:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            typ, _src, text = m
+            if typ == gst.MSG_EOS:
+                self.done = True
+            elif typ == gst.MSG_ERROR:
+                self.error = text.split(" | ")[0]
+                self.done = True
+        if self.stopping and not self.done and time.monotonic() - self.stop_at > 8:
+            self.done = True
+        if self.done:
+            self.close()
+        return self.done
+
+    def close(self):
+        with self.lock:
+            if self.pipe:
+                gst.set_state(self.pipe, gst.STATE_NULL)
+                for el in (self.v, self.a, self.bus, self.pipe):
+                    if el:
+                        gst.object_unref(el)
+                self.pipe = self.v = self.a = self.bus = None
+
+
+class LiveEncoder(Output):
+    """Multistream: Mischpult → ein Kodierer → alle Ziele (Twitch, YouTube, Kick, TikTok, eigener Server).
+    Spart bei mehreren Zielen viel Leistung; jedes Ziel hat trotzdem seine eigene Pipeline."""
+
+    def __init__(self, targets, fps, kbps, cpu_only=False):
+        self.senders = {}
+        self.finished = []
+        self._pending = dict(targets)
+        super().__init__("live", "", fps, kbps, "flv", cpu_only)
+
+    def _setup(self):
+        for key, url in self._pending.items():
+            try:
+                self.senders[key] = Sender(key, url)
+            except (RuntimeError, ValueError) as e:
+                self.finished.append((key, str(e)))
+        if not self.senders:
+            raise RuntimeError(self.finished[0][1] if self.finished else "Kein Ziel")
+        self.vo = gst.bin_by_name(self.pipe, b"vo")
+        self.ao = gst.bin_by_name(self.pipe, b"ao")
+        self._h = [(self.vo, gst.connect_new_sample(self.vo, lambda s: self._out(s, True))),
+                   (self.ao, gst.connect_new_sample(self.ao, lambda s: self._out(s, False)))]
+
+    def _out(self, sink, video):
+        s = gst.pull_sample_blocking(sink)
+        if s:
+            try:
+                for snd in list(self.senders.values()):
+                    snd.push(s, video)
+            finally:
+                gst.mini_unref(s)
+        return gst.FLOW_OK
+
+    def stop_target(self, key):
+        snd = self.senders.get(key)
+        if snd:
+            snd.finish()
+
+    def poll(self):
+        """True, sobald alles beendet ist. Beendete Ziele landen in self.finished."""
+        while self.bus and not self.done:
+            m = gst.pop(self.bus)
+            if not m:
+                break
+            typ, _src, text = m
+            if typ == gst.MSG_EOS:
+                self.done = True
+            elif typ == gst.MSG_ERROR:
+                self.error = text.split(" | ")[0]
+                self.done = True
+        if self.done:
+            for snd in self.senders.values():
+                snd.finish()
+        for key, snd in list(self.senders.items()):
+            if snd.poll():
+                self.finished.append((key, snd.error or (self.error if self.done else "")))
+                del self.senders[key]
+        if not self.senders and not self.stopping:
+            self.stop()                                  # letztes Ziel weg → Kodierer beenden
+        if self.stopping and not self.done and time.monotonic() - self.stop_at > 8:
+            self.done = True
+        if self.done and not self.senders:
+            for el, h in getattr(self, "_h", []):
+                gst.signal_disconnect(el, h)
+                gst.object_unref(el)
+            self._h = []
+            self.close()
+            return True
+        return False
 
 
 class Mixer:
@@ -674,6 +839,17 @@ class Mixer:
         out = self.outputs.get(key)
         if out:
             out.stop()
+        elif "live" in self.outputs and key in self.outputs["live"].senders:
+            self.outputs["live"].stop_target(key)
+
+    def start_live(self, targets, kbps, cpu_only=False):
+        """Multistream an alle Ziele {schlüssel: adresse}. Rückgabe: der Kodierer."""
+        if not self.pipe:
+            raise RuntimeError("Studio ist noch nicht bereit.")
+        enc = LiveEncoder(targets, self.size[2], kbps, cpu_only)
+        with self._lock:
+            self.outputs["live"] = enc
+        return enc
 
     # ---- Einstellungen im laufenden Betrieb -------------------------------------------------
     def set_volume(self, slot, volume, muted):
@@ -707,7 +883,17 @@ class Mixer:
                 self.errors.append(f"feeder:{f.src.get('type')}: {err}")
         finished = []
         for key, out in list(self.outputs.items()):
-            if out.poll():
+            done = out.poll()
+            if isinstance(out, LiveEncoder):
+                # beim Multistream meldet jedes Ziel einzeln
+                while out.finished:
+                    target, err = out.finished.pop(0)
+                    finished.append((target, err, out))
+                if done:
+                    with self._lock:
+                        self.outputs.pop(key, None)
+                continue
+            if done:
                 with self._lock:
                     self.outputs.pop(key, None)
                 finished.append((key, out.error, out))
