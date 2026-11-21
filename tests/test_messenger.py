@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_nur_im_tray_nicht_im_startmenue():
     desk = (ROOT / "messenger" / "orbit-messenger.desktop").read_text(encoding="utf-8")
     assert "NoDisplay=true" in desk and "StartupWMClass=orbit-messenger" in desk
-    bar = (ROOT / "shell" / "creative_shell" / "qml" / "surfaces" / "Taskbar.qml").read_text(encoding="utf-8")
+    bar = (ROOT / "shell" / "creative_shell" / "qml" / "surfaces" / "Topbar.qml").read_text(encoding="utf-8")  # Tray sitzt oben
     assert "shell.toggleMessenger(root.screenName)" in bar and 'name: "chat"' in bar
     apps = (ROOT / "shell" / "creative_shell" / "apps.py").read_text(encoding="utf-8")
     assert "orbit-messenger" not in apps                     # nicht in der Gibeon OS Suite

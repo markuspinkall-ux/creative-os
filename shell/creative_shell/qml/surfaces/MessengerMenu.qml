@@ -1,10 +1,14 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
 
 // Messenger im Tray: letzte Chats, Anfragen, Schnellantwort, Nicht stören.
 Item {
     id: root
+    // Lage der Fläche: oben unter der Leiste (links/rechts) oder unten über der Taskleiste
+    readonly property string place: Window.window ? Window.window.placement : ""
+    readonly property bool atTop: place === "topleft" || place === "topright"
     property string screenName
     focus: true
     Keys.onEscapePressed: shell.closePopups()
@@ -30,8 +34,14 @@ Item {
     }
 
     Rectangle {
-        anchors.right: parent.right; anchors.rightMargin: 24
-        anchors.bottom: parent.bottom; anchors.bottomMargin: 10
+        anchors.left: root.place === "topleft" ? parent.left : undefined
+        anchors.leftMargin: 10
+        anchors.right: root.place === "topleft" ? undefined : parent.right
+        anchors.rightMargin: root.place === "topright" ? 10 : 24
+        anchors.top: root.atTop ? parent.top : undefined
+        anchors.topMargin: 6
+        anchors.bottom: root.atTop ? undefined : parent.bottom
+        anchors.bottomMargin: 10
         width: 380; height: Math.min(parent.height - 10, content.implicitHeight + 36)
         radius: Theme.radiusMenu; color: Theme.surface; border.color: Theme.hairline
         MouseArea { anchors.fill: parent }

@@ -13,3 +13,19 @@ def test_ziehen_ueber_monitore():
     main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
     for part in ("def screenAt(", "def screenGeometry(", "def setWidgetGhost("):
         assert part in main
+
+
+def test_obere_leiste_fluid():
+    """Fluid-Design: Tray oben links, Uhrzeit rechts, Taskleiste unten ohne Tray, Menüs oben."""
+    top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
+    assert "shell.toggleQuickPanel(root.screenName)" in top and "shell.toggleCalendar(root.screenName)" in top
+    assert "trayApps.items" in top and 'text: "Gibeon OS"' in top
+    bar = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
+    assert "toggleQuickPanel" not in bar and "trash.open()" in bar
+    main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
+    assert '"Topbar.qml"' in main and "TOP_HEIGHT = 50" in main
+    host = (ROOT / "shell/creative_shell/qml/HostLayer.qml").read_text(encoding="utf-8")
+    assert "AnchorTop" in host and '"topleft"' in host
+    for f in ("QuickPanel", "BluetoothMenu", "MessengerMenu", "TrayAppMenu"):
+        qml = (ROOT / f"shell/creative_shell/qml/surfaces/{f}.qml").read_text(encoding="utf-8")
+        assert "root.atTop ? parent.top" in qml, f
