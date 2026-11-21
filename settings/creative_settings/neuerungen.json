@@ -16,7 +16,8 @@
       "Stream Deck steuert Studio: neue Tastenart „Studio“ in Deck – Live gehen, Aufnahme, Szene wechseln (Name oder Nummer), nächste Szene, Mikrofon und Desktop-Ton stumm; startet Studio bei Bedarf. Die alte OBS-Beispielseite wird zur Studio-Seite",
       "Studio: Multistream an Twitch, YouTube, Kick, TikTok und einen eigenen Server gleichzeitig – das Bild wird nur einmal kodiert und an alle Ziele verteilt (spart viel Leistung); bricht ein Ziel ab, laufen die anderen weiter. Kick-Chat erscheint links, sobald der Kanalname eingetragen ist",
       "Studio: Capture-Karte mithören – bei „Weitere Tonquelle“ „Mithören“ einschalten und die Kopfhörer wählen; geht sofort, auch während des Streams. Studio warnt, wenn der Ton sonst doppelt im Stream landen würde",
-      "Studio: Upload-Ampel während des Streams – je Ziel grün „flüssig“, gelb „wackelig“ oder rot blinkend „Upload zu langsam“ (mit Rückstau in Sekunden und Tipp, die Bitrate zu senken)"
+      "Studio: Upload-Ampel während des Streams – je Ziel grün „flüssig“, gelb „wackelig“ oder rot blinkend „Upload zu langsam“ (mit Rückstau in Sekunden und Tipp, die Bitrate zu senken)",
+      "Studio: Twitch und YouTube auch ohne Anmeldung – einfach den Stream-Schlüssel unter „Ziele“ eintragen; so geht Multistream an Twitch, YouTube, Kick und TikTok gleichzeitig"
     ],
     "verbessert": [
       "Neues Fluid-Design wie in der Vorschau: Oben gibt es jetzt eine Leiste aus zwei Glasfeldern. Links sitzt der Tray mit WLAN, Lautstärke, Bluetooth, Tastatur (DE) und den Symbolen von Steam, Discord, Messenger & Co. – ein Klick öffnet den Schnellzugriff direkt darunter. In der Mitte steht „Gibeon OS“, rechts Uhrzeit, Datum und bei Laptops der Akku – ein Klick öffnet den Kalender. Die Taskleiste unten geht über die ganze Breite bis an den Rand, ist schmaler und wirkt wie Glas mit Lichtkante; rechts sitzt der Papierkorb. Der Startknopf mit der Rakete ist rund und leuchtet sanft, bei offenem Startmenü stärker. Das Startmenü hat stark abgerundete Ecken und eine Lichtkante, die gewählte App erscheint als leuchtende Glasfläche, und der Scrollbalken passt zum Design. Widgets und Schreibtisch-Symbole bleiben unter der oberen Leiste. Gilt für Graphit und Porzellan",
@@ -32,6 +33,7 @@
     ],
     "behoben": [
       "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt",
+      "Fehlermeldungen vor dem Systemstart („syntax error“, „Incorrect command“, „prohibited by secure boot policy“) beseitigt: die Startauswahl nutzte eine Schreibweise, die GRUB nicht kennt, und lud mit Secure Boot verbotene Zusatzmodule nach – verschwindet ab dem zweiten Start nach dem Update",
       "Android-Apps: Die erste App nach dem Systemstart öffnet sich jetzt direkt als eigenes Fenster – Android (LineageOS) startet dafür unsichtbar im Hintergrund, statt die App erst in der ganzen LineageOS-Oberfläche zu zeigen"
     ]
   },
