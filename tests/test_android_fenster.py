@@ -353,3 +353,43 @@ class HelperTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AppStartImHintergrund(unittest.TestCase):
+    """App anklicken, Android läuft noch nicht: Android unsichtbar starten, dann nur die App öffnen
+    (statt der ganzen LineageOS-Oberfläche)."""
+
+    def test_erst_hochfahren_dann_app(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            log = d / "log"
+            fake = d / "waydroid-echt"
+            # Falsches waydroid: läuft nach „session start“, ist zwei Abfragen später hochgefahren
+            fake.write_text(f"""#!/bin/sh
+echo "$*" >> {log}
+case "$1 $2" in
+  "session start") touch {d}/laeuft ;;
+  "status ") [ -e {d}/laeuft ] && echo "Session:	RUNNING" || echo "Session:	STOPPED" ;;
+  "prop get") n=$(cat {d}/zaehler 2>/dev/null || echo 0); n=$((n+1)); echo $n > {d}/zaehler
+              [ $n -ge 2 ] && echo 1 || echo 0 ;;
+esac
+""")
+            fake.chmod(0o755)
+            wrapper = d / "waydroid"
+            wrapper.write_text((ROOT / "android/waydroid-wrapper").read_text().replace("@WAYDROID@", str(fake)))
+            wrapper.chmod(0o755)
+            env = dict(os.environ, XDG_RUNTIME_DIR=str(d), GIBEON_WAYDROID_TEST="1")
+            env.pop("WAYLAND_DISPLAY", None)
+            res = subprocess.run(["sh", str(wrapper), "app", "launch", "com.beispiel"], env=env,
+                                 capture_output=True, text=True, timeout=30)
+            self.assertEqual(res.returncode, 0, res.stderr)
+            lines = log.read_text().splitlines()
+            self.assertIn("session start", lines)
+            self.assertNotIn("show-full-ui", lines)
+            self.assertEqual(lines[-1], "app launch com.beispiel")          # App erst ganz zum Schluss
+            self.assertLess(lines.index("session start"), lines.index("app launch com.beispiel"))
+            # läuft Android schon, geht es sofort los
+            log.write_text("")
+            subprocess.run(["sh", str(wrapper), "app", "launch", "com.zwei"], env=env, timeout=30)
+            self.assertNotIn("session start", log.read_text())

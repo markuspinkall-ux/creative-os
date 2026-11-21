@@ -31,7 +31,8 @@
       "Studio: Quellen jetzt links über dem schmaleren Chat (einklappbar); die Capture-Karte bleibt in der Szene gespeichert – auch wenn sie nach Neustart oder Umstecken eine andere Gerätenummer bekommt, und Studio verbindet sich beim Anstecken von selbst. Beim ersten Start mit Capture-Karte gibt es gleich eine fertige Szene „Capture-Karte“"
     ],
     "behoben": [
-      "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt"
+      "Widgets steht nicht mehr im Ordner „Gibeon OS Suite“ – auch wenn noch eine ältere Verknüpfung herumliegt",
+      "Android-Apps: Die erste App nach dem Systemstart öffnet sich jetzt direkt als eigenes Fenster – Android (LineageOS) startet dafür unsichtbar im Hintergrund, statt die App erst in der ganzen LineageOS-Oberfläche zu zeigen"
     ]
   },
   {
