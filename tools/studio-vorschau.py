@@ -101,6 +101,16 @@ s.removeScene(1)
 s.removeScene(1)
 check(len(s.cfg["scenes"]) == 1, "Szenen löschen")
 check(backend.audio_outputs()[0]["name"] == "Standard-Ausgabe", "Desktop-Ton: Auswahl beginnt mit Standard-Ausgabe")
+s.set("canvas", "1440p60")
+s.set("stream_res", "936")
+s.set("stream_fps", "30")
+check(s._stream_size() == (1664, 936, 30), "Stream: 1440p60 → 936p30")
+s.set("rec_quality", "hoch")
+check(s._rec_kbps() > 20000, f"Aufnahme-Bitrate 1440p60 hoch: {s._rec_kbps()} kbit/s")
+s.set("canvas", "1080p30")
+bpos = s.addSource("browser")
+s.setItem(bpos, "url", "data:text/html,<body style='margin:0;background:transparent'><div style='width:400px;height:300px;background:%23ff0000'></div></body>")
+check(any(w["url"].startswith("data:") for w in s._web_sources()), "Browserquelle angelegt")
 s.set("twitch_key", "live_123")
 s.set("youtube_key", "abcd-efgh")
 s.set("targets.kick", True)
@@ -121,17 +131,46 @@ check(bool(engine.rootObjects()), "Oberfläche lädt")
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(tmp, "studio.png")
 
 
+def web_check():
+    """Kommt die Browserquelle im Bild an? (Offscreen ohne Grafikkarte kann WebEngine fehlen.)"""
+    it = next(i for i in s.cfg["scenes"][0]["items"] if i["kind"] == "browser")
+    f = s.mixer.frame()
+    if f:
+        d, w, h = f
+        x = int((it["x"] + it["w"] * 0.25) * w)
+        y = int((it["y"] + backend.item_height(it) * 0.25) * h)
+        b, g, r = d[(y * w + x) * 4:(y * w + x) * 4 + 3]
+        print(f"Browserquelle im Bild: {'ja' if r > 200 and g < 60 else 'nein'} ({r},{g},{b})")
+
+
 def shoot():
+    web_check()
+    if s.poll:
+        print("Umfrage im Bild:", s.poll.state()["phase"], s.poll.state()["total"], "Stimmen")
     win = engine.rootObjects()[0]
     win.setProperty("selected", s.cfg["scenes"][0]["items"][1]["id"])
-    QTimer.singleShot(1200, lambda: (win.grabWindow().save(out), print("Foto:", out), app.quit()))
+    from PySide6.QtCore import QObject
+
+    def second():
+        dlg = win.findChild(QObject, "settingsDialog")
+        if dlg is not None:
+            dlg.setProperty("tab", "ziele")
+            dlg.setProperty("open", True)
+        out2 = out.replace(".png", "-einstellungen.png")
+        QTimer.singleShot(800, lambda: (win.grabWindow().save(out2), print("Foto:", out2), app.quit()))
+    QTimer.singleShot(1200, lambda: (win.grabWindow().save(out), print("Foto:", out), second()))
 
 
 if engine.rootObjects():
+    s.startPoll("Welches Spiel spielen wir als Nächstes?", ["Mario Kart", "Zelda", "Tetris"], 120, 20, False)
+    for i, v in enumerate("1121321112"):
+        s.poll.vote(f"zuschauer{i}", v)
+    check(s.poll.state()["total"] == 10 and any(i["kind"] == "umfrage" for i in s.cfg["scenes"][0]["items"]),
+          "Umfrage gestartet, Einblendung in der Szene, Stimmen gezählt")
     s.addScene()
     s.renameScene(1, "Pause")
     s.setScene(0)
-    QTimer.singleShot(1500, shoot)
+    QTimer.singleShot(5000, shoot)
     QTimer.singleShot(15000, app.quit)
     app.exec()
 s.shutdown()

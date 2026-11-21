@@ -60,24 +60,28 @@ def describe(node):
     return {"elgato": elgato, "capture": capture}
 
 
-def capture_mode(device, fps_max=60):
-    """Bestes Format einer Capture-Karte: 1080p mit höchster Bildrate (bis 60), unkomprimiert bevorzugt.
-    None, wenn die Karte nichts meldet (dann entscheidet GStreamer)."""
+def capture_mode(device, fps_max=60, height=1080):
+    """Bestes Format einer Capture-Karte für die Leinwand (z. B. 1080p60 oder 4K30), unkomprimiert
+    bevorzugt. None, wenn die Karte nichts meldet (dann entscheidet GStreamer)."""
     modes = v4l2modes.list_modes(device)
-    return pick_capture_mode(modes, fps_max)
+    return pick_capture_mode(modes, fps_max, height)
 
 
 RAW_ORDER = {"NV12": 4, "YUYV": 3, "UYVY": 3, "YU12": 2, "MJPG": 1}
 
 
-def pick_capture_mode(modes, fps_max=60):
+def pick_capture_mode(modes, fps_max=60, height=1080):
+    """Genau die Höhe der Leinwand, sonst die nächstkleinere (nie unnötig größer), dann die höchste
+    Bildrate bis fps_max und unkomprimiert vor MJPG."""
     usable = [m for m in modes if m["format"] in RAW_ORDER and m["width"] <= 3840]
     if not usable:
         return None
 
     def score(m):
-        full_hd = m["width"] == 1920 and m["height"] == 1080
-        return (full_hd, min(m["fps"], fps_max), RAW_ORDER[m["format"]], m["width"] * m["height"])
+        fits = m["height"] <= height
+        return (m["height"] == height, fits, min(m["fps"], fps_max) >= min(fps_max, 29.9),
+                min(m["fps"], fps_max), RAW_ORDER[m["format"]],
+                m["width"] * m["height"] * (1 if fits else -1))
     best = dict(max(usable, key=score))
     best["fps"] = min(best["fps"], fps_max)
     return best

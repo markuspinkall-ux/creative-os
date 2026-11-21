@@ -21,8 +21,21 @@ import time
 
 from . import gst
 
-CANVAS = {"720p30": (1280, 720, 30), "720p60": (1280, 720, 60),
-          "1080p30": (1920, 1080, 30), "1080p60": (1920, 1080, 60)}
+# Auflösungen (16:9) und Bildraten, aus denen sich die Leinwand zusammensetzt, z. B. „1440p60“
+HEIGHTS = (720, 1080, 1440, 2160)
+RATES = (24, 25, 30, 50, 60)
+CANVAS = {f"{h}p{r}": (h * 16 // 9, h, r) for h in HEIGHTS for r in RATES}
+# Für den Stream verkleinern (Twitch & Co. mögen 1440p/4K nicht): 936p ist der Twitch-Klassiker
+STREAM_HEIGHTS = (1080, 936, 720)
+
+
+def canvas_size(name):
+    """„1080p60“ → (1920, 1080, 60); Unbekanntes → 1080p30."""
+    return CANVAS.get(name or "", CANVAS["1080p30"])
+
+
+def size_for_height(h):
+    return (h * 16 // 9) // 2 * 2, h
 PREVIEW = (960, 540)
 AUDIO_CAPS = "audio/x-raw,format=F32LE,rate=48000,channels=2,layout=interleaved"
 CORNERS = ("oben-links", "oben-rechts", "unten-links", "unten-rechts")
@@ -158,6 +171,13 @@ def source_branch(src, w, h, fps, n):
         return (f"filesrc location={_q(f)} ! pngdec ! videoconvert n-threads=0 ! videoscale n-threads=0 "
                 f"! video/x-raw,format=BGRA,width={iw},height={ih},pixel-aspect-ratio=1/1 "
                 f"! imagefreeze is-live=true ! video/x-raw,framerate={fps}/1 ! queue max-size-buffers=3 leaky=downstream")
+    if t == "browser":
+        # Browserquelle (z. B. StreamElements-Alerts): Studio rendert die Seite selbst und schiebt
+        # die Bilder mit durchsichtigem Hintergrund hier hinein (Mixer.push_web)
+        bw, bh = _even(src.get("w", 800)), _even(src.get("h", 600))
+        return (f"appsrc name=web_{n} is-live=true do-timestamp=true format=time block=false max-bytes=0 "
+                f"caps={_q(f'video/x-raw,format=BGRA,width={bw},height={bh},framerate=0/1')} "
+                f"! queue max-size-buffers=2 leaky=downstream")
     if t not in ("screen", "video", "test") or not video_source(src):
         return None
     # Kameras, Capture-Karten und Bildschirm laufen in einer eigenen kleinen Pipeline (Feeder) und
@@ -292,7 +312,7 @@ def build_description(cfg, sources, audio, layout=None):
     layout: {key: (x, y, b, h, z)} in Pixeln – was nicht drinsteht, ist unsichtbar.
     audio: {slot: quellen-dict} (nur eingeschaltete).
     Rückgabe: (Beschreibung, (b, h, fps), {key: padname})."""
-    w, h, fps = CANVAS.get(cfg.get("canvas"), CANVAS["1080p30"])
+    w, h, fps = canvas_size(cfg.get("canvas"))
     pw, ph = PREVIEW
     layout = layout or {}
     # Mischpult rechnet in BGRA wie alle Zulieferer – keine Umrechnung je Quelle und für die Vorschau
@@ -351,8 +371,9 @@ LEVEL_RE = re.compile(r"peak=\([A-Za-z]+\)[{<]([^}>]*)[}>]")
 class Output:
     """Ein Ausgang (Aufnahme oder Stream) in eigener Pipeline."""
 
-    def __init__(self, kind, target, fps, kbps, fmt="mp4", cpu_only=False):
+    def __init__(self, kind, target, fps, kbps, fmt="mp4", cpu_only=False, out=None):
         self.kind = kind               # "record" oder Name des Stream-Ziels
+        self.out_size = out            # (b, h, fps) – Stream kleiner/langsamer als die Leinwand
         self.kbps, self.fmt = kbps, fmt
         self.target = target           # Dateipfad oder rtmp://…
         self.started = time.monotonic()
@@ -372,7 +393,7 @@ class Output:
             mux = sink = None
             desc = (f"appsrc name=v format=time is-live=true do-timestamp=false max-bytes=0 "
                     f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! videoconvert n-threads=0 "
-                    f"! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc,alignment=au "
+                    f"{self._scale()}! {venc[0]} name=venc ! h264parse config-interval=-1 ! video/x-h264,stream-format=avc,alignment=au "
                     f"! appsink name=vo emit-signals=true sync=false max-buffers=0  "
                     f"appsrc name=a format=time is-live=true do-timestamp=false max-bytes=0 "
                     f"! queue max-size-time=3000000000 max-size-bytes=0 max-size-buffers=0 ! audioconvert "
@@ -407,6 +428,14 @@ class Output:
 
     def _setup(self):
         pass
+
+    def _scale(self):
+        """Für den Stream verkleinern und/oder die Bildrate senken (z. B. 1440p60 → 1080p30)."""
+        if not self.out_size:
+            return ""
+        w, h, fps = self.out_size
+        return (f"! videoscale n-threads=0 ! videorate drop-only=true "
+                f"! video/x-raw,width={w},height={h},framerate={fps}/1,pixel-aspect-ratio=1/1 ")
 
     def take(self, sample, video):
         """Ein Stück (Bild oder Ton) aus dem Mischpult übernehmen – läuft im GStreamer-Thread."""
@@ -619,11 +648,11 @@ class LiveEncoder(Output):
     """Multistream: Mischpult → ein Kodierer → alle Ziele (Twitch, YouTube, Kick, TikTok, eigener Server).
     Spart bei mehreren Zielen viel Leistung; jedes Ziel hat trotzdem seine eigene Pipeline."""
 
-    def __init__(self, targets, fps, kbps, cpu_only=False):
+    def __init__(self, targets, fps, kbps, cpu_only=False, out=None):
         self.senders = {}
         self.finished = []
         self._pending = dict(targets)
-        super().__init__("live", "", fps, kbps, "flv", cpu_only)
+        super().__init__("live", "", out[2] if out else fps, kbps, "flv", cpu_only, out)
 
     def _setup(self):
         for key, url in self._pending.items():
@@ -703,6 +732,7 @@ class Mixer:
         self.outputs = {}
         self.pads = {}                  # Quelle → Pad-Name am Mischpult
         self.feeders = {}               # Quelle → Feeder (Kameras, Bildschirm)
+        self.web = {}                   # Browserquelle → (appsrc, b, h)
         self.on_frame = None            # fn(bytes, b, h) – jedes Vorschaubild, sobald es fertig ist
         self.monitors = {}              # Tonquelle → Monitor (Mithören über Kopfhörer)
         self.monitor_device = ""
@@ -742,6 +772,9 @@ class Mixer:
             self._hook_round(pad)
         by_key = {s["key"]: s for s in sources}
         for key, pad in pads.items():
+            web = gst.bin_by_name(self.pipe, f"web_{pad[5:]}".encode())
+            if web:
+                self.web[key] = (web, _even(by_key[key].get("w", 800)), _even(by_key[key].get("h", 600)))
             feed = gst.bin_by_name(self.pipe, f"feed_{pad[5:]}".encode())
             if feed:
                 self.feeders[key] = Feeder(key, by_key[key], feed, self.size)
@@ -762,6 +795,16 @@ class Mixer:
             gst.relay_sample(sink, None)            # nur abholen, damit nichts staut
         return gst.FLOW_OK
 
+    def push_web(self, key, data, w, h):
+        """Ein Bild einer Browserquelle (BGRA, genau b×h) ins Mischpult geben."""
+        entry = self.web.get(key)
+        if not entry or not self.pipe:
+            return False
+        el, bw, bh = entry
+        if (w, h) != (bw, bh) or len(data) != bw * bh * 4:
+            return False
+        return gst.push_bytes(el, data)
+
     def set_monitor(self, slot, on, device=""):
         """Mithören an/aus – sofort, ohne das Mischpult neu aufzubauen."""
         old = self.monitors.pop(slot, None)
@@ -771,7 +814,7 @@ class Mixer:
             self.monitors[slot] = Monitor(device)
 
     def _branch_ok(self, src):
-        w, h, fps = CANVAS.get(self.cfg.get("canvas"), CANVAS["1080p30"])
+        w, h, fps = canvas_size(self.cfg.get("canvas"))
         d = source_branch(src, w, h, fps, 1)
         if not d:
             return False
@@ -849,6 +892,9 @@ class Mixer:
             gst.bin_remove(self.pipe, branch)
             return False
         self.pads[src["key"]] = name
+        web = gst.bin_by_name(branch, f"web_{n}".encode())
+        if web:
+            self.web[src["key"]] = (web, _even(src.get("w", 800)), _even(src.get("h", 600)))
         feed = gst.bin_by_name(branch, f"feed_{n}".encode())
         if feed:
             self.feeders[src["key"]] = Feeder(src["key"], src, feed, self.size)
@@ -876,6 +922,9 @@ class Mixer:
             for f in self.feeders.values():
                 f.stop()
             self.feeders = {}
+            for el, _w, _h in self.web.values():
+                gst.object_unref(el)
+            self.web = {}
             for el, h in self._overlays:
                 gst.signal_disconnect(el, h)
                 gst.object_unref(el)
@@ -942,11 +991,14 @@ class Mixer:
         elif "live" in self.outputs and key in self.outputs["live"].senders:
             self.outputs["live"].stop_target(key)
 
-    def start_live(self, targets, kbps, cpu_only=False):
-        """Multistream an alle Ziele {schlüssel: adresse}. Rückgabe: der Kodierer."""
+    def start_live(self, targets, kbps, cpu_only=False, out=None):
+        """Multistream an alle Ziele {schlüssel: adresse}. out: (b, h, fps) für den Stream oder None
+        (= wie die Leinwand). Rückgabe: der Kodierer."""
         if not self.pipe:
             raise RuntimeError("Studio ist noch nicht bereit.")
-        enc = LiveEncoder(targets, self.size[2], kbps, cpu_only)
+        if out and tuple(out) == tuple(self.size):
+            out = None
+        enc = LiveEncoder(targets, self.size[2], kbps, cpu_only, out)
         with self._lock:
             self.outputs["live"] = enc
         return enc

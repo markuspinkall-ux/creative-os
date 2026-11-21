@@ -22,7 +22,7 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-TWITCH_SCOPES = "channel:manage:broadcast channel:read:stream_key chat:read chat:edit"
+TWITCH_SCOPES = "channel:manage:broadcast channel:read:stream_key chat:read chat:edit channel:manage:polls"
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
 TIMEOUT = 15
 
@@ -233,6 +233,20 @@ class Twitch(Account):
         d = self._api("GET", f"streams/key?broadcaster_id={self.store['user_id']}").get("data") or [{}]
         key = d[0].get("stream_key", "")
         return f"rtmp://live.twitch.tv/app/{key}" if key else ""
+
+    # ---- Umfragen (nur Affiliate/Partner; sonst wird im Chat abgestimmt) ----------------------------
+    def create_poll(self, title, choices, duration):
+        body = {"broadcaster_id": self.store["user_id"], "title": title[:60],
+                "choices": [{"title": c[:25]} for c in choices], "duration": max(15, min(1800, int(duration)))}
+        d = self._api("POST", "polls", body).get("data") or [{}]
+        return d[0].get("id", "")
+
+    def poll_votes(self, poll_id):
+        d = self._api("GET", f"polls?broadcaster_id={self.store['user_id']}&id={poll_id}").get("data") or [{}]
+        return [int(c.get("votes", 0)) for c in d[0].get("choices", [])]
+
+    def end_poll(self, poll_id):
+        self._api("PATCH", "polls", {"broadcaster_id": self.store["user_id"], "id": poll_id, "status": "TERMINATED"})
 
     def chat_url(self, dark=True):
         login = self.login_name
