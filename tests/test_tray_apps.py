@@ -76,3 +76,27 @@ def test_widgets_nur_per_rechtsklick():
     assert '"creative-widgets.desktop"' not in src.split("SUITE = {", 1)[1].split("}", 1)[0]
     qml = (ROOT / "shell/creative_shell/qml/surfaces/Wallpaper.qml").read_text(encoding="utf-8")
     assert 'act: "widgets"' in qml
+
+
+def test_pictures_nur_als_standard_app():
+    """Pictures steht nicht im Startmenü, öffnet aber weiterhin Bilder (Standard-App)."""
+    assert "NoDisplay=true" in _main_section("pictures/creative-pictures.desktop")
+    cf = (ROOT / "image/Containerfile").read_text(encoding="utf-8")
+    assert "=creative-pictures.desktop/' >> /etc/xdg/mimeapps.list" in cf
+
+
+def test_engine_entfernt():
+    """Engine ist komplett raus; installierte Engine wird beim Anmelden entfernt."""
+    assert not (ROOT / "engine").exists()
+    for f in ("shell/creative_shell/apps.py", "shell/creative_shell/icons.py", "image/Containerfile",
+              "software/creative-software"):
+        assert "org.creativeos.Engine" not in (ROOT / f).read_text(encoding="utf-8"), f
+    user = (ROOT / "theme/apps/creative-theme-user").read_text(encoding="utf-8")
+    assert "flatpak uninstall --user -y --noninteractive org.creativeos.Engine" in user
+
+
+def test_3d_ansicht_nur_als_standard_app():
+    """3D-Ansicht steht nicht im Startmenü, öffnet aber weiterhin .glb/.gltf (Standard-App)."""
+    assert "NoDisplay=true" in _main_section("viewer3d/creative-3dansicht.desktop")
+    cf = (ROOT / "image/Containerfile").read_text(encoding="utf-8")
+    assert "model/gltf-binary=creative-3dansicht.desktop" in cf

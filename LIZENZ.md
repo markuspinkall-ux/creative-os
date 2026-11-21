@@ -9,7 +9,7 @@ Alle von Gibeon OS selbst entwickelten Programme und Bestandteile stehen unter d
 (GPL-3.0-or-later). Den vollständigen Lizenztext findest du in der Datei `LICENSE`.
 
 Dazu gehören insbesondere Shell (Taskleiste, Startmenü, Schreibtisch, Ablage),
-Systemsteuerung, Browser, Engine, Broadcast, Capture, Deck, Player, Notes, Calculator,
+Systemsteuerung, Browser, Broadcast, Capture, Deck, Player, Notes, Calculator,
 Pictures, Shots, Writer, Art, Cut, Mail, Magazin, Podcast, Iso, Taskmanager, Dateien,
 Game Launcher, Widgets, Willkommens-Assistent, Benachrichtigungen, Datensicherung,
 Mein Server, die Gibeon-Symbole, Hintergrundbilder, das Graphit- und Porzellan-Design sowie

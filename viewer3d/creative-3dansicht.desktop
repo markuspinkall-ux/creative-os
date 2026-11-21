@@ -10,3 +10,4 @@ Categories=Graphics;Viewer;3DGraphics;
 MimeType=model/gltf-binary;model/gltf+json;
 Keywords=3D;GLB;glTF;Modell;Figur;Betrachter;Viewer;Ansicht;
 StartupWMClass=creative-3dansicht
+NoDisplay=true

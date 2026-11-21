@@ -28,7 +28,7 @@ CHATS = {
         {"mid": "5", "me": False, "text": "Deal. Schick mir den Link zum Discord?", "ts": now - 2 * MIN, "state": ""},
     ],
     "lena.gibeonos0932": [
-        {"mid": "6", "me": True, "text": "Hier ist das Engine-Spiel von gestern – sag mir, ob die Landung klappt!", "ts": now - 5 * MIN, "state": "queued"},
+        {"mid": "6", "me": True, "text": "Hier ist das Spiel von gestern – sag mir, ob die Landung klappt!", "ts": now - 5 * MIN, "state": "queued"},
     ],
 }
 

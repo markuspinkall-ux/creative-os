@@ -1,11 +1,15 @@
 [
   {
     "datum": "2026-11-21",
-    "titel": "Android-Apps mit normalem Fensterrahmen und im Tablet-Format",
+    "titel": "Android-Apps mit normalem Fensterrahmen und im Tablet-Format, Startmenü aufgeräumt",
     "neu": [
       "Android-Apps haben jetzt denselben Fensterrahmen wie alle anderen Fenster – mit der gewohnten Titelleiste, Minimieren, Maximieren und Schließen. Die kleine Android-Leiste oben im Fenster bleibt zusätzlich",
       "Android-Apps öffnen sich im Tablet-Format: groß im Querformat statt schmal wie auf einem Handy. Maximieren und Größe ziehen am Rahmen funktionieren, die App passt sich kurz nach dem Loslassen an. Apps, die nur hochkant gedacht sind, wirken dabei manchmal gestreckt",
       "Beides lässt sich in „Android-Apps“ unter „Fenster“ einzeln abschalten. Der Rahmen gilt ab dem nächsten Start von Android – einmal „Beenden“ und wieder „Starten“"
+    ],
+    "verbessert": [
+      "Startmenü aufgeräumt: „Pictures“ und „3D-Ansicht“ stehen nicht mehr im Startmenü. Sie öffnen sich weiterhin automatisch, sobald du ein Bild oder eine 3D-Datei (.glb, .gltf) öffnest, zum Beispiel per Doppelklick in „Dateien“",
+      "Engine ist aus Gibeon OS entfernt. Eine installierte Engine und der Katalog „Eigene Apps“ in „Software“, der nur für sie da war, werden beim nächsten Anmelden entfernt. Eigene Spiele-Projekte im Ordner „Engine“ bleiben erhalten"
     ]
   },
   {
