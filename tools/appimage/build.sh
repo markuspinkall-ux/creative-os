@@ -67,6 +67,7 @@ finish() {   # finish <appdir> <name> <desktop-id> <icon.svg>
     mkdir -p "$d/usr/share/gibeon-appimage"
     printf '{"app": "%s", "version": "%s"}\n' "$id" "$VERSION" > "$d/usr/share/gibeon-appimage/version.json"
     chmod +x "$d/AppRun"
+    chmod -R a+rX "$d"
     ARCH=x86_64 ./appimagetool --no-appstream -n "$d" "$OUT/$name-x86_64.AppImage" >/dev/null
     ls -la "$OUT/$name-x86_64.AppImage"
 }
