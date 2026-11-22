@@ -12,6 +12,16 @@ Item {
 
     // Wird beim Öffnen aufgerufen
     // Fluid-Glas unter dem Menü
+    // Fenster wachsen aus dem angeklickten Eintrag (KWin-Effekt „gibeon-fenster“).
+    // Das Startmenü sitzt links unten direkt über der Taskleiste (52 px, BAR_HEIGHT).
+    function noteLaunch(item) {
+        const win = Window.window
+        const geo = shell.screenGeometry(root.screenName)
+        if (!item || !win || geo.width === undefined) return
+        const p = item.mapToItem(null, 32, item.height / 2)
+        windowAnim.noteLaunch(geo.x + p.x, geo.y + geo.height - 52 - win.height + p.y)
+    }
+
     function updateBlur() {
         shell.setBlur(Window.window, [{ x: menu.x, y: menu.y, w: menu.width, h: menu.height, r: menu.radius }])
     }
@@ -173,6 +183,7 @@ Item {
             function launchCurrent() {
                 if (count === 0)
                     return
+                root.noteLaunch(currentItem)
                 if (apps.launchAt(currentIndex >= 0 ? currentIndex : 0))
                     shell.closePopups()
                 else
@@ -329,6 +340,7 @@ Item {
                             appMenu.visible = true
                             return
                         }
+                        root.noteLaunch(row)
                         if (apps.launchAt(row.index))
                             shell.closePopups()
                         else

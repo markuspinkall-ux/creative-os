@@ -12,8 +12,11 @@ Item {
 
     // ---- Einfahren bei maximiertem Fenster ------------------------------------------------
     // Ist auf diesem Monitor ein Fenster maximiert, reserviert die Leiste keinen Platz und fährt
-    // nach oben weg. Nur ein schmaler Streifen am oberen Rand nimmt dann die Maus an: geht sie
-    // dorthin, fährt die Leiste herein; verlässt sie die Leiste, fährt sie wieder ein.
+    // nach oben weg. Nur ein schmaler Streifen am oberen Rand über dem Tray (links) nimmt dann die
+    // Maus an: geht sie dorthin, fährt die Leiste herein; verlässt sie die Leiste, fährt sie wieder
+    // ein. Rechts bleibt der obere Rand frei – dort liegen Minimieren, Maximieren und Schließen des
+    // Fensters, die die Leiste sonst verdecken würde. Auch ausgefahren nimmt sie dann nur am Tray
+    // die Maus an.
     readonly property bool autoHide: !!(Window.window && Window.window.autoHide)
     readonly property bool hovered: !!(Window.window && Window.window.hovered)
     readonly property bool menuOpen: shell.trayMenuOpenOn === root.screenName
@@ -24,6 +27,10 @@ Item {
     property real shift: shown ? 0 : -height
     Behavior on shift { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
     transform: Translate { y: root.shift }
+    // Eingefahren ganz unsichtbar (kein stehengebliebener Rest oben links)
+    opacity: shown ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: 200 } }
+    readonly property int trayRight: left.x + left.width + 24
 
     onHoveredChanged: {
         if (hovered) {
@@ -40,10 +47,12 @@ Item {
 
     function updateInput() {
         if (!Window.window) return
-        if (!autoHide || shown)
-            shell.setInputRect(Window.window, 0, 0, 0, 0)          // ganze Fläche
+        if (!autoHide)
+            shell.setInputRect(Window.window, 0, 0, 0, 0)               // ganze Fläche
+        else if (shown)
+            shell.setInputRect(Window.window, 0, 0, trayRight, height)  // nur am Tray
         else
-            shell.setInputRect(Window.window, 0, 0, width, edge)   // nur der Streifen oben
+            shell.setInputRect(Window.window, 0, 0, trayRight, edge)    // Streifen oben überm Tray
     }
 
     // Fluid-Glas: nur unter den beiden Feldern weichzeichnen
@@ -89,7 +98,7 @@ Item {
         x: 14
         y: 10
         width: leftRow.implicitWidth + 28
-        onWidthChanged: Qt.callLater(root.updateBlur)
+        onWidthChanged: { Qt.callLater(root.updateBlur); Qt.callLater(root.updateInput) }
         lit: leftMouse.containsMouse || shell.quickPanelOpenOn === root.screenName
 
         MouseArea {

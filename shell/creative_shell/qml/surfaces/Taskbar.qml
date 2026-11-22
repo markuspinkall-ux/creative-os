@@ -14,7 +14,26 @@ Item {
         shell.setBlur(Window.window, [{ x: bar.x, y: bar.y, w: bar.width, h: bar.height, r: 0 }])
     }
     Component.onCompleted: Qt.callLater(updateBlur)
-    onWidthChanged: Qt.callLater(updateBlur)
+    onWidthChanged: { Qt.callLater(updateBlur); pointTimer.restart() }
+
+    // Fenster wachsen aus ihrem Symbol: Lage der Symbole an den KWin-Effekt melden
+    Timer { id: pointTimer; interval: 300; onTriggered: root.reportPoints() }
+    Connections { target: tasks; function onRevisionChanged() { pointTimer.restart() } }
+    function reportPoints() {
+        const win = Window.window
+        const geo = shell.screenGeometry(root.screenName)
+        if (!win || geo.width === undefined) return
+        const top = geo.y + geo.height - win.height
+        const pts = []
+        for (let i = 0; i < taskRepeater.count; i++) {
+            const it = taskRepeater.itemAt(i)
+            if (!it || !it.modelData) continue
+            const p = it.mapToItem(null, it.width / 2, it.height / 2)
+            pts.push({ key: it.modelData.key, desktopId: it.modelData.desktopId || "",
+                       x: geo.x + p.x, y: top + p.y })
+        }
+        windowAnim.setTaskPoints(root.screenName, pts)
+    }
     onHeightChanged: Qt.callLater(updateBlur)
 
     // Fluid-Design: Glasleiste über die ganze Breite, bündig am unteren Rand,
@@ -106,7 +125,10 @@ Item {
             }
 
             Repeater {
+                id: taskRepeater
                 // Angeheftete Apps + laufende Programme auf diesem Monitor
+                onItemAdded: pointTimer.restart()
+                onItemRemoved: pointTimer.restart()
                 model: {
                     tasks.revision
                     return tasks.taskbarItems(root.screenName)

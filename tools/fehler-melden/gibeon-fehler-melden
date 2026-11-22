@@ -1,0 +1,12 @@
+#!/bin/sh
+# Gibeon OS: „Fehler melden“ – öffnet das Meldeformular (GitHub) mit schon eingetragener Version.
+# Die Meldungen landen beim Entwickler im Entwickler-Widget.
+version=""
+if [ -r /usr/share/creative-os/version.json ]; then
+    version=$(python3 -c 'import json;d=json.load(open("/usr/share/creative-os/version.json"));print(f"Gibeon OS {d[\"nummer\"]} „{d[\"codename\"]}“")' 2>/dev/null)
+fi
+stand=$(sed -n 's/^IMAGE_VERSION=//p;s/^OSTREE_VERSION=//p' /etc/os-release 2>/dev/null | tr -d '"' | head -n 1)
+[ -n "$stand" ] && version="$version ($stand)"
+enc() { python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$1"; }
+url="https://github.com/markuspinkall-ux/creative-os/issues/new?template=fehlermeldung.yml&quelle=$(enc "Gibeon OS")&version=$(enc "$version")"
+exec xdg-open "$url"

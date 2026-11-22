@@ -1,0 +1,16 @@
+name: Fenster-Effekt prüfen
+# KWin-Effekt „gibeon-fenster“ (Fenster wachsen aus dem Symbol) in echtem KWin (Fedora 44)
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [shell/kwin/kwinrc, shell/kwin/gibeon-fenster/**, tools/fenster-effekt-test.sh, .github/workflows/fenster-effekt-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: KWin mit Effekt
+        timeout-minutes: 15
+        run: docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/fenster-effekt-test.sh

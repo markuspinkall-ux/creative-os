@@ -10,7 +10,9 @@
       "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten",
       "Studio: Spiel-Aufnahmen – unter Einstellungen › Aufnahme wählst du, was in die Aufnahme kommt: „Alles wie im Bild“, „Spiel + Kamera“ oder „Nur das Spiel“. Overlays, Bilder, Browserquellen, Alerts und Umfragen bleiben dann aus der Aufnahme draußen, der Stream sieht weiter alles",
       "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme",
-      "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü"
+      "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü",
+      "Fenster öffnen sich jetzt dynamisch: Sie wachsen aus dem Symbol heraus, auf das du geklickt hast (Startmenü oder Taskleiste), schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück und kommen beim Wiederherstellen von dort wieder heraus",
+      "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
@@ -24,12 +26,16 @@
       "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt",
       "Studio: Neuer Knopf „Broadcast (Mikrofon & Kamera)“ rechts unter den Einstellungen – öffnet Broadcast direkt aus Studio",
       "Studio: Die Spalten links und rechts lassen sich schmaler oder breiter ziehen (am Griff zwischen den Spalten, Doppelklick setzt zurück). Der Inhalt passt sich an, die Breite bleibt gespeichert",
-      "Capture zeigt jetzt nur noch echte Capture-Karten an – z. B. Elgato oder AVerMedia Live Gamer Mini, je nachdem, was angeschlossen ist. Webcams und virtuelle Kameras tauchen dort nicht mehr auf"
+      "Capture zeigt jetzt nur noch echte Capture-Karten an – z. B. Elgato oder AVerMedia Live Gamer Mini, je nachdem, was angeschlossen ist. Webcams und virtuelle Kameras tauchen dort nicht mehr auf",
+      "Obere Leiste bei maximiertem Fenster: Sie fährt nur noch herein, wenn die Maus oben links an den Tray geht – rechts oben bleiben Minimieren, Maximieren und Schließen des Fensters frei bedienbar"
     ],
     "behoben": [
       "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt",
       "Studio: Kamera, Bilder und andere Quellen lassen sich in der Vorschau wieder frei verschieben und an den Ecken skalieren – vorher brach das Ziehen nach ein, zwei Pixeln ab",
-      "Studio: Wird die Gibeon Kamera als Quelle gewählt, schaltet Studio die Kamera in Broadcast selbst ein (und startet Broadcast, falls nötig) – vorher blieb das Bild leer, solange die Kamera in Broadcast aus war"
+      "Studio: Wird die Gibeon Kamera als Quelle gewählt, schaltet Studio die Kamera in Broadcast selbst ein (und startet Broadcast, falls nötig) – vorher blieb das Bild leer, solange die Kamera in Broadcast aus war",
+      "Beim Einfahren der oberen Leiste blieb oben links ein Rest der Leiste stehen – jetzt verschwindet sie ganz",
+      "Der Converter hat wieder ein rundes Symbol wie die anderen Apps",
+      "Android-Apps öffnen sich nach dem Hochfahren gleich als eigenes Fenster – nicht mehr erst in der großen LineageOS-Oberfläche"
     ]
   },
   {

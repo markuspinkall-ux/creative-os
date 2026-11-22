@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "gibeon-fenster",
+        "Name": "Gibeon: Fenster aus dem Symbol",
+        "Description": "Fenster wachsen beim Öffnen aus dem angeklickten Symbol (Taskleiste/Startmenü) und schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück.",
+        "Authors": [{ "Name": "Gibeon OS" }],
+        "Category": "Window Open/Close Animation",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.1",
+        "EnabledByDefault": false
+    },
+    "X-KDE-Ordering": 60,
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Effect"
+}

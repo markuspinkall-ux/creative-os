@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -36,6 +37,9 @@ ALIASES = {
 def creative_icon(icon_id):
     """Pfad des Gibeon-Symbols für einen Symbolnamen oder Symbolpfad – sonst None."""
     stem = os.path.splitext(os.path.basename(icon_id or ""))[0]
+    local = local_round_icon(icon_id)
+    if local:
+        return local
     for name in dict.fromkeys((stem, ALIASES.get(stem.lower(), stem))):
         for folder in (PORZELLAN_DIRS if _LIGHT else CREATIVE_DIRS):
             for ext in (".svg", ".png"):
@@ -46,6 +50,73 @@ def creative_icon(icon_id):
 
 
 _LIGHT = False
+
+# Eigene Apps im Benutzerordner (z. B. der Converter) bringen ihr Symbol als Graphit-Kachel mit.
+# Die System-Symbole werden beim Bau rund gemacht – diese hier erst beim Anzeigen.
+LOCAL_DIRS = (
+    os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps"),
+    os.path.expanduser("~/.local/share/icons/Creative/apps/scalable"),
+)
+SYSTEM_GIBEON_DIR = "/usr/share/icons/hicolor/scalable/apps"
+_TILE_RECT = re.compile(
+    r'<rect\b(?=[^>]*\bfill="#(?:232836|1c2029)")(?=[^>]*\bwidth="(?:5[4-8]|6[0-4])")[^>]*?/?>(?:\s*</rect>)?',
+    re.I)
+_ACCENTS = re.compile(r"#8fb3ff|#ffb07a|#6fdcc0|#e5484d|#9f7aea", re.I)
+_PORZELLAN = {"#10131a": "#d6dce6", "#dce6ff": "#1c2433", "#12151b": "#e9eef6"}
+_LOCAL_CACHE = {}
+
+
+def _roundify(text, light):
+    """Wie theme/icons/round-icons.py (+ Porzellan): Kachel → runde Fläche, Symbol einfarbig."""
+    text = _TILE_RECT.sub(f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_DARK}"/>', text, count=1)
+    text = re.sub("#232836", CIRCLE_DARK, text, flags=re.I)
+    text = _ACCENTS.sub("#dce6ff", text)
+    if light:
+        text = re.sub("|".join(_PORZELLAN), lambda m: _PORZELLAN[m.group(0).lower()], text, flags=re.I)
+    return text
+
+
+def _local_svg(icon_id):
+    if not icon_id:
+        return None
+    if icon_id.startswith("/"):
+        home = os.path.expanduser("~") + "/"
+        return icon_id if icon_id.endswith(".svg") and icon_id.startswith(home) and os.path.isfile(icon_id) else None
+    for folder in LOCAL_DIRS:
+        path = os.path.join(folder, icon_id + ".svg")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def local_round_icon(icon_id):
+    """Rund gemachte Kopie eines Kachel-Symbols aus dem Benutzerordner – sonst None."""
+    path = _local_svg(icon_id)
+    if not path:
+        return None
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return None
+    key = (path, mtime, _LIGHT)
+    if key in _LOCAL_CACHE:
+        return _LOCAL_CACHE[key]
+    result = None
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+        viewbox = re.search(r'viewBox="\s*0\s+0\s+64\s+64', text)
+        if viewbox and _TILE_RECT.search(text):
+            digest = hashlib.sha1(f"{path}:{mtime}:{_LIGHT}".encode()).hexdigest()[:16]
+            cache = Path(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")) / "gibeon-icons"
+            cache.mkdir(parents=True, exist_ok=True)
+            target = cache / f"{digest}.svg"
+            if not target.exists():
+                target.write_text(_roundify(text, _LIGHT), encoding="utf-8")
+            result = str(target)
+    except OSError:
+        result = None
+    _LOCAL_CACHE[key] = result
+    return result
 
 
 class IconProvider(QQuickImageProvider):
@@ -90,8 +161,14 @@ def wants_circle(icon_id):
     Fläche, damit sie zu den übrigen Symbolen in Startmenü und Taskleiste passen."""
     if not icon_id or creative_icon(icon_id):
         return False
-    stem = os.path.splitext(os.path.basename(icon_id))[0].lower()
-    return not stem.startswith(("waydroid.", "creative-", "gibeon-"))
+    stem = os.path.splitext(os.path.basename(icon_id))[0]
+    low = stem.lower()
+    if low.startswith("waydroid."):
+        return False
+    if low.startswith(("creative-", "gibeon-")):
+        # Nur die mitgelieferten (beim Bau rund gemachten) Gibeon-Symbole sind schon rund
+        return not os.path.exists(os.path.join(SYSTEM_GIBEON_DIR, stem + ".svg"))
+    return True
 
 
 def in_circle(pixmap, edge, light=None):

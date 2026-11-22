@@ -27,7 +27,10 @@ def test_obere_leiste_bei_maximiert():
     top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
     assert "toggleCalendar" not in top
     # eingefahren: nur ein Streifen oben nimmt die Maus, dann fährt die Leiste herein
-    assert "transform: Translate { y: root.shift }" in top and "shell.setInputRect(Window.window, 0, 0, width, edge)" in top
+    assert "transform: Translate { y: root.shift }" in top and "shell.setInputRect(Window.window, 0, 0, trayRight, edge)" in top
+    # ausgefahren nur am Tray: rechts bleiben die Fensterknöpfe (Minimieren/Maximieren/Schließen) bedienbar
+    assert "shell.setInputRect(Window.window, 0, 0, trayRight, height)" in top
+    assert "opacity: shown ? 1 : 0" in top
     host = (ROOT / "shell/creative_shell/qml/HostLayer.qml").read_text(encoding="utf-8")
     assert "exclusionZone: isBar ? (autoHide ? 0 : surfaceHeight)" in host and "HoverHandler" in host
     assert 'win.setProperty("autoHide", name in wanted)' in main and "def setInputRect(" in main

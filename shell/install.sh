@@ -33,6 +33,9 @@ sh lockscreen/install-lockscreen.sh
 rm -rf /usr/share/kwin/scripts/creative-tasks /usr/share/kwin/scripts/creative-abstand
 mkdir -p /usr/share/kwin/scripts
 cp -r kwin/creative-tasks kwin/creative-abstand /usr/share/kwin/scripts/
+rm -rf /usr/share/kwin/effects/gibeon-fenster
+mkdir -p /usr/share/kwin/effects
+cp -r kwin/gibeon-fenster /usr/share/kwin/effects/
 
 # Web-Apps als eigene Fenster (Claude)
 install -Dm755 webapps/creative-webapp /usr/bin/creative-webapp

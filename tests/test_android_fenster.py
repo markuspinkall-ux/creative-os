@@ -371,8 +371,13 @@ echo "$*" >> {log}
 case "$1 $2" in
   "session start") touch {d}/laeuft ;;
   "status ") [ -e {d}/laeuft ] && echo "Session:	RUNNING" || echo "Session:	STOPPED" ;;
-  "prop get") n=$(cat {d}/zaehler 2>/dev/null || echo 0); n=$((n+1)); echo $n > {d}/zaehler
-              [ $n -ge 2 ] && echo 1 || echo 0 ;;
+  "prop get") if [ "$3" = init.svc.bootanim ]; then
+                b=$(cat {d}/anim 2>/dev/null || echo 0); b=$((b+1)); echo $b > {d}/anim
+                [ $b -ge 2 ] && echo stopped || echo running
+              else
+                n=$(cat {d}/zaehler 2>/dev/null || echo 0); n=$((n+1)); echo $n > {d}/zaehler
+                [ $n -ge 2 ] && echo 1 || echo 0
+              fi ;;
 esac
 """)
             fake.chmod(0o755)
@@ -389,6 +394,11 @@ esac
             self.assertNotIn("show-full-ui", lines)
             self.assertEqual(lines[-1], "app launch com.beispiel")          # App erst ganz zum Schluss
             self.assertLess(lines.index("session start"), lines.index("app launch com.beispiel"))
+            # erst nach dem Ende der Boot-Animation (Startbildschirm fertig)
+            self.assertGreaterEqual(int((d / "anim").read_text()), 2)
+            import time
+            time.sleep(5)                       # zweiter Aufruf holt die App nach vorn
+            self.assertEqual(log.read_text().splitlines().count("app launch com.beispiel"), 2)
             # läuft Android schon, geht es sofort los
             log.write_text("")
             subprocess.run(["sh", str(wrapper), "app", "launch", "com.zwei"], env=env, timeout=30)

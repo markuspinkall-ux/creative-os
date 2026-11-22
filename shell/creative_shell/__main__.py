@@ -27,6 +27,8 @@ from .dbus_service import ShellBus
 from .kwin import KWinBridge
 from .desktop import DesktopModel
 from .tasks import TaskModel
+from .fensteranimation import WindowAnimation
+from .entwickler import DevStats
 from .icons import IconFiles
 from .network import NetworkModel
 from .vpn import VpnModel
@@ -663,6 +665,10 @@ def main():
         "deckTray": DeckTray(),
         "shelf": ShelfModel(apps),
         "messenger": MessengerModel(),
+        # Fenster wachsen aus dem angeklickten Symbol (KWin-Effekt „gibeon-fenster“)
+        "windowAnim": WindowAnimation(tasks),
+        # Entwickler-Widget (Besuche, Downloads, Fehlermeldungen) – nur mit „gibeon-entwickler an“
+        "devStats": DevStats(),
     }
     use_layer = not args.dev and app.platformName() == "wayland" and layer_shell_available(engine)
     if not use_layer and not args.dev:
