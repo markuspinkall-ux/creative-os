@@ -10,7 +10,7 @@ OUT="$(realpath -m "${1:-secureboot-fotos}")"
 mkdir -p "$OUT"
 dnf install -y -q --setopt=install_weak_deps=False shim-x64 grub2-efi-x64 grub2-tools grub2-tools-extra bootupd \
     edk2-ovmf qemu-system-x86-core dosfstools mtools liberation-sans-fonts fontconfig python3-pillow socat \
-    kernel-core >/dev/null
+    kernel-core diffutils >/dev/null
 W="$(mktemp -d)"
 
 echo "--- bootupd: statische GRUB-Dateien ---"
@@ -44,7 +44,7 @@ cat > "$BOOT/loader/entries/ostree-1.conf" <<CONF
 title Gibeon OS 3 (Test)
 version 1
 linux /vmlinuz-test
-options console=ttyS0 panic=-1
+options console=ttyS0
 CONF
 # user.cfg: genau wie creative-quiet-boot, creative-grub-menue und creative-grub-design
 printf '# creative-os: GRUB-Textmeldungen unsichtbar\nset color_normal=black/black\nset menu_color_normal=light-gray/black\nset menu_color_highlight=white/dark-gray\n' > "$BOOT/grub2/user.cfg"
@@ -62,6 +62,10 @@ cp /boot/efi/EFI/fedora/mmx64.efi "$EFI/EFI/BOOT/" 2>/dev/null || true
 efistub=$(find /usr/lib/bootupd -name 'grub-static-efi.cfg' | head -n 1)
 if [ -n "$efistub" ]; then cp "$efistub" "$EFI/EFI/fedora/grub.cfg"
 else printf 'search --label boot --set prefix --no-floppy\nset prefix=($prefix)/grub2\nconfigfile $prefix/grub.cfg\n' > "$EFI/EFI/fedora/grub.cfg"; fi
+# Nur für die Prüfung: GRUB-Meldungen zusätzlich auf die serielle Schnittstelle (bis das Design
+# auf gfxterm umschaltet); danach zeigen die Bildschirmfotos, was GRUB schreibt.
+{ printf 'serial --unit=0 --speed=115200\nterminal_output --append serial\necho CREATIVE: GRUB laeuft\n'; cat "$EFI/EFI/fedora/grub.cfg"; } > "$W/stub.cfg"
+cp "$W/stub.cfg" "$EFI/EFI/fedora/grub.cfg"
 cp "$EFI/EFI/fedora/grub.cfg" "$EFI/EFI/BOOT/grub.cfg"
 echo "--- EFI-grub.cfg ---"; cat "$EFI/EFI/fedora/grub.cfg"
 mk() {   # $1 Bild, $2 Ordner, $3 Name
@@ -89,7 +93,16 @@ qemu-system-x86_64 -machine q35,smm=on -global driver=cfi.pflash01,property=secu
     -drive file="$W/efi.img",format=raw,if=virtio -drive file="$W/boot.img",format=raw,if=virtio \
     -vga std -display none -serial file:"$OUT/serial.log" \
     -qmp unix:"$W/qmp.sock",server,nowait -daemonize -pidfile "$W/qemu.pid"
-for i in $(seq 1 12); do sleep 10; foto "$OUT/start-$(printf %03d $((i*10))).png"; done
+# dicht fotografieren: GRUB ist nur ein paar Sekunden zu sehen; gleiche Bilder werden verworfen
+last=""
+for i in $(seq 1 180); do
+    sleep 0.5
+    foto "$W/f.png"
+    [ -f "$W/f.png" ] || continue
+    h=$(sha256sum "$W/f.png" | cut -c1-16)
+    [ "$h" = "$last" ] && continue
+    last="$h"; cp "$W/f.png" "$OUT/bild-$(printf %03d "$i").png"
+done
 kill "$(cat "$W/qemu.pid")" 2>/dev/null || true
 echo "--- serielle Ausgabe ---"; cat "$OUT/serial.log" | tr -d '\r' | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g' | tail -c 6000; echo
 if grep -a "prohibited by secure boot" "$OUT/serial.log"; then
