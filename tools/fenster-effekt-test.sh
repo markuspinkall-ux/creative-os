@@ -30,7 +30,7 @@ dbus-run-session -- sh -c '
       i=$((i+1)); [ $i -gt 40 ] && break; sleep 1
   done
   echo "KWin bereit nach $i s"
-  for prop in active compositingType compositingPossible compositingNotPossibleReason; do
+  for prop in active; do
       dbus-send --session --print-reply --dest=org.kde.KWin /Compositor org.freedesktop.DBus.Properties.Get string:org.kde.kwin.Compositing string:$prop 2>&1 | tail -n 1
   done
   kpackagetool6 --type KWin/Effect --list > /tmp/pakete.txt 2>&1 || true
