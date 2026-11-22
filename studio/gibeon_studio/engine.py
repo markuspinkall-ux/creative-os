@@ -306,11 +306,13 @@ def pad_props(rect, z):
     return {"xpos": int(x), "ypos": int(y), "width": _even(rw), "height": _even(rh), "zorder": int(z), "alpha": 1.0}
 
 
-def build_description(cfg, sources, audio, layout=None):
+def build_description(cfg, sources, audio, layout=None, rec_layout=None):
     """Text-Beschreibung des Mischpults.
     sources: [{"key": …, "type": "screen"|"video"|"image"|"test", …}] – jede Quelle einmal.
     layout: {key: (x, y, b, h, z)} in Pixeln – was nicht drinsteht, ist unsichtbar.
     audio: {slot: quellen-dict} (nur eingeschaltete).
+    rec_layout: eigene Anordnung nur für die Aufnahme (Spiel ohne Overlays) – dann gibt es ein zweites
+    Mischpult „rmix“ mit Ausgang „rvout“; None = die Aufnahme zeigt genau das Bild.
     Rückgabe: (Beschreibung, (b, h, fps), {key: padname})."""
     w, h, fps = canvas_size(cfg.get("canvas"))
     pw, ph = PREVIEW
@@ -318,6 +320,8 @@ def build_description(cfg, sources, audio, layout=None):
     # Mischpult rechnet in BGRA wie alle Zulieferer – keine Umrechnung je Quelle und für die Vorschau
     raw = f"video/x-raw,format=BGRA,width={w},height={h},framerate={fps}/1"
     branches, pads, padprops = [], {}, ["sink_0::zorder=0"]
+    rprops = ["sink_0::zorder=0"]
+    split = rec_layout is not None
     n = 1
     for src in sources:
         d = source_branch(src, w, h, fps, n)
@@ -328,7 +332,14 @@ def build_description(cfg, sources, audio, layout=None):
         L = layout.get(key)
         props = pad_props(L[:4] if L else None, L[4] if L else 0)
         padprops += [f"sink_{n}::{k}={v}" for k, v in props.items()]
-        branches.append(f"{d} ! mix.sink_{n}")
+        if split:
+            R = rec_layout.get(key)
+            rprops += [f"sink_{n}::{k}={v}" for k, v in pad_props(R[:4] if R else None, R[4] if R else 0).items()]
+            branches.append(f"{d} ! tee name=st_{n} allow-not-linked=true  "
+                            f"st_{n}. ! queue max-size-buffers=2 leaky=downstream ! mix.sink_{n}  "
+                            f"st_{n}. ! queue max-size-buffers=2 leaky=downstream ! rmix.sink_{n}")
+        else:
+            branches.append(f"{d} ! mix.sink_{n}")
         n += 1
     parts = [
         f"compositor name=mix background=black {' '.join(padprops)} "
@@ -340,6 +351,11 @@ def build_description(cfg, sources, audio, layout=None):
         f"! appsink name=vout max-buffers=4 drop=true sync=false emit-signals=true",
         f"videotestsrc is-live=true pattern=black ! {raw} ! mix.sink_0",
     ] + branches
+    if split:
+        parts += [f"compositor name=rmix background=black {' '.join(rprops)} ! {raw} "
+                  f"! queue leaky=downstream max-size-buffers=4 max-size-bytes=0 max-size-time=0 "
+                  f"! appsink name=rvout max-buffers=4 drop=true sync=false emit-signals=true",
+                  f"videotestsrc is-live=true pattern=black ! {raw} ! rmix.sink_0"]
     parts += [
         f"audiomixer name=amix ! {AUDIO_CAPS} ! tee name=at allow-not-linked=true",
         f"at. ! queue leaky=downstream max-size-time=1000000000 ! appsink name=aout max-buffers=50 "
@@ -726,6 +742,7 @@ class Mixer:
         gst.init()
         self.pipe = None
         self.bus = self.preview = self.vout = self.aout = None
+        self.rvout = None               # eigenes Bild nur für die Aufnahme (Spiel ohne Overlays)
         self.size = CANVAS["1080p30"]
         self.levels = {}
         self.errors = []
@@ -743,12 +760,12 @@ class Mixer:
         self._lock = threading.Lock()
 
     # ---- Aufbau ----------------------------------------------------------------------------
-    def build(self, cfg, sources, audio, layout=None, rounds=None):
+    def build(self, cfg, sources, audio, layout=None, rounds=None, rec_layout=None):
         if self.outputs:
             raise RuntimeError("Während Aufnahme oder Stream lassen sich die Quellen nicht tauschen.")
         self.stop()
         self.cfg = cfg
-        desc, self.size, pads = build_description(cfg, sources, audio, layout)
+        desc, self.size, pads = build_description(cfg, sources, audio, layout, rec_layout)
         try:
             self.pipe = gst.launch(desc)
         except ValueError:
@@ -757,7 +774,7 @@ class Mixer:
                 raise
             good = [s for s in sources if self._branch_ok(s)]
             self.errors.append("Eine Bildquelle ist gerade nicht verfügbar.")
-            desc, self.size, pads = build_description(cfg, good, audio, layout)
+            desc, self.size, pads = build_description(cfg, good, audio, layout, rec_layout)
             self.pipe = gst.launch(desc)
         self.pads = pads
         self.bus = gst.get_bus(self.pipe)
@@ -767,6 +784,9 @@ class Mixer:
         self._handlers = [(self.vout, gst.connect_new_sample(self.vout, self._on_video)),
                           (self.aout, gst.connect_new_sample(self.aout, self._on_audio)),
                           (self.preview, gst.connect_new_sample(self.preview, self._on_preview))]
+        self.rvout = gst.bin_by_name(self.pipe, b"rvout")
+        if self.rvout:
+            self._handlers.append((self.rvout, gst.connect_new_sample(self.rvout, self._on_rec_video)))
         self.rounds = {}
         for key, pad in pads.items():
             self._hook_round(pad)
@@ -840,24 +860,26 @@ class Mixer:
         self._overlays.append((el, gst.connect_draw(el, draw)))
 
     # ---- Anordnung im laufenden Betrieb (Szenen, Verschieben, Größe) ------------------------
-    def apply_layout(self, layout):
-        """layout: {key: (x, y, b, h, z)} – alles andere wird ausgeblendet."""
+    def apply_layout(self, layout, rec_layout=None):
+        """layout: {key: (x, y, b, h, z)} – alles andere wird ausgeblendet.
+        rec_layout: Anordnung für das Aufnahme-Mischpult (falls es eins gibt)."""
         if not self.pipe:
             return
-        mix = gst.bin_by_name(self.pipe, b"mix")
-        if not mix:
-            return
-        try:
-            for key, pad_name in self.pads.items():
-                pad = gst.static_pad(mix, pad_name.encode())
-                if not pad:
-                    continue
-                L = layout.get(key)
-                for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
-                    gst.set_prop(pad, k, v)
-                gst.object_unref(pad)
-        finally:
-            gst.object_unref(mix)
+        for name, lay in ((b"mix", layout), (b"rmix", rec_layout if rec_layout is not None else layout)):
+            mix = gst.bin_by_name(self.pipe, name)
+            if not mix:
+                continue
+            try:
+                for key, pad_name in self.pads.items():
+                    pad = gst.static_pad(mix, pad_name.encode())
+                    if not pad:
+                        continue
+                    L = lay.get(key)
+                    for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
+                        gst.set_prop(pad, k, v)
+                    gst.object_unref(pad)
+            finally:
+                gst.object_unref(mix)
 
     def set_rounds(self, rounds):
         """rounds: {key: anteil} – Ecken der Kameras."""
@@ -931,16 +953,26 @@ class Mixer:
             self._overlays = []
             self.pads = {}
             gst.set_state(self.pipe, gst.STATE_NULL)
-            for el in (self.preview, self.vout, self.aout, self.bus, self.pipe):
+            for el in (self.preview, self.vout, self.aout, self.rvout, self.bus, self.pipe):
                 if el:
                     gst.object_unref(el)
-        self.pipe = self.bus = self.preview = self.vout = self.aout = None
+        self.pipe = self.bus = self.preview = self.vout = self.aout = self.rvout = None
         self.last_frame = None
 
     # ---- Daten an die Ausgänge (GStreamer-Thread) ----------------------------------------
     def _on_video(self, sink):
         with self._lock:
-            outs = list(self.outputs.values())
+            # gibt es ein eigenes Aufnahme-Bild, bekommt die Aufnahme das (siehe _on_rec_video)
+            outs = [o for o in self.outputs.values() if not (self.rvout and o.kind == "record")]
+        if not outs:
+            gst.forward_sample(sink, None, 0, True)
+            return gst.FLOW_OK
+        self._fan_out(sink, outs, video=True)
+        return gst.FLOW_OK
+
+    def _on_rec_video(self, sink):
+        with self._lock:
+            outs = [o for o in self.outputs.values() if o.kind == "record"]
         if not outs:
             gst.forward_sample(sink, None, 0, True)
             return gst.FLOW_OK

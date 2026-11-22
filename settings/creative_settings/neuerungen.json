@@ -7,7 +7,9 @@
       "Shots nimmt jetzt auch Videos auf: Druck-Taste und dann „Aufnehmen“ (oder Taste R), kurz den Bildschirm wählen – Bild, Mauszeiger und der Ton vom Desktop werden aufgenommen. Eine kleine Leiste zeigt die Laufzeit, „Stopp“ beendet die Aufnahme. Videos landen unter Videos › Bildschirmaufnahmen",
       "Dateien und Ordner auf dem Schreibtisch lassen sich jetzt genau wie die Widgets mit der Maus auf einen anderen Monitor ziehen – dort zeigt ein Umriss, wo sie landen. Die Plätze bleiben gespeichert",
       "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern",
-      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten"
+      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten",
+      "Studio: Spiel-Aufnahmen – unter Einstellungen › Aufnahme wählst du, was in die Aufnahme kommt: „Alles wie im Bild“, „Spiel + Kamera“ oder „Nur das Spiel“. Overlays, Bilder, Browserquellen, Alerts und Umfragen bleiben dann aus der Aufnahme draußen, der Stream sieht weiter alles",
+      "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",

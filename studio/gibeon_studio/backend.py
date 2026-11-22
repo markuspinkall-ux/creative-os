@@ -57,6 +57,8 @@ DEFAULTS = {
     "rec_quality": "normal",         # normal | hoch | sehr-hoch
     "encoder": "auto",               # auto (Grafikkarte, wenn möglich) | cpu
     "upscale": "aus",                # aus | schnell | ki
+    # Was in die Aufnahme kommt: alles wie im Bild | Spiel + Kamera (ohne Overlays) | nur das Spiel
+    "rec_inhalt": "alles",           # alles | kamera | spiel
     # Umfragen: Kanal zum Mitlesen (ohne Anmeldung), eigenes CSS, zuletzt benutzte Einstellungen
     "twitch_channel": "",
     "poll_css": umfrage.DEFAULT_CSS,
@@ -78,7 +80,7 @@ DEFAULTS = {
     "screen_token": "",
     "chat_open": True,
 }
-SOURCE_KEYS = ("canvas", "audio")
+SOURCE_KEYS = ("canvas", "audio", "rec_inhalt")
 # Standard-Server, wenn jemand nur den Stream-Schlüssel einträgt
 INGEST = {"twitch": "rtmp://ingest.global-contribute.live-video.net/app",
           "youtube": "rtmp://a.rtmp.youtube.com/live2"}
@@ -839,9 +841,20 @@ class Studio(QObject):
             rounds[key] = engine.ROUND if it.get("round") else 0.0
         return layout, rounds
 
+    # Spiel-Aufnahme: was in die Aufnahme darf (Rest wie Overlays, Bilder, Browser, Umfrage bleibt draußen)
+    REC_KINDS = {"spiel": {"screen", "capture"}, "kamera": {"screen", "capture", "camera"}}
+
+    def _rec_layout(self, layout):
+        """Anordnung nur für die Aufnahme – None, wenn sie alles wie im Bild zeigt."""
+        kinds = self.REC_KINDS.get(self.cfg.get("rec_inhalt", "alles"))
+        if not kinds:
+            return None
+        keep = {item_key(it) for it in self._scene()["items"] if it.get("kind") in kinds}
+        return {k: v for k, v in layout.items() if k in keep}
+
     def _apply(self):
         layout, rounds = self._layout()
-        self.mixer.apply_layout(layout)
+        self.mixer.apply_layout(layout, self._rec_layout(layout))
         self.mixer.set_rounds(rounds)
 
     def _structure(self):
@@ -1105,7 +1118,7 @@ class Studio(QObject):
         sources, audio = self._sources()
         layout, rounds = self._layout()
         try:
-            self.mixer.build(self.cfg, sources, audio, layout, rounds)
+            self.mixer.build(self.cfg, sources, audio, layout, rounds, self._rec_layout(layout))
             self.error = ""
         except (ValueError, RuntimeError) as e:
             self.error = f"Studio konnte die Quellen nicht starten: {e}"
@@ -1464,8 +1477,17 @@ class Studio(QObject):
         env.insert("PYTHONPATH", str(HERE.parent))
         return env
 
-    def _start_upscale(self, path):
-        art = self.cfg["upscale"]
+    @Slot(str)
+    def upscaleFile(self, url):
+        """Eine fertige Aufnahme nachträglich auf 4K bringen (Datei wählen → läuft im Hintergrund)."""
+        path = QUrl(url).toLocalFile() if url.startswith("file:") else url
+        if not path or not os.path.isfile(path):
+            return
+        self._start_upscale(path, self.cfg["upscale"] if self.cfg["upscale"] != "aus" else ("ki" if self.ki_ok else "schnell"))
+        self.toast.emit(f"Wird auf 4K hochskaliert: {Path(path).name}")
+
+    def _start_upscale(self, path, art=None):
+        art = art or self.cfg["upscale"]
         if art == "ki" and not self.ki_ok:
             art = "schnell"
         src = Path(path)
@@ -1725,7 +1747,22 @@ class Studio(QObject):
         frame = self.mixer.frame()
         self.mixer.stop()
         size = os.path.getsize(out_path) if os.path.exists(out_path) else 0
-        return size > 10000 and frame is not None, f"{out.encoder_name}, {size} Byte"
+        if not (size > 10000 and frame is not None):
+            return False, f"{out.encoder_name}, {size} Byte"
+        # Spiel-Aufnahme: eigenes Aufnahme-Bild ohne das Bild (Overlay) – Vorschau zeigt es weiter
+        game_path = out_path.replace(".mp4", "-spiel.mp4")
+        self.mixer.build(self.cfg, sources, audio, layout, rounds, {k: v for k, v in layout.items() if not k.startswith("image:")})
+        time.sleep(0.8)
+        self.mixer.start_output("record", game_path, 2000, "mp4")
+        time.sleep(2.0)
+        self.mixer.stop_output("record")
+        deadline = time.monotonic() + 10
+        while self.mixer.outputs and time.monotonic() < deadline:
+            self.mixer.poll()
+            time.sleep(0.05)
+        self.mixer.stop()
+        game = os.path.getsize(game_path) if os.path.exists(game_path) else 0
+        return game > 5000, f"{out.encoder_name}, {size} Byte, Spiel-Aufnahme {game} Byte"
 
 
 def _clock(sec):

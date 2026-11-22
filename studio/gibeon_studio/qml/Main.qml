@@ -1,3 +1,4 @@
+import QtCore
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -871,7 +872,8 @@ ApplicationWindow {
                                          .map(k => ({ twitch: "Twitch", youtube: "YouTube", kick: "Kick", tiktok: "TikTok", custom: "Eigener Server" })[k]).join(", ") || "noch kein Ziel"],
                             ["Bild", (st.canvasHeight === 2160 ? "4K" : st.canvasHeight + "p") + " · " + st.canvasFps + " Bilder/s"],
                             ["Stream", (cfg.stream_res && cfg.stream_res !== "gleich" ? cfg.stream_res + "p" : "wie Bild") + (cfg.stream_fps === "30" && st.canvasFps > 30 ? " · 30 Bilder/s" : "") + " · " + ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"],
-                            ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")],
+                            ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")
+                                         + (({ kamera: " · Spiel + Kamera", spiel: " · nur Spiel" })[cfg.rec_inhalt || "alles"] || "")],
                             ["Kodierer", cfg.encoder === "cpu" ? "Prozessor" : (st.encoder || "Automatisch")]
                         ]
                         delegate: RowLayout {
@@ -884,6 +886,7 @@ ApplicationWindow {
                     CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
                     CButton { Layout.fillWidth: true; text: "Plattformen einrichten …"; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
+                    CButton { Layout.fillWidth: true; text: "Aufnahme in 4K umwandeln …"; onClicked: videoPicker.open() }
                     CButton { Layout.fillWidth: true; visible: studio.broadcastAvailable; text: "Broadcast (Mikrofon & Kamera) …"; onClicked: studio.openBroadcast() }
                     // laufendes Hochskalieren
                     Rectangle {
@@ -991,6 +994,16 @@ ApplicationWindow {
     function selectAt(pos) {
         if (pos >= 0 && pos < win.items.length)
             win.selected = win.items[pos].id
+    }
+
+    // Fertige Aufnahme nachträglich auf 4K bringen
+    FilePicker {
+        id: videoPicker
+        mode: "open"
+        title: "Aufnahme in 4K umwandeln"
+        nameFilters: ["*.mp4", "*.mkv", "*.mov"]
+        startFolder: StandardPaths.writableLocation(StandardPaths.MoviesLocation) + "/Studio"
+        onAccepted: (url) => studio.upscaleFile(url.toString())
     }
 
     ImagePicker {
@@ -1354,6 +1367,24 @@ ApplicationWindow {
                                 options: [["mp4", "MP4"], ["mkv", "MKV"]]
                                 value: cfg.format || "mp4"
                                 onPicked: (v) => studio.set("format", v)
+                            }
+                            Label2 { text: "Was aufgenommen wird" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !st.recording && !st.live
+                                options: [["alles", "Alles wie im Bild"], ["kamera", "Spiel + Kamera"], ["spiel", "Nur das Spiel"]]
+                                value: cfg.rec_inhalt || "alles"
+                                onPicked: (v) => studio.set("rec_inhalt", v)
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: cfg.rec_inhalt === "spiel"
+                                      ? "Die Aufnahme zeigt nur Bildschirm und Capture-Karte – Kamera, Bilder, Browserquellen, Alerts und Umfragen bleiben draußen. Der Stream sieht weiter alles."
+                                      : cfg.rec_inhalt === "kamera"
+                                      ? "Die Aufnahme zeigt Spiel und Kamera – Bilder, Browserquellen, Alerts und Umfragen bleiben draußen. Der Stream sieht weiter alles."
+                                      : "Die Aufnahme sieht genau so aus wie die Vorschau."
+                                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                             }
                             Label2 { text: "Qualität · " + (st.recMbit || 12) + " Mbit/s" }
                             Seg {
