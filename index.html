@@ -1381,6 +1381,18 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
       </div>
       <div class="req"><span>64-Bit-PC mit UEFI</span><span>8 GB RAM, 16 GB empfohlen</span><span>mind. 80 GB Speicher</span><span>Internet bei der Installation</span><a href="#anforderungen" style="color:var(--accent)">Alle Anforderungen</a></div>
     </div>
+    <div class="dl" id="appimages" style="margin-top:28px">
+      <div class="kicker">Für andere Linux-Systeme</div>
+      <h2 style="margin-bottom:10px">Studio und 3D Studio als AppImage</h2>
+      <p class="sub">Zwei Programme aus Gibeon OS laufen auch auf Fedora, Ubuntu, Arch, openSUSE und Co. – ohne Installation: herunterladen, ausführbar machen, starten.</p>
+      <div class="dlgrid">
+        <div class="dlc"><h3>Studio mit Broadcast</h3><p>Aufnehmen und live streamen, dazu Broadcast für ein rauschfreies Mikrofon und den Hintergrund der Webcam. Aktualisiert sich selbst – Studio und Broadcast immer zusammen.</p><a class="btn primary" href="https://github.com/markuspinkall-ux/creative-os/releases/download/appimages/Gibeon-Studio-x86_64.AppImage"><svg class="i"><use href="#down"/></svg>Studio herunterladen</a>
+          <p style="margin:14px 0 0;font-size:13px">Braucht PipeWire, GStreamer (Pakete good, bad, ugly, libav) und ffmpeg. Für die virtuelle Kamera zusätzlich v4l2loopback.</p></div>
+        <div class="dlc"><h3>3D Studio</h3><p>Aus einem Foto wird eine 3D-Figur – gerechnet auf deiner eigenen NVIDIA-Grafikkarte, nicht in der Cloud.</p><a class="btn ghost" href="https://github.com/markuspinkall-ux/creative-os/releases/download/appimages/Gibeon-3D-Studio-x86_64.AppImage"><svg class="i"><use href="#down"/></svg>3D Studio herunterladen</a>
+          <p style="margin:14px 0 0;font-size:13px">Braucht eine NVIDIA-Karte mit mind. 12 GB, podman und das NVIDIA Container Toolkit. Beim ersten Start werden rund 18 GB geladen.</p></div>
+      </div>
+      <div class="req"><span>64-Bit-Linux (x86_64)</span><span>Studio ≈ 355 MB</span><span>3D Studio ≈ 215 MB</span><span>Starten: Rechtsklick › Eigenschaften › „Ausführbar“, dann doppelklicken</span></div>
+    </div>
   </div>
 </section>
 
@@ -1394,6 +1406,7 @@ html,body,header.nav,.card,.tab,.btn{transition:background-color .25s,color .25s
       <details><summary>Warum heißt es Gibeon OS?</summary><p>Gibeon ist ein Eisenmeteorit aus Namibia. Bis November 2026 hieß das System Orbit OS, davor Creative OS. Das Raketen-Logo und die Planeten-Namen der Versionen sind geblieben.</p></details>
       <details><summary>Wie kommen Updates auf meinen PC?</summary><p>Automatisch im Hintergrund. Aktiv werden sie beim nächsten Neustart. Gefällt dir ein Update nicht, wählst du im Bootmenü den vorherigen Stand.</p></details>
       <details><summary>Laufen meine Windows-Spiele?</summary><p>Viele ja, dank Proton. Spiele mit manchen Anti-Cheat-Systemen (zum Beispiel einige Online-Shooter) laufen unter Linux allerdings nicht.</p></details>
+      <details><summary>Gibt es Studio auch ohne Gibeon OS?</summary><p>Ja. Studio (mit Broadcast) und 3D Studio gibt es als AppImage für andere Linux-Systeme – siehe <a href="#appimages" style="color:var(--accent)">Download</a>. Studio meldet sich selbst, wenn ein Update da ist.</p></details>
       <details><summary>Kann ich es erst mal ausprobieren?</summary><p>Ja, zum Beispiel in VirtualBox: Typ „Fedora (64-bit)“, EFI an, 8 GB RAM, 4 CPUs, 80 GB Festplatte und die AMD/Intel-Ausgabe.</p></details>
     </div>
   </div>
