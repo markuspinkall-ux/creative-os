@@ -58,6 +58,7 @@ VISIBLE = {
     "creative-iso.desktop": ("Iso", "creative-iso"),
     "gibeon-android.desktop": ("Android-Apps", "gibeon-android"),
     "gibeon-studio.desktop": ("Studio", "gibeon-studio"),
+    "gibeon-fehler-melden.desktop": ("Fehler melden", "gibeon-fehler-melden"),
     "creative-capture.desktop": ("Capture", "creative-capture"),
     "com.obsproject.Studio.desktop": (None, "creative-obs"),
     "creative-pictures.desktop": ("Pictures", "creative-pictures"),
