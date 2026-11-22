@@ -301,6 +301,45 @@ ApplicationWindow {
                     text: "Updates kommen automatisch im Hintergrund. Viel Spaß mit Gibeon OS!"
                     color: Theme.text; font.pixelSize: 15
                 }
+                // Freiwillig: Land anonym mitteilen (Regionen im Entwickler-Widget)
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width, 520)
+                    height: regionCol.implicitHeight + 28
+                    radius: 14
+                    color: Theme.tint(0.05)
+                    border.color: Theme.hairline
+                    Row {
+                        x: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 14
+                        CSwitch {
+                            anchors.verticalCenter: parent.verticalCenter
+                            checked: regionConsent.enabled
+                            label: "Land anonym mitteilen"
+                            onToggled: (v) => regionConsent.setEnabled(v)
+                        }
+                        Column {
+                            id: regionCol
+                            width: 520 - 16 - 40 - 14 - 16
+                            spacing: 3
+                            Text {
+                                width: parent.width
+                                text: "Anonym mitteilen, aus welchem Land du Gibeon OS nutzt?"
+                                color: Theme.text; font.pixelSize: 13; font.bold: true
+                                wrapMode: Text.WordWrap
+                            }
+                            Text {
+                                width: parent.width
+                                text: "Hilft dem Entwickler zu sehen, wo Gibeon OS genutzt wird. Gesendet wird einmal im Monat nur das Land"
+                                      + (regionConsent.land ? " (" + regionConsent.land + ")" : "")
+                                      + " – keine IP, kein Name, keine Kennung. Freiwillig, jederzeit abschaltbar in Einstellungen › System."
+                                color: Theme.textMuted; font.pixelSize: 12
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                }
             }
         }
 

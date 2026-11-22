@@ -3,6 +3,8 @@
 
   gibeon-entwickler an     GitHub-Zugang eintragen → Widget erscheint auf dem Schreibtisch
   gibeon-entwickler aus    Widget aus, Zugang löschen
+  gibeon-entwickler regionen <adresse> <schlüssel>
+                           Regionen-Sammelstelle (Cloudflare Worker) ans Widget anschließen
 
 Zugang: GitHub → Settings → Developer settings → Personal access tokens (classic) → „repo“
 (für Besucherzahlen braucht GitHub Schreibrechte am Repo).
@@ -11,7 +13,7 @@ import getpass
 import sys
 
 sys.path.insert(0, "/usr/lib/creative-shell")
-from creative_shell.entwickler import REPO, check_token, conf_path, load_conf, save_conf  # noqa: E402
+from creative_shell.entwickler import REPO, check_token, conf_path, load_conf, regionen, save_conf  # noqa: E402
 
 
 def main(argv):
@@ -26,6 +28,22 @@ def main(argv):
         conf.update({"token": token, "login": info, "repo": REPO})
         save_conf(conf)
         print(f"Eingeschaltet für {info} – das Entwickler-Widget erscheint gleich auf dem Schreibtisch.")
+        return 0
+    if cmd == "regionen" and len(argv) == 4:
+        url, key = argv[2].rstrip("/"), argv[3]
+        try:
+            data = regionen(url, key)
+        except Exception as e:  # noqa: BLE001
+            print(f"Sammelstelle nicht erreichbar oder Schlüssel falsch: {e}")
+            return 1
+        conf = load_conf()
+        if not conf.get("token"):
+            print("Erst „gibeon-entwickler an“ ausführen.")
+            return 1
+        conf.update({"regionen_url": url, "regionen_key": key})
+        save_conf(conf)
+        n = sum((data.get("installationen") or {}).values())
+        print(f"Regionen verbunden – bisher {n} gemeldete Installationen. Das Widget zeigt sie gleich an.")
         return 0
     if cmd == "aus":
         try:

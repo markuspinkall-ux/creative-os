@@ -22,6 +22,7 @@ from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
 from creative_shell import config as shell_config  # noqa: E402
 from creative_shell.network import NetworkModel  # noqa: E402
+from creative_shell.region import RegionConsent  # noqa: E402
 from creative_shell.runner import spawn_detached  # noqa: E402
 from creative_shell.session import SessionModel  # noqa: E402
 from creative_settings.system import LookModel  # noqa: E402
@@ -68,6 +69,7 @@ def main():
     welcome = Welcome()
     ctx = engine.rootContext()
     ctx.setContextProperty("welcome", welcome)
+    ctx.setContextProperty("regionConsent", RegionConsent())
     # Die Modelle müssen in Python festgehalten werden – sonst räumt Python sie weg,
     # QML sieht nur noch „null“ und das Fenster schließt sich scheinbar von selbst.
     network = NetworkModel()

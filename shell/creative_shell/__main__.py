@@ -29,6 +29,7 @@ from .desktop import DesktopModel
 from .tasks import TaskModel
 from .fensteranimation import WindowAnimation
 from .entwickler import DevStats
+from .region import RegionConsent, start_reporting
 from .icons import IconFiles
 from .network import NetworkModel
 from .vpn import VpnModel
@@ -705,6 +706,8 @@ def main():
         "windowAnim": WindowAnimation(tasks),
         # Entwickler-Widget (Besuche, Downloads, Fehlermeldungen) – nur mit „gibeon-entwickler an“
         "devStats": DevStats(),
+        # Land anonym mitteilen (nur mit Zustimmung) – Schalter in Willkommen/Einstellungen
+        "regionConsent": RegionConsent(),
     }
     use_layer = not args.dev and app.platformName() == "wayland" and layer_shell_available(engine)
     if not use_layer and not args.dev:
@@ -779,6 +782,7 @@ def main():
     ticker.start(300)
     ticker.timeout.connect(lambda: None)
 
+    _region_timer = start_reporting(app)   # monatliche Land-Meldung (nur mit Zustimmung)
     sys.exit(app.exec())
 
 
