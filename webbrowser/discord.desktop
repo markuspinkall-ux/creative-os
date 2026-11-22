@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Discord
+GenericName=Sprach- und Text-Chat
+Comment=Discord im Gibeon-Look – mit Benachrichtigungen, Zähler an der Taskleiste und Bildschirm teilen
+Keywords=Discord;Chat;Sprachchat;Server;Gaming;
+Exec=discord
+Icon=discord
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+StartupWMClass=discord
+StartupNotify=true

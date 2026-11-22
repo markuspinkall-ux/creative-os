@@ -1,0 +1,118 @@
+/* Gibeon OS – Discord im Graphit-/Porzellan-Look.
+   Nur Farben, Rundungen und Abstände: Inhalte und Funktionen von Discord bleiben unangetastet.
+   Ändert Discord seine Variablen, fällt schlimmstenfalls ein Teil auf die Original-Farben zurück.
+   ACCENT / ACCENT_DARK / ACCENT_TEXT werden beim Laden ersetzt (Akzentfarbe aus look.conf). */
+
+:root, .theme-dark, .theme-darker, .theme-midnight, .visual-refresh.theme-dark {
+  --background-primary: #1a1e27 !important;
+  --background-secondary: #151922 !important;
+  --background-secondary-alt: #10131a !important;
+  --background-tertiary: #0c0f15 !important;
+  --background-accent: #2a3040 !important;
+  --background-floating: #1c2029 !important;
+  --background-nested-floating: #1c2029 !important;
+  --background-mobile-primary: #1a1e27 !important;
+  --background-mobile-secondary: #151922 !important;
+  --background-modifier-hover: rgba(143, 179, 255, 0.08) !important;
+  --background-modifier-active: rgba(143, 179, 255, 0.12) !important;
+  --background-modifier-selected: rgba(143, 179, 255, 0.16) !important;
+  --background-modifier-accent: #2a3040 !important;
+  --background-message-hover: rgba(143, 179, 255, 0.04) !important;
+  --background-base-lowest: #0c0f15 !important;
+  --background-base-lower: #10131a !important;
+  --background-base-low: #151922 !important;
+  --background-surface-high: #1c2029 !important;
+  --background-surface-higher: #232a38 !important;
+  --background-surface-highest: #2a3040 !important;
+  --chat-background: #1a1e27 !important;
+  --chat-background-default: #1a1e27 !important;
+  --channeltextarea-background: #232a38 !important;
+  --input-background: #10131a !important;
+  --modal-background: #1c2029 !important;
+  --modal-footer-background: #151922 !important;
+  --deprecated-card-bg: #1c2029 !important;
+  --deprecated-card-editable-bg: #232a38 !important;
+  --home-background: #1a1e27 !important;
+  --scrollbar-auto-thumb: #2a3040 !important;
+  --scrollbar-auto-track: transparent !important;
+  --scrollbar-thin-thumb: #2a3040 !important;
+  --border-subtle: #2a3040 !important;
+  --border-faint: #20252f !important;
+  --text-normal: #dce6ff !important;
+  --text-default: #dce6ff !important;
+  --text-strong: #eef2ff !important;
+  --header-primary: #eef2ff !important;
+  --header-secondary: #a9b4cc !important;
+  --text-muted: #7f8aa3 !important;
+  --text-subtle: #8f9ab3 !important;
+  --channels-default: #8f9ab3 !important;
+  --channel-icon: #7f8aa3 !important;
+  --interactive-normal: #b9c3da !important;
+  --interactive-hover: #dce6ff !important;
+  --interactive-active: #ffffff !important;
+  --interactive-muted: #4a5468 !important;
+  --text-link: ACCENT !important;
+  --text-brand: ACCENT !important;
+  --brand-experiment: ACCENT !important;
+  --brand-500: ACCENT !important;
+  --brand-560: ACCENT_DARK !important;
+  --brand-600: ACCENT_DARK !important;
+  --brand-experiment-560: ACCENT_DARK !important;
+  --brand-experiment-600: ACCENT_DARK !important;
+  --button-filled-brand-background: ACCENT !important;
+  --button-filled-brand-background-hover: ACCENT_DARK !important;
+  --button-filled-brand-background-active: ACCENT_DARK !important;
+  --button-filled-brand-text: ACCENT_TEXT !important;
+  --control-brand-foreground: ACCENT !important;
+  --control-brand-foreground-new: ACCENT !important;
+  --mention-foreground: ACCENT !important;
+  --info-help-foreground: ACCENT !important;
+  --focus-primary: ACCENT !important;
+}
+
+.theme-light, .visual-refresh.theme-light {
+  --background-primary: #f4f7fb !important;
+  --background-secondary: #e9eef6 !important;
+  --background-secondary-alt: #dfe6f0 !important;
+  --background-tertiary: #d6dce6 !important;
+  --background-accent: #c9d2df !important;
+  --background-floating: #ffffff !important;
+  --background-modifier-hover: rgba(61, 111, 224, 0.07) !important;
+  --background-modifier-active: rgba(61, 111, 224, 0.11) !important;
+  --background-modifier-selected: rgba(61, 111, 224, 0.15) !important;
+  --background-base-lowest: #d6dce6 !important;
+  --background-base-lower: #e9eef6 !important;
+  --background-base-low: #eef2f8 !important;
+  --background-surface-high: #ffffff !important;
+  --background-surface-higher: #ffffff !important;
+  --background-surface-highest: #ffffff !important;
+  --chat-background: #f4f7fb !important;
+  --chat-background-default: #f4f7fb !important;
+  --channeltextarea-background: #ffffff !important;
+  --input-background: #ffffff !important;
+  --modal-background: #ffffff !important;
+  --text-normal: #1c2433 !important;
+  --text-default: #1c2433 !important;
+  --header-primary: #12151b !important;
+  --header-secondary: #4a5468 !important;
+  --text-muted: #6a7590 !important;
+  --channels-default: #4a5468 !important;
+  --interactive-normal: #3a4356 !important;
+  --interactive-hover: #12151b !important;
+  --interactive-active: #000000 !important;
+  --text-link: ACCENT_DARK !important;
+  --brand-experiment: ACCENT_DARK !important;
+  --brand-500: ACCENT_DARK !important;
+  --brand-560: ACCENT_DARK !important;
+  --button-filled-brand-background: ACCENT_DARK !important;
+  --button-filled-brand-text: #ffffff !important;
+}
+
+/* Gibeon-Formen: etwas rundere Ecken an Feldern, Karten und Menüs */
+[class*="channelTextArea"] [class*="scrollableContainer"],
+[class*="channelTextArea"] > [class*="inner"] { border-radius: 14px !important; }
+[class*="menu_"], [class*="menu-"], [role="menu"] { border-radius: 12px !important; }
+[class*="authBox"], [class*="modal_"], [role="dialog"] > div { border-radius: 16px !important; }
+input, [class*="inputDefault"] { border-radius: 10px !important; }
+.theme-dark [class*="lookFilled"][class*="colorBrand"],
+.theme-dark button[class*="colorBrand"] { color: ACCENT_TEXT !important; }

@@ -16,7 +16,8 @@
       "Systemtray wahlweise oben links oder in der Taskleiste vor der Uhr (Systemsteuerung › Darstellung › Systemtray). In der Taskleiste sieht er aus wie die Uhr, die obere Leiste entfällt dann und die Menüs gehen unten rechts auf",
       "Bereinigung in der Systemsteuerung (wie CCleaner): Analysieren zeigt, wie viel Platz frei wird – dann Papierkorb, Vorschaubilder, Browser- und Programm-Zwischenspeicher und ungenutzte Flatpak-Reste aufräumen. Optional: Shader-Cache, KI-Modelle, Systemprotokolle. Eigene Dateien bleiben immer unberührt",
       "Autostart: Rechtsklick auf eine App im Startmenü › „Beim Anmelden starten“ – die App öffnet sich dann nach jeder Anmeldung. Gilt auch für Programme, die das selbst anbieten (z. B. Steam oder Discord „mit dem System starten“)",
-      "Startmenü nach Kategorien sortiert (Internet, Kreativ und Medien, Büro, Spiele, Werkzeuge, System …), immer aufgeklappt. In Systemsteuerung › Darstellung › Startmenü lässt sich auch die alte A–Z-Liste oder die Kachel-Ansicht mit Kategorie-Leiste wählen"
+      "Startmenü nach Kategorien sortiert (Internet, Kreativ und Medien, Büro, Spiele, Werkzeuge, System …), immer aufgeklappt. In Systemsteuerung › Darstellung › Startmenü lässt sich auch die alte A–Z-Liste oder die Kachel-Ansicht mit Kategorie-Leiste wählen",
+      "Discord im Gibeon-Look: Discord läuft jetzt als offizielles Discord Web in einem eigenen Fenster mit Graphit- bzw. Porzellan-Farben, deiner Akzentfarbe und runden Formen – mit Zähler an der Taskleiste, Benachrichtigungen, Tray-Symbol und Bildschirm teilen. Einmal neu anmelden (auch per QR-Code mit dem Handy). Das Design lässt sich per Rechtsklick abschalten"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
