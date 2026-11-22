@@ -204,6 +204,11 @@ SettingsPage {
                     primary: look.trayPosition === "taskleiste"
                     onClicked: look.setTrayPosition("taskleiste")
                 }
+            }
+        }
+    }
+
+    Card {
         title: "Startmenü"
         subtitle: "Wie die Apps im Startmenü sortiert sind"
         SettingRow {
