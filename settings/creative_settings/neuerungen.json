@@ -13,7 +13,8 @@
       "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü",
       "Fenster öffnen sich jetzt dynamisch: Sie wachsen aus dem Symbol heraus, auf das du geklickt hast (Startmenü oder Taskleiste), schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück und kommen beim Wiederherstellen von dort wieder heraus",
       "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler",
-      "Systemtray wahlweise oben links oder in der Taskleiste vor der Uhr (Systemsteuerung › Darstellung › Systemtray). In der Taskleiste sieht er aus wie die Uhr, die obere Leiste entfällt dann und die Menüs gehen unten rechts auf"
+      "Systemtray wahlweise oben links oder in der Taskleiste vor der Uhr (Systemsteuerung › Darstellung › Systemtray). In der Taskleiste sieht er aus wie die Uhr, die obere Leiste entfällt dann und die Menüs gehen unten rechts auf",
+      "Bereinigung in der Systemsteuerung (wie CCleaner): Analysieren zeigt, wie viel Platz frei wird – dann Papierkorb, Vorschaubilder, Browser- und Programm-Zwischenspeicher und ungenutzte Flatpak-Reste aufräumen. Optional: Shader-Cache, KI-Modelle, Systemprotokolle. Eigene Dateien bleiben immer unberührt"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
