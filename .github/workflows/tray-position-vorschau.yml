@@ -3,7 +3,7 @@ name: Tray-Position Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml]
+    paths: [shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml, tools/tray-vorschau-bild.py]
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,10 +16,11 @@ jobs:
       - name: Qt installieren
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-liberation dbus
-          pip install -q PySide6
+          pip install -q PySide6 pillow
+          echo '{"screens":[{"name":"Bildschirm","x":0,"y":0,"width":1600,"height":900,"logicalDpi":96,"logicalBaseDpi":96,"dpr":1}]}' > /tmp/screens.json
       - name: Shell fotografieren
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: "offscreen:configfile=/tmp/screens.json"
           QT_QUICK_BACKEND: software
         run: |
           mkdir -p fotos
@@ -27,9 +28,10 @@ jobs:
             H=$(mktemp -d); mkdir -p "$H/Schreibtisch" "$H/.config/creative-os"
             echo "{\"trayPosition\": \"$pos\", \"desktopStats\": false}" > "$H/.config/creative-os/shell.json"
             cd "$GITHUB_WORKSPACE/shell" && CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" \
-              CREATIVE_SCREENSHOT_DELAY=4000 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
+              CREATIVE_SCREENSHOT_DELAY=4000 CREATIVE_SCREENSHOT_ALL=1 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" \
               CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/tray-$pos.png" \
               timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -iE "error|warn|qml" | tail -20 || true
+            python3 "$GITHUB_WORKSPACE/tools/tray-vorschau-bild.py" "$GITHUB_WORKSPACE/fotos/tray-$pos"
           done
           ls -la "$GITHUB_WORKSPACE/fotos"
           test -s "$GITHUB_WORKSPACE/fotos/tray-taskleiste.png"
