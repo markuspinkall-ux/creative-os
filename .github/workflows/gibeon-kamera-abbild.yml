@@ -1,0 +1,58 @@
+name: Gibeon Kamera im echten Abbild
+# Das fertige Gibeon-OS-Abbild (Test-Kanal) mit echter virtueller Kamera und einer Test-Webcam:
+# Kommt das Bild von Broadcast wirklich in Studio an? Prüft genau das, was auf dem PC läuft.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths: [broadcast/**, studio/**, tools/gibeon-kamera-im-abbild.sh, .github/workflows/gibeon-kamera-abbild.yml]
+permissions:
+  contents: write
+  packages: read
+jobs:
+  pruefen:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [amd, nvidia]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Platz schaffen, v4l2loopback wie im System (plus Test-Webcam)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo apt-get update -q
+          sudo apt-get install -y -q linux-headers-$(uname -r) v4l2loopback-dkms v4l-utils ffmpeg
+          sudo modprobe v4l2loopback devices=2 video_nr=42,43 card_label="Gibeon Kamera,Test-Webcam" \
+            exclusive_caps=1,1 max_buffers=2 max_width=3840 max_height=2160
+          sudo udevadm settle; sleep 1; sudo chmod 666 /dev/video42 /dev/video43
+          # Test-Webcam: bewegtes Testbild mit „Person“ (hautfarbenes Oval) vor Zimmerwand, 1280×720 MJPEG wie eine USB-Webcam
+          nohup ffmpeg -loglevel error -re -f lavfi -i "testsrc2=size=1280x720:rate=30" \
+            -vf "drawbox=x=0:y=0:w=1280:h=720:color=0x8a8070:t=fill,drawbox=x=480:y=120:w=320:h=600:color=0xd0a080:t=fill,drawtext=text='%{pts}':x=20:y=20:fontsize=40:fontcolor=white" \
+            -f v4l2 -pix_fmt yuyv422 /dev/video43 > /tmp/webcam.log 2>&1 &
+          sleep 3; v4l2-ctl -d /dev/video43 --info | head -8; df -h / | tail -1
+      - name: Abbild holen (${{ matrix.variant }}-testing)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin >/dev/null
+          sudo podman pull -q ghcr.io/markuspinkall-ux/creative-os:${{ matrix.variant }}-testing >/dev/null
+          sudo podman images
+      - name: Broadcast und Gibeon Kamera im Abbild prüfen
+        run: |
+          mkdir -p out
+          sudo podman run --rm --device /dev/video42 --device /dev/video43 \
+            -v "$PWD/tools/gibeon-kamera-im-abbild.sh:/test.sh:ro,z" -v "$PWD/out:/out:z" \
+            --entrypoint /bin/bash ghcr.io/markuspinkall-ux/creative-os:${{ matrix.variant }}-testing /test.sh 2>&1 | tee out/protokoll.txt
+          exit ${PIPESTATUS[0]}
+      - name: Bilder in den Zweig kamera-fotos
+        if: always()
+        run: |
+          cd out && sudo chown -R $(id -u) . && git init -q && git checkout -q -b kamera-fotos-${{ matrix.variant }} \
+            && git -c user.name=ci -c user.email=ci@localhost add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm fotos \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" kamera-fotos-${{ matrix.variant }} || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gibeon-kamera-${{ matrix.variant }}
+          path: out/
+          retention-days: 7
