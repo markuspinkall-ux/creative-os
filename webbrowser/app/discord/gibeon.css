@@ -68,6 +68,34 @@
   --mention-foreground: ACCENT !important;
   --info-help-foreground: ACCENT !important;
   --focus-primary: ACCENT !important;
+  /* neue Discord-Bezeichnungen (2025) */
+  --control-primary-background-default: ACCENT !important;
+  --control-primary-background-hover: ACCENT_DARK !important;
+  --control-primary-background-active: ACCENT_DARK !important;
+  --control-primary-border-default: ACCENT !important;
+  --control-primary-border-hover: ACCENT_DARK !important;
+  --control-primary-border-active: ACCENT_DARK !important;
+  --control-primary-text-default: ACCENT_TEXT !important;
+  --control-primary-text-hover: ACCENT_TEXT !important;
+  --control-primary-text-active: ACCENT_TEXT !important;
+  --control-primary-icon-default: ACCENT_TEXT !important;
+  --control-primary-icon-hover: ACCENT_TEXT !important;
+  --control-primary-icon-active: ACCENT_TEXT !important;
+  --control-secondary-background-default: #232a38 !important;
+  --control-secondary-background-hover: #2a3040 !important;
+  --control-secondary-background-active: #2f3748 !important;
+  --background-brand: ACCENT !important;
+  --icon-brand: ACCENT !important;
+  --checkbox-background-selected-default: ACCENT !important;
+  --radio-background-selected-default: ACCENT !important;
+  --switch-background-selected-default: ACCENT !important;
+  --slider-indicator-background: ACCENT !important;
+  --badge-primary-background: ACCENT !important;
+  --background-mod-subtle: rgba(143, 179, 255, 0.06) !important;
+  --background-mod-normal: rgba(143, 179, 255, 0.10) !important;
+  --background-mod-strong: rgba(143, 179, 255, 0.16) !important;
+  --background-mod-muted: rgba(143, 179, 255, 0.04) !important;
+  --bg-surface-raised: #1c2029 !important;
 }
 
 .theme-light, .visual-refresh.theme-light {
@@ -106,6 +134,10 @@
   --brand-560: ACCENT_DARK !important;
   --button-filled-brand-background: ACCENT_DARK !important;
   --button-filled-brand-text: #ffffff !important;
+  --control-primary-background-default: ACCENT_DARK !important;
+  --control-primary-background-hover: ACCENT_DARK !important;
+  --control-primary-text-default: #ffffff !important;
+  --background-brand: ACCENT_DARK !important;
 }
 
 /* Gibeon-Formen: etwas rundere Ecken an Feldern, Karten und Menüs */

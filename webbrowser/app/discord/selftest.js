@@ -47,8 +47,9 @@ async function run(ctx) {
       const norm = (v) => { probe.style.color = ''; probe.style.color = v; return getComputedStyle(probe).color; };
       const pick = (el) => el ? getComputedStyle(el).backgroundColor : '';
       const btn = document.querySelector('button[type=submit]');
-      const box = btn && btn.closest('form') ? btn.closest('form').firstElementChild : null;
-      const inp = document.querySelector('input');
+      const solid = (el) => { while (el && el !== document.body) { const c = getComputedStyle(el).backgroundColor; if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return el; el = el.parentElement; } return null; };
+      const box = solid(btn && btn.parentElement);
+      const inp = solid(document.querySelector('input'));
       const want = { button: pick(btn), box: pick(box), input: pick(inp), text: btn ? getComputedStyle(btn).color : '' };
       const hits = {};
       for (const [k, col] of Object.entries(want)) {
