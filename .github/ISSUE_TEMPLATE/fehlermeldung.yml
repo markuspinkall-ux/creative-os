@@ -1,0 +1,33 @@
+name: Fehler melden
+description: Etwas funktioniert in Gibeon OS oder auf der Webseite nicht richtig
+title: "Fehler: "
+labels: ["fehlermeldung"]
+body:
+  - type: markdown
+    attributes:
+      value: Danke fürs Melden! Beschreib kurz, was passiert ist – je genauer, desto schneller ist es behoben.
+  - type: input
+    id: quelle
+    attributes:
+      label: Quelle
+      description: Wo ist der Fehler aufgetreten? (Gibeon OS oder Webseite)
+      placeholder: Gibeon OS
+    validations:
+      required: true
+  - type: textarea
+    id: beschreibung
+    attributes:
+      label: Was ist passiert?
+      placeholder: Was hast du gemacht, was ist passiert, was hättest du erwartet?
+    validations:
+      required: true
+  - type: input
+    id: programm
+    attributes:
+      label: Programm oder Seite
+      placeholder: z. B. Studio, Taskleiste, Startseite der Webseite
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Wird beim Melden aus Gibeon OS automatisch eingetragen

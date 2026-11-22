@@ -12,6 +12,14 @@ creative-tasksEnabled=true
 creative-abstandEnabled=false
 # Fluid-Glas: Hintergrund hinter Leisten und Startmenü weichzeichnen
 blurEnabled=true
+# Fenster öffnen dynamisch: wachsen aus dem angeklickten Symbol, minimieren ins Taskleisten-Symbol
+# (eigener Effekt „gibeon-fenster“ statt der KDE-Effekte für Öffnen/Schließen/Minimieren)
+gibeon-fensterEnabled=true
+scaleEnabled=false
+glideEnabled=false
+fadeEnabled=false
+squashEnabled=false
+magiclampEnabled=false
 
 [Effect-blur]
 BlurStrength=10

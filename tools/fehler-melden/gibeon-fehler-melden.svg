@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Käfer -->
+  <ellipse cx="32" cy="36" rx="10" ry="13" fill="#dce6ff"/>
+  <circle cx="32" cy="21" r="6" fill="#dce6ff"/>
+  <path d="M32 25v24" stroke="#232836" stroke-width="2"/>
+  <path d="M22 30l-7-4M22 38h-8M23 45l-7 5M42 30l7-4M42 38h8M41 45l7 5M28 17l-4-5M36 17l4-5"
+        stroke="#dce6ff" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+</svg>

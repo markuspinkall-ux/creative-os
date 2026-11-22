@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+"""Entwickler-Widget ein-/ausschalten (nur für den Besitzer von Gibeon OS).
+
+  gibeon-entwickler an     GitHub-Zugang eintragen → Widget erscheint auf dem Schreibtisch
+  gibeon-entwickler aus    Widget aus, Zugang löschen
+
+Zugang: GitHub → Settings → Developer settings → Personal access tokens (classic) → „repo“
+(für Besucherzahlen braucht GitHub Schreibrechte am Repo).
+"""
+import getpass
+import sys
+
+sys.path.insert(0, "/usr/lib/creative-shell")
+from creative_shell.entwickler import REPO, check_token, conf_path, load_conf, save_conf  # noqa: E402
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else ""
+    if cmd == "an":
+        token = getpass.getpass("GitHub-Token (wird nicht angezeigt): ").strip()
+        ok, info = check_token(token, REPO)
+        if not ok:
+            print(info)
+            return 1
+        conf = load_conf()
+        conf.update({"token": token, "login": info, "repo": REPO})
+        save_conf(conf)
+        print(f"Eingeschaltet für {info} – das Entwickler-Widget erscheint gleich auf dem Schreibtisch.")
+        return 0
+    if cmd == "aus":
+        try:
+            conf_path().unlink()
+        except FileNotFoundError:
+            pass
+        print("Entwickler-Widget ausgeschaltet, Zugang gelöscht.")
+        return 0
+    print(__doc__.strip())
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fehler melden
+Comment=Einen Fehler in Gibeon OS melden – die Meldung geht direkt an den Entwickler
+Exec=gibeon-fehler-melden
+Icon=gibeon-fehler-melden
+Categories=System;Utility;
+Keywords=Fehler;Bug;Problem;Melden;Hilfe;

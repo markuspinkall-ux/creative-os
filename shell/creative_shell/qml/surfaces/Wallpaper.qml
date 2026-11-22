@@ -698,6 +698,7 @@ Item {
         }
         function setPos(x, y) {
             if (key === "ki") kiHelper.setPos(x, y)
+            else if (key === "entwickler") devStats.setPos(x, y)
             else widgetExtras.setPosition(key, x, y)
         }
         function restorePosition() {
@@ -865,6 +866,113 @@ Item {
                     Accessible.name: modelData.name + " – " + badge.text
                     Accessible.onPressAction: streamRow.openChannel()
                 }
+            }
+        }
+    }
+
+    // Entwickler (nur für den Besitzer von Gibeon OS, „gibeon-entwickler an“): Besuche der GitHub-Seite,
+    // wie oft das System und die AppImages geladen wurden, offene Fehlermeldungen von Nutzern
+    ExtraWidget {
+        id: extraDev
+        key: "entwickler"
+        visible: root.widgetOnScreen("entwickler") && devStats.enabled
+        posX: devStats.posX
+        posY: devStats.posY
+        defaultX: Math.max(8, root.width - 1000)
+        defaultY: 24
+        width: 340
+        height: 96 + 21 * devStats.rows.length + 22 * Math.max(1, Math.min(8, devStats.reports.length))
+                + (devStats.message.length > 0 ? 34 : 0)
+        body: Column {
+            id: devBody
+            spacing: 4
+            RowLayout {
+                width: parent.width
+                Text { Layout.fillWidth: true; text: "Gibeon OS – Entwickler"; color: Theme.text; font.bold: true }
+                IconButton {
+                    icon: "refresh"; iconSize: 16; width: 28; height: 28
+                    label: "Zahlen aktualisieren"
+                    enabled: !devStats.busy
+                    onClicked: devStats.refresh()
+                }
+            }
+            Repeater {
+                model: devStats.rows
+                delegate: RowLayout {
+                    required property var modelData
+                    width: devBody.width
+                    Text {
+                        Layout.fillWidth: true
+                        text: modelData.label
+                        color: Theme.textMuted
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                    }
+                    Text { text: modelData.value; color: Theme.text; font.pixelSize: 13; font.bold: true }
+                }
+            }
+            Item { width: 1; height: 6 }
+            RowLayout {
+                width: parent.width
+                Text {
+                    Layout.fillWidth: true
+                    text: "Fehlermeldungen (" + devStats.reports.length + " offen)"
+                    color: Theme.text
+                    font.bold: true
+                }
+                Text {
+                    text: "Alle ansehen"
+                    color: Theme.accent
+                    font.pixelSize: 12
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: devStats.openReports() }
+                }
+            }
+            Text {
+                visible: devStats.reports.length === 0
+                text: devStats.busy ? "Wird geladen …" : "Keine offenen Meldungen"
+                color: Theme.textMuted
+                font.pixelSize: 12
+            }
+            Repeater {
+                model: devStats.reports.slice(0, 8)
+                delegate: Item {
+                    required property var modelData
+                    width: devBody.width
+                    height: 22
+                    Text {
+                        anchors.left: parent.left
+                        anchors.right: tag.left
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "#" + modelData.number + " " + modelData.title
+                        textFormat: Text.PlainText
+                        color: Theme.accent
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        id: tag
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: modelData.quelle
+                        color: Theme.textMuted
+                        font.pixelSize: 11
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Qt.openUrlExternally(parent.modelData.url)
+                    }
+                }
+            }
+            Text {
+                visible: devStats.message.length > 0
+                width: parent.width
+                text: devStats.message
+                textFormat: Text.PlainText
+                color: Theme.textMuted
+                font.pixelSize: 11
+                wrapMode: Text.Wrap
             }
         }
     }

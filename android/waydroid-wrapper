@@ -21,8 +21,22 @@ laeuft() {
     timeout 10 "$REAL" status 2>/dev/null | grep -q "Session:[[:space:]]*RUNNING"
 }
 
+prop() {
+    timeout 10 "$REAL" prop get "$1" 2>/dev/null | tail -n 1 | tr -d '[:space:]'
+}
+
 hochgefahren() {
-    [ "$(timeout 10 "$REAL" prop get sys.boot_completed 2>/dev/null | tail -n 1 | tr -d '[:space:]')" = "1" ]
+    [ "$(prop sys.boot_completed)" = "1" ]
+}
+
+# Die Boot-Animation endet erst, wenn der Android-Startbildschirm (LineageOS) fertig gezeichnet ist.
+# Startet die App vorher, schiebt sich der Startbildschirm danach davor – die App landet dann in der
+# großen LineageOS-Oberfläche statt in ihrem eigenen Fenster.
+startbild_fertig() {
+    case "$(prop init.svc.bootanim)" in
+        running|restarting) return 1 ;;
+    esac
+    return 0
 }
 
 nutzer=""
@@ -37,13 +51,16 @@ if [ -n "$nutzer" ] && [ "${1:-}" = "app" ] && [ "${2:-}" = "launch" ] && [ -n "
         fi
         i=0
         while [ "$i" -lt 180 ]; do
-            if laeuft && hochgefahren; then
-                sleep 1                     # Android-Startbildschirm kurz fertig werden lassen
+            if laeuft && hochgefahren && startbild_fertig; then
+                sleep 3                     # Startbildschirm ganz fertig werden lassen
                 break
             fi
             sleep 1
             i=$((i + 1))
         done
     ) 9>"$lock"
+    # Sicherheitshalber: Hat sich der Startbildschirm doch noch davorgeschoben, holt ein zweiter
+    # Aufruf die App als eigenes Fenster nach vorn (läuft sie schon, passiert sonst nichts).
+    ( sleep 4; "$REAL" app launch "$3" >/dev/null 2>&1 ) </dev/null >/dev/null 2>&1 &
 fi
 exec "$REAL" "$@"

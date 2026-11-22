@@ -146,6 +146,8 @@ COPY login/creative/background-light.svg /usr/share/creative-os/lockscreen/backg
 RUN sh /tmp/creative-lockscreen/install-lockscreen.sh && rm -rf /tmp/creative-lockscreen
 COPY shell/kwin/creative-tasks /usr/share/kwin/scripts/creative-tasks
 COPY shell/kwin/creative-abstand /usr/share/kwin/scripts/creative-abstand
+# Fenster wachsen aus dem angeklickten Symbol und schrumpfen beim Minimieren dorthin zurück
+COPY shell/kwin/gibeon-fenster /usr/share/kwin/effects/gibeon-fenster
 
 # KI-Assistenten, YouTube und Twitch als eigene Fenster, fest in der Taskleiste
 COPY shell/webapps/creative-webapp /usr/bin/creative-webapp
@@ -203,6 +205,12 @@ RUN ln -s /usr/lib/creative-3dansicht/creative-3dansicht /usr/bin/creative-3dans
 COPY shell/webapps/creative-claude.desktop /usr/share/applications/
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
+# „Fehler melden“ (Startmenü): Meldeformular mit eingetragener Version – landet im Entwickler-Widget
+COPY --chmod=755 tools/fehler-melden/gibeon-fehler-melden /usr/bin/gibeon-fehler-melden
+COPY tools/fehler-melden/gibeon-fehler-melden.desktop /usr/share/applications/gibeon-fehler-melden.desktop
+COPY tools/fehler-melden/gibeon-fehler-melden.svg /usr/share/icons/hicolor/scalable/apps/gibeon-fehler-melden.svg
+# Entwickler-Widget ein-/ausschalten (nur für den Besitzer des Repos)
+COPY --chmod=755 shell/bin/gibeon-entwickler /usr/bin/gibeon-entwickler
 
 # Gibeon OS ist die einzige Sitzung im Anmeldebildschirm
 RUN chmod 755 /usr/bin/creative-shell /usr/bin/creative-session /usr/libexec/creative-shell-supervisor /usr/libexec/creative-wallet-setup /usr/bin/creative-webapp \
