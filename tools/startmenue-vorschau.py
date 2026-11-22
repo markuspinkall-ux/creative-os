@@ -40,6 +40,16 @@ class Apps(QAbstractListModel):
     folderName = Property(str, lambda self: "", notify=folderChanged)
     filterText = Property(str, lambda self: "", lambda self, v: None, notify=folderChanged)
 
+    style = Property(str, lambda self: "alphabet", notify=folderChanged)
+    category = Property(str, lambda self: "", notify=folderChanged)
+    categories = Property("QVariantList", lambda self: [], notify=folderChanged)
+
+    @Slot()
+    def refreshStyle(self): pass
+
+    @Slot(str)
+    def setCategory(self, c): pass
+
     @Slot()
     def closeFolder(self): pass
 
@@ -60,6 +70,10 @@ class Apps(QAbstractListModel):
 
 
 class Icons(QObject):
+    @Slot(str, result=str)
+    def app(self, name):
+        return self.url(name)
+
     @Slot(str, result=str)
     def url(self, name):
         p = ROOT / "shell/creative_shell/qml/Creative/icons" / f"{name}.svg"
