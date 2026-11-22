@@ -418,7 +418,12 @@ class Win {
       tab.title = title; if (!tab.win.isPrivate) store.title(wc.getURL(), title); upd();
       if (tab === tab.win.active) tab.win.setTitle();
     });
-    wc.on('page-favicon-updated', (_e, icons) => { tab.favicon = icons[0] || ''; upd(); });
+    wc.on('page-favicon-updated', (_e, icons) => {
+      tab.favicon = icons[0] || '';
+      // Lesezeichen dieser Seite bekommt das echte Symbol (auch für ältere Lesezeichen ohne Symbol)
+      if (tab.favicon && store.setBookmarkIcon(wc.getURL(), tab.favicon)) broadcast();
+      upd();
+    });
     wc.on('did-start-loading', () => { tab.loading = true; tab.crashed = false; upd(); });
     wc.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
       const main = e && e.isMainFrame !== undefined ? e.isMainFrame : isMainFrame;
@@ -815,7 +820,7 @@ class Win {
       case 'reload': if (wc) wc.reload(); break;
       case 'stop': if (wc) wc.stop(); break;
       case 'home': if (wc) wc.loadURL(START_URL); break;
-      case 'toggle-bookmark': if (wc && /^https?:/.test(wc.getURL())) { store.toggleBookmark(wc.getURL(), a.title); broadcast(); } break;
+      case 'toggle-bookmark': if (wc && /^https?:/.test(wc.getURL())) { store.toggleBookmark(wc.getURL(), a.title, a.favicon); broadcast(); } break;
       case 'remove-bookmark': store.removeBookmark(arg1); broadcast(); break;
       case 'rename-bookmark': store.renameBookmark(arg1, arg2); broadcast(); break;
       case 'move-bookmark': store.moveBookmark(arg1, arg2); broadcast(); break;

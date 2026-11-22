@@ -61,12 +61,21 @@ class Store {
 
   // ---- Lesezeichen ----
   isBookmarked(url) { return this.data.bookmarks.some((b) => b.url === url); }
-  toggleBookmark(url, title) {
+  toggleBookmark(url, title, icon) {
     const i = this.data.bookmarks.findIndex((b) => b.url === url);
     if (i >= 0) this.data.bookmarks.splice(i, 1);
-    else this.data.bookmarks.push({ title: title || url, url });
+    else this.data.bookmarks.push({ title: title || url, url, ...(/^https?:|^data:image\//.test(icon || '') ? { icon } : {}) });
     this.save();
     return i < 0;
+  }
+  // Symbol einer Seite merken (aus dem Tab), damit die Lesezeichenleiste das richtige zeigt
+  setBookmarkIcon(url, icon) {
+    if (!/^https?:|^data:image\//.test(icon || '') || icon.length > 200000) return false;
+    const b = this.data.bookmarks.find((x) => x.url === url);
+    if (!b || b.icon === icon) return false;
+    b.icon = icon;
+    this.save();
+    return true;
   }
   removeBookmark(url) {
     this.data.bookmarks = this.data.bookmarks.filter((b) => b.url !== url);

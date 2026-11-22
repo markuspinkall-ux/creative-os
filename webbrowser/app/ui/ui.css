@@ -100,7 +100,10 @@ body.private #private-badge { display: block; }
 #bookmarks { height: 30px; display: flex; align-items: center; gap: 2px; padding: 0 10px 3px; overflow: hidden; }
 #bookmarks[hidden] { display: none; }
 .bm { display: flex; align-items: center; gap: 7px; height: 26px; max-width: 190px; padding: 0 10px 0 7px; border: 0; border-radius: 8px; background: transparent; color: var(--text); flex: none; }
-.bm span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Symbol nie zusammendrücken – bei langen Namen kürzt sich nur der Text (vorher blieb vom Symbol ein Strich) */
+.bm .ico { flex: none; width: 16px; height: 16px; display: grid; place-items: center; }
+.bm .ico img { width: 16px; height: 16px; border-radius: 3px; object-fit: contain; }
 .bm:hover { background: var(--hover); }
 .bm-empty { color: var(--muted); padding-left: 6px; }
 

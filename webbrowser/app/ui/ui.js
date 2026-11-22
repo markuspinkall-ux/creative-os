@@ -364,15 +364,23 @@ function renderBookmarks() {
     return;
   }
   bar.innerHTML = S.bookmarks.map((b, i) => `<button class="bm" data-i="${i}" title="${esc(b.title)}\n${esc(b.url)}">
-      <span class="ico"><img src="${esc(faviconFor(b.url))}" width="16" height="16" alt="" data-letter="${letterFor(b.title, b.url)}"></span>
+      <span class="ico"><img src="${esc(b.icon || faviconFor(b.url))}" width="16" height="16" alt="" data-letter="${letterFor(b.title, b.url)}" data-fallback="${b.icon ? esc(faviconFor(b.url)) : ''}"></span>
       <span>${esc(b.title)}</span></button>`).join('');
   bar.querySelectorAll('img[data-letter]').forEach((img) => {
-    img.addEventListener('error', () => {
+    const toLetter = () => {
       const d = document.createElement('div');
       d.className = 'letter';
       d.textContent = img.dataset.letter;
       img.replaceWith(d);
-    }, { once: true });
+    };
+    // erst das Symbol der Seite, dann /favicon.ico, sonst der Anfangsbuchstabe
+    img.addEventListener('error', function onErr() {
+      if (img.dataset.fallback) { const f = img.dataset.fallback; img.dataset.fallback = ''; img.src = f; return; }
+      img.removeEventListener('error', onErr);
+      toLetter();
+    });
+    // Winzige oder leere Bilder (z. B. 1×1-Platzhalter) gelten nicht als Symbol
+    img.addEventListener('load', () => { if (img.naturalWidth < 8 || img.naturalHeight < 8) toLetter(); }, { once: true });
   });
   bar.querySelectorAll('.bm').forEach((el) => {
     const b = S.bookmarks[Number(el.dataset.i)];
