@@ -4,6 +4,11 @@ if (process.argv.includes('--whatsapp')) {
   require('./whatsapp/main.js');
   return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
 }
+// Discord (Discord Web im Gibeon-Look) ebenso – eigene App in discord/
+if (process.argv.includes('--discord')) {
+  require('./discord/main.js');
+  return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
+}
 // Browser – Hauptprozess.
 // Jedes Fenster: unten die Tabs (je ein WebContentsView), darüber die Oberfläche (ui/), ein
 // durchsichtiger WebContentsView. Öffnet die Oberfläche ein Menü, wird sie kurz fensterhoch.

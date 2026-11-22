@@ -1,0 +1,7 @@
+#!/bin/sh
+# Discord: das offizielle Discord Web im Gibeon-Look (gleiche Electron-Laufzeit wie der Browser).
+# Heißt und startet wie der bisherige Discord-Client – Taskleisten-Pins und Autostart bleiben gültig.
+#   discord                      Fenster öffnen (läuft es schon: nach vorn holen)
+#   discord --start-minimized    unsichtbar im Hintergrund starten (Autostart)
+export CHROME_DESKTOP=discord.desktop
+exec /usr/lib/creative-browser/electron/electron --class=discord --discord "$@"

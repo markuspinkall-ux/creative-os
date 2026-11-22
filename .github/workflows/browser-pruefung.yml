@@ -28,7 +28,7 @@ jobs:
           [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
           ls node_modules/electron/dist | head
           /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
-          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js','preload-videoad.js','adblock.js','passwords.js','preload-pass.js','page-tools.js','import-bookmarks.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js','discord/selftest.js','discord/dc-preload.js','preload-videoad.js','adblock.js','passwords.js','preload-pass.js','page-tools.js','import-bookmarks.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
       - name: Lesezeichen-Import, Ordner und Passwörter (ohne Electron)
         run: node tests/browser_funktionen_test.js
       - name: Wie im Abbild verpacken (App als resources/app, ohne default_app.asar)
@@ -78,6 +78,17 @@ jobs:
           echo "exit=$?" | tee /tmp/exit-wa
           ls "$H/.config/creative-browser/apps/whatsapp" | head
           grep -q "exit=0" /tmp/exit-wa
+      - name: Discord prüfen (echtes Discord Web im Gibeon-Look, Anmeldeseite)
+        run: |
+          mkdir -p fotos
+          H=$(mktemp -d)
+          set +e
+          xvfb-run -a -s "-screen 0 1600x1000x24" sh -c '
+            HOME='"$H"' XDG_CONFIG_HOME='"$H"'/.config timeout 200 /tmp/pkg/electron --no-sandbox --class=discord --discord \
+              --creative-selftest=$PWD/fotos
+          '
+          echo "exit=$?" | tee /tmp/exit-dc
+          grep -q "exit=0" /tmp/exit-dc
       - name: Normaler erster Start (frischer Benutzer, mit Einzel-Instanz-Sperre)
         run: |
           H=$(mktemp -d)
