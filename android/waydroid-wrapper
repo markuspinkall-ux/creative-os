@@ -39,10 +39,19 @@ startbild_fertig() {
     return 0
 }
 
+# Ganze Android-Oberfläche bewusst geöffnet: dann nichts automatisch schließen
+case "${1:-}" in show-full-ui) rm -f "${XDG_RUNTIME_DIR:-/tmp}/gibeon-android-erststart" ;; esac
+
 nutzer=""
 [ "$(id -u)" -ne 0 ] || [ -n "${GIBEON_WAYDROID_TEST:-}" ] && nutzer=1     # (Variable nur für Tests)
 if [ -n "$nutzer" ] && [ "${1:-}" = "app" ] && [ "${2:-}" = "launch" ] && [ -n "${3:-}" ] && ! laeuft; then
     lock="${XDG_RUNTIME_DIR:-/tmp}/gibeon-android-start.lock"
+    # Erster Start: Waydroid zeigt die erste App sonst in der ganzen LineageOS-Oberfläche – erst wenn die
+    # einmal geschlossen wurde, kommen Apps als eigene Fenster. Der Fenster-Vermittler schließt sie dann
+    # selbst (Datei „gibeon-android-erststart“), danach wird die App hier noch einmal geöffnet.
+    erst="${XDG_RUNTIME_DIR:-/tmp}/gibeon-android-erststart"
+    rm -f "$erst.fertig"
+    touch "$erst"
     (
         # Mehrere Apps gleichzeitig angeklickt: nur einmal Android starten
         command -v flock >/dev/null 2>&1 && flock -w 180 9
@@ -59,8 +68,14 @@ if [ -n "$nutzer" ] && [ "${1:-}" = "app" ] && [ "${2:-}" = "launch" ] && [ -n "
             i=$((i + 1))
         done
     ) 9>"$lock"
-    # Sicherheitshalber: Hat sich der Startbildschirm doch noch davorgeschoben, holt ein zweiter
-    # Aufruf die App als eigenes Fenster nach vorn (läuft sie schon, passiert sonst nichts).
-    ( sleep 4; "$REAL" app launch "$3" >/dev/null 2>&1 ) </dev/null >/dev/null 2>&1 &
+    # Danach: Sobald der Vermittler die LineageOS-Oberfläche geschlossen hat, die App als eigenes Fenster
+    # neu öffnen. Kam die Oberfläche gar nicht, holt ein zweiter Aufruf die App trotzdem nach vorn.
+    (
+        i=0
+        while [ "$i" -lt 25 ] && [ ! -e "$erst.fertig" ]; do sleep 1; i=$((i + 1)); done
+        if [ -e "$erst.fertig" ]; then sleep 2; else sleep 0; fi
+        rm -f "$erst" "$erst.fertig"
+        "$REAL" app launch "$3" >/dev/null 2>&1
+    ) </dev/null >/dev/null 2>&1 &
 fi
 exec "$REAL" "$@"

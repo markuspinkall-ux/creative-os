@@ -45,6 +45,14 @@ MODE_SERVER_SIDE = 2
 TABLET_DELAY = 0.8          # Sekunden nach dem Öffnen: Fenster aufs Tablet-Format stellen
 RESIZE_DELAY = 0.4          # Größe ziehen: erst nach dem Loslassen an Android weitergeben
 MAX_FDS = 64            # Wayland schickt höchstens 28 pro Nachricht
+# Erster App-Start nach dem Hochfahren: Waydroid zeigt die App zuerst in der ganzen LineageOS-Oberfläche
+# (Fenster „Waydroid“). Erst wenn diese einmal geschlossen wurde, kommen Apps als eigene Fenster.
+# Der waydroid-Wrapper legt dafür die Datei ERSTSTART an; der Vermittler schließt die Oberfläche dann
+# selbst (wie ein Klick aufs X) und meldet das mit ERSTSTART.fertig – danach öffnet der Wrapper die App neu.
+FULL_UI_IDS = ("Waydroid", "waydroid")
+ERSTSTART = "gibeon-android-erststart"
+ERSTSTART_MAX_AGE = 300     # Sekunden
+FULL_UI_CLOSE_DELAY = 1.5
 
 
 def _xdg(var, fallback):
@@ -307,6 +315,9 @@ class Conn:
             if top is not None:
                 top.app_id = vals[0] or ""
                 m = APP_RE.match(top.app_id)
+                if not m and top.app_id in FULL_UI_IDS and erststart_wanted():
+                    self.log("Erster App-Start: LineageOS-Oberfläche wird geschlossen, App kommt als eigenes Fenster")
+                    self.p.later(FULL_UI_CLOSE_DELAY, lambda cid=cid: self.close_toplevel(cid))
                 if m and not top.pkg:
                     top.pkg = m.group(1)
                     if self.p.config()["tablet"]:
@@ -319,6 +330,23 @@ class Conn:
                 self.dest[surface] = (vals[0], vals[1])
         elif key == ("wl_surface", "destroy"):
             self.dest.pop(cid, None)
+
+    def close_toplevel(self, cid):
+        """Fenster schließen wie mit dem X am Rahmen: „close“ an Waydroid schicken."""
+        if cid not in self.tops:
+            return
+        iface = self._iface("xdg_toplevel")
+        op = next((i for i, m in enumerate(iface.events) if m.name == "close"), None) if iface else None
+        if op is None:
+            return
+        data, fds = wl.encode(cid, op, iface.events[op], [])
+        self.c.queue(data, fds)
+        try:
+            self.c.flush()
+        except OSError:
+            pass
+        self.p._update_write(self)
+        erststart_done()
 
     def decorate(self, top):
         """Bei KWin den normalen Fensterrahmen für dieses Fenster anfordern."""
@@ -621,6 +649,27 @@ class Proxy:
 # ---------------------------------------------------------------------------------------------
 def runtime_dir():
     return os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+
+
+def erststart_wanted():
+    """Hat der Wrapper gerade Android für einen App-Start hochgefahren? (Datei, höchstens 5 Minuten alt)"""
+    f = Path(runtime_dir()) / ERSTSTART
+    try:
+        return time.time() - f.stat().st_mtime < ERSTSTART_MAX_AGE
+    except OSError:
+        return False
+
+
+def erststart_done():
+    base = Path(runtime_dir())
+    try:
+        (base / ERSTSTART).unlink()
+    except OSError:
+        pass
+    try:
+        (base / (ERSTSTART + ".fertig")).touch()
+    except OSError:
+        pass
 
 
 def upstream_path():

@@ -59,7 +59,8 @@
       "Browser: Bei Lesezeichen mit langem Namen wurde das Symbol zu einem Strich zusammengedrückt. Jetzt bleibt es immer ganz, und Lesezeichen zeigen das echte Symbol der Seite (sonst den Anfangsbuchstaben)",
       "Browser: Symbole in der Lesezeichenleiste wurden bei manchen Seiten falsch oder verzerrt angezeigt.",
       "Startmenü: Die Ansicht A–Z oder Kacheln aus der Systemsteuerung wird jetzt sofort übernommen (vorher blieb das Menü bei den Kategorien).",
-      "Systemtray in der Taskleiste: Widgets lassen sich jetzt bis an den oberen Bildschirmrand schieben. Kommt der Tray wieder nach oben, rücken sie automatisch darunter."
+      "Systemtray in der Taskleiste: Widgets lassen sich jetzt bis an den oberen Bildschirmrand schieben. Kommt der Tray wieder nach oben, rücken sie automatisch darunter.",
+      "Android-Apps: Beim ersten Klick nach dem Hochfahren kommt die App jetzt direkt als eigenes Fenster auf den Schreibtisch – vorher landete sie in der LineageOS-Oberfläche, bis man diese einmal geöffnet und geschlossen hatte."
     ]
   },
   {

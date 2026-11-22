@@ -272,6 +272,47 @@ class FensterTest(unittest.TestCase):
         self.kwin.send(7, "xdg_toplevel", "configure", [1920, 1040, b""])
         self.assertEqual(self.app.read(self.proxy), [(7, "xdg_toplevel", "configure", [1920, 1040, b""])])
 
+    def test_erster_start_schliesst_lineage_oberflaeche(self):
+        """Erster App-Start: Die ganze LineageOS-Oberfläche („Waydroid“) wird wie per X geschlossen."""
+        rt = Path(self.tmp.name) / "run"
+        rt.mkdir()
+        old = os.environ.get("XDG_RUNTIME_DIR")
+        os.environ["XDG_RUNTIME_DIR"] = str(rt)
+        old_delay = fenster.FULL_UI_CLOSE_DELAY
+        fenster.FULL_UI_CLOSE_DELAY = 0.05
+        try:
+            (rt / fenster.ERSTSTART).touch()
+            self._window()
+            self.app.send(7, "xdg_toplevel", "set_app_id", ["Waydroid"])
+            self.kwin.read(self.proxy)
+            got = self.app.read(self.proxy, want=1, rounds=60)
+            self.assertIn((7, "xdg_toplevel", "close", []), got)
+            self.assertFalse((rt / fenster.ERSTSTART).exists())
+            self.assertTrue((rt / (fenster.ERSTSTART + ".fertig")).exists())
+        finally:
+            fenster.FULL_UI_CLOSE_DELAY = old_delay
+            if old is None:
+                os.environ.pop("XDG_RUNTIME_DIR", None)
+            else:
+                os.environ["XDG_RUNTIME_DIR"] = old
+
+    def test_bewusst_geoeffnete_oberflaeche_bleibt(self):
+        rt = Path(self.tmp.name) / "run2"
+        rt.mkdir()
+        old = os.environ.get("XDG_RUNTIME_DIR")
+        os.environ["XDG_RUNTIME_DIR"] = str(rt)
+        try:
+            self._window()
+            self.app.send(7, "xdg_toplevel", "set_app_id", ["Waydroid"])
+            self.kwin.read(self.proxy)
+            got = self.app.read(self.proxy, want=1, rounds=30)
+            self.assertNotIn("close", [n for _o, _i, n, _v in got])
+        finally:
+            if old is None:
+                os.environ.pop("XDG_RUNTIME_DIR", None)
+            else:
+                os.environ["XDG_RUNTIME_DIR"] = old
+
     def test_rahmen_vor_fenster_entfernt(self):
         self._window()
         self.app.send(7, "xdg_toplevel", "destroy", [])
@@ -397,8 +438,13 @@ esac
             # erst nach dem Ende der Boot-Animation (Startbildschirm fertig)
             self.assertGreaterEqual(int((d / "anim").read_text()), 2)
             import time
-            time.sleep(5)                       # zweiter Aufruf holt die App nach vorn
+            # Wrapper hat dem Vermittler Bescheid gesagt („erster Start“) …
+            self.assertTrue((d / "gibeon-android-erststart").exists())
+            # … der schließt die LineageOS-Oberfläche und meldet das; danach öffnet der Wrapper die App neu
+            (d / "gibeon-android-erststart.fertig").touch()
+            time.sleep(4.5)
             self.assertEqual(log.read_text().splitlines().count("app launch com.beispiel"), 2)
+            self.assertFalse((d / "gibeon-android-erststart").exists())
             # läuft Android schon, geht es sofort los
             log.write_text("")
             subprocess.run(["sh", str(wrapper), "app", "launch", "com.zwei"], env=env, timeout=30)
