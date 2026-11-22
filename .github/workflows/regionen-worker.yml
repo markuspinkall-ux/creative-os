@@ -42,8 +42,10 @@ jobs:
       - name: Worker hochladen
         working-directory: tools/regionen-worker
         run: |
+          set -o pipefail
           npx -y wrangler@4 deploy 2>&1 | tee /tmp/deploy.txt
           url=$(grep -oE "https://[a-z0-9.-]+\.workers\.dev" /tmp/deploy.txt | head -n 1)
+          [ -n "$url" ] || { echo "::error::Keine workers.dev-Adresse – im Cloudflare-Dashboard unter Workers & Pages einmal eine workers.dev-Subdomain anlegen"; exit 1; }
           echo "URL=$url" >> "$GITHUB_ENV"
       - name: Schlüssel fürs Widget
         if: env.REGIONEN_SCHLUESSEL != ''
