@@ -22,6 +22,49 @@ CURSOR_EMBEDDED = 2
 PERSIST_UNTIL_REVOKED = 2
 
 
+class _CtypesGLib:
+    """Das Nötigste von GLib (Hauptschleife, stdin beobachten) über ctypes – für das AppImage,
+    das ohne PyGObject auskommt. dbus-python hängt sich an dieselbe Standard-Schleife."""
+    IO_IN, IO_HUP, IO_ERR = 1, 16, 8
+
+    def __init__(self):
+        import ctypes
+        import ctypes.util
+        lib = ctypes.CDLL(ctypes.util.find_library("glib-2.0") or "libglib-2.0.so.0")
+        lib.g_main_loop_new.restype = ctypes.c_void_p
+        lib.g_main_loop_new.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        lib.g_main_loop_run.argtypes = [ctypes.c_void_p]
+        lib.g_main_loop_quit.argtypes = [ctypes.c_void_p]
+        self._lib = lib
+        glib = self
+
+        class MainLoop:
+            def __init__(self):
+                self.ptr = glib._lib.g_main_loop_new(None, 0)
+
+            def run(self):
+                glib._lib.g_main_loop_run(self.ptr)
+
+            def quit(self):
+                glib._lib.g_main_loop_quit(self.ptr)
+
+        self.MainLoop = MainLoop
+        self._loops = []
+
+    def io_add_watch(self, fd, _cond, fn):
+        """Nur für stdin: endet die Eingabe (Studio schließt sie), wird fn aufgerufen."""
+        import threading
+
+        def watch():
+            try:
+                while os.read(fd, 4096):
+                    pass
+            except OSError:
+                pass
+            fn()
+        threading.Thread(target=watch, daemon=True).start()
+
+
 def main(argv):
     sock_fd = int(argv[argv.index("--sock") + 1])
     token = argv[argv.index("--token") + 1] if "--token" in argv else ""
@@ -37,10 +80,13 @@ def main(argv):
     try:
         import dbus
         from dbus.mainloop.glib import DBusGMainLoop
-        from gi.repository import GLib
     except ImportError as e:
         send({"error": f"Bildschirmfreigabe nicht verfügbar ({e})"})
         return 1
+    try:
+        from gi.repository import GLib
+    except ImportError:                 # AppImage ohne PyGObject: GLib direkt ansprechen
+        GLib = _CtypesGLib()
 
     DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()

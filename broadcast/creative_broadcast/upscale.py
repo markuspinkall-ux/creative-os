@@ -10,10 +10,11 @@ Stufen:
   beste   – KI verdoppelt das volle Kamerabild, danach sauber auf 1080p verkleinert
 """
 
+import os
 import sys
 from pathlib import Path
 
-MODEL = Path("/usr/share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx")
+MODEL = Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx"
 OUT_W, OUT_H = 1920, 1080
 
 

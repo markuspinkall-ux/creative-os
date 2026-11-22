@@ -1224,6 +1224,16 @@ class Studio(QObject):
         self.changed.emit()
 
     @Slot()
+    def openBroadcast(self):
+        """Broadcast öffnen (Mikrofon entrauschen, Hintergrund der Webcam) – in Gibeon OS sitzt es
+        sonst im Tray, im AppImage liegt es mit im Paket."""
+        if shutil.which("creative-broadcast"):
+            subprocess.Popen(["creative-broadcast"], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    broadcastAvailable = Property(bool, lambda self: bool(shutil.which("creative-broadcast")), constant=True)
+
+    @Slot()
     def openRecordings(self):
         folder = Path(self.rec_file).parent if self.rec_file else user_dir("VIDEOS", "Videos") / "Studio"
         folder.mkdir(parents=True, exist_ok=True)

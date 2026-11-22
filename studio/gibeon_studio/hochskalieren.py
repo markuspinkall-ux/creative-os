@@ -18,8 +18,9 @@ import sys
 from pathlib import Path
 
 OUT_W, OUT_H = 3840, 2160
-MODEL = Path("/usr/share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx")
-for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
+PREFIX = Path(os.environ.get("GIBEON_PREFIX") or "/usr")          # AppImage: zeigt ins AppImage
+MODEL = PREFIX / "share/creative-broadcast/2xNomosUni_span_multijpg_fp16.onnx"
+for _v in (PREFIX / "lib/creative-broadcast/vendor", PREFIX / "lib/creative-broadcast/gpu"):
     if _v.is_dir() and str(_v) not in sys.path:
         sys.path.insert(0, str(_v))
 

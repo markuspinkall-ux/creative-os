@@ -1,0 +1,74 @@
+name: AppImages bauen (Studio, 3D Studio)
+# Studio (mit Broadcast) und 3D Studio als AppImage für andere Linux-Systeme.
+# Auf claude/**-Zweigen nur bauen und prüfen; auf main zusätzlich im Release „appimages“ ablegen
+# (dort verlinkt die Webseite, und Studio fragt dort nach Updates).
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: [studio/**, broadcast/**, creative3d/**, shell/creative_shell/qml/Creative/**, shell/creative_shell/look.py,
+            dialogs/creative_dialogs.py, tools/appimage/**, .github/workflows/appimages.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: appimages-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bauen:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge
+        timeout-minutes: 15
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q librsvg2-bin libdbus-1-dev libglib2.0-dev pkg-config meson ninja-build \
+            libfuse2 libxkbcommon0 libegl1 libgl1 libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
+            libxkbfile1 libasound2 fonts-liberation ffmpeg \
+            gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav
+      - name: DeepFilterNet (Rauschfilter für Broadcast)
+        timeout-minutes: 30
+        run: |
+          git clone -q --depth 1 https://github.com/Rikorose/DeepFilterNet /tmp/DeepFilterNet
+          cd /tmp/DeepFilterNet && cargo build -q --release -p deep-filter-ladspa
+          ls -la target/release/libdeep_filter_ladspa.so
+      - name: AppImages bauen
+        timeout-minutes: 40
+        run: |
+          v="$(date -u +%Y.%m.%d).${{ github.run_number }}"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          DEEPFILTER_SO=/tmp/DeepFilterNet/target/release/libdeep_filter_ladspa.so bash tools/appimage/build.sh dist "$v"
+      - name: Selbsttest Studio
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          timeout 180 ./dist/Gibeon-Studio-x86_64.AppImage --selftest
+      - name: Selbsttest 3D Studio
+        env:
+          QT_QPA_PLATFORM: offscreen
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          CREATIVE3D_NO_WEB: "1"
+        run: |
+          export XDG_RUNTIME_DIR=$(mktemp -d)
+          timeout 120 ./dist/Gibeon-3D-Studio-x86_64.AppImage --selftest && echo "3D Studio: Selbsttest bestanden"
+      - name: Update-Angaben (für die Update-Leiste in Studio)
+        run: python3 tools/appimage/release-info.py dist "$VERSION"
+      - name: Als Artefakt ablegen
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimages
+          path: dist/
+          retention-days: 7
+      - name: Im Release „appimages“ veröffentlichen
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view appimages >/dev/null 2>&1 || gh release create appimages --title "Gibeon-Apps für andere Linux-Systeme" \
+            --notes "Studio (mit Broadcast) und 3D Studio aus Gibeon OS als AppImage. Wird automatisch aktualisiert." --latest=false
+          gh release upload appimages dist/*.AppImage dist/*.json --clobber

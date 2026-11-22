@@ -884,6 +884,7 @@ ApplicationWindow {
                     CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
                     CButton { Layout.fillWidth: true; text: "Plattformen einrichten …"; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
+                    CButton { Layout.fillWidth: true; visible: studio.broadcastAvailable; text: "Broadcast (Mikrofon & Kamera) …"; onClicked: studio.openBroadcast() }
                     // laufendes Hochskalieren
                     Rectangle {
                         Layout.fillWidth: true
@@ -997,6 +998,103 @@ ApplicationWindow {
         title: "Bild für die Szene wählen"
         acceptText: "Einfügen"
         onAccepted: (url) => win.selectAt(studio.addImage(url.toString()))
+    }
+
+    // ---------------- Update (nur AppImage für andere Linux-Systeme) ----------------
+    Rectangle {
+        id: updateBar
+        z: 40
+        visible: appUpdate.visible && !updateDialog.open
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 10
+        width: updRow.implicitWidth + 24
+        height: 46
+        radius: 12
+        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
+        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45)
+        RowLayout {
+            id: updRow
+            anchors.centerIn: parent
+            spacing: 10
+            Column {
+                Text { text: appUpdate.phase === "ready" ? "Update geladen" : "Update verfügbar: Version " + appUpdate.version; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                Text { text: "Studio und Broadcast werden zusammen aktualisiert"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            }
+            CButton { text: "Später"; onClicked: appUpdate.later() }
+            CButton { primary: true; text: appUpdate.phase === "ready" ? "Neu starten" : "Jetzt aktualisieren"; onClicked: updateDialog.open = true }
+        }
+    }
+    Rectangle {
+        id: updateDialog
+        property bool open: false
+        anchors.fill: parent
+        z: 41
+        visible: open
+        color: Qt.rgba(0, 0, 0, 0.5)
+        MouseArea { anchors.fill: parent }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 460
+            height: updCol.implicitHeight + 40
+            radius: Theme.radiusMenu
+            color: Theme.surface
+            border.color: Theme.hairline
+            ColumnLayout {
+                id: updCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 20
+                spacing: 8
+                Heading { text: "Update auf Version " + appUpdate.version }
+                Text {
+                    text: "Installiert: " + (appUpdate.currentVersion || "–") + " · Download " + appUpdate.sizeMb + " MB"
+                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+                }
+                Text { visible: appUpdate.studioNotes.length > 0; Layout.topMargin: 6; text: "Studio"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                Repeater {
+                    model: appUpdate.studioNotes
+                    delegate: Text { required property string modelData; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "•  " + modelData; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                }
+                Text { visible: appUpdate.broadcastNotes.length > 0; Layout.topMargin: 6; text: "Broadcast"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                Repeater {
+                    model: appUpdate.broadcastNotes
+                    delegate: Text { required property string modelData; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "•  " + modelData; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 10
+                    visible: appUpdate.phase === "loading" || appUpdate.phase === "ready"
+                    height: 6; radius: 3
+                    color: Theme.tint(0.1)
+                    Rectangle { width: parent.width * appUpdate.progressValue; height: 6; radius: 3; color: Theme.accent }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    visible: text.length > 0
+                    text: appUpdate.errorText !== "" ? appUpdate.errorText
+                          : appUpdate.phase === "loading" ? "Wird geladen … " + Math.round(appUpdate.progressValue * appUpdate.sizeMb) + " von " + appUpdate.sizeMb + " MB"
+                          : appUpdate.phase === "ready" ? "Fertig geladen – beim Neustart läuft die neue Version."
+                          : !appUpdate.writable ? "Der Ordner mit dem AppImage ist schreibgeschützt oder voll – lade das neue AppImage bitte von der Webseite."
+                          : ""
+                    color: appUpdate.errorText !== "" ? win.redLive : Theme.textMuted
+                    font.family: Theme.fontFamily; font.pixelSize: 11
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                    Item { Layout.fillWidth: true }
+                    CButton { text: appUpdate.phase === "loading" ? "Im Hintergrund" : "Abbrechen"; onClicked: updateDialog.open = false }
+                    CButton {
+                        primary: true
+                        enabled: appUpdate.writable && appUpdate.phase !== "loading"
+                        text: appUpdate.phase === "ready" ? "Neu starten und fertig" : "Aktualisieren"
+                        onClicked: appUpdate.phase === "ready" ? appUpdate.restart() : appUpdate.start()
+                    }
+                }
+            }
+        }
     }
 
     // ---------------- Anmeldung (Gerätecode) ----------------

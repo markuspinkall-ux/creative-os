@@ -38,7 +38,7 @@ def main():
         return 0
     from .ui import Broadcast
     engine = QQmlApplicationEngine()
-    for d in (HERE.parent.parent / "shell" / "creative_shell" / "qml", Path("/usr/lib/creative-shell/creative_shell/qml")):
+    for d in (HERE.parent.parent / "shell" / "creative_shell" / "qml", Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/creative-shell/creative_shell/qml"):
         if (d / "Creative" / "qmldir").exists():
             engine.addImportPath(str(d))
             break
