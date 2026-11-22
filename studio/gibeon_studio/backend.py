@@ -6,6 +6,7 @@ import json
 import os
 import re
 import socket
+import shutil
 import subprocess
 import sys
 import threading
@@ -158,6 +159,45 @@ def broadcast_green():
     except OSError:
         return False
     return True
+
+
+def broadcast_camera():
+    """Für die Gibeon Kamera: Broadcast muss laufen und seine Kamera eingeschaltet haben – sonst
+    schreibt niemand in die virtuelle Kamera und Studio bekommt kein Bild. Schaltet beides ein
+    (mit grünem Hintergrund, den Studio durchsichtig macht). Rückgabe: ob etwas geändert wurde."""
+    path = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os" / "broadcast.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    changed = False
+    if data.get("camera") is not True or data.get("effect") != "green":
+        data["camera"] = True
+        data["effect"] = "green"
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(path)
+            changed = True
+        except OSError:
+            pass
+    # Hintergrunddienst starten, falls er (noch) nicht läuft
+    try:
+        running = subprocess.run(["pgrep", "-u", str(os.getuid()), "-f", "creative_broadcast.daemon"],
+                                 capture_output=True, timeout=3).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        running = True
+    if not running and shutil.which("creative-broadcastd"):
+        try:
+            subprocess.Popen(["creative-broadcastd"], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            changed = True
+        except OSError:
+            pass
+    return changed
 
 
 def audio_inputs():
@@ -352,6 +392,7 @@ class Studio(QObject):
         self._portal_note = None
         self._screen_wanted = False
         self.video_list = []
+        self._broadcast_checked = False
         self.audio_list = []
         self.output_list = []
         self.upscale_queue = []
@@ -744,6 +785,9 @@ class Studio(QObject):
         if k in ("camera", "capture"):
             src = {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
             dev = next((d for d in self.video_list if d["id"] == it["device"]), {})
+            if dev.get("virtual") and not self._broadcast_checked:
+                self._broadcast_checked = True          # einmal je Start: Broadcast einschalten
+                broadcast_camera()
             if k == "capture" or dev.get("capture"):
                 # Capture-Karten (z. B. Elgato): bestes Format fest einstellen, 1080p mit voller Bildrate
                 _w, ch, cfps = engine.canvas_size(self.cfg["canvas"])
@@ -952,8 +996,8 @@ class Studio(QObject):
             # Gibeon Kamera (Broadcast): grünen Hintergrund durchsichtig machen, Person freigestellt zeigen
             it["green"] = True
             it["round"] = False
-            if broadcast_green():
-                self.toast.emit("Broadcast zeigt jetzt einen grünen Hintergrund – Studio blendet ihn aus.")
+            if broadcast_camera():
+                self.toast.emit("Broadcast liefert jetzt die Gibeon Kamera mit grünem Hintergrund – Studio blendet ihn aus.")
         elif it["kind"] == "capture" and not self.cfg["audio"]["extra"]["device"]:
             match = matching_audio(os.path.realpath(it.get("device", "")), self.audio_list)
             if match:
@@ -1001,16 +1045,27 @@ class Studio(QObject):
     @Slot(int, float, float, float)
     def moveItem(self, index, x, y, w):
         """Verschieben / Größe ändern (Anteile der Bildbreite/-höhe) – sofort im Bild, auch live."""
+        if self._place(index, x, y, w):
+            self.changed.emit()
+
+    @Slot(int, float, float, float)
+    def dragItem(self, index, x, y, w):
+        """Wie moveItem, aber während des Ziehens: nur das Bild ändert sich, die Liste der Quellen
+        in der Oberfläche bleibt (sonst würde sie neu aufgebaut und das Ziehen bräche nach ein,
+        zwei Pixeln ab). Am Ende des Ziehens kommt moveItem."""
+        self._place(index, x, y, w)
+
+    def _place(self, index, x, y, w):
         it = self._item(index)
         if not it:
-            return
+            return False
         it["w"] = max(0.03, min(4.0, w))
         h = item_height(it)
         it["x"] = max(-it["w"] + 0.03, min(0.97, x))
         it["y"] = max(-h + 0.03, min(0.97, y))
         self._apply()
         self._save_later.start()
-        self.changed.emit()
+        return True
 
     @Slot(int)
     def fillItem(self, index):

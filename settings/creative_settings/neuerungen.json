@@ -1,6 +1,20 @@
 [
   {
     "datum": "2026-11-22",
+    "titel": "Studio: Quellen frei verschieben und per Rechtsklick löschen",
+    "neu": [
+      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten"
+    ],
+    "verbessert": [
+      "Studio aufgeräumt: der Chat sitzt jetzt rechts über „Live gehen“ und „Aufnehmen“, die Umfrage hat links unter den Quellen einen eigenen Platz. Die Plattformen (Twitch, YouTube, Kick, TikTok, eigener Server) richtest du in den Einstellungen unter „Plattformen“ ein – rechts steht nur noch, wohin gesendet wird"
+    ],
+    "behoben": [
+      "Studio: Kamera, Bilder und andere Quellen lassen sich in der Vorschau wieder frei verschieben und an den Ecken skalieren – vorher brach das Ziehen nach ein, zwei Pixeln ab",
+      "Studio: Wird die Gibeon Kamera als Quelle gewählt, schaltet Studio die Kamera in Broadcast selbst ein (und startet Broadcast, falls nötig) – vorher blieb das Bild leer, solange die Kamera in Broadcast aus war"
+    ]
+  },
+  {
+    "datum": "2026-11-22",
     "titel": "Podcasts im Player: Kacheln und Suche",
     "neu": [
       "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern"

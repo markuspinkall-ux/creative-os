@@ -32,7 +32,41 @@ ApplicationWindow {
     property string selected: ""                 // ausgewählte Quelle (id) in der aktiven Szene
     property int renaming: -1                    // Szene, deren Namen gerade bearbeitet wird
     property int webReload: 0                    // „Seite neu laden“ bei Browserquellen
-    readonly property var items: st.items || []
+    // Quellen der Szene – nur neu setzen, wenn sich wirklich etwas geändert hat (der Zustand kommt
+    // jede Sekunde neu für die Uhr; sonst würde die Bühne ständig neu aufgebaut und Ziehen bräche ab)
+    property var items: []
+    property string itemsSig: ""
+    property bool stageDragging: false
+    onStChanged: syncItems()
+    onStageDraggingChanged: if (!stageDragging) syncItems()
+    function syncItems() {
+        if (stageDragging)
+            return
+        const list = st.items || []
+        const sig = JSON.stringify(list)
+        if (sig !== itemsSig) {
+            itemsSig = sig
+            items = list
+        }
+    }
+    Component.onCompleted: syncItems()
+
+    // Rechtsklick auf eine Quelle (Liste oder Vorschau): Löschen und Co.
+    function openSourceMenu(pos) {
+        sourceMenu.pos = pos
+        sourceMenu.popup()
+    }
+    Menu {
+        id: sourceMenu
+        property int pos: -1
+        readonly property var it: pos >= 0 && pos < win.items.length ? win.items[pos] : null
+        MenuItem { text: sourceMenu.it && sourceMenu.it.hidden ? "Einblenden" : "Ausblenden"; onTriggered: studio.setItem(sourceMenu.pos, "hidden", !(sourceMenu.it && sourceMenu.it.hidden)) }
+        MenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
+        MenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
+        MenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
+        MenuSeparator {}
+        MenuItem { text: "Löschen"; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
+    }
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
     readonly property string redLive: "#e5484d"
@@ -94,9 +128,7 @@ ApplicationWindow {
             Card {
                 id: sourcesPane
                 Layout.fillWidth: true
-                Layout.fillHeight: !cfg.chat_open
-                // mit Chat: so hoch wie nötig, höchstens gut die Hälfte – der Rest gehört dem Chat
-                Layout.preferredHeight: cfg.chat_open ? Math.min(srcCol.implicitHeight + 32, leftCol.height * 0.58) : -1
+                Layout.fillHeight: true
                 Flickable {
                     anchors.fill: parent
                     anchors.margins: 16
@@ -238,124 +270,44 @@ ApplicationWindow {
                 }
             }
 
-            // ---------------- Chat ----------------
+            // ---------------- Umfrage ----------------
             Card {
-                id: chatPane
+                id: pollPane
                 Layout.fillWidth: true
-                Layout.fillHeight: !!cfg.chat_open
-                Layout.preferredHeight: cfg.chat_open ? -1 : 52
-
+                Layout.preferredHeight: pollPaneCol.implicitHeight + 28
+                readonly property var p: st.poll || ({})
+                readonly property bool running: p.phase === "laeuft"
                 ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 10
-                    visible: cfg.chat_open
-
+                    id: pollPaneCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 14
+                    spacing: 8
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Heading { text: "Umfrage"; Layout.fillWidth: true }
+                        Badge {
+                            visible: pollPane.running
+                            text: Math.floor((pollPane.p.remaining || 0) / 60) + ":" + String((pollPane.p.remaining || 0) % 60).padStart(2, "0")
+                            fill: win.redLive
+                            pulse: true
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: pollPane.running ? (pollPane.p.question || "") + " · " + (pollPane.p.total || 0) + " Stimmen"
+                              : pollPane.p.phase === "ergebnis" ? "Ergebnis: " + (pollPane.p.total || 0) + " Stimmen"
+                              : "Frage stellen – der Chat stimmt mit !1, !2 … ab, das Ergebnis erscheint im Bild."
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                    }
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 6
-                        Repeater {
-                            model: ["twitch", "youtube"].concat(acc.kick && acc.kick.connected ? ["kick"] : [])
-                            delegate: Pill {
-                                required property string modelData
-                                Layout.fillWidth: true
-                                text: modelData === "twitch" ? "Twitch" : modelData === "kick" ? "Kick" : "YouTube"
-                                dot: modelData === "twitch" ? "#9f7aea" : modelData === "kick" ? "#53fc18" : "#ff4e45"
-                                checked: win.chatTab === modelData
-                                onClicked: win.chatTab = modelData
-                            }
-                        }
-                        IconBtn { icon: "chevron-down"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
+                        CButton { Layout.fillWidth: true; primary: !pollPane.running; text: pollPane.running ? "Ansehen" : "Neue Umfrage …"; onClicked: pollDialog.open = true }
+                        CButton { visible: pollPane.running; text: "Beenden"; onClicked: studio.endPoll() }
                     }
-
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        readonly property var a: acc[win.chatTab] || ({})
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Theme.radiusRow
-                            color: Theme.raised
-                            clip: true
-                            WebEngineView {
-                                id: chatView
-                                anchors.fill: parent
-                                anchors.margins: 1
-                                visible: !!parent.parent.a.chat
-                                url: parent.parent.a.chat || "about:blank"
-                                backgroundColor: Theme.raised
-                                settings.javascriptCanOpenWindows: false
-                                profile: WebEngineProfile {
-                                    storageName: "gibeon-studio-chat"
-                                    offTheRecord: false
-                                    persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
-                                }
-                                // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
-                                onLoadingChanged: (info) => {
-                                    if (info.status !== WebEngineView.LoadSucceededStatus)
-                                        return
-                                    const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
-                                        + "{display:none!important} body{background:" + Theme.raised + "!important}"
-                                    runJavaScript("(function(){var s=document.createElement('style');s.textContent="
-                                                  + JSON.stringify(css) + ";document.head.appendChild(s);})()")
-                                }
-                            }
-                            Column {
-                                anchors.centerIn: parent
-                                width: parent.width - 40
-                                spacing: 12
-                                visible: !chatView.visible
-                                Text {
-                                    width: parent.width
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    color: Theme.textMuted
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 13
-                                    text: win.chatTab === "kick" ? "Kick-Chat wird geladen …" : !parent.parent.parent.a.connected
-                                          ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
-                                          : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
-                                }
-                                CButton {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: !parent.parent.parent.a.connected
-                                    primary: true
-                                    text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
-                                    onClicked: studio.login(win.chatTab)
-                                }
-                                CButton {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
-                                    text: "Neu laden"
-                                    onClicked: studio.reloadChannel("youtube")
-                                }
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-                        visible: win.chatTab !== "kick"            // bei Kick schreibst du direkt im Chat oben
-                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
-                        opacity: enabled ? 1 : 0.5
-                        Field {
-                            id: chatInput
-                            Layout.fillWidth: true
-                            placeholderText: "Nachricht an den Chat"
-                            onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
-                        }
-                        IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
-                    }
-                }
-                RowLayout {
-                    visible: !cfg.chat_open
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 8
-                    Text { text: "Chat"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true; Layout.fillWidth: true }
-                    IconBtn { icon: "chevron-down"; turn: 180; tip: "Chat zeigen"; onClicked: studio.set("chat_open", true) }
                 }
             }
         }
@@ -489,10 +441,29 @@ ApplicationWindow {
                             readonly property real ratio: modelData.h / Math.max(0.0001, modelData.w)
                             visible: modelData.ok && !modelData.hidden
                             z: index + 1
-                            x: modelData.x * stage.width
-                            y: modelData.y * stage.height
-                            width: modelData.w * stage.width
-                            height: modelData.h * stage.height
+                            // Beim Ziehen gilt die eigene Lage (lx/ly/lw); erst beim Loslassen wird
+                            // gespeichert und die Liste neu geladen.
+                            property bool dragging: false
+                            property real lx: 0
+                            property real ly: 0
+                            property real lw: 0
+                            function startDrag() { lx = modelData.x; ly = modelData.y; lw = modelData.w; dragging = true; win.stageDragging = true }
+                            function dragTo(nx, ny, nw) {
+                                lw = Math.max(0.03, Math.min(4.0, nw))
+                                lx = Math.max(-lw + 0.03, Math.min(0.97, nx))
+                                ly = Math.max(-lw * ratio + 0.03, Math.min(0.97, ny))
+                                studio.dragItem(index, lx, ly, lw)
+                            }
+                            function endDrag() {
+                                if (!dragging) return
+                                studio.moveItem(index, lx, ly, lw)   // speichert; Liste folgt gleich
+                                dragging = false
+                                win.stageDragging = false
+                            }
+                            x: (dragging ? lx : modelData.x) * stage.width
+                            y: (dragging ? ly : modelData.y) * stage.height
+                            width: (dragging ? lw : modelData.w) * stage.width
+                            height: (dragging ? lw * ratio : modelData.h) * stage.height
 
                             Rectangle {
                                 anchors.fill: parent
@@ -515,19 +486,28 @@ ApplicationWindow {
                                 hoverEnabled: true
                                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                                 property real sx; property real sy; property real ox; property real oy
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 onPressed: (m) => {
                                     win.selected = box.modelData.id
+                                    if (m.button === Qt.RightButton) {
+                                        win.openSourceMenu(box.index)
+                                        return
+                                    }
                                     const p = mapToItem(stage, m.x, m.y)
                                     sx = p.x; sy = p.y; ox = box.modelData.x; oy = box.modelData.y
+                                    box.startDrag()
                                 }
                                 onPositionChanged: (m) => {
-                                    if (!pressed) return
+                                    if (!pressed || !box.dragging) return
+                                    // Koordinaten über die Bühne (die sich nicht bewegt) – das Feld selbst wandert mit
                                     const p = mapToItem(stage, m.x, m.y)
-                                    const w = box.modelData.w, h = box.modelData.h
+                                    const w = box.lw, h = box.lw * box.ratio
                                     const nx = stage.snapX(ox + (p.x - sx) / stage.width, w)
                                     const ny = stage.snapY(oy + (p.y - sy) / stage.height, h)
-                                    studio.moveItem(box.index, nx, ny, w)
+                                    box.dragTo(nx, ny, w)
                                 }
+                                onReleased: box.endDrag()
+                                onCanceled: box.endDrag()
                                 onDoubleClicked: studio.fillItem(box.index)
                             }
 
@@ -553,7 +533,10 @@ ApplicationWindow {
                                             const d = box.modelData
                                             ax = parent.cx ? d.x : d.x + d.w          // Gegenecke in Anteilen
                                             ay = parent.cy ? d.y : d.y + d.h
+                                            box.startDrag()
                                         }
+                                        onReleased: box.endDrag()
+                                        onCanceled: box.endDrag()
                                         onPositionChanged: (m) => {
                                             if (!pressed) return
                                             const p = mapToItem(stage, m.x, m.y)
@@ -563,7 +546,7 @@ ApplicationWindow {
                                             const h = w * box.ratio
                                             const nx = parent.cx ? ax : ax - w
                                             const ny = parent.cy ? ay : ay - h
-                                            studio.moveItem(box.index, nx, ny, w)
+                                            box.dragTo(nx, ny, w)
                                         }
                                     }
                                 }
@@ -719,11 +702,6 @@ ApplicationWindow {
                 }
                 IconBtn { icon: "plus"; tip: "Neue Szene"; onClicked: { win.selected = ""; studio.addScene() } }
                 Item { Layout.fillWidth: true }
-                CButton {
-                    text: st.poll && st.poll.phase === "laeuft" ? "Umfrage · " + Math.floor(st.poll.remaining / 60) + ":" + String(st.poll.remaining % 60).padStart(2, "0") : "Umfrage"
-                    primary: !!(st.poll && st.poll.phase === "laeuft")
-                    onClicked: pollDialog.open = true
-                }
                 Text {
                     text: "Strg+1 … 9 wechselt die Szene"
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
@@ -740,10 +718,138 @@ ApplicationWindow {
             }
         }
 
-        // ---------------- Quellen ----------------
-        Card {
+        // ---------------- Rechts: Chat, Einstellungen, Live / Aufnahme ----------------
+        ColumnLayout {
+            id: rightCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 290
+            Layout.preferredWidth: 320
+            spacing: 14
+
+            // ---------------- Chat ----------------
+            Card {
+                id: chatPane
+                Layout.fillWidth: true
+                Layout.fillHeight: !!cfg.chat_open
+                Layout.preferredHeight: cfg.chat_open ? -1 : 52
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+                    visible: cfg.chat_open
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Repeater {
+                            model: ["twitch", "youtube"].concat(acc.kick && acc.kick.connected ? ["kick"] : [])
+                            delegate: Pill {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: modelData === "twitch" ? "Twitch" : modelData === "kick" ? "Kick" : "YouTube"
+                                dot: modelData === "twitch" ? "#9f7aea" : modelData === "kick" ? "#53fc18" : "#ff4e45"
+                                checked: win.chatTab === modelData
+                                onClicked: win.chatTab = modelData
+                            }
+                        }
+                        IconBtn { icon: "chevron-down"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        readonly property var a: acc[win.chatTab] || ({})
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Theme.radiusRow
+                            color: Theme.raised
+                            clip: true
+                            WebEngineView {
+                                id: chatView
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                visible: !!parent.parent.a.chat
+                                url: parent.parent.a.chat || "about:blank"
+                                backgroundColor: Theme.raised
+                                settings.javascriptCanOpenWindows: false
+                                profile: WebEngineProfile {
+                                    storageName: "gibeon-studio-chat"
+                                    offTheRecord: false
+                                    persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
+                                }
+                                // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
+                                onLoadingChanged: (info) => {
+                                    if (info.status !== WebEngineView.LoadSucceededStatus)
+                                        return
+                                    const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
+                                        + "{display:none!important} body{background:" + Theme.raised + "!important}"
+                                    runJavaScript("(function(){var s=document.createElement('style');s.textContent="
+                                                  + JSON.stringify(css) + ";document.head.appendChild(s);})()")
+                                }
+                            }
+                            Column {
+                                anchors.centerIn: parent
+                                width: parent.width - 40
+                                spacing: 12
+                                visible: !chatView.visible
+                                Text {
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    wrapMode: Text.WordWrap
+                                    color: Theme.textMuted
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 13
+                                    text: win.chatTab === "kick" ? "Kick-Chat wird geladen …" : !parent.parent.parent.a.connected
+                                          ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
+                                          : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: !parent.parent.parent.a.connected
+                                    primary: true
+                                    text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
+                                    onClicked: studio.login(win.chatTab)
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
+                                    text: "Neu laden"
+                                    onClicked: studio.reloadChannel("youtube")
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        visible: win.chatTab !== "kick"            // bei Kick schreibst du direkt im Chat oben
+                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
+                        opacity: enabled ? 1 : 0.5
+                        Field {
+                            id: chatInput
+                            Layout.fillWidth: true
+                            placeholderText: "Nachricht an den Chat"
+                            onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
+                        }
+                        IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
+                    }
+                }
+                RowLayout {
+                    visible: !cfg.chat_open
+                    anchors.fill: parent
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 8
+                    Text { text: "Chat"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true; Layout.fillWidth: true }
+                    IconBtn { icon: "chevron-down"; turn: 180; tip: "Chat zeigen"; onClicked: studio.set("chat_open", true) }
+                }
+            }
+
+        Card {
+            Layout.fillWidth: true
+            Layout.fillHeight: !cfg.chat_open
+            Layout.preferredHeight: cfg.chat_open ? Math.min(side.implicitHeight + buttons.height + 60, rightCol.height * 0.6) : -1
 
             Flickable {
                 anchors.fill: parent
@@ -758,37 +864,11 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 10
 
-                    Heading { text: "Live senden an" }
-                    Repeater {
-                        model: [["twitch", "Twitch"], ["youtube", "YouTube"], ["kick", "Kick"], ["tiktok", "TikTok"], ["custom", "Eigener Server"]]
-                        delegate: RowLayout {
-                            id: tg
-                            required property var modelData
-                            readonly property string key: modelData[0]
-                            readonly property bool ready: key === "twitch" ? !!((acc.twitch && acc.twitch.connected && acc.twitch.target) || cfg.twitch_key)
-                                                        : key === "youtube" ? !!((acc.youtube && acc.youtube.connected && acc.youtube.target) || cfg.youtube_key)
-                                                        : !!cfg[key + "_url"]
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Rectangle { width: 8; height: 8; radius: 4; color: tg.ready ? Theme.ok : Theme.tint(0.25) }
-                            Column {
-                                Layout.fillWidth: true
-                                Text { text: tg.modelData[1]; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
-                                Text {
-                                    text: tg.ready ? "bereit" : "einrichten …"
-                                    color: tg.ready ? Theme.textMuted : Theme.accent
-                                    font.family: Theme.fontFamily; font.pixelSize: 11
-                                    MouseArea { anchors.fill: parent; enabled: !tg.ready; cursorShape: Qt.PointingHandCursor; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
-                                }
-                            }
-                            CSwitch { checked: !!(cfg.targets && cfg.targets[tg.key]); enabled: !st.live; label: tg.modelData[1]; onToggled: (v) => studio.set("targets." + tg.key, v) }
-                        }
-                    }
-
-                    Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
                     Heading { text: "Einstellungen" }
                     Repeater {
                         model: [
+                            ["Live an", ["twitch", "youtube", "kick", "tiktok", "custom"].filter(k => cfg.targets && cfg.targets[k])
+                                         .map(k => ({ twitch: "Twitch", youtube: "YouTube", kick: "Kick", tiktok: "TikTok", custom: "Eigener Server" })[k]).join(", ") || "noch kein Ziel"],
                             ["Bild", (st.canvasHeight === 2160 ? "4K" : st.canvasHeight + "p") + " · " + st.canvasFps + " Bilder/s"],
                             ["Stream", (cfg.stream_res && cfg.stream_res !== "gleich" ? cfg.stream_res + "p" : "wie Bild") + (cfg.stream_fps === "30" && st.canvasFps > 30 ? " · 30 Bilder/s" : "") + " · " + ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"],
                             ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")],
@@ -802,6 +882,7 @@ ApplicationWindow {
                         }
                     }
                     CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
+                    CButton { Layout.fillWidth: true; text: "Plattformen einrichten …"; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
                     // laufendes Hochskalieren
                     Rectangle {
@@ -852,6 +933,7 @@ ApplicationWindow {
                     onClicked: studio.toggleRecord()
                 }
             }
+        }
         }
     }
 
@@ -984,7 +1066,7 @@ ApplicationWindow {
                 }
                 Seg {
                     Layout.fillWidth: true
-                    options: [["bild", "Bild"], ["stream", "Stream"], ["ziele", "Ziele"], ["aufnahme", "Aufnahme"]]
+                    options: [["bild", "Bild"], ["stream", "Stream"], ["ziele", "Plattformen"], ["aufnahme", "Aufnahme"]]
                     value: settingsDialog.tab
                     onPicked: (v) => settingsDialog.tab = v
                 }
@@ -1697,7 +1779,17 @@ ApplicationWindow {
         implicitHeight: 42
         radius: Theme.radiusRow
         color: sel ? Theme.tint(0.12) : (srm.containsMouse ? Theme.hover : Theme.raised)
-        MouseArea { id: srm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.selected = sr.item.id }
+        MouseArea {
+            id: srm
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (m) => {
+                win.selected = sr.item.id
+                if (m.button === Qt.RightButton) win.openSourceMenu(sr.pos)
+            }
+        }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 10
