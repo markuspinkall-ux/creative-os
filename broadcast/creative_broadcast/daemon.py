@@ -83,8 +83,37 @@ def loopback_device():
     return ""
 
 
+# Capture-Karten (HDMI-Grabber) sind keine Webcams – Broadcast nimmt sie nur, wenn ausdrücklich gewählt
+CAPTURE_VENDORS = {"0fd9", "07ca", "534d", "2935", "1edb", "1164", "345f"}
+CAPTURE_WORDS = ("capture", "elgato", "hd60", "cam link", "live gamer", "avermedia", "hdmi", "usb video")
+
+
+def _is_capture_card(sysdir, name):
+    low = (name or "").lower()
+    if any(w in low for w in CAPTURE_WORDS):
+        return True
+    try:
+        dev = (sysdir / "device").resolve()
+    except OSError:
+        return False
+    for p in (dev, *dev.parents):
+        vid = p / "idVendor"
+        if vid.exists():
+            try:
+                return vid.read_text().strip().lower() in CAPTURE_VENDORS
+            except OSError:
+                return False
+        ven = p / "vendor"           # PCI-Karten (z. B. Elgato 4K60 Pro: 0x1cfa)
+        if ven.exists() and (p / "class").exists():
+            try:
+                return ven.read_text().strip().lower() in ("0x1cfa", "0x12ab")
+            except OSError:
+                return False
+    return False
+
+
 def list_cameras():
-    """Echte Kameras (ohne die virtuelle)."""
+    """Echte Kameras (ohne die virtuelle). Webcams zuerst, Capture-Karten danach."""
     out = []
     for d in sorted(Path("/sys/class/video4linux").glob("video*"), key=lambda p: int(p.name[5:] or 0)):
         try:
@@ -95,7 +124,8 @@ def list_cameras():
         # virtuelle Kameras (unsere und die für OBS) sind keine echten Kameras
         if "Gibeon Kamera" in name or "Orbit Kamera" in name or "Creative Kamera" in name or "OBS" in name or "Virtuelle" in name or index != 0:
             continue
-        out.append({"device": f"/dev/{d.name}", "name": name})
+        out.append({"device": f"/dev/{d.name}", "name": name, "capture": _is_capture_card(d, name)})
+    out.sort(key=lambda c: c["capture"])          # stabil: Webcams vor Capture-Karten
     return out
 
 
@@ -333,7 +363,7 @@ class Camera:
         """Beste Einstellung der Kamera. „1080p“: höchste Bildrate (bis 60), dann größte Auflösung bis 1080p.
         „max“: volle Auflösung der Kamera (z. B. 2K/1440p, bis 4K) bei mindestens 24 Bildern/s."""
         from . import v4l2modes
-        devices = [device] if device else [c["device"] for c in list_cameras()]
+        devices = [device] if device else [c["device"] for c in list_cameras() if not c["capture"]]
         for d in devices:
             modes = v4l2modes.list_modes(d)
             mode = (v4l2modes.best_mode(modes, max_width=3840, prefer="size") if resolution == "max"
@@ -398,6 +428,7 @@ class Camera:
         last_check, consumers = 0.0, 0
         t_frames, n_frames = time.monotonic(), 0
         prev_alpha = None
+        read_fail_since = 0.0
         last_preview = 0.0
         try:
             while not self.stop_flag.is_set():
@@ -422,15 +453,29 @@ class Camera:
                 if cap is None:
                     cap = self._open(cv2, cfg["cameraDevice"])
                     if cap is None:
-                        STATUS.set(camera="keine Kamera gefunden", fps=0)
+                        STATUS.set(camera=("Kamera wird gerade von einem anderen Programm benutzt"
+                                           if getattr(self, "busy_device", "") else "keine Kamera gefunden"), fps=0)
                         ff.stdin.write(idle.tobytes())
+                        ff.stdin.flush()
                         time.sleep(1)
                         continue
+                    read_fail_since = 0.0
                 capture_start = time.monotonic()
                 ok, frame = cap.read()
                 if not ok or frame is None:
+                    # Kamera liefert nichts mehr (abgezogen oder von einem anderen Programm belegt):
+                    # nach 1,5 s freigeben und neu suchen – solange bekommt der Zuschauer die Graphit-Fläche,
+                    # statt dass das Bild einfriert oder ganz ausbleibt.
+                    read_fail_since = read_fail_since or time.monotonic()
+                    if time.monotonic() - read_fail_since > 1.5:
+                        cap.release()
+                        cap = None
+                        prev_alpha = None
+                        ff.stdin.write(idle.tobytes())
+                        ff.stdin.flush()
                     time.sleep(0.05)
                     continue
+                read_fail_since = 0.0
                 if frame.shape[1] != self.W or frame.shape[0] != self.H:
                     frame = cv2.resize(frame, (self.W, self.H))
                 capture_ms = (time.monotonic() - capture_start) * 1000
@@ -487,7 +532,8 @@ class Camera:
             ff.terminate()
 
     def _open(self, cv2, device):
-        devices = [device] if device else [c["device"] for c in list_cameras()]
+        # Ohne feste Wahl nur Webcams – eine Capture-Karte (Konsole) ist kein Gesicht für den Greenscreen
+        devices = [device] if device else [c["device"] for c in list_cameras() if not c["capture"]]
         for d in devices:
             cap = cv2.VideoCapture(d, cv2.CAP_V4L2)
             if not cap.isOpened():
@@ -497,7 +543,19 @@ class Camera:
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.H)
             cap.set(cv2.CAP_PROP_FPS, self.FPS)
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            return cap
+            # Liefert sie wirklich Bilder? Benutzt ein anderes Programm (z. B. Studio) die Kamera
+            # gerade selbst, lässt sie sich öffnen, gibt aber nie ein Bild – dann die nächste nehmen.
+            ok = False
+            for _ in range(10):
+                ok, _frame = cap.read()
+                if ok:
+                    break
+                time.sleep(0.1)
+            if ok:
+                self.busy_device = ""
+                return cap
+            cap.release()
+            self.busy_device = d
         return None
 
     def _idle_frame(self, np, cv2):
