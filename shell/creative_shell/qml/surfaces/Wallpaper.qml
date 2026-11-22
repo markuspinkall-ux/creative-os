@@ -57,8 +57,10 @@ Item {
     property string screenName
     readonly property string iconDragFormat: "application/x-creative-desktop-icon"
     readonly property int barSpace: 52
-    // obere Leiste (Tray links, Uhrzeit rechts): Widgets und Symbole bleiben darunter
-    readonly property int topSpace: 50
+    // obere Leiste mit dem Systemtray: Widgets und Symbole bleiben darunter. Sitzt der Tray in der
+    // Taskleiste, gibt es oben keine Leiste – dann docken Widgets direkt am oberen Bildschirmrand an.
+    // Kommt der Tray wieder nach oben, rücken sie automatisch darunter (Positionen sind relativ gespeichert).
+    readonly property int topSpace: (typeof shell !== "undefined" && shell && shell.trayInTaskbar) ? 0 : 50
     readonly property int minY: topSpace + 8
     // Fluid-Glas der Widgets: diese Ebene liegt weichgezeichnet hinter jedem Widget
     readonly property Item wallLayer: wallLayerItem
