@@ -1,0 +1,40 @@
+name: Studio – virtuelle Kamera prüfen
+# Echte virtuelle Kamera (v4l2loopback mit denselben Einstellungen wie im System) und ein Schreiber
+# wie in Broadcast – kommt das Bild in Studio an?
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [studio/**, broadcast/modprobe-creative-kamera.conf, tools/studio-virtualkamera-test.py,
+            .github/workflows/studio-virtualkamera.yml]
+  workflow_dispatch:
+concurrency:
+  group: studio-vkam-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge und v4l2loopback
+        timeout-minutes: 15
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q linux-headers-$(uname -r) v4l2loopback-dkms v4l-utils ffmpeg \
+            gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+          pip install -q PySide6
+          sudo modprobe v4l2loopback devices=1 video_nr=42 card_label="Gibeon Kamera" exclusive_caps=1 max_buffers=2 max_width=3840 max_height=2160
+          sudo chmod 666 /dev/video42
+          v4l2-ctl -d /dev/video42 --info
+      - name: Schreiber wie Broadcast (Leerlauf, dann volle Rate)
+        run: |
+          # Leerlauf: 2 Bilder/s wie Broadcast ohne Zuschauer, danach 30 Bilder/s mit grünem Hintergrund
+          ( ffmpeg -loglevel error -re -f lavfi -i "color=c=0x00ff00:s=1920x1080:r=2,drawbox=x=800:y=300:w=300:h=500:color=red:t=fill" -t 6 \
+              -f rawvideo -pix_fmt bgr24 - ; \
+            ffmpeg -loglevel error -re -f lavfi -i "color=c=0x00ff00:s=1920x1080:r=30,drawbox=x=800:y=300:w=300:h=500:color=red:t=fill" -t 60 \
+              -f rawvideo -pix_fmt bgr24 - ) \
+          | ffmpeg -loglevel error -f rawvideo -pix_fmt bgr24 -s 1920x1080 -r 30 -i - -f v4l2 -pix_fmt yuv420p /dev/video42 &
+          sleep 3
+          v4l2-ctl -d /dev/video42 --all | head -40
+      - name: Studio liest die virtuelle Kamera
+        run: timeout 120 python3 tools/studio-virtualkamera-test.py /dev/video42

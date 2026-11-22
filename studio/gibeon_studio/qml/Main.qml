@@ -32,7 +32,41 @@ ApplicationWindow {
     property string selected: ""                 // ausgewählte Quelle (id) in der aktiven Szene
     property int renaming: -1                    // Szene, deren Namen gerade bearbeitet wird
     property int webReload: 0                    // „Seite neu laden“ bei Browserquellen
-    readonly property var items: st.items || []
+    // Quellen der Szene – nur neu setzen, wenn sich wirklich etwas geändert hat (der Zustand kommt
+    // jede Sekunde neu für die Uhr; sonst würde die Bühne ständig neu aufgebaut und Ziehen bräche ab)
+    property var items: []
+    property string itemsSig: ""
+    property bool stageDragging: false
+    onStChanged: syncItems()
+    onStageDraggingChanged: if (!stageDragging) syncItems()
+    function syncItems() {
+        if (stageDragging)
+            return
+        const list = st.items || []
+        const sig = JSON.stringify(list)
+        if (sig !== itemsSig) {
+            itemsSig = sig
+            items = list
+        }
+    }
+    Component.onCompleted: syncItems()
+
+    // Rechtsklick auf eine Quelle (Liste oder Vorschau): Löschen und Co.
+    function openSourceMenu(pos) {
+        sourceMenu.pos = pos
+        sourceMenu.popup()
+    }
+    Menu {
+        id: sourceMenu
+        property int pos: -1
+        readonly property var it: pos >= 0 && pos < win.items.length ? win.items[pos] : null
+        MenuItem { text: sourceMenu.it && sourceMenu.it.hidden ? "Einblenden" : "Ausblenden"; onTriggered: studio.setItem(sourceMenu.pos, "hidden", !(sourceMenu.it && sourceMenu.it.hidden)) }
+        MenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
+        MenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
+        MenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
+        MenuSeparator {}
+        MenuItem { text: "Löschen"; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
+    }
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
     readonly property string redLive: "#e5484d"
@@ -489,10 +523,29 @@ ApplicationWindow {
                             readonly property real ratio: modelData.h / Math.max(0.0001, modelData.w)
                             visible: modelData.ok && !modelData.hidden
                             z: index + 1
-                            x: modelData.x * stage.width
-                            y: modelData.y * stage.height
-                            width: modelData.w * stage.width
-                            height: modelData.h * stage.height
+                            // Beim Ziehen gilt die eigene Lage (lx/ly/lw); erst beim Loslassen wird
+                            // gespeichert und die Liste neu geladen.
+                            property bool dragging: false
+                            property real lx: 0
+                            property real ly: 0
+                            property real lw: 0
+                            function startDrag() { lx = modelData.x; ly = modelData.y; lw = modelData.w; dragging = true; win.stageDragging = true }
+                            function dragTo(nx, ny, nw) {
+                                lw = Math.max(0.03, Math.min(4.0, nw))
+                                lx = Math.max(-lw + 0.03, Math.min(0.97, nx))
+                                ly = Math.max(-lw * ratio + 0.03, Math.min(0.97, ny))
+                                studio.dragItem(index, lx, ly, lw)
+                            }
+                            function endDrag() {
+                                if (!dragging) return
+                                studio.moveItem(index, lx, ly, lw)   // speichert; Liste folgt gleich
+                                dragging = false
+                                win.stageDragging = false
+                            }
+                            x: (dragging ? lx : modelData.x) * stage.width
+                            y: (dragging ? ly : modelData.y) * stage.height
+                            width: (dragging ? lw : modelData.w) * stage.width
+                            height: (dragging ? lw * ratio : modelData.h) * stage.height
 
                             Rectangle {
                                 anchors.fill: parent
@@ -515,19 +568,28 @@ ApplicationWindow {
                                 hoverEnabled: true
                                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                                 property real sx; property real sy; property real ox; property real oy
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 onPressed: (m) => {
                                     win.selected = box.modelData.id
+                                    if (m.button === Qt.RightButton) {
+                                        win.openSourceMenu(box.index)
+                                        return
+                                    }
                                     const p = mapToItem(stage, m.x, m.y)
                                     sx = p.x; sy = p.y; ox = box.modelData.x; oy = box.modelData.y
+                                    box.startDrag()
                                 }
                                 onPositionChanged: (m) => {
-                                    if (!pressed) return
+                                    if (!pressed || !box.dragging) return
+                                    // Koordinaten über die Bühne (die sich nicht bewegt) – das Feld selbst wandert mit
                                     const p = mapToItem(stage, m.x, m.y)
-                                    const w = box.modelData.w, h = box.modelData.h
+                                    const w = box.lw, h = box.lw * box.ratio
                                     const nx = stage.snapX(ox + (p.x - sx) / stage.width, w)
                                     const ny = stage.snapY(oy + (p.y - sy) / stage.height, h)
-                                    studio.moveItem(box.index, nx, ny, w)
+                                    box.dragTo(nx, ny, w)
                                 }
+                                onReleased: box.endDrag()
+                                onCanceled: box.endDrag()
                                 onDoubleClicked: studio.fillItem(box.index)
                             }
 
@@ -553,7 +615,10 @@ ApplicationWindow {
                                             const d = box.modelData
                                             ax = parent.cx ? d.x : d.x + d.w          // Gegenecke in Anteilen
                                             ay = parent.cy ? d.y : d.y + d.h
+                                            box.startDrag()
                                         }
+                                        onReleased: box.endDrag()
+                                        onCanceled: box.endDrag()
                                         onPositionChanged: (m) => {
                                             if (!pressed) return
                                             const p = mapToItem(stage, m.x, m.y)
@@ -563,7 +628,7 @@ ApplicationWindow {
                                             const h = w * box.ratio
                                             const nx = parent.cx ? ax : ax - w
                                             const ny = parent.cy ? ay : ay - h
-                                            studio.moveItem(box.index, nx, ny, w)
+                                            box.dragTo(nx, ny, w)
                                         }
                                     }
                                 }
@@ -1697,7 +1762,17 @@ ApplicationWindow {
         implicitHeight: 42
         radius: Theme.radiusRow
         color: sel ? Theme.tint(0.12) : (srm.containsMouse ? Theme.hover : Theme.raised)
-        MouseArea { id: srm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.selected = sr.item.id }
+        MouseArea {
+            id: srm
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: (m) => {
+                win.selected = sr.item.id
+                if (m.button === Qt.RightButton) win.openSourceMenu(sr.pos)
+            }
+        }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 10

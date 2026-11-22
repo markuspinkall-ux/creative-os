@@ -1,5 +1,16 @@
 [
   {
+    "datum": "2026-11-22",
+    "titel": "Studio: Quellen frei verschieben und per Rechtsklick löschen",
+    "neu": [
+      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten"
+    ],
+    "verbessert": [],
+    "behoben": [
+      "Studio: Kamera, Bilder und andere Quellen lassen sich in der Vorschau wieder frei verschieben und an den Ecken skalieren – vorher brach das Ziehen nach ein, zwei Pixeln ab"
+    ]
+  },
+  {
     "datum": "2026-11-21",
     "titel": "Neu: Studio zum Aufnehmen und Streamen, Android-Apps mit Fensterrahmen, Startmenü aufgeräumt",
     "neu": [

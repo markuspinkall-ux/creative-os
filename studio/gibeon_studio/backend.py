@@ -1001,16 +1001,27 @@ class Studio(QObject):
     @Slot(int, float, float, float)
     def moveItem(self, index, x, y, w):
         """Verschieben / Größe ändern (Anteile der Bildbreite/-höhe) – sofort im Bild, auch live."""
+        if self._place(index, x, y, w):
+            self.changed.emit()
+
+    @Slot(int, float, float, float)
+    def dragItem(self, index, x, y, w):
+        """Wie moveItem, aber während des Ziehens: nur das Bild ändert sich, die Liste der Quellen
+        in der Oberfläche bleibt (sonst würde sie neu aufgebaut und das Ziehen bräche nach ein,
+        zwei Pixeln ab). Am Ende des Ziehens kommt moveItem."""
+        self._place(index, x, y, w)
+
+    def _place(self, index, x, y, w):
         it = self._item(index)
         if not it:
-            return
+            return False
         it["w"] = max(0.03, min(4.0, w))
         h = item_height(it)
         it["x"] = max(-it["w"] + 0.03, min(0.97, x))
         it["y"] = max(-h + 0.03, min(0.97, y))
         self._apply()
         self._save_later.start()
-        self.changed.emit()
+        return True
 
     @Slot(int)
     def fillItem(self, index):
