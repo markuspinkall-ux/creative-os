@@ -1,5 +1,5 @@
 #!/bin/sh
-# Abstand in echtem KWin prüfen (Fedora-Container, virtueller Bildschirm 1600×1000).
+# Maximieren in echtem KWin prüfen (ohne Abstand) (Fedora-Container, virtueller Bildschirm 1600×1000).
 #   docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/abstand-test.sh
 set -eu
 dnf -y -q install kwin-wayland python3-pyside6 dbus-daemon dbus-tools plasma-breeze mesa-dri-drivers qt6-qtwayland >/dev/null
@@ -26,11 +26,9 @@ r = {x["step"]: x for x in json.load(open("/tmp/abstand.json"))}
 gap = int(os.environ.get("GAP", "6"))
 n, m, b = r["normal"], r["maximiert"], r["wieder normal"]
 print(n, m, b, sep="\n")
-assert not m["maximized"], "Fenster ist echt maximiert – Skript greift nicht"
-# volle Fläche minus Abstand und Rahmen: deutlich größer als vorher, aber nicht randlos
-# (Wayland-Fenster kennen ihre Position nicht – geprüft wird die Größe ohne Rahmen)
-assert m["w"] >= 1500 and m["h"] >= 880, "nicht groß gezogen"
-assert m["w"] <= 1600 - 2 * gap and m["h"] <= 1000 - 2 * gap - 20, "kein Abstand zum Rand"
-assert (b["w"], b["h"]) == (n["w"], n["h"]), "nochmal maximieren stellt die alte Größe nicht her"
-print("Abstand: in Ordnung")
+# creative-abstand ist abgeschaltet: maximiert heißt randlos über die ganze Fläche
+assert m["maximized"], "Fenster ist nicht maximiert"
+assert m["w"] >= 1600 - 4 and m["h"] >= 1000 - 60, "maximiertes Fenster füllt die Fläche nicht"
+assert (b["w"], b["h"]) == (n["w"], n["h"]), "Wiederherstellen bringt die alte Größe nicht zurück"
+print("Maximieren ohne Abstand: in Ordnung")
 PY

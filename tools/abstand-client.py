@@ -1,5 +1,5 @@
-"""Testfenster für Abstand (läuft unter kwin_wayland --virtual).
-Maximiert sich, meldet Größe und Zustand, maximiert dann nochmal (= wiederherstellen)."""
+"""Testfenster für maximierte Fenster (läuft unter kwin_wayland --virtual).
+Maximiert sich, meldet Größe und Zustand und stellt dann die alte Größe wieder her."""
 import json
 import sys
 
@@ -37,7 +37,8 @@ def note(step):
 QTimer.singleShot(2000, lambda: note("normal"))
 QTimer.singleShot(2500, w.showMaximized)
 QTimer.singleShot(5000, lambda: note("maximiert"))
-QTimer.singleShot(5500, w.showMaximized)       # nochmal maximieren = alte Größe
+QTimer.singleShot(5500, lambda: w.showNormal() if w.windowStates() & Qt.WindowState.WindowMaximized
+                  else w.showMaximized())   # wiederherstellen
 QTimer.singleShot(8000, lambda: note("wieder normal"))
 QTimer.singleShot(8500, app.quit)
 app.exec()
