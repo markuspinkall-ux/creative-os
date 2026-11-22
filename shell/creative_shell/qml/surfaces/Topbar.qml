@@ -14,8 +14,8 @@ Item {
     // Ist auf diesem Monitor ein Fenster maximiert, reserviert die Leiste keinen Platz und fährt
     // nach oben weg. Nur ein schmaler Streifen am oberen Rand nimmt dann die Maus an: geht sie
     // dorthin, fährt die Leiste herein; verlässt sie die Leiste, fährt sie wieder ein.
-    readonly property bool autoHide: Window.window ? Window.window.autoHide : false
-    readonly property bool hovered: Window.window ? Window.window.hovered : false
+    readonly property bool autoHide: !!(Window.window && Window.window.autoHide)
+    readonly property bool hovered: !!(Window.window && Window.window.hovered)
     readonly property bool menuOpen: shell.trayMenuOpenOn === root.screenName
                                      || shell.quickPanelOpenOn === root.screenName
     property bool peek: false
