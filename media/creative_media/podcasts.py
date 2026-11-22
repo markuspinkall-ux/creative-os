@@ -5,6 +5,8 @@ gleicher Ordner). Abgespielt wird über den Player selbst (gemeinsame Wiedergabe
 """
 
 import json
+import sys
+import uuid
 from pathlib import Path
 from threading import Thread
 
@@ -28,7 +30,9 @@ class Podcasts(QObject):
     playlistChanged = Signal()
     followingChanged = Signal()
     offlineChanged = Signal()
-    completed = Signal(object, object, str)
+    # Ergebnis aus dem Hintergrund: Auftrag, Ergebnis als JSON, Fehlertext (nur einfache Typen –
+    # das kommt sicher über Thread-Grenzen an)
+    completed = Signal(str, str, str)
 
     def __init__(self, directory):
         super().__init__()
@@ -44,6 +48,10 @@ class Podcasts(QObject):
         self.show = {}
         self.message = ""
         self.busy = False
+        self.title = ""                 # Überschrift über den Kacheln
+        self.top_loaded = False
+        self.seq = 0                    # nur das Ergebnis der letzten Suche zählt
+        self.jobs = {}
         self.completed.connect(self.finish)
 
     def read(self, key):
@@ -57,19 +65,26 @@ class Podcasts(QObject):
         self.settings.sync()
 
     def run(self, work, done, label):
+        job = uuid.uuid4().hex
+        self.jobs[job] = done
+
         def task():
             try:
-                result = work()
+                result = json.dumps(work(), ensure_ascii=False)
             except Exception as exc:
-                self.completed.emit(done, None, f"{label} fehlgeschlagen: {exc}")
+                print(f"Podcasts: {label} fehlgeschlagen: {exc}", file=sys.stderr)
+                self.completed.emit(job, "", f"{label} fehlgeschlagen: {exc}")
             else:
-                self.completed.emit(done, result, "")
+                self.completed.emit(job, result, "")
         Thread(target=task, daemon=True).start()
 
-    @Slot(object, object, str)
-    def finish(self, done, result, error):
+    @Slot(str, str, str)
+    def finish(self, job, result, error):
+        done = self.jobs.pop(job, None)
+        if done is None:
+            return
         self.message = error
-        done(result)
+        done(json.loads(result) if result else None)
         self.changed.emit()
 
     @Property("QVariantList", notify=catalogueChanged)
@@ -104,6 +119,10 @@ class Podcasts(QObject):
     def status(self):
         return self.message
 
+    @Property(str, notify=catalogueChanged)
+    def heading(self):
+        return self.title
+
     @Property("QStringList", notify=changed)
     def downloadedKeys(self):
         return list(self.downloads)
@@ -115,33 +134,78 @@ class Podcasts(QObject):
     @Slot(str)
     def search(self, term):
         term = term.strip()
-        if not term or self.busy:
+        if not term:
             return
         self.busy = True
         self.message = "Suche läuft …"
         self.changed.emit()
+        self.seq += 1
+        seq = self.seq
 
         def done(result):
+            if seq != self.seq:
+                return
             self.busy = False
             if result is not None:
                 self.results = result
+                self.title = f"Suchergebnisse für „{term}“"
                 self.catalogueChanged.emit()
-                self.message = "" if result else "Keine Podcasts gefunden."
+                self.message = "" if result else f"Keine Podcasts zu „{term}“ gefunden."
 
         self.run(lambda: podcast_feeds.search(term), done, "Suche")
 
+    @Slot()
+    def loadTop(self):
+        """Beliebte Podcasts als Kacheln (einmal beim ersten Öffnen)."""
+        if self.top_loaded and self.title == "Beliebt in Deutschland":
+            return
+        self.busy = True
+        self.message = ""
+        self.changed.emit()
+        self.seq += 1
+        seq = self.seq
+
+        def done(result):
+            if seq != self.seq:
+                return
+            self.busy = False
+            if result:
+                self.top_loaded = True
+                self.results = result
+                self.title = "Beliebt in Deutschland"
+                self.catalogueChanged.emit()
+
+        self.run(lambda: podcast_feeds.top(), done, "Charts laden")
+
+    @Slot()
+    def back(self):
+        """Zurück von einem Podcast zu den Kacheln."""
+        self.show = {}
+        self.episodes = []
+        self.playlistChanged.emit()
+        self.changed.emit()
+
     @Slot("QVariantMap")
     def openShow(self, show):
-        if self.busy:
-            return
+        self.show = dict(show)          # Kopf (Bild, Titel) sofort zeigen
+        self.episodes = []
+        self.playlistChanged.emit()
         self.busy = True
         self.message = "Folgen werden geladen …"
         self.changed.emit()
 
+        url = show.get("url")
+
         def done(result):
             self.busy = False
+            if self.show.get("url") != url:
+                return                  # inzwischen ein anderer Podcast geöffnet (oder zurück)
             if result is not None:
                 self.show, self.episodes = result
+                if self.show.get("url") in self.subscriptions:   # Abo mit Bild auffrischen
+                    self.subscriptions[self.show["url"]] = self.show
+                    self.save("subscriptions", self.subscriptions)
+                    self.followingChanged.emit()
                 self.playlistChanged.emit()
                 self.message = "" if self.episodes else "Dieser Feed enthält keine abspielbaren Folgen."
 
@@ -171,7 +235,7 @@ class Podcasts(QObject):
         self.changed.emit()
 
         def done(result):
-            self.pending.remove(key)
+            self.pending.discard(key)
             if result is not None:
                 self.downloads[key] = result
                 self.save("downloads", self.downloads)
