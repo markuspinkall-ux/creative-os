@@ -1,10 +1,10 @@
-name: Vivid Venus prüfen
+name: Emerald Earth prüfen
 # Bewegter Hintergrund: echte Shell ohne Bildschirm zweimal fotografieren (nach 4 s und nach 10 s)
 # – die Bilder müssen sich unterscheiden (Rakete, Sterne, Wolken). Dazu Graphit und Porzellan.
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/qml/surfaces/Wallpaper.qml, shell/creative_shell/qml/Creative/wallpapers*/**, shell/creative_shell/__main__.py, shell/creative_shell/tasks.py, tools/venus-wallpaper.py, image/version.json, .github/workflows/venus-pruefung.yml]
+    paths: [shell/creative_shell/qml/surfaces/Wallpaper.qml, shell/creative_shell/qml/Creative/wallpapers*/**, shell/creative_shell/__main__.py, shell/creative_shell/tasks.py, tools/earth-wallpaper.py, image/version.json, .github/workflows/erde-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,10 +20,10 @@ jobs:
           pip install -q PySide6
       - name: Bilder sind aktuell (Generator = eingecheckte Dateien)
         run: |
-          python3 tools/venus-wallpaper.py --creative >/dev/null
+          python3 tools/earth-wallpaper.py --creative >/dev/null
           git diff --stat --exit-code -- shell/creative_shell/qml/Creative browser/startpage login shell/lockscreen \
-            || { echo "::error::Hintergründe weichen vom Generator ab – tools/venus-wallpaper.py --creative ausführen"; exit 1; }
-          python3 -c "import json;d=json.load(open('image/version.json'));assert (d['nummer'],d['codename'],d['kurz'])==(2,'Vivid Venus','venus'),d;print('Version:',d['nummer'],d['codename'])"
+            || { echo "::error::Hintergründe weichen vom Generator ab – tools/earth-wallpaper.py --creative ausführen"; exit 1; }
+          python3 -c "import json;d=json.load(open('image/version.json'));assert (d['nummer'],d['codename'],d['kurz'])==(3,'Emerald Earth','earth'),d;print('Version:',d['nummer'],d['codename'])"
       - name: Schreibtisch bewegt sich
         env:
           QT_QPA_PLATFORM: offscreen
@@ -36,7 +36,7 @@ jobs:
               echo '{"desktopStats": false, "desktopExtras": {}}' > "$H/.config/creative-os/shell.json"
               [ $design = porzellan ] && printf '[Look]\ndesign=porzellan\n' > "$H/.config/creative-os/look.conf"
               (cd shell && env CREATIVE_TEST_BACKGROUND=1 PYTHONUSERBASE="$HOME/.local" HOME="$H" XDG_CONFIG_HOME="$H/.config" \
-                CREATIVE_SCREENSHOT_DELAY=$delay CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/venus-$design-$delay.png" \
+                CREATIVE_SCREENSHOT_DELAY=$delay CREATIVE_SCREENSHOT="$GITHUB_WORKSPACE/fotos/erde-$design-$delay.png" \
                 PYTHONPATH="$GITHUB_WORKSPACE/tools/screenshots" timeout 60 dbus-run-session -- python3 -m creative_shell --dev 2>&1 | grep -iv "^$" | grep -i "qml\|error\|warn" | head -8) || true
             done
           done
@@ -44,18 +44,18 @@ jobs:
           python3 - <<'PY'
           from PIL import Image, ImageChops
           for d in ("graphit", "porzellan"):
-              a = Image.open(f"fotos/venus-{d}-4000.png").convert("RGB")
-              b = Image.open(f"fotos/venus-{d}-10000.png").convert("RGB")
+              a = Image.open(f"fotos/erde-{d}-4000.png").convert("RGB")
+              b = Image.open(f"fotos/erde-{d}-10000.png").convert("RGB")
               diff = ImageChops.difference(a, b).convert("L")
               changed = sum(1 for v in diff.getdata() if v > 6)
               print(d, a.size, "veränderte Bildpunkte:", changed)
               assert changed > 200, f"{d}: Hintergrund bewegt sich nicht"
-          print("Vivid Venus bewegt sich")
+          print("Emerald Earth bewegt sich")
           PY
       - name: Ablegen
         if: always()
         run: |
           [ -d fotos ] || exit 0
-          cd fotos && git init -q -b venus-fotos && git add . \
+          cd fotos && git init -q -b erde-fotos && git add . \
             && git -c user.name=bot -c user.email=bot@localhost commit -qm "Fotos ${GITHUB_SHA}" \
-            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" venus-fotos
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" erde-fotos

@@ -678,14 +678,14 @@ def main():
         return QUrl.fromLocalFile(path)
 
     def wallpaper_anim():
-        """Bewegter Hintergrund (nur beim mitgelieferten „Vivid Venus“-Bild und wenn eingeschaltet):
-        Ebenen-Ordner + Daten (Sterne, Rakete) aus wallpapers*/venus/ebenen.json – sonst {}."""
+        """Bewegter Hintergrund (nur beim mitgelieferten „Emerald Earth“-Bild und wenn eingeschaltet):
+        Ebenen-Ordner + Daten (Sterne, Rakete) aus wallpapers*/erde/ebenen.json – sonst {}."""
         cfg = config.load()
         path = os.path.expanduser(cfg.get("wallpaper") or "")
         if (path and os.path.exists(path)) or not cfg.get("wallpaperAnimated", True):
             return {}
         from creative_shell import look
-        folder = look.wallpaper_dir(QML_DIR) / "venus"
+        folder = look.wallpaper_dir(QML_DIR) / "erde"
         try:
             data = json.loads((folder / "ebenen.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):

@@ -2,8 +2,8 @@
 Type=Application
 Name=Deck
 GenericName=Stream Deck einrichten
-Comment=Tasten des Elgato Stream Deck belegen: Programme, Tastenkürzel, Musik, Lautstärke, OBS
-Keywords=Stream Deck;Elgato;Streamdeck;Makro;Tasten;OBS;Streaming;Hotkey;
+Comment=Tasten des Elgato Stream Deck belegen: Programme, Tastenkürzel, Musik, Lautstärke, Studio
+Keywords=Stream Deck;Elgato;Streamdeck;Makro;Tasten;Studio;Streaming;Hotkey;
 Exec=creative-deck
 Icon=creative-deck
 Terminal=false

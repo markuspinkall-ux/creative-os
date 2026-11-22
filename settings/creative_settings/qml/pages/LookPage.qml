@@ -130,7 +130,7 @@ SettingsPage {
         SettingRow {
             label: "Hintergrund bewegt"
             hint: look.current === "" ? "Die Rakete schwebt, Sterne funkeln, Wolken ziehen – pausiert, sobald ein Fenster den Schreibtisch verdeckt"
-                                      : "Nur beim mitgelieferten Bild „Vivid Venus“"
+                                      : "Nur beim mitgelieferten Bild „Emerald Earth“"
             enabled: look.current === ""
             opacity: enabled ? 1 : 0.45
             last: true

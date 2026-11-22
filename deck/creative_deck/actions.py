@@ -18,14 +18,14 @@ TYPES = [
     ("lautstaerke", "Lautstärke"),
     ("mikrofon", "Mikrofon stumm"),
     ("studio", "Studio (Gibeon)"),
-    ("obs", "OBS Studio"),
     ("sound", "Ton abspielen"),
     ("seite", "Seite öffnen"),
     ("zurueck", "Zurück"),
     ("helligkeit", "Helligkeit"),
     ("keine", "Nichts"),
 ]
-TYPE_NAMES = dict(TYPES)
+# „OBS Studio“ (obs-websocket) gibt es nicht mehr zur Auswahl – vorhandene Tasten funktionieren weiter
+TYPE_NAMES = dict(TYPES + [("obs", "OBS Studio")])
 DECK_ACTIONS = ("seite", "zurueck", "helligkeit")
 
 MEDIA = {"play-pause": "playpause", "weiter": "next", "zurueck": "previous", "stopp": "stop"}

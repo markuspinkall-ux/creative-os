@@ -351,7 +351,7 @@ Item {
         return "auto"
     }
 
-    // Hintergrund (Farbe, Bild, bewegte Venus) als eine Ebene – Widgets im Fluid-Stil
+    // Hintergrund (Farbe, Bild, bewegte Erde) als eine Ebene – Widgets im Fluid-Stil
     // zeigen diese Ebene weichgezeichnet hinter sich (Milchglas).
     Item {
         id: wallLayerItem
@@ -374,7 +374,7 @@ Item {
             cache: true
         }
 
-        // „Vivid Venus“ bewegt sich: Wolken ziehen, die Rakete schwebt, Sterne funkeln.
+        // „Emerald Earth“ bewegt sich: Wolken ziehen, die Rakete schwebt, Sterne funkeln.
         // Sehr ruhig (eine Runde = 24 s) und nur, solange man den Schreibtisch auch sieht.
         Item {
             id: wallAnim

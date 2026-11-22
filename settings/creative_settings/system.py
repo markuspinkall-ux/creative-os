@@ -32,7 +32,7 @@ def os_name():
 
 
 def release_info():
-    """Versionsnummer und Codename von Gibeon OS, z. B. „Gibeon OS 2 · Vivid Venus“."""
+    """Versionsnummer und Codename von Gibeon OS, z. B. „Gibeon OS 3 · Emerald Earth“."""
     try:
         data = json.loads(Path("/usr/share/creative-os/version.json").read_text(encoding="utf-8"))
         return f"Gibeon OS {data['nummer']} · {data['codename']}"
@@ -659,7 +659,7 @@ class LookModel(QObject):
         default = _look.default_wallpaper(self._builtin.parent.parent)
         if default.exists():
             images.append({"path": "", "url": QUrl.fromLocalFile(str(default)).toString(),
-                           "label": "Vivid Venus (passt zum Design)"})
+                           "label": "Emerald Earth (passt zum Design)"})
         home = Path.home()
         pics = home / "Bilder"
         if not pics.exists() and not pics.is_symlink():

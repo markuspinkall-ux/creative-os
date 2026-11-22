@@ -85,8 +85,8 @@ set timeout=30
 set default=0
 set prefix=($root)/boot/grub
 if [ -f $prefix/user.cfg ]; then source $prefix/user.cfg; fi
-menuentry "Gibeon OS 2 – Vivid Venus" { sleep 600 }
-menuentry "Gibeon OS 2 – Vivid Venus (vorherige Version)" { sleep 600 }
+menuentry "Gibeon OS 3 – Emerald Earth" { sleep 600 }
+menuentry "Gibeon OS 3 – Emerald Earth (vorherige Version)" { sleep 600 }
 menuentry "UEFI-Firmware-Einstellungen" { sleep 600 }
 CFG
 grub2-mkrescue -o "$W/test.iso" "$ISO" >/dev/null 2>&1

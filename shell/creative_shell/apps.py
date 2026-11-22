@@ -33,8 +33,10 @@ DESKTOP_NAMES = {"creative", "kde"}
 NAME, ICON, DESKTOP_ID, LETTER, COMMENT, IS_FOLDER, FOLDER_ICONS, FOLDER_COUNT = range(
     Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 9)
 
-# Eigene Apps liegen im Startmenü gesammelt im Ordner „Gibeon OS Suite“ (Kennung bleibt gleich,
-# damit Anheften und Ausblenden erhalten bleiben).
+# Früher lagen die eigenen Apps im Startmenü gesammelt im Ordner „Gibeon OS Suite“. Seit
+# „Emerald Earth“ stehen alle Apps ganz normal alphabetisch im Startmenü (USE_FOLDER = False);
+# der Ordner-Code bleibt, falls er einmal wieder gebraucht wird.
+USE_FOLDER = False
 FOLDER_ID = "creative-apps-ordner"
 FOLDER_NAME = "Gibeon OS Suite"
 NOT_IN_FOLDER = {"creative-installer.desktop", "creative-browser.desktop",   # Browser gehört direkt ins Startmenü
@@ -247,8 +249,10 @@ class AppModel(QAbstractListModel):
             hits.sort(key=lambda e: (not _plain(e.name).startswith(terms[0]), _plain(e.name)))
             self._shown = hits
         else:
-            creative = [e for e in visible if is_creative(e)]
-            if self._folder:
+            creative = [e for e in visible if is_creative(e)] if USE_FOLDER else []
+            if not USE_FOLDER:
+                self._shown = sorted(visible, key=lambda e: (_letter(e.name) == "#", _plain(e.name)))
+            elif self._folder:
                 self._shown = creative
             elif len(creative) >= 2:
                 folder = AppEntry(FOLDER_ID, "", FOLDER_NAME, creative[0].icon,
