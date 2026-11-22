@@ -39,6 +39,16 @@ jobs:
           fi
           echo "KV: $id"
           sed -i "s/KV_ID/$id/" wrangler.toml
+      - name: workers.dev-Subdomain anlegen (falls noch keine da ist)
+        env:
+          SUBDOMAIN: yebisu
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain"
+          jetzt=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" | python3 -c 'import json,sys;d=json.load(sys.stdin);print((d.get("result") or {}).get("subdomain") or "")')
+          if [ -n "$jetzt" ]; then echo "Subdomain schon da: $jetzt"; exit 0; fi
+          antwort=$(curl -s -X PUT -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" --data "{\"subdomain\":\"$SUBDOMAIN\"}" "$api")
+          echo "$antwort"
+          echo "$antwort" | python3 -c 'import json,sys;sys.exit(0 if json.load(sys.stdin).get("success") else 1)' || { echo "::error::Subdomain $SUBDOMAIN konnte nicht angelegt werden (vergeben oder Token ohne Recht)"; exit 1; }
       - name: Worker hochladen
         working-directory: tools/regionen-worker
         run: |
