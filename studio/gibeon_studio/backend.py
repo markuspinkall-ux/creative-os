@@ -59,6 +59,9 @@ DEFAULTS = {
     "upscale": "aus",                # aus | schnell | ki
     # Was in die Aufnahme kommt: alles wie im Bild | Spiel + Kamera (ohne Overlays) | nur das Spiel
     "rec_inhalt": "alles",           # alles | kamera | spiel
+    # Breite der Spalten links und rechts (Pixel), am Spaltenrand verstellbar
+    "left_w": 300,
+    "right_w": 320,
     # Umfragen: Kanal zum Mitlesen (ohne Anmeldung), eigenes CSS, zuletzt benutzte Einstellungen
     "twitch_channel": "",
     "poll_css": umfrage.DEFAULT_CSS,

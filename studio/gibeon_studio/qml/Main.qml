@@ -71,6 +71,11 @@ ApplicationWindow {
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
     readonly property string redLive: "#e5484d"
+    // Breite der Spalten links und rechts: am Rand zwischen den Spalten ziehen, wird gespeichert
+    property real leftWidth: cfg.left_w || 300
+    property real rightWidth: cfg.right_w || 320
+    readonly property int colMin: 220
+    readonly property int colMax: Math.max(260, Math.min(560, (width - 480) / 2))
 
     onClosing: (close) => {
         if (studio.busyOutputs()) {
@@ -117,13 +122,15 @@ ApplicationWindow {
     RowLayout {
         anchors.fill: parent
         anchors.margins: 14
-        spacing: 14
+        spacing: 4
 
-        // ---------------- Links: Quellen und Chat ----------------
+        // ---------------- Links: Quellen und Umfrage ----------------
         ColumnLayout {
             id: leftCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 300
+            Layout.preferredWidth: win.leftWidth
+            Layout.minimumWidth: win.leftWidth
+            Layout.maximumWidth: win.leftWidth
             spacing: 14
 
             Card {
@@ -312,6 +319,8 @@ ApplicationWindow {
                 }
             }
         }
+
+        ColumnResizer { side: "left" }
 
         // ---------------- Mitte ----------------
         ColumnLayout {
@@ -719,11 +728,15 @@ ApplicationWindow {
             }
         }
 
+        ColumnResizer { side: "right" }
+
         // ---------------- Rechts: Chat, Einstellungen, Live / Aufnahme ----------------
         ColumnLayout {
             id: rightCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 320
+            Layout.preferredWidth: win.rightWidth
+            Layout.minimumWidth: win.rightWidth
+            Layout.maximumWidth: win.rightWidth
             spacing: 14
 
             // ---------------- Chat ----------------
@@ -1897,6 +1910,49 @@ ApplicationWindow {
                 color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
             }
         }
+    }
+
+    // Griff zwischen zwei Spalten: ziehen ändert die Breite, Doppelklick setzt sie zurück
+    component ColumnResizer: Item {
+        id: rz
+        required property string side
+        Layout.fillHeight: true
+        Layout.preferredWidth: 10
+        property real startX
+        property real startW
+        Rectangle {
+            anchors.centerIn: parent
+            width: 3
+            height: 44
+            radius: 1.5
+            color: rzm.pressed ? Theme.accent : (rzm.containsMouse ? Theme.tint(0.35) : Theme.tint(0.12))
+        }
+        MouseArea {
+            id: rzm
+            anchors.fill: parent
+            anchors.leftMargin: -3
+            anchors.rightMargin: -3
+            hoverEnabled: true
+            cursorShape: Qt.SplitHCursor
+            onPressed: (m) => {
+                rz.startX = mapToItem(null, m.x, m.y).x
+                rz.startW = rz.side === "left" ? win.leftWidth : win.rightWidth
+            }
+            onPositionChanged: (m) => {
+                if (!pressed) return
+                const dx = mapToItem(null, m.x, m.y).x - rz.startX
+                const w = Math.round(Math.max(win.colMin, Math.min(win.colMax, rz.startW + (rz.side === "left" ? dx : -dx))))
+                if (rz.side === "left") win.leftWidth = w
+                else win.rightWidth = w
+            }
+            onReleased: studio.set(rz.side === "left" ? "left_w" : "right_w", Math.round(rz.side === "left" ? win.leftWidth : win.rightWidth))
+            onDoubleClicked: {
+                if (rz.side === "left") { win.leftWidth = 300; studio.set("left_w", 300) }
+                else { win.rightWidth = 320; studio.set("right_w", 320) }
+            }
+        }
+        Accessible.role: Accessible.Separator
+        Accessible.name: rz.side === "left" ? "Breite der linken Spalte" : "Breite der rechten Spalte"
     }
 
     component SourceRow: Rectangle {

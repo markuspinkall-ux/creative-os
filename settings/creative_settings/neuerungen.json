@@ -21,7 +21,8 @@
       "Studio aufgeräumt: der Chat sitzt jetzt rechts über „Live gehen“ und „Aufnehmen“, die Umfrage hat links unter den Quellen einen eigenen Platz. Die Plattformen (Twitch, YouTube, Kick, TikTok, eigener Server) richtest du in den Einstellungen unter „Plattformen“ ein – rechts steht nur noch, wohin gesendet wird",
       "Startmenü: Den Ordner „Gibeon OS Suite“ gibt es nicht mehr – alle Apps stehen jetzt ganz normal alphabetisch im Startmenü",
       "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt",
-      "Studio: Neuer Knopf „Broadcast (Mikrofon & Kamera)“ rechts unter den Einstellungen – öffnet Broadcast direkt aus Studio"
+      "Studio: Neuer Knopf „Broadcast (Mikrofon & Kamera)“ rechts unter den Einstellungen – öffnet Broadcast direkt aus Studio",
+      "Studio: Die Spalten links und rechts lassen sich schmaler oder breiter ziehen (am Griff zwischen den Spalten, Doppelklick setzt zurück). Der Inhalt passt sich an, die Breite bleibt gespeichert"
     ],
     "behoben": [
       "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt",
