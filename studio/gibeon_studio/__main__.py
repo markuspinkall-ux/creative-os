@@ -43,8 +43,9 @@ def main():
     if not selftest and _raise_running():
         return 0
 
-    from .backend import Preview, Studio
+    from .backend import Preview, ProjectorView, Studio
     qmlRegisterType(Preview, "Studio", 1, 0, "Preview")
+    qmlRegisterType(ProjectorView, "Studio", 1, 0, "ProjectorView")
     studio = Studio(selftest=selftest)
     if selftest:
         out = os.path.join(tempfile.mkdtemp(), "selbsttest.mp4")
@@ -53,11 +54,17 @@ def main():
         if not ok:
             return 1
     engine = QQmlApplicationEngine()
-    for d in (HERE.parent.parent / "shell" / "creative_shell" / "qml", Path("/usr/lib/creative-shell/creative_shell/qml")):
+    for d in (HERE.parent.parent / "shell" / "creative_shell" / "qml", Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/creative-shell/creative_shell/qml"):
         if (d / "Creative" / "qmldir").exists():
             engine.addImportPath(str(d))
             break
     engine.rootContext().setContextProperty("studio", studio)
+    # Updates nur in der AppImage-Fassung (andere Linux-Systeme); in Gibeon OS kommen sie mit dem System
+    from .appupdate import AppUpdate
+    app_update = AppUpdate(app)
+    engine.rootContext().setContextProperty("appUpdate", app_update)
+    if not selftest:
+        QTimer.singleShot(4000, app_update.check)
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
         return 1

@@ -81,3 +81,38 @@ class AudioRoutingTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CaptureCardTests(unittest.TestCase):
+    """Capture listet nur Capture-Karten – Webcams und virtuelle Kameras nicht."""
+
+    def _fake(self, root, n, label, vendor=None):
+        import os
+        dev = root / "usb1" / f"1-{n}"
+        (dev / "1.0").mkdir(parents=True)
+        if vendor:
+            (dev / "idVendor").write_text(vendor + "\n")
+        node = root / "v4l" / f"video{n}"
+        node.mkdir(parents=True)
+        (node / "name").write_text(label + "\n")
+        os.symlink(dev / "1.0", node / "device")
+
+    def test_nur_capture_karten(self):
+        import tempfile
+        from pathlib import Path
+        capture_card = routing.capture_card
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            self._fake(root, 0, "Elgato HD60 X", "0fd9")
+            self._fake(root, 1, "Live Gamer MINI: Live Gamer MINI", "07ca")
+            self._fake(root, 2, "HD Pro Webcam C920", "046d")
+            self._fake(root, 3, "Integrated Camera", "04f2")
+            self._fake(root, 4, "USB Video: USB Video", "534d")
+            self._fake(root, 5, "Gibeon Kamera")
+            v = root / "v4l"
+            self.assertEqual(capture_card("/dev/video0", v), "Elgato")
+            self.assertEqual(capture_card("/dev/video1", v), "AVerMedia")
+            self.assertEqual(capture_card("/dev/video2", v), "")
+            self.assertEqual(capture_card("/dev/video3", v), "")
+            self.assertEqual(capture_card("/dev/video4", v), "MacroSilicon")
+            self.assertEqual(capture_card("/dev/video5", v), "")

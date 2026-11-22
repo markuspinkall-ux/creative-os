@@ -36,7 +36,7 @@ except ImportError:
         return value
 
 
-LIB = Path("/usr/lib/creative-3d")
+LIB = Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/creative-3d"
 if not (LIB / "creative3d_softview.py").is_file():
     LIB = Path(__file__).resolve().parent                     # aus dem Quellordner gestartet
 sys.path.insert(0, str(LIB))

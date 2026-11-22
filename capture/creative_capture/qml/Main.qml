@@ -16,10 +16,9 @@ Window {
     title: cam.cameraDevice && hasVideo ? "Capture – " + cam.cameraDevice.description : "Capture"
     color: hasVideo && cam.active && cam.error === Camera.NoError ? "black" : Theme.surface
 
-    // Nur echte Capture-Karten – virtuelle Kameras (Gibeon Kamera, OBS) gehören nicht hierher
-    readonly property var cards: devices.videoInputs.filter(d => d.description.indexOf("Gibeon Kamera") < 0
-                                     && d.description.indexOf("OBS") < 0 && d.description.indexOf("Virtuelle") < 0
-                                     && d.description.indexOf("Dummy") < 0 && d.description.indexOf("v4l2loopback") < 0)
+    // Nur echte Capture-Karten (z. B. Elgato, AVerMedia Live Gamer Mini) – keine Webcams und
+    // keine virtuellen Kameras (Gibeon Kamera)
+    readonly property var cards: devices.videoInputs.filter(d => capture.isCaptureCard(d.id))
     readonly property bool hasVideo: cards.length > 0
     readonly property bool fullscreen: visibility === Window.FullScreen
     property bool barVisible: true
@@ -214,8 +213,8 @@ Window {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             text: !win.hasVideo
-                  ? "Steck die Capture-Karte (z. B. HDMI-Grabber per USB) ein – sie erscheint hier automatisch. In einer VM muss sie unter „Geräte › USB“ durchgereicht werden."
-                  : (cam.errorString || "Vielleicht benutzt gerade ein anderes Programm (OBS, Discord …) die Karte.")
+                  ? "Steck die Capture-Karte ein (z. B. Elgato oder AVerMedia Live Gamer Mini) – sie erscheint hier automatisch. Webcams zeigt Capture nicht an. In einer VM muss sie unter „Geräte › USB“ durchgereicht werden."
+                  : (cam.errorString || "Vielleicht benutzt gerade ein anderes Programm (Studio, Discord …) die Karte.")
             color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
         }
     }

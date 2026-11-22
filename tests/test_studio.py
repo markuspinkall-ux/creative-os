@@ -494,3 +494,18 @@ class Umfragen(unittest.TestCase):
         html = (ROOT / "studio/gibeon_studio/umfrage.html").read_text(encoding="utf-8")
         for part in ("window.gibeonUmfrage", 'id="eigen"', ".umfrage", ".antwort", ".fuellung", "background: transparent"):
             self.assertIn(part, html)
+
+
+def test_spiel_aufnahme_eigenes_mischpult():
+    """„Nur das Spiel“: die Aufnahme bekommt ein zweites Mischpult ohne Overlays."""
+    import sys
+    sys.path.insert(0, str(ROOT / "studio"))
+    from gibeon_studio import engine
+    srcs = [{"key": "screen", "type": "test"}, {"key": "image:/x.png", "type": "image", "file": "/x.png", "w": 100, "h": 100}]
+    lay = {"screen": (0, 0, 1920, 1080, 1), "image:/x.png": (10, 10, 100, 100, 2)}
+    desc, _size, pads = engine.build_description({"canvas": "1080p30"}, srcs, {}, lay)
+    assert "rmix" not in desc
+    desc, _size, pads = engine.build_description({"canvas": "1080p30"}, srcs, {}, lay, {"screen": lay["screen"]})
+    assert "compositor name=rmix" in desc and "appsink name=rvout" in desc
+    n = pads["image:/x.png"][5:]
+    assert f"rmix.sink_{n}" in desc and f"sink_{n}::alpha=0.0" in desc.split("compositor name=rmix")[1]

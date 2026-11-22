@@ -57,6 +57,11 @@ DEFAULTS = {
     "rec_quality": "normal",         # normal | hoch | sehr-hoch
     "encoder": "auto",               # auto (Grafikkarte, wenn möglich) | cpu
     "upscale": "aus",                # aus | schnell | ki
+    # Was in die Aufnahme kommt: alles wie im Bild | Spiel + Kamera (ohne Overlays) | nur das Spiel
+    "rec_inhalt": "alles",           # alles | kamera | spiel
+    # Breite der Spalten links und rechts (Pixel), am Spaltenrand verstellbar
+    "left_w": 300,
+    "right_w": 320,
     # Umfragen: Kanal zum Mitlesen (ohne Anmeldung), eigenes CSS, zuletzt benutzte Einstellungen
     "twitch_channel": "",
     "poll_css": umfrage.DEFAULT_CSS,
@@ -78,7 +83,7 @@ DEFAULTS = {
     "screen_token": "",
     "chat_open": True,
 }
-SOURCE_KEYS = ("canvas", "audio")
+SOURCE_KEYS = ("canvas", "audio", "rec_inhalt")
 # Standard-Server, wenn jemand nur den Stream-Schlüssel einträgt
 INGEST = {"twitch": "rtmp://ingest.global-contribute.live-video.net/app",
           "youtube": "rtmp://a.rtmp.youtube.com/live2"}
@@ -337,6 +342,7 @@ class Hub(QObject):
 
 
 HUB = Hub()
+PROJ = Hub()            # Bilder für die Monitor-Anzeige (Capture-Karte pur auf einem anderen Monitor)
 
 
 class Preview(QQuickPaintedItem):
@@ -354,6 +360,36 @@ class Preview(QQuickPaintedItem):
 
     def paint(self, painter):
         painter.fillRect(self.boundingRect(), QColor("#0b0d12"))
+        if self._img.isNull():
+            return
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        r = self.boundingRect()
+        w = r.width()
+        h = w * self._img.height() / self._img.width()
+        if h > r.height():
+            h = r.height()
+            w = h * self._img.width() / self._img.height()
+        painter.drawImage(r.adjusted((r.width() - w) / 2, (r.height() - h) / 2,
+                                     -(r.width() - w) / 2, -(r.height() - h) / 2), self._img)
+
+
+class ProjectorView(QQuickPaintedItem):
+    """Monitor-Anzeige: nur das Bild der Capture-Karte (bzw. Kamera), ohne Overlays, Kamera-Ecke
+    oder Umfrage – die gibt es nur in Studio selbst."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._img = QImage()
+        self.setRenderTarget(QQuickPaintedItem.RenderTarget.FramebufferObject)
+        self.setOpaquePainting(True)
+        PROJ.frame.connect(self._on_frame)
+
+    def _on_frame(self):
+        self._img = PROJ.take()
+        self.update()
+
+    def paint(self, painter):
+        painter.fillRect(self.boundingRect(), QColor("#000000"))
         if self._img.isNull():
             return
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -393,6 +429,7 @@ class Studio(QObject):
         self._screen_wanted = False
         self.video_list = []
         self._broadcast_checked = False
+        self.projector = {}             # Monitor-Anzeige: {"key", "screen", "label", "listen_before"}
         self.audio_list = []
         self.output_list = []
         self.upscale_queue = []
@@ -525,6 +562,7 @@ class Studio(QObject):
             "canvasHeight": engine.canvas_size(self.cfg["canvas"])[1], "canvasFps": engine.canvas_size(self.cfg["canvas"])[2],
             "heights": list(engine.HEIGHTS), "rates": list(engine.RATES),
             "recMbit": round(self._rec_kbps() / 1000), "kiOk": self.ki_ok, "kiWhy": self.ki_why,
+            "projector": {k: v for k, v in self.projector.items() if k in ("key", "screen", "label")},
             "upscaleJob": {k: v for k, v in self.upscale_job.items() if k != "proc"} if self.upscale_job else {},
             "upscaleQueue": len(self.upscale_queue),
             "webSources": self._web_sources(),
@@ -839,9 +877,20 @@ class Studio(QObject):
             rounds[key] = engine.ROUND if it.get("round") else 0.0
         return layout, rounds
 
+    # Spiel-Aufnahme: was in die Aufnahme darf (Rest wie Overlays, Bilder, Browser, Umfrage bleibt draußen)
+    REC_KINDS = {"spiel": {"screen", "capture"}, "kamera": {"screen", "capture", "camera"}}
+
+    def _rec_layout(self, layout):
+        """Anordnung nur für die Aufnahme – None, wenn sie alles wie im Bild zeigt."""
+        kinds = self.REC_KINDS.get(self.cfg.get("rec_inhalt", "alles"))
+        if not kinds:
+            return None
+        keep = {item_key(it) for it in self._scene()["items"] if it.get("kind") in kinds}
+        return {k: v for k, v in layout.items() if k in keep}
+
     def _apply(self):
         layout, rounds = self._layout()
-        self.mixer.apply_layout(layout)
+        self.mixer.apply_layout(layout, self._rec_layout(layout))
         self.mixer.set_rounds(rounds)
 
     def _structure(self):
@@ -1105,8 +1154,10 @@ class Studio(QObject):
         sources, audio = self._sources()
         layout, rounds = self._layout()
         try:
-            self.mixer.build(self.cfg, sources, audio, layout, rounds)
+            self.mixer.build(self.cfg, sources, audio, layout, rounds, self._rec_layout(layout))
             self.error = ""
+            if self.projector:
+                self.mixer.set_tap(self.projector["key"], self._on_projector_frame)
         except (ValueError, RuntimeError) as e:
             self.error = f"Studio konnte die Quellen nicht starten: {e}"
         self.levels = dict(self.mixer.levels)
@@ -1222,6 +1273,53 @@ class Studio(QObject):
         self.encoder = out.encoder_name
         self.rec_since = time.monotonic()
         self.changed.emit()
+
+    # ---- Monitor-Anzeige (Capture-Karte pur auf einen anderen Monitor) ----------------------------
+    def _on_projector_frame(self, data, w, h):
+        PROJ.push(QImage(data, w, h, w * 4, QImage.Format.Format_ARGB32).copy())
+
+    @Slot(int, str)
+    def projectItem(self, index, screen):
+        """Bild (und bei der Capture-Karte deren Ton) auf einem Monitor zeigen – ohne Overlays."""
+        it = self._item(index)
+        key = item_key(it) if it else None
+        if not it or it.get("kind") not in ("capture", "camera", "test") or not key:
+            return
+        self.stopProjector(quiet=True)
+        if not self.mixer.set_tap(key, self._on_projector_frame):
+            self.toast.emit("Diese Quelle liefert gerade kein Bild.")
+            return
+        self.projector = {"key": key, "screen": screen, "label": it.get("name") or KINDS.get(it["kind"], ""),
+                          "listen_before": None}
+        extra = self.cfg["audio"]["extra"]
+        if it["kind"] == "capture" and extra["on"] and extra["device"]:
+            # Ton der Capture-Karte mit ausgeben (Mithören) – wie vorher, sobald die Anzeige endet
+            self.projector["listen_before"] = bool(extra.get("listen"))
+            if not extra.get("listen"):
+                self.set("audio.extra.listen", True)
+        self.changed.emit()
+
+    @Slot()
+    def stopProjector(self, quiet=False):
+        if not self.projector:
+            return
+        self.mixer.set_tap(None, None)
+        before = self.projector.get("listen_before")
+        self.projector = {}
+        if before is False:
+            self.set("audio.extra.listen", False)
+        if not quiet:
+            self.changed.emit()
+
+    @Slot()
+    def openBroadcast(self):
+        """Broadcast öffnen (Mikrofon entrauschen, Hintergrund der Webcam) – in Gibeon OS sitzt es
+        sonst im Tray, im AppImage liegt es mit im Paket."""
+        if shutil.which("creative-broadcast"):
+            subprocess.Popen(["creative-broadcast"], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    broadcastAvailable = Property(bool, lambda self: bool(shutil.which("creative-broadcast")), constant=True)
 
     @Slot()
     def openRecordings(self):
@@ -1454,8 +1552,17 @@ class Studio(QObject):
         env.insert("PYTHONPATH", str(HERE.parent))
         return env
 
-    def _start_upscale(self, path):
-        art = self.cfg["upscale"]
+    @Slot(str)
+    def upscaleFile(self, url):
+        """Eine fertige Aufnahme nachträglich auf 4K bringen (Datei wählen → läuft im Hintergrund)."""
+        path = QUrl(url).toLocalFile() if url.startswith("file:") else url
+        if not path or not os.path.isfile(path):
+            return
+        self._start_upscale(path, self.cfg["upscale"] if self.cfg["upscale"] != "aus" else ("ki" if self.ki_ok else "schnell"))
+        self.toast.emit(f"Wird auf 4K hochskaliert: {Path(path).name}")
+
+    def _start_upscale(self, path, art=None):
+        art = art or self.cfg["upscale"]
         if art == "ki" and not self.ki_ok:
             art = "schnell"
         src = Path(path)
@@ -1715,7 +1822,22 @@ class Studio(QObject):
         frame = self.mixer.frame()
         self.mixer.stop()
         size = os.path.getsize(out_path) if os.path.exists(out_path) else 0
-        return size > 10000 and frame is not None, f"{out.encoder_name}, {size} Byte"
+        if not (size > 10000 and frame is not None):
+            return False, f"{out.encoder_name}, {size} Byte"
+        # Spiel-Aufnahme: eigenes Aufnahme-Bild ohne das Bild (Overlay) – Vorschau zeigt es weiter
+        game_path = out_path.replace(".mp4", "-spiel.mp4")
+        self.mixer.build(self.cfg, sources, audio, layout, rounds, {k: v for k, v in layout.items() if not k.startswith("image:")})
+        time.sleep(0.8)
+        self.mixer.start_output("record", game_path, 2000, "mp4")
+        time.sleep(2.0)
+        self.mixer.stop_output("record")
+        deadline = time.monotonic() + 10
+        while self.mixer.outputs and time.monotonic() < deadline:
+            self.mixer.poll()
+            time.sleep(0.05)
+        self.mixer.stop()
+        game = os.path.getsize(game_path) if os.path.exists(game_path) else 0
+        return game > 5000, f"{out.encoder_name}, {size} Byte, Spiel-Aufnahme {game} Byte"
 
 
 def _clock(sec):

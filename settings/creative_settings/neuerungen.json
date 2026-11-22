@@ -7,7 +7,10 @@
       "Shots nimmt jetzt auch Videos auf: Druck-Taste und dann „Aufnehmen“ (oder Taste R), kurz den Bildschirm wählen – Bild, Mauszeiger und der Ton vom Desktop werden aufgenommen. Eine kleine Leiste zeigt die Laufzeit, „Stopp“ beendet die Aufnahme. Videos landen unter Videos › Bildschirmaufnahmen",
       "Dateien und Ordner auf dem Schreibtisch lassen sich jetzt genau wie die Widgets mit der Maus auf einen anderen Monitor ziehen – dort zeigt ein Umriss, wo sie landen. Die Plätze bleiben gespeichert",
       "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern",
-      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten"
+      "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten",
+      "Studio: Spiel-Aufnahmen – unter Einstellungen › Aufnahme wählst du, was in die Aufnahme kommt: „Alles wie im Bild“, „Spiel + Kamera“ oder „Nur das Spiel“. Overlays, Bilder, Browserquellen, Alerts und Umfragen bleiben dann aus der Aufnahme draußen, der Stream sieht weiter alles",
+      "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme",
+      "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
@@ -18,7 +21,10 @@
       "Die überflüssigen Hinweistexte mitten im Player sind weg",
       "Studio aufgeräumt: der Chat sitzt jetzt rechts über „Live gehen“ und „Aufnehmen“, die Umfrage hat links unter den Quellen einen eigenen Platz. Die Plattformen (Twitch, YouTube, Kick, TikTok, eigener Server) richtest du in den Einstellungen unter „Plattformen“ ein – rechts steht nur noch, wohin gesendet wird",
       "Startmenü: Den Ordner „Gibeon OS Suite“ gibt es nicht mehr – alle Apps stehen jetzt ganz normal alphabetisch im Startmenü",
-      "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt"
+      "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt",
+      "Studio: Neuer Knopf „Broadcast (Mikrofon & Kamera)“ rechts unter den Einstellungen – öffnet Broadcast direkt aus Studio",
+      "Studio: Die Spalten links und rechts lassen sich schmaler oder breiter ziehen (am Griff zwischen den Spalten, Doppelklick setzt zurück). Der Inhalt passt sich an, die Breite bleibt gespeichert",
+      "Capture zeigt jetzt nur noch echte Capture-Karten an – z. B. Elgato oder AVerMedia Live Gamer Mini, je nachdem, was angeschlossen ist. Webcams und virtuelle Kameras tauchen dort nicht mehr auf"
     ],
     "behoben": [
       "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt",

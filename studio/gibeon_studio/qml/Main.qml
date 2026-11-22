@@ -1,3 +1,4 @@
+import QtCore
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -64,12 +65,69 @@ ApplicationWindow {
         MenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
         MenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
         MenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
+        // Capture-Karte / Kamera pur auf einem anderen Monitor zeigen (ohne Overlays)
+        MenuSeparator { visible: projItems.count > 0 }
+        Instantiator {
+            id: projItems
+            model: sourceMenu.it && (sourceMenu.it.kind === "capture" || sourceMenu.it.kind === "camera") ? Qt.application.screens : []
+            delegate: MenuItem {
+                required property var modelData
+                text: "Auf „" + modelData.name + "“ zeigen" + (modelData.model ? " (" + modelData.model + ")" : "")
+                onTriggered: studio.projectItem(sourceMenu.pos, modelData.name)
+            }
+            onObjectAdded: (i, o) => sourceMenu.insertItem(sourceMenu.count - 3, o)
+            onObjectRemoved: (i, o) => sourceMenu.removeItem(o)
+        }
+        MenuItem {
+            text: "Monitor-Anzeige beenden"
+            visible: !!(st.projector && st.projector.screen)
+            height: visible ? implicitHeight : 0
+            onTriggered: studio.stopProjector()
+        }
         MenuSeparator {}
         MenuItem { text: "Löschen"; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
+    }
+
+    // Monitor-Anzeige: nur Bild (und Ton) der Capture-Karte, ganz ohne Studio-Overlays
+    Window {
+        id: projectorWin
+        readonly property var p: st.projector || ({})
+        readonly property var target: {
+            const list = Qt.application.screens
+            for (let i = 0; i < list.length; i++)
+                if (list[i].name === p.screen) return list[i]
+            return null
+        }
+        visible: !!p.screen && target !== null
+        screen: target || Qt.application.screens[0]
+        x: target ? target.virtualX : 0
+        y: target ? target.virtualY : 0
+        width: target ? target.width : 1280
+        height: target ? target.height : 720
+        flags: Qt.Window | Qt.FramelessWindowHint
+        color: "black"
+        title: "Studio – " + (p.label || "Capture-Karte")
+        onVisibleChanged: if (visible) showFullScreen()
+        onClosing: studio.stopProjector()
+        ProjectorView { anchors.fill: parent }
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: containsMouse && hideCursor.running ? Qt.ArrowCursor : Qt.BlankCursor
+            onPositionChanged: hideCursor.restart()
+            onDoubleClicked: studio.stopProjector()
+            Timer { id: hideCursor; interval: 2000 }
+        }
+        Shortcut { sequence: "Esc"; onActivated: studio.stopProjector() }
     }
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null
     readonly property string redLive: "#e5484d"
+    // Breite der Spalten links und rechts: am Rand zwischen den Spalten ziehen, wird gespeichert
+    property real leftWidth: cfg.left_w || 300
+    property real rightWidth: cfg.right_w || 320
+    readonly property int colMin: 220
+    readonly property int colMax: Math.max(260, Math.min(560, (width - 480) / 2))
 
     onClosing: (close) => {
         if (studio.busyOutputs()) {
@@ -116,13 +174,15 @@ ApplicationWindow {
     RowLayout {
         anchors.fill: parent
         anchors.margins: 14
-        spacing: 14
+        spacing: 4
 
-        // ---------------- Links: Quellen und Chat ----------------
+        // ---------------- Links: Quellen und Umfrage ----------------
         ColumnLayout {
             id: leftCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 300
+            Layout.preferredWidth: win.leftWidth
+            Layout.minimumWidth: win.leftWidth
+            Layout.maximumWidth: win.leftWidth
             spacing: 14
 
             Card {
@@ -311,6 +371,8 @@ ApplicationWindow {
                 }
             }
         }
+
+        ColumnResizer { side: "left" }
 
         // ---------------- Mitte ----------------
         ColumnLayout {
@@ -718,11 +780,15 @@ ApplicationWindow {
             }
         }
 
+        ColumnResizer { side: "right" }
+
         // ---------------- Rechts: Chat, Einstellungen, Live / Aufnahme ----------------
         ColumnLayout {
             id: rightCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 320
+            Layout.preferredWidth: win.rightWidth
+            Layout.minimumWidth: win.rightWidth
+            Layout.maximumWidth: win.rightWidth
             spacing: 14
 
             // ---------------- Chat ----------------
@@ -871,7 +937,8 @@ ApplicationWindow {
                                          .map(k => ({ twitch: "Twitch", youtube: "YouTube", kick: "Kick", tiktok: "TikTok", custom: "Eigener Server" })[k]).join(", ") || "noch kein Ziel"],
                             ["Bild", (st.canvasHeight === 2160 ? "4K" : st.canvasHeight + "p") + " · " + st.canvasFps + " Bilder/s"],
                             ["Stream", (cfg.stream_res && cfg.stream_res !== "gleich" ? cfg.stream_res + "p" : "wie Bild") + (cfg.stream_fps === "30" && st.canvasFps > 30 ? " · 30 Bilder/s" : "") + " · " + ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"],
-                            ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")],
+                            ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")
+                                         + (({ kamera: " · Spiel + Kamera", spiel: " · nur Spiel" })[cfg.rec_inhalt || "alles"] || "")],
                             ["Kodierer", cfg.encoder === "cpu" ? "Prozessor" : (st.encoder || "Automatisch")]
                         ]
                         delegate: RowLayout {
@@ -884,6 +951,8 @@ ApplicationWindow {
                     CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
                     CButton { Layout.fillWidth: true; text: "Plattformen einrichten …"; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
+                    CButton { Layout.fillWidth: true; text: "Aufnahme in 4K umwandeln …"; onClicked: videoPicker.open() }
+                    CButton { Layout.fillWidth: true; visible: studio.broadcastAvailable; text: "Broadcast (Mikrofon & Kamera) …"; onClicked: studio.openBroadcast() }
                     // laufendes Hochskalieren
                     Rectangle {
                         Layout.fillWidth: true
@@ -992,11 +1061,118 @@ ApplicationWindow {
             win.selected = win.items[pos].id
     }
 
+    // Fertige Aufnahme nachträglich auf 4K bringen
+    FilePicker {
+        id: videoPicker
+        mode: "open"
+        title: "Aufnahme in 4K umwandeln"
+        nameFilters: ["*.mp4", "*.mkv", "*.mov"]
+        startFolder: StandardPaths.writableLocation(StandardPaths.MoviesLocation) + "/Studio"
+        onAccepted: (url) => studio.upscaleFile(url.toString())
+    }
+
     ImagePicker {
         id: imagePicker
         title: "Bild für die Szene wählen"
         acceptText: "Einfügen"
         onAccepted: (url) => win.selectAt(studio.addImage(url.toString()))
+    }
+
+    // ---------------- Update (nur AppImage für andere Linux-Systeme) ----------------
+    Rectangle {
+        id: updateBar
+        z: 40
+        visible: appUpdate.visible && !updateDialog.open
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 10
+        width: updRow.implicitWidth + 24
+        height: 46
+        radius: 12
+        color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
+        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45)
+        RowLayout {
+            id: updRow
+            anchors.centerIn: parent
+            spacing: 10
+            Column {
+                Text { text: appUpdate.phase === "ready" ? "Update geladen" : "Update verfügbar: Version " + appUpdate.version; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                Text { text: "Studio und Broadcast werden zusammen aktualisiert"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
+            }
+            CButton { text: "Später"; onClicked: appUpdate.later() }
+            CButton { primary: true; text: appUpdate.phase === "ready" ? "Neu starten" : "Jetzt aktualisieren"; onClicked: updateDialog.open = true }
+        }
+    }
+    Rectangle {
+        id: updateDialog
+        property bool open: false
+        anchors.fill: parent
+        z: 41
+        visible: open
+        color: Qt.rgba(0, 0, 0, 0.5)
+        MouseArea { anchors.fill: parent }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 460
+            height: updCol.implicitHeight + 40
+            radius: Theme.radiusMenu
+            color: Theme.surface
+            border.color: Theme.hairline
+            ColumnLayout {
+                id: updCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 20
+                spacing: 8
+                Heading { text: "Update auf Version " + appUpdate.version }
+                Text {
+                    text: "Installiert: " + (appUpdate.currentVersion || "–") + " · Download " + appUpdate.sizeMb + " MB"
+                    color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
+                }
+                Text { visible: appUpdate.studioNotes.length > 0; Layout.topMargin: 6; text: "Studio"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                Repeater {
+                    model: appUpdate.studioNotes
+                    delegate: Text { required property string modelData; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "•  " + modelData; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                }
+                Text { visible: appUpdate.broadcastNotes.length > 0; Layout.topMargin: 6; text: "Broadcast"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12; font.bold: true }
+                Repeater {
+                    model: appUpdate.broadcastNotes
+                    delegate: Text { required property string modelData; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "•  " + modelData; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 12 }
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 10
+                    visible: appUpdate.phase === "loading" || appUpdate.phase === "ready"
+                    height: 6; radius: 3
+                    color: Theme.tint(0.1)
+                    Rectangle { width: parent.width * appUpdate.progressValue; height: 6; radius: 3; color: Theme.accent }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    visible: text.length > 0
+                    text: appUpdate.errorText !== "" ? appUpdate.errorText
+                          : appUpdate.phase === "loading" ? "Wird geladen … " + Math.round(appUpdate.progressValue * appUpdate.sizeMb) + " von " + appUpdate.sizeMb + " MB"
+                          : appUpdate.phase === "ready" ? "Fertig geladen – beim Neustart läuft die neue Version."
+                          : !appUpdate.writable ? "Der Ordner mit dem AppImage ist schreibgeschützt oder voll – lade das neue AppImage bitte von der Webseite."
+                          : ""
+                    color: appUpdate.errorText !== "" ? win.redLive : Theme.textMuted
+                    font.family: Theme.fontFamily; font.pixelSize: 11
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 8
+                    Item { Layout.fillWidth: true }
+                    CButton { text: appUpdate.phase === "loading" ? "Im Hintergrund" : "Abbrechen"; onClicked: updateDialog.open = false }
+                    CButton {
+                        primary: true
+                        enabled: appUpdate.writable && appUpdate.phase !== "loading"
+                        text: appUpdate.phase === "ready" ? "Neu starten und fertig" : "Aktualisieren"
+                        onClicked: appUpdate.phase === "ready" ? appUpdate.restart() : appUpdate.start()
+                    }
+                }
+            }
+        }
     }
 
     // ---------------- Anmeldung (Gerätecode) ----------------
@@ -1256,6 +1432,24 @@ ApplicationWindow {
                                 options: [["mp4", "MP4"], ["mkv", "MKV"]]
                                 value: cfg.format || "mp4"
                                 onPicked: (v) => studio.set("format", v)
+                            }
+                            Label2 { text: "Was aufgenommen wird" }
+                            Seg {
+                                Layout.fillWidth: true
+                                enabled: !st.recording && !st.live
+                                options: [["alles", "Alles wie im Bild"], ["kamera", "Spiel + Kamera"], ["spiel", "Nur das Spiel"]]
+                                value: cfg.rec_inhalt || "alles"
+                                onPicked: (v) => studio.set("rec_inhalt", v)
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: cfg.rec_inhalt === "spiel"
+                                      ? "Die Aufnahme zeigt nur Bildschirm und Capture-Karte – Kamera, Bilder, Browserquellen, Alerts und Umfragen bleiben draußen. Der Stream sieht weiter alles."
+                                      : cfg.rec_inhalt === "kamera"
+                                      ? "Die Aufnahme zeigt Spiel und Kamera – Bilder, Browserquellen, Alerts und Umfragen bleiben draußen. Der Stream sieht weiter alles."
+                                      : "Die Aufnahme sieht genau so aus wie die Vorschau."
+                                color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
                             }
                             Label2 { text: "Qualität · " + (st.recMbit || 12) + " Mbit/s" }
                             Seg {
@@ -1768,6 +1962,49 @@ ApplicationWindow {
                 color: Theme.flame; font.family: Theme.fontFamily; font.pixelSize: 11
             }
         }
+    }
+
+    // Griff zwischen zwei Spalten: ziehen ändert die Breite, Doppelklick setzt sie zurück
+    component ColumnResizer: Item {
+        id: rz
+        required property string side
+        Layout.fillHeight: true
+        Layout.preferredWidth: 10
+        property real startX
+        property real startW
+        Rectangle {
+            anchors.centerIn: parent
+            width: 3
+            height: 44
+            radius: 1.5
+            color: rzm.pressed ? Theme.accent : (rzm.containsMouse ? Theme.tint(0.35) : Theme.tint(0.12))
+        }
+        MouseArea {
+            id: rzm
+            anchors.fill: parent
+            anchors.leftMargin: -3
+            anchors.rightMargin: -3
+            hoverEnabled: true
+            cursorShape: Qt.SplitHCursor
+            onPressed: (m) => {
+                rz.startX = mapToItem(null, m.x, m.y).x
+                rz.startW = rz.side === "left" ? win.leftWidth : win.rightWidth
+            }
+            onPositionChanged: (m) => {
+                if (!pressed) return
+                const dx = mapToItem(null, m.x, m.y).x - rz.startX
+                const w = Math.round(Math.max(win.colMin, Math.min(win.colMax, rz.startW + (rz.side === "left" ? dx : -dx))))
+                if (rz.side === "left") win.leftWidth = w
+                else win.rightWidth = w
+            }
+            onReleased: studio.set(rz.side === "left" ? "left_w" : "right_w", Math.round(rz.side === "left" ? win.leftWidth : win.rightWidth))
+            onDoubleClicked: {
+                if (rz.side === "left") { win.leftWidth = 300; studio.set("left_w", 300) }
+                else { win.rightWidth = 320; studio.set("right_w", 320) }
+            }
+        }
+        Accessible.role: Accessible.Separator
+        Accessible.name: rz.side === "left" ? "Breite der linken Spalte" : "Breite der rechten Spalte"
     }
 
     component SourceRow: Rectangle {

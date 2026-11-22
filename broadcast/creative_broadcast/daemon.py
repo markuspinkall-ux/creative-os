@@ -23,14 +23,16 @@ import threading
 import time
 from pathlib import Path
 
-LADSPA = [Path("/usr/lib64/ladspa/libdeep_filter_ladspa.so"), Path("/usr/lib/ladspa/libdeep_filter_ladspa.so")]
-MODEL = Path("/usr/share/creative-broadcast/rvm_mobilenetv3_fp32.onnx")
+# Gibeon OS: alles unter /usr. Als AppImage für andere Linux-Systeme zeigt GIBEON_PREFIX ins AppImage.
+PREFIX = Path(os.environ.get("GIBEON_PREFIX") or "/usr")
+LADSPA = [PREFIX / "lib64/ladspa/libdeep_filter_ladspa.so", PREFIX / "lib/ladspa/libdeep_filter_ladspa.so"]
+MODEL = PREFIX / "share/creative-broadcast/rvm_mobilenetv3_fp32.onnx"
 VOICE_NODE = "creative_voice"
 DEFAULTS = {"voice": False, "voiceStrength": 70, "realMic": "", "voiceInput": "", "camera": False, "cameraDevice": "",
             "effect": "blur", "background": "", "quality": "sparsam", "upscale": "aus",
             "resolution": "1080p"}
 
-for _v in (Path("/usr/lib/creative-broadcast/vendor"), Path("/usr/lib/creative-broadcast/gpu")):
+for _v in (PREFIX / "lib/creative-broadcast/vendor", PREFIX / "lib/creative-broadcast/gpu"):
     if _v.is_dir() and str(_v) not in sys.path:
         sys.path.insert(0, str(_v))
 
@@ -260,7 +262,7 @@ class Matting:
         import numpy as np
         import onnxruntime as ort
         self.np = np
-        if hasattr(ort, "preload_dlls") and Path("/usr/lib/creative-broadcast/gpu").is_dir():
+        if hasattr(ort, "preload_dlls") and (PREFIX / "lib/creative-broadcast/gpu").is_dir():
             try:
                 ort.preload_dlls(directory="", msvc=False)
             except Exception as exc:
