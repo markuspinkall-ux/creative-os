@@ -5,8 +5,8 @@ name: Regionen-Sammelstelle bereitstellen
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths: [tools/regionen-worker/**]
+    branches: [main, claude/regionen]
+    paths: [tools/regionen-worker/**, .github/workflows/regionen-worker.yml]
 concurrency:
   group: regionen-worker
   cancel-in-progress: false
