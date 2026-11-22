@@ -23,7 +23,8 @@
       "Startmenü: Den Ordner „Gibeon OS Suite“ gibt es nicht mehr – alle Apps stehen jetzt ganz normal alphabetisch im Startmenü",
       "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt",
       "Studio: Neuer Knopf „Broadcast (Mikrofon & Kamera)“ rechts unter den Einstellungen – öffnet Broadcast direkt aus Studio",
-      "Studio: Die Spalten links und rechts lassen sich schmaler oder breiter ziehen (am Griff zwischen den Spalten, Doppelklick setzt zurück). Der Inhalt passt sich an, die Breite bleibt gespeichert"
+      "Studio: Die Spalten links und rechts lassen sich schmaler oder breiter ziehen (am Griff zwischen den Spalten, Doppelklick setzt zurück). Der Inhalt passt sich an, die Breite bleibt gespeichert",
+      "Capture zeigt jetzt nur noch echte Capture-Karten an – z. B. Elgato oder AVerMedia Live Gamer Mini, je nachdem, was angeschlossen ist. Webcams und virtuelle Kameras tauchen dort nicht mehr auf"
     ],
     "behoben": [
       "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt",

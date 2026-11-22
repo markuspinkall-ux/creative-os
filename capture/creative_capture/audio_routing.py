@@ -81,3 +81,57 @@ def matching_audio(video_id, candidates):
         return matches[0] if len(matches) == 1 else ''
     except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError):
         return ''
+
+
+# ---- Nur Capture-Karten (keine Webcams) -----------------------------------------------------------
+# Hersteller, die (fast) nur Capture-Karten bauen bzw. deren Karten hier gemeint sind
+CAPTURE_VENDORS = {
+    "0fd9": "Elgato",            # HD60 S/X, Cam Link, 4K60 S+/X … (Stream Decks haben kein Video)
+    "07ca": "AVerMedia",         # Live Gamer Mini (GC311), Portable, Ultra …
+    "534d": "MacroSilicon",      # günstige HDMI-Grabber („USB Video“)
+    "2935": "Magewell",
+    "1edb": "Blackmagic",
+    "1164": "Yuan",
+    "345f": "UGREEN/Genki",
+}
+CAPTURE_PCI_VENDORS = {"0x1cfa": "Elgato", "0x1461": "AVerMedia", "0x1cd7": "Magewell", "0x12ab": "Yuan"}
+CAPTURE_WORDS = ("capture", "cam link", "hd60", "4k60", "live gamer", "gc311", "gc5", "gc3", "grabber",
+                 "hdmi", "usb video", "game capture", "magewell", "decklink")
+WEBCAM_WORDS = ("webcam", "integrated", "facetime", "c920", "c922", "brio", "kiyo", "streamcam", "ir camera")
+
+
+def _read(p):
+    try:
+        return Path(p).read_text().strip()
+    except OSError:
+        return ""
+
+
+def capture_card(device, sysfs=Path('/sys/class/video4linux')):
+    """Ist /dev/videoN eine Capture-Karte (und keine Webcam)? Rückgabe: Herstellername oder ''."""
+    name = Path(str(device)).name
+    if not re.fullmatch(r'video\d+', name):
+        return ''
+    node = sysfs / name
+    label = _read(node / 'name').lower()
+    if any(w in label for w in ("gibeon kamera", "orbit kamera", "creative kamera", "obs", "virtuelle", "dummy", "loopback")):
+        return ''
+    try:
+        dev = (node / 'device').resolve(strict=True)
+    except (OSError, RuntimeError):
+        dev = None
+    if dev is not None:
+        for d in (dev, *dev.parents):
+            vid = _read(d / 'idVendor').lower()
+            if vid:
+                if vid in CAPTURE_VENDORS:
+                    return CAPTURE_VENDORS[vid]
+                break
+            ven = _read(d / 'vendor').lower()
+            if ven and (d / 'class').exists():
+                if ven in CAPTURE_PCI_VENDORS:
+                    return CAPTURE_PCI_VENDORS[ven]
+                break
+    if any(w in label for w in WEBCAM_WORDS):
+        return ''
+    return 'Capture-Karte' if any(w in label for w in CAPTURE_WORDS) else ''

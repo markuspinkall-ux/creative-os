@@ -105,6 +105,12 @@ class Capture(QObject):
         except (TypeError, ValueError, UnicodeDecodeError):
             return ""
 
+    @Slot("QVariant", result=bool)
+    def isCaptureCard(self, value):
+        """Nur Capture-Karten (Elgato, AVerMedia Live Gamer Mini usw.) – Webcams nicht."""
+        from .audio_routing import capture_card
+        return bool(capture_card(self.deviceKey(value)))
+
     @Slot(str, result=int)
     def channelCount(self, source):
         try:
