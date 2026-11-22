@@ -8,7 +8,7 @@ import Creative
 Window {
     id: win
 
-    width: shots.hasImage ? Math.max(820, Math.min(1280, shots.imageWidth + 80)) : 680
+    width: shots.hasImage ? Math.max(1040, Math.min(1280, shots.imageWidth + 80)) : 680
     height: shots.hasImage ? Math.max(560, Math.min(860, shots.imageHeight + 180)) : 230
     minimumWidth: 640
     minimumHeight: 200
@@ -82,9 +82,12 @@ Window {
         anchors.right: parent.right
         height: 60
         color: Theme.footer
+        // Schmales Fenster: Beschriftungen weglassen, damit sich die Knöpfe nicht überlappen
+        readonly property bool compact: shots.hasImage && width < 1080
 
         Row {
             id: leftTools
+            objectName: "leftTools"
             x: 14
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
@@ -100,7 +103,7 @@ Window {
                     anchors.centerIn: parent
                     spacing: 7
                     SvgIcon { anchors.verticalCenter: parent.verticalCenter; name: "plus-dark"; size: 15 }
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Neu"; color: Theme.accentText; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Neu"; visible: !toolbar.compact; color: Theme.accentText; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
                 }
                 MouseArea { id: nm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: shots.newCapture() }
                 Accessible.role: Accessible.Button
@@ -119,7 +122,7 @@ Window {
                     anchors.centerIn: parent
                     spacing: 7
                     Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 12; height: 12; radius: 6; color: "#ff4d5e" }
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Aufnehmen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Aufnehmen"; visible: !toolbar.compact; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
                 }
                 MouseArea { id: rcm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: shots.startRecording() }
                 Accessible.role: Accessible.Button
@@ -181,6 +184,7 @@ Window {
                     SvgIcon { anchors.verticalCenter: parent.verticalCenter; name: "timer"; size: 15 }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: !toolbar.compact || shots.delay > 0
                         text: shots.delay ? shots.delay + " s" : "Sofort"
                         color: Theme.text
                         font.family: Theme.fontFamily
@@ -213,12 +217,27 @@ Window {
             }
         }
 
-        // Editor-Werkzeuge (nur mit Bild)
-        Row {
-            id: editTools
+        // Editor-Werkzeuge (nur mit Bild). Sie liegen in einem eigenen Bereich zwischen links und
+        // rechts: Ist das Fenster zu schmal, wird dieser Bereich wischbar statt die Knöpfe rechts
+        // (Kopieren, Speichern, Mehr) zu überdecken.
+        Flickable {
+            id: editArea
+            objectName: "editArea"
             visible: shots.hasImage
             anchors.left: leftTools.right
-            anchors.leftMargin: 16
+            anchors.leftMargin: toolbar.compact ? 8 : 16
+            anchors.right: rightTools.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            height: 40
+            clip: true
+            contentWidth: editTools.width
+            contentHeight: height
+            interactive: contentWidth > width
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.HorizontalFlick
+        Row {
+            id: editTools
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
             Rectangle { width: 1; height: 26; anchors.verticalCenter: parent.verticalCenter; color: Theme.hairline }
@@ -246,8 +265,11 @@ Window {
             IconButton { width: 38; height: 38; icon: "undo"; iconSize: 17; label: "Rückgängig (Strg+Z)"; opacity: win.strokes.length ? 1 : 0.4; onClicked: win.undo() }
             IconButton { width: 38; height: 38; icon: "redo"; iconSize: 17; label: "Wiederholen (Strg+Y)"; opacity: win.redoStack.length ? 1 : 0.4; onClicked: win.redo() }
         }
+        }
 
         Row {
+            id: rightTools
+            objectName: "rightTools"
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
