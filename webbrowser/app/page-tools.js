@@ -45,6 +45,11 @@ function readerPage(art, look) {
   const muted = light ? '#5b667e' : '#8f9ab3';
   const accent = (look && look.accentColor) || '#8fb3ff';
   // Inhalt kommt aus der Seite – Skripte sind entfernt, zusätzlich verbietet die CSP alles Ausführbare
+  // Steht die Überschrift schon im Artikel, nicht doppelt zeigen
+  const norm = (t) => String(t || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  let body = String(art.html || '');
+  const h1 = /^\s*(?:<[^h][^>]*>\s*)*<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(body);
+  if (h1 && norm(h1[1]) === norm(art.title)) body = body.replace(h1[0], h1[0].replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, ''));
   return `<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'">
 <title>${esc(art.title)} – Leseansicht</title>
@@ -59,7 +64,7 @@ pre,code{font-size:15px;background:${light ? '#e3e9f2' : '#1c2029'};border-radiu
 .orig{font:13px Arial,sans-serif;color:${muted};margin-top:48px}
 </style></head><body><main>
 <div class="site">${esc(art.site)}</div><h1>${esc(art.title)}</h1>
-${art.html}
+${body}
 <p class="orig">Original: <a href="${esc(art.url)}">${esc(art.url)}</a></p>
 </main></body></html>`;
 }
