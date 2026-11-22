@@ -12,7 +12,8 @@
       "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme",
       "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü",
       "Fenster öffnen sich jetzt dynamisch: Sie wachsen aus dem Symbol heraus, auf das du geklickt hast (Startmenü oder Taskleiste), schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück und kommen beim Wiederherstellen von dort wieder heraus",
-      "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler"
+      "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler",
+      "Autostart: Rechtsklick auf eine App im Startmenü › „Beim Anmelden starten“ – die App öffnet sich dann nach jeder Anmeldung. Gilt auch für Programme, die das selbst anbieten (z. B. Steam oder Discord „mit dem System starten“)"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",

@@ -333,6 +333,7 @@ Item {
                             appMenu.desktopId = row.desktopId
                             appMenu.appName = row.name
                             appMenu.pinned = apps.isPinned(row.desktopId)
+                            appMenu.autostart = apps.isAutostart(row.desktopId)
                             appMenu.confirming = false
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
@@ -524,6 +525,7 @@ Item {
             property string desktopId: ""
             property string appName: ""
             property bool pinned: false
+            property bool autostart: false
             property bool confirming: false
             visible: false
             z: 3
@@ -585,6 +587,15 @@ Item {
                     active: !appMenu.pinned
                     label: appMenu.pinned ? "In der Taskleiste angeheftet" : "An die Taskleiste anheften"
                     onTriggered: { apps.pin(appMenu.desktopId); appMenu.visible = false }
+                }
+                MenuRow {
+                    objectName: "autostartRow"
+                    icon: appMenu.autostart ? "check" : "power"
+                    label: appMenu.autostart ? "Startet beim Anmelden – ausschalten" : "Beim Anmelden starten (Autostart)"
+                    onTriggered: {
+                        apps.setAutostart(appMenu.desktopId, !appMenu.autostart)
+                        appMenu.visible = false
+                    }
                 }
                 MenuRow {
                     objectName: "hideRow"
