@@ -77,7 +77,7 @@ def outputs():
         .replace("CustomCursorColor=143,179,255", "CustomCursorColor=61,111,224") \
         .replace("CustomCursorTextColor=18,21,27", "CustomCursorTextColor=255,255,255")
     files[ROOT / "theme/konsole/CreativePorzellan.profile"] = prof
-    # Hintergrundbilder (Schreibtisch, Anmeldung) baut seit „Vivid Venus“ tools/venus-wallpaper.py
+    # Hintergrundbilder (Schreibtisch, Anmeldung) baut seit „Emerald Earth“ tools/earth-wallpaper.py
     # für beide Designs selbst – hier nicht mehr überschreiben.
     return files
 

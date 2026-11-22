@@ -1,8 +1,9 @@
 [
   {
     "datum": "2026-11-22",
-    "titel": "Desktop als Video aufnehmen, Podcasts mit Kacheln, Studio aufgeräumt, maximierte Fenster ohne Rand",
+    "titel": "Gibeon OS 3 „Emerald Earth“: neuer Hintergrund, Desktop als Video aufnehmen, Podcasts mit Kacheln, Studio aufgeräumt",
     "neu": [
+      "Neue Version: Gibeon OS 3 „Emerald Earth“ – mit neuem Hintergrund für Graphit und Porzellan: die Erde aus dem All mit grünen Kontinenten, ziehenden Wolken, leuchtenden Städten auf der Nachtseite und dem Mond. Wie bei „Vivid Venus“ bewegt sich das Bild sanft (Wolken, funkelnde Sterne, die Rakete von der Venus). Auch Anmeldung, Sperrbildschirm, Startauswahl und die Startseite des Browsers zeigen das neue Motiv",
       "Shots nimmt jetzt auch Videos auf: Druck-Taste und dann „Aufnehmen“ (oder Taste R), kurz den Bildschirm wählen – Bild, Mauszeiger und der Ton vom Desktop werden aufgenommen. Eine kleine Leiste zeigt die Laufzeit, „Stopp“ beendet die Aufnahme. Videos landen unter Videos › Bildschirmaufnahmen",
       "Dateien und Ordner auf dem Schreibtisch lassen sich jetzt genau wie die Widgets mit der Maus auf einen anderen Monitor ziehen – dort zeigt ein Umriss, wo sie landen. Die Plätze bleiben gespeichert",
       "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern",
@@ -15,7 +16,9 @@
       "Die Ablage lässt sich ebenfalls auf einen anderen Monitor ziehen; „Auf Monitor verschieben“ im Rechtsklick-Menü ist dafür weggefallen",
       "Podcasts lassen sich wieder per Texteingabe suchen (Enter im Suchfeld). Ein Klick auf eine Kachel öffnet den Podcast mit Cover und allen Folgen; „Neueste abspielen“, Folgen und Downloads direkt dort",
       "Die überflüssigen Hinweistexte mitten im Player sind weg",
-      "Studio aufgeräumt: der Chat sitzt jetzt rechts über „Live gehen“ und „Aufnehmen“, die Umfrage hat links unter den Quellen einen eigenen Platz. Die Plattformen (Twitch, YouTube, Kick, TikTok, eigener Server) richtest du in den Einstellungen unter „Plattformen“ ein – rechts steht nur noch, wohin gesendet wird"
+      "Studio aufgeräumt: der Chat sitzt jetzt rechts über „Live gehen“ und „Aufnehmen“, die Umfrage hat links unter den Quellen einen eigenen Platz. Die Plattformen (Twitch, YouTube, Kick, TikTok, eigener Server) richtest du in den Einstellungen unter „Plattformen“ ein – rechts steht nur noch, wohin gesendet wird",
+      "Startmenü: Den Ordner „Gibeon OS Suite“ gibt es nicht mehr – alle Apps stehen jetzt ganz normal alphabetisch im Startmenü",
+      "OBS Studio ist entfernt – aufgenommen und gestreamt wird jetzt mit Studio. Damit entfällt auch die zweite virtuelle Kamera „OBS Virtuelle Kamera“; die „Gibeon Kamera“ von Broadcast bleibt"
     ],
     "behoben": [
       "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt",

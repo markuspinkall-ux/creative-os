@@ -55,7 +55,7 @@ OWN = {
                        "Rechteck, Fenster, Vollbild oder Freihand – mit Stift, Textmarker, Pfeil und Zuschneiden.", "Graphics"),
     "creative-broadcast": ("Broadcast", "creative-broadcast", "Rauschfreies Mikrofon und virtueller Hintergrund",
                            "KI-Rauschentfernung (DeepFilterNet) und virtueller Greenscreen (Robust Video Matting) als "
-                           "virtuelle Kamera für Discord, Teams, Zoom und OBS.", "AudioVideo"),
+                           "virtuelle Kamera für Discord, Teams, Zoom und Studio.", "AudioVideo"),
     "creative-settings": ("Systemsteuerung", "creative-settings", "Alle Einstellungen von Gibeon OS",
                           "Netzwerk, Bildschirme, Ton, Laufwerke, Drucker, Mein Server, Aussehen und Updates.", "Settings"),
 }

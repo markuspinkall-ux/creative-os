@@ -1,9 +1,8 @@
 {
-  "nummer": 2,
-  "codename": "Vivid Venus",
-  "kurz": "venus",
+  "nummer": 3,
+  "codename": "Emerald Earth",
+  "kurz": "earth",
   "naechste": [
-    "Easygoing Earth",
     "Mellow Mars",
     "Jolly Jupiter",
     "Shining Saturn",
@@ -17,6 +16,7 @@
     "Gallant Ganymede"
   ],
   "vorherige": [
-    "Mighty Mercury"
+    "Mighty Mercury",
+    "Vivid Venus"
   ]
 }

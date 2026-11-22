@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
-  <!-- Gibeon OS 2 „Vivid Venus“ – Ebene für den bewegten Hintergrund (porzellan) -->
+  <!-- Gibeon OS 3 „Emerald Earth“ – Ebene für den bewegten Hintergrund (porzellan) -->
   <defs><linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#dde5f3"/><stop offset="1" stop-color="#d3dbeb"/>
     </linearGradient>
@@ -10,13 +10,13 @@
       <stop offset="1" stop-color="#ffb07a" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="haze" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0.55" stop-color="#ffd59a" stop-opacity="0.3"/>
-      <stop offset="0.75" stop-color="#ffd59a" stop-opacity="0.105"/>
-      <stop offset="1" stop-color="#ffd59a" stop-opacity="0"/>
+      <stop offset="0.55" stop-color="#5cc4f2" stop-opacity="0.3"/>
+      <stop offset="0.75" stop-color="#5cc4f2" stop-opacity="0.105"/>
+      <stop offset="1" stop-color="#5cc4f2" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="venus" cx="0.25" cy="0.22" r="0.95">
-      <stop offset="0" stop-color="#fff1cf"/><stop offset="0.35" stop-color="#f4d9a0"/>
-      <stop offset="0.7" stop-color="#e2b46e"/><stop offset="1" stop-color="#b9844a"/>
+    <radialGradient id="erde" cx="0.25" cy="0.22" r="0.95">
+      <stop offset="0" stop-color="#4fb6d8"/><stop offset="0.3" stop-color="#1f86b5"/>
+      <stop offset="0.65" stop-color="#14608f"/><stop offset="1" stop-color="#08263d"/>
     </radialGradient>
     <radialGradient id="night" cx="0.85" cy="0.85" r="0.8">
       <stop offset="0" stop-color="rgb(60,52,46)" stop-opacity="0.85"/>
