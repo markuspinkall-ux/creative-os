@@ -14,6 +14,7 @@ sauber beendet (EOS), damit die Datei vollständig ist.
 
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -48,6 +49,8 @@ def has(element):
         return False
 
 
+# gst-launch nimmt die Pipeline Wort für Wort (ein Wort mit Leerzeichen, z. B. der Dateiname,
+# bleibt dabei ein Wort) – deshalb mit shlex aufteilen statt als eine lange Zeichenkette.
 def build_pipeline(fd, node, out, audio, kbps=12000, test=False):
     """gst-launch-Beschreibung und tatsächlicher Dateiname (ohne H.264 → WebM)."""
     venc = next((e for e in VIDEO_ENCODERS if has(e[0])), None)
@@ -83,7 +86,7 @@ def selftest(out, seconds=4):
     """Pipeline mit Testbild und Testton ein paar Sekunden laufen lassen und sauber beenden."""
     import time
     desc, out = build_pipeline(0, 0, out, True, test=True)
-    proc = subprocess.Popen(["gst-launch-1.0", "-e", "-q", desc], stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(["gst-launch-1.0", "-e", "-q", *shlex.split(desc)], stderr=subprocess.PIPE, text=True)
     time.sleep(seconds)
     proc.send_signal(signal.SIGINT)
     try:
@@ -178,7 +181,7 @@ def main(argv):
             return
         desc, state["file"] = build_pipeline(fd, node, out, audio)
         try:
-            state["proc"] = subprocess.Popen(["gst-launch-1.0", "-e", "-q", desc],
+            state["proc"] = subprocess.Popen(["gst-launch-1.0", "-e", "-q", *shlex.split(desc)],
                                              pass_fds=(fd,), stdout=subprocess.DEVNULL,
                                              stderr=subprocess.PIPE, text=True)
         except OSError as e:
