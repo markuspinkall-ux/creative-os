@@ -1,0 +1,61 @@
+name: Regionen-Sammelstelle bereitstellen
+# Lädt tools/regionen-worker (Cloudflare Worker + KV) in das Cloudflare-Konto hoch.
+# Braucht die Repo-Secrets CLOUDFLARE_API_TOKEN (Vorlage „Edit Cloudflare Workers“) und
+# REGIONEN_SCHLUESSEL (Schlüssel fürs Entwickler-Widget). Danach steht die Adresse in der Zusammenfassung.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [tools/regionen-worker/**]
+concurrency:
+  group: regionen-worker
+  cancel-in-progress: false
+jobs:
+  bereitstellen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Zugang vorhanden?
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "::error::Secret CLOUDFLARE_API_TOKEN fehlt"; exit 1; }
+      - name: Probe (Zählen, Schlüssel, keine IP)
+        run: node tests/regionen_worker_probe.mjs
+      - name: Speicher (KV) anlegen oder wiederfinden
+        working-directory: tools/regionen-worker
+        run: |
+          npx -y wrangler@4 kv namespace list > /tmp/kv.json
+          id=$(python3 -c 'import json;d=json.load(open("/tmp/kv.json"));print(next((n["id"] for n in d if n["title"] in ("gibeon-regionen","gibeon-regionen-ZAHLEN")), ""))')
+          if [ -z "$id" ]; then
+            npx -y wrangler@4 kv namespace create gibeon-regionen | tee /tmp/kv-neu.txt
+            npx -y wrangler@4 kv namespace list > /tmp/kv.json
+            id=$(python3 -c 'import json;d=json.load(open("/tmp/kv.json"));print(next(n["id"] for n in d if n["title"] in ("gibeon-regionen","gibeon-regionen-ZAHLEN")))')
+          fi
+          echo "KV: $id"
+          sed -i "s/KV_ID/$id/" wrangler.toml
+      - name: Worker hochladen
+        working-directory: tools/regionen-worker
+        run: |
+          npx -y wrangler@4 deploy 2>&1 | tee /tmp/deploy.txt
+          url=$(grep -oE "https://[a-z0-9.-]+\.workers\.dev" /tmp/deploy.txt | head -n 1)
+          echo "URL=$url" >> "$GITHUB_ENV"
+      - name: Schlüssel fürs Widget
+        if: env.REGIONEN_SCHLUESSEL != ''
+        env:
+          REGIONEN_SCHLUESSEL: ${{ secrets.REGIONEN_SCHLUESSEL }}
+        working-directory: tools/regionen-worker
+        run: printf '%s' "$REGIONEN_SCHLUESSEL" | npx -y wrangler@4 secret put SCHLUESSEL
+      - name: Läuft sie?
+        env:
+          REGIONEN_SCHLUESSEL: ${{ secrets.REGIONEN_SCHLUESSEL }}
+        run: |
+          sleep 5
+          curl -s -o /dev/null -w "ohne Schlüssel: %{http_code}\n" "$URL/zahlen"
+          curl -sf -H "Authorization: Bearer $REGIONEN_SCHLUESSEL" "$URL/zahlen" && echo
+          echo "### Regionen-Sammelstelle: $URL" >> "$GITHUB_STEP_SUMMARY"

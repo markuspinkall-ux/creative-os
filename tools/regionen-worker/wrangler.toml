@@ -1,0 +1,10 @@
+# Gibeon OS – Regionen-Sammelstelle. Wird vom Workflow „Regionen-Sammelstelle bereitstellen“
+# hochgeladen; die KV-Kennung trägt der Workflow selbst ein.
+name = "gibeon-regionen"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "ZAHLEN"
+id = "KV_ID"
