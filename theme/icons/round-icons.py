@@ -11,10 +11,12 @@ import sys
 from pathlib import Path
 
 TILE = "#232836"
+# Runde Fläche: deutlich dunkler als das Startmenü, damit der Kreis gut zu sehen ist
+CIRCLE_FILL = "#10131a"
 TEXT = "#dce6ff"
 # Kachel-Rechteck (64er-Symbol): fill="#232836", meist mit stroke="#8fb3ff"
 TILE_RECT = re.compile(r'<rect\b(?=[^>]*\bfill="#(?:232836|1c2029)")(?=[^>]*\bwidth="(?:5[4-8]|6[0-4])")[^>]*?/?>(?:\s*</rect>)?', re.I)
-CIRCLE = f'<circle cx="32" cy="32" r="29" fill="{TILE}"/>'
+CIRCLE = f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_FILL}"/>'
 # Akzente im Symbol → Schriftfarbe (Aussparungen #12151b/#232836 bleiben)
 ACCENTS = re.compile(r"#8fb3ff|#ffb07a|#6fdcc0|#e5484d|#9f7aea", re.I)
 
@@ -28,6 +30,8 @@ def roundify(text):
     if not is_tile(text):
         return text
     text = TILE_RECT.sub(CIRCLE, text, count=1)
+    # Aussparungen in Kachelfarbe gehen mit der Fläche mit
+    text = re.sub(TILE, CIRCLE_FILL, text, flags=re.I)
     return ACCENTS.sub(TEXT, text)
 
 

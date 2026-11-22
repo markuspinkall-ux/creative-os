@@ -14,6 +14,35 @@
     ]
   },
   {
+    "datum": "2026-11-22",
+    "titel": "Podcasts im Player: Kacheln und Suche",
+    "neu": [
+      "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern"
+    ],
+    "verbessert": [
+      "Podcasts lassen sich wieder per Texteingabe suchen (Enter im Suchfeld). Ein Klick auf eine Kachel öffnet den Podcast mit Cover und allen Folgen; „Neueste abspielen“, Folgen und Downloads direkt dort",
+      "Die überflüssigen Hinweistexte mitten im Player sind weg"
+    ],
+    "behoben": [
+      "Podcast-Suche: Ergebnisse kommen jetzt zuverlässig an, statt dass die Ansicht nur neu lädt"
+    ]
+  },
+  {
+    "datum": "2026-11-22",
+    "titel": "Desktop als Video aufnehmen, Uhr in der Taskleiste, maximierte Fenster ohne Rand",
+    "neu": [
+      "Shots nimmt jetzt auch Videos auf: Druck-Taste und dann „Aufnehmen“ (oder Taste R), kurz den Bildschirm wählen – Bild, Mauszeiger und der Ton vom Desktop werden aufgenommen. Eine kleine Leiste zeigt die Laufzeit, „Stopp“ beendet die Aufnahme. Videos landen unter Videos › Bildschirmaufnahmen",
+      "Dateien und Ordner auf dem Schreibtisch lassen sich jetzt genau wie die Widgets mit der Maus auf einen anderen Monitor ziehen – dort zeigt ein Umriss, wo sie landen. Die Plätze bleiben gespeichert"
+    ],
+    "verbessert": [
+      "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
+      "Ist ein Fenster maximiert, fährt die obere Leiste nach oben weg: das Fenster nutzt den ganzen Platz bis zur Taskleiste, ohne Abstand an den Seiten. Geht die Maus an den oberen Rand, fährt die Leiste mit dem Tray herein und verschwindet wieder, wenn die Maus weggeht. Nur im Vollbild wird auch die Taskleiste verdeckt",
+      "Die runden Flächen hinter den App-Symbolen sind dunkler und heben sich besser vom Startmenü ab. Auch Symbole fremder Apps (z. B. selbst gebaute) bekommen automatisch diese runde Fläche",
+      "Die Ablage lässt sich ebenfalls auf einen anderen Monitor ziehen; „Auf Monitor verschieben“ im Rechtsklick-Menü ist dafür weggefallen"
+    ],
+    "behoben": []
+  },
+  {
     "datum": "2026-11-21",
     "titel": "Neu: Studio zum Aufnehmen und Streamen, Android-Apps mit Fensterrahmen, Startmenü aufgeräumt",
     "neu": [

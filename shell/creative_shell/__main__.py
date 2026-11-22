@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Property, QFileSystemWatcher, QMetaObject, QObject, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QRegion, QWindow
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuickControls2 import QQuickStyle
 
@@ -217,6 +217,34 @@ class ShellController(QObject):
         self._app.screenAdded.connect(self._add_screen)
         self._app.screenRemoved.connect(self._remove_screen)
 
+    # ---- Obere Leiste bei maximierten Fenstern einfahren -----------------------------------
+    # Ist auf einem Monitor ein Fenster maximiert (oder im Vollbild), gibt die obere Leiste dort
+    # ihren Platz frei und fährt nach oben weg – das Fenster bekommt den ganzen Platz bis zur
+    # Taskleiste. Geht die Maus an den oberen Rand, fährt die Leiste wieder herein (Topbar.qml).
+    def watch_tasks(self, tasks):
+        self._tasks = tasks
+        self._top_hidden = set()
+        tasks.revisionChanged.connect(self._update_topbars)
+
+    def _update_topbars(self):
+        tasks = getattr(self, "_tasks", None)
+        if tasks is None:
+            return
+        wanted = tasks.maximized_outputs() & set(self._surfaces)
+        if wanted == self._top_hidden:
+            return
+        for name, entry in self._surfaces.items():
+            win = entry.get("top")
+            if win is not None:
+                win.setProperty("autoHide", name in wanted)
+        self._top_hidden = wanted
+
+    @Slot(QObject, int, int, int, int)
+    def setInputRect(self, window, x, y, w, h):
+        """Nur dieser Bereich der Fläche nimmt die Maus an (der Rest geht ans Fenster darunter)."""
+        if isinstance(window, QWindow):
+            window.setMask(QRegion(x, y, w, h) if w > 0 and h > 0 else QRegion())
+
     # ---- Monitore -----------------------------------------------------------
     def _add_screen(self, screen):
         name = screen.name()
@@ -237,11 +265,14 @@ class ShellController(QObject):
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
         screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
         self.screensChanged.emit()
+        self._top_hidden = set()            # neue Leiste: Zustand neu setzen
+        self._update_topbars()
 
     def _remove_screen(self, screen):
         entry = self._surfaces.pop(screen.name(), None)
         if not entry:
             return
+        getattr(self, "_top_hidden", set()).discard(screen.name())
         for key in ("bg", "bar", "top") + SURFACES:
             win = entry.get(key)
             if win is not None:
@@ -516,6 +547,9 @@ class ShellController(QObject):
     startMenuOpenOn = Property(str, lambda self: self._open["start"], notify=openChanged)
     quickPanelOpenOn = Property(str, lambda self: self._open["panel"], notify=openChanged)
     trashMenuOpenOn = Property(str, lambda self: self._open["trash"], notify=openChanged)
+    # Monitor, auf dem gerade ein Menü aus der oberen Leiste offen ist (dann bleibt sie draußen)
+    trayMenuOpenOn = Property(str, lambda self: next((self._open[k] for k in TRAY_POPUPS
+                                                      if self._open.get(k)), ""), notify=openChanged)
     messengerOpenOn = Property(str, lambda self: self._open["messenger"], notify=openChanged)
     panelFocus = Property(str, lambda self: self._panel_focus, notify=openChanged)
     trayMenuKey = Property(str, lambda self: self._tray_menu_key, notify=openChanged)
@@ -681,6 +715,7 @@ def main():
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)
+    shell.watch_tasks(tasks)
     shell.start()
     # Anmelde-Ton, sobald der Desktop gezeichnet ist (einmal pro Sitzung)
     QTimer.singleShot(1500, play_login_sound)

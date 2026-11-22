@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Window
 import Creative
 
-// Die Taskleiste: links Startmenü und Apps, Mitte „Gerade läuft“, rechts der Papierkorb.
-// Tray (WLAN, Ton, Bluetooth, Programme) und Uhrzeit sitzen in der oberen Leiste (Topbar.qml).
+// Die Taskleiste: links Startmenü und Apps, Mitte „Gerade läuft“, rechts Papierkorb und Uhr.
+// Der Tray (WLAN, Ton, Bluetooth, Programme) sitzt in der oberen Leiste (Topbar.qml).
 Item {
     id: root
 
@@ -189,10 +189,91 @@ Item {
             Accessible.name: "Gerade läuft: " + nowplaying.artist + " – " + nowplaying.title
         }
 
-        // Papierkorb ganz rechts (Tray, Uhrzeit und WLAN sitzen jetzt oben in der Leiste)
+        // Ganz rechts: Uhrzeit, Datum und Akku im Glasfeld – Klick öffnet den Kalender
+        Rectangle {
+            id: clockPill
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            width: clockRow.implicitWidth + 28
+            height: 34
+            radius: 17
+            // Nur ein Hauch Grau (10 %) – eine leichte Abgrenzung zur Taskleiste
+            readonly property color base: Theme.glassSolid
+            color: Qt.rgba(base.r, base.g, base.b, clockMouse.containsMouse ? 0.22 : 0.10)
+            // Rand nur angedeutet, keine Lichtkante – bloß eine leichte Nuance
+            border.color: Theme.tint(0.05)
+            border.width: 1
+            MouseArea {
+                id: clockMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: shell.toggleCalendar(root.screenName)
+            }
+            Row {
+                id: clockRow
+                anchors.centerIn: parent
+                spacing: 12
+                Text {
+                    id: clock
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
+                }
+                Text {
+                    id: date
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                }
+                // Akku (nur bei Laptops)
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: akku.present && widgetExtras.akkuInstalled
+                    spacing: 6
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: akku.percent + " %"
+                        color: akku.low ? Theme.flame : Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                    BatteryGlyph {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 24; height: 12
+                        level: akku.percent
+                        charging: akku.charging
+                        low: akku.low
+                    }
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: "Akku " + akku.percent + " Prozent, " + akku.statusText
+                }
+            }
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    const now = new Date()
+                    clock.text = Qt.formatTime(now, "HH:mm")
+                    // z. B. „Sa., 21. Nov.“
+                    date.text = now.toLocaleDateString(Qt.locale("de_DE"), "ddd, d. MMM")
+                }
+            }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Kalender – " + clock.text + ", " + date.text
+            Accessible.onPressAction: shell.toggleCalendar(root.screenName)
+        }
+
+        // Papierkorb vor der Uhr
         Rectangle {
             id: trashBtn
-            anchors.right: parent.right
+            anchors.right: clockPill.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             width: 40

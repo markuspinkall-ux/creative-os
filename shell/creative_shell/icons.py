@@ -5,8 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QSize, QUrl, Slot
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtCore import QObject, QRectF, QSize, Qt, QUrl, Slot
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtQuick import QQuickImageProvider
 
 FALLBACK = "application-x-executable"
@@ -78,6 +78,48 @@ class IconProvider(QQuickImageProvider):
         return pixmap
 
 
+# Runde Fläche hinter den App-Symbolen (wie in theme/icons/round-icons.py)
+CIRCLE_DARK = "#10131a"
+CIRCLE_LIGHT = "#d6dce6"
+CIRCLE_SCALE = 58 / 64     # Kreis wie bei den Gibeon-Symbolen (r = 29 im 64er-Raster)
+LOGO_SCALE = 0.60          # fremdes Logo: so groß, dass es ganz in den Kreis passt
+
+
+def wants_circle(icon_id):
+    """Fremde App-Symbole (keine Gibeon-Symbole, keine Android-Apps) bekommen die runde
+    Fläche, damit sie zu den übrigen Symbolen in Startmenü und Taskleiste passen."""
+    if not icon_id or creative_icon(icon_id):
+        return False
+    stem = os.path.splitext(os.path.basename(icon_id))[0].lower()
+    return not stem.startswith(("waydroid.", "creative-", "gibeon-"))
+
+
+def in_circle(pixmap, edge, light=None):
+    """Legt ein Symbol mittig in die runde Gibeon-Fläche."""
+    light = _LIGHT if light is None else light
+    out = QPixmap(edge, edge)
+    out.fill(Qt.GlobalColor.transparent)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    d = edge * CIRCLE_SCALE
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(CIRCLE_LIGHT if light else CIRCLE_DARK))
+    p.drawEllipse(QRectF((edge - d) / 2, (edge - d) / 2, d, d))
+    logo = edge * LOGO_SCALE
+    p.drawPixmap(QRectF((edge - logo) / 2, (edge - logo) / 2, logo, logo), pixmap,
+                 QRectF(0, 0, pixmap.width(), pixmap.height()))
+    p.end()
+    return out
+
+
+def render_app_icon(icon_id, edge):
+    """App-Symbol für Startmenü und Taskleiste: fremde Symbole in der runden Fläche."""
+    if wants_circle(icon_id):
+        return in_circle(render_icon(icon_id, edge), edge)
+    return render_icon(icon_id, edge)
+
+
 def render_icon(icon_id, edge):
     """Symbol als QPixmap (gleiche Suche wie der Bildlieferant)."""
     icon = None
@@ -121,8 +163,18 @@ class IconFiles(QObject):
 
     @Slot(str, result=str)
     def url(self, icon_id):
+        """Symbol so, wie es ist (z. B. für den Tray)."""
+        return self._file(icon_id or FALLBACK, False)
+
+    @Slot(str, result=str)
+    def app(self, icon_id):
+        """App-Symbol für Startmenü, Taskleiste und Ablage: fremde Symbole rund wie die eigenen."""
         icon_id = icon_id or FALLBACK
-        cached = self._urls.get(icon_id)
+        return self._file(icon_id, wants_circle(icon_id))
+
+    def _file(self, icon_id, circle):
+        key = ("rund:" if circle else "") + icon_id
+        cached = self._urls.get(key)
         if cached:
             return cached
         # Gibeon-Symbol samt Änderungszeit im Namen: ein neues Symbol (Update) ersetzt das alte sofort
@@ -131,12 +183,15 @@ class IconFiles(QObject):
             stamp = f"{override}:{os.path.getmtime(override)}" if override else ""
         except OSError:
             stamp = override
-        name = hashlib.sha1(f"{icon_id}|{stamp}".encode("utf-8", "replace")).hexdigest()[:20] + ".png"
+        name = hashlib.sha1(f"{key}|{stamp}|kreis2".encode("utf-8", "replace")).hexdigest()[:20] + ".png"
         path = self._dir / name
         if not path.exists():
             tmp = path.with_suffix(".tmp.png")
-            if render_icon(icon_id, self.EDGE).save(str(tmp), "PNG"):
+            pix = render_icon(icon_id, self.EDGE)
+            if circle:
+                pix = in_circle(pix, self.EDGE)
+            if pix.save(str(tmp), "PNG"):
                 os.replace(tmp, path)
         url = QUrl.fromLocalFile(str(path)).toString()
-        self._urls[icon_id] = url
+        self._urls[key] = url
         return url

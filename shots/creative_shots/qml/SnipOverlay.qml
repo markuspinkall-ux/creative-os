@@ -224,6 +224,27 @@ Window {
                 }
             }
             Rectangle { width: 1; height: 26; anchors.verticalCenter: parent.verticalCenter; color: Theme.hairline }
+            // Video: den Desktop aufnehmen (Aufnehmen → Stopp)
+            Rectangle {
+                id: recBtn
+                anchors.verticalCenter: parent.verticalCenter
+                width: recRow.implicitWidth + 22
+                height: 40
+                radius: 12
+                color: rm.pressed ? Theme.pressed : (rm.containsMouse ? Theme.hover : "transparent")
+                Row {
+                    id: recRow
+                    anchors.centerIn: parent
+                    spacing: 8
+                    Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 13; height: 13; radius: 6.5; color: "#ff4d5e" }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Aufnehmen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                }
+                MouseArea { id: rm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: shots.startRecording() }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Video aufnehmen (R)"
+                Accessible.onPressAction: shots.startRecording()
+            }
+            Rectangle { width: 1; height: 26; anchors.verticalCenter: parent.verticalCenter; color: Theme.hairline }
             IconButton { width: 40; height: 40; icon: "close"; iconSize: 15; label: "Abbrechen (Esc)"; onClicked: shots.cancel() }
         }
     }
@@ -246,6 +267,7 @@ Window {
     Shortcut { sequence: "2"; onActivated: shots.mode = "window" }
     Shortcut { sequence: "3"; onActivated: shots.mode = "screen" }
     Shortcut { sequence: "4"; onActivated: shots.mode = "free" }
+    Shortcut { sequence: "R"; onActivated: shots.startRecording() }
 
     Component.onCompleted: { showFullScreen(); requestActivate() }
 }

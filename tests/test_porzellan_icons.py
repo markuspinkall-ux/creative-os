@@ -42,7 +42,7 @@ def test_runde_symbole():
     spec.loader.exec_module(mod)
     tile = (ROOT / "studio" / "gibeon-studio.svg").read_text()
     out = mod.roundify(tile)
-    assert '<circle cx="32" cy="32" r="29" fill="#232836"/>' in out and "<rect x=\"4\"" not in out
+    assert '<circle cx="32" cy="32" r="29" fill="#10131a"/>' in out and "#232836" not in out.lower() and "<rect x=\"4\"" not in out
     assert "#8fb3ff" not in out.lower() and "#ffb07a" not in out.lower()     # nur Schriftfarbe
     glyph = (ROOT / "shell/creative_shell/qml/Creative/icons/lock.svg").read_text()
     assert mod.roundify(glyph) == glyph                                    # Strichsymbole bleiben

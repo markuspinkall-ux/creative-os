@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 MAX_FEED_BYTES = 16 * 1024 * 1024
 ATOM = "{http://www.w3.org/2005/Atom}"
+ITUNES = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 
 
 def web_url(url):
@@ -34,16 +35,51 @@ def document(url):
         return data, response.geturl()
 
 
+def _show(result):
+    url = result.get("feedUrl") or ""
+    if not web_url(url):
+        return None
+    art = result.get("artworkUrl600") or result.get("artworkUrl100") or ""
+    return dict(url=url, title=result.get("collectionName") or result.get("trackName") or "Podcast",
+                author=result.get("artistName", ""), image=art if web_url(art) else "")
+
+
 def search(term):
-    query = urlencode(dict(term=term, media="podcast", entity="podcast", country="DE", limit=40))
+    """Podcasts suchen (Apple-Podcast-Verzeichnis, frei zugänglich)."""
+    query = urlencode(dict(term=term, media="podcast", entity="podcast", country="DE", limit=50))
     data, _ = document(f"https://itunes.apple.com/search?{query}")
     shows = {}
-    for result in json.loads(data)["results"]:
-        url = result.get("feedUrl") or ""
-        if web_url(url):
-            shows.setdefault(url, dict(url=url, title=result["collectionName"],
-                                       author=result.get("artistName", "")))
+    for result in json.loads(data).get("results", []):
+        show = _show(result)
+        if show:
+            shows.setdefault(show["url"], show)
     return list(shows.values())
+
+
+def top(country="de", limit=40):
+    """Beliebte Podcasts (Charts) – als Kacheln beim Öffnen."""
+    data, _ = document(f"https://rss.applemarketingtools.com/api/v2/{country}/podcasts/top/{limit}/podcasts.json")
+    ids = [r.get("id") for r in json.loads(data).get("feed", {}).get("results", []) if r.get("id")]
+    if not ids:
+        return []
+    data, _ = document("https://itunes.apple.com/lookup?" + urlencode(dict(id=",".join(ids), entity="podcast",
+                                                                            country=country.upper())))
+    found = {}
+    for result in json.loads(data).get("results", []):
+        show = _show(result)
+        if show:
+            found[str(result.get("collectionId"))] = show
+    return [found[i] for i in ids if i in found]
+
+
+def _image(node):
+    if node is None:
+        return ""
+    it = node.find(f"{ITUNES}image")
+    if it is not None and web_url(it.get("href") or ""):
+        return it.get("href")
+    url = node.findtext("image/url") or ""
+    return url if web_url(url) else ""
 
 
 def playlist(show):
@@ -61,7 +97,9 @@ def playlist(show):
         if channel is None:
             raise ValueError("Diese Adresse liefert keinen Podcast-RSS-Feed.")
         if len(visited) == 1:
-            details = dict(show, title=channel.findtext("title") or show["title"])
+            details = dict(show, title=channel.findtext("title") or show.get("title") or "Podcast",
+                           author=show.get("author") or channel.findtext(f"{ITUNES}author") or "",
+                           image=show.get("image") or _image(channel))
         for item in channel.findall("item"):
             for enclosure in item.findall("enclosure"):
                 href = enclosure.get("url")
@@ -75,13 +113,23 @@ def playlist(show):
                 key = hashlib.sha256(f"{show['url']}\n{guid}".encode()).hexdigest()
                 episodes.setdefault(key, dict(
                     key=key, url=media, mime=mime, title=item.findtext("title") or "Unbenannte Folge",
-                    date=item.findtext("pubDate") or "", show=details["title"],
+                    date=_date(item.findtext("pubDate") or ""), show=details["title"],
+                    image=_image(item) or details.get("image", ""),
                 ))
                 break
         next_page = channel.find(f"{ATOM}link[@rel='next']")
         href = next_page.get("href") if next_page is not None else None
         url = urljoin(base, href) if href else None
     return details, list(episodes.values())
+
+
+def _date(text):
+    """„Tue, 18 Nov 2026 06:00:00 +0000“ → „18.11.2026“"""
+    from email.utils import parsedate_to_datetime
+    try:
+        return parsedate_to_datetime(text).strftime("%d.%m.%Y")
+    except (TypeError, ValueError, IndexError):
+        return text
 
 
 def download(episode, directory):

@@ -95,9 +95,41 @@ step(500, suchen)
 step(15000, lambda: (print(f"Suche: {len(ytm.results)} Treffer"),
                      [print("  ·", r["title"], "|", r["subtitle"][:60], "|", r["videoId"]) for r in ytm.results[:5]],
                      shot("player-ytmusic-suche.png")))
-step(500, lambda: win.setProperty("section", "podcast"))
-step(500, lambda: pods.search("Wissen"))
-step(8000, lambda: (print(f"Podcasts: {len(pods.catalogue)} Treffer"), shot("player-podcast.png")))
+def podview():
+    from PySide6.QtCore import QObject, QMetaObject, Q_ARG
+    return win.findChild(QObject, "podcastView"), QMetaObject, Q_ARG
+
+
+def pod_suchen():
+    v, meta, arg = podview()
+    if v is None:
+        fails.append("Podcast-Ansicht fehlt")
+        return
+    # wie eine Texteingabe im Suchfeld + Enter
+    meta.invokeMethod(v, "runSearch", arg("QVariant", "Gaming"))
+
+
+def pod_oeffnen():
+    if pods.catalogue:
+        pods.openShow(pods.catalogue[0])
+
+
+def pod_check(name, what, ok):
+    print(f"Podcasts {what}")
+    if not ok:
+        fails.append(f"Podcasts: {what}")
+    shot(name)
+
+
+step(500, lambda: win.setProperty("section", "podcast"))      # lädt die Charts als Kacheln
+step(9000, lambda: pod_check("player-podcast.png", f"Charts: {len(pods.catalogue)} Kacheln, "
+                             f"mit Bild: {sum(1 for c in pods.catalogue if c.get('image'))}", len(pods.catalogue) > 0))
+step(500, pod_suchen)
+step(8000, lambda: pod_check("player-podcast-suche.png", f"Suche „Gaming“: {len(pods.catalogue)} Treffer "
+                             f"({pods.heading})", len(pods.catalogue) > 0 and "Gaming" in pods.heading))
+step(500, pod_oeffnen)
+step(10000, lambda: pod_check("player-podcast-folgen.png", f"Folgen von „{pods.selected.get('title')}“: "
+                              f"{len(pods.playlist)}", len(pods.playlist) > 0))
 run_steps()
 app.exec()
 sys.exit(1 if fails else 0)

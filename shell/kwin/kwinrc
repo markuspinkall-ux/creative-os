@@ -7,8 +7,9 @@ Meta=org.creativeos.Shell,/Shell,org.creativeos.Shell,toggleStartMenu
 
 [Plugins]
 creative-tasksEnabled=true
-# Maximierte Fenster: kleiner Abstand rundum (auch zur Taskleiste) und runde Ecken
-creative-abstandEnabled=true
+# Maximierte Fenster füllen den ganzen Platz bis zur Taskleiste – ohne Abstand
+# (das Skript „creative-abstand“ liegt noch bei, ist aber abgeschaltet)
+creative-abstandEnabled=false
 # Fluid-Glas: Hintergrund hinter Leisten und Startmenü weichzeichnen
 blurEnabled=true
 
