@@ -274,6 +274,24 @@ class AppModel(QAbstractListModel):
         self._update_pinned()
 
     @Slot(str, result=bool)
+    def isAutostart(self, desktop_id):
+        """Startet diese App beim Anmelden (~/.config/autostart)?"""
+        from . import autostart
+        return autostart.is_enabled(desktop_id)
+
+    @Slot(str, bool)
+    def setAutostart(self, desktop_id, on):
+        from . import autostart
+        entry = self._by_id.get(desktop_id)
+        try:
+            if on and entry is not None:
+                autostart.enable(desktop_id, entry.path)
+            elif not on:
+                autostart.disable(desktop_id)
+        except OSError as e:
+            print(f"creative-shell: Autostart {desktop_id}: {e}")
+
+    @Slot(str, result=bool)
     def isPinned(self, desktop_id):
         return any(p["desktopId"] == desktop_id for p in self._pinned)
 

@@ -14,7 +14,8 @@
       "Fenster öffnen sich jetzt dynamisch: Sie wachsen aus dem Symbol heraus, auf das du geklickt hast (Startmenü oder Taskleiste), schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück und kommen beim Wiederherstellen von dort wieder heraus",
       "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler",
       "Systemtray wahlweise oben links oder in der Taskleiste vor der Uhr (Systemsteuerung › Darstellung › Systemtray). In der Taskleiste sieht er aus wie die Uhr, die obere Leiste entfällt dann und die Menüs gehen unten rechts auf",
-      "Bereinigung in der Systemsteuerung (wie CCleaner): Analysieren zeigt, wie viel Platz frei wird – dann Papierkorb, Vorschaubilder, Browser- und Programm-Zwischenspeicher und ungenutzte Flatpak-Reste aufräumen. Optional: Shader-Cache, KI-Modelle, Systemprotokolle. Eigene Dateien bleiben immer unberührt"
+      "Bereinigung in der Systemsteuerung (wie CCleaner): Analysieren zeigt, wie viel Platz frei wird – dann Papierkorb, Vorschaubilder, Browser- und Programm-Zwischenspeicher und ungenutzte Flatpak-Reste aufräumen. Optional: Shader-Cache, KI-Modelle, Systemprotokolle. Eigene Dateien bleiben immer unberührt",
+      "Autostart: Rechtsklick auf eine App im Startmenü › „Beim Anmelden starten“ – die App öffnet sich dann nach jeder Anmeldung. Gilt auch für Programme, die das selbst anbieten (z. B. Steam oder Discord „mit dem System starten“)"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
