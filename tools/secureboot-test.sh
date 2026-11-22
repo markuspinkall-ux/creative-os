@@ -68,7 +68,7 @@ if [ -n "$efistub" ]; then cp "$efistub" "$EFI/EFI/fedora/grub.cfg"
 else printf 'search --label boot --set prefix --no-floppy\nset prefix=($prefix)/grub2\nconfigfile $prefix/grub.cfg\n' > "$EFI/EFI/fedora/grub.cfg"; fi
 # Nur für die Prüfung: GRUB-Meldungen zusätzlich auf die serielle Schnittstelle (bis das Design
 # auf gfxterm umschaltet); danach zeigen die Bildschirmfotos, was GRUB schreibt.
-{ printf 'serial --unit=0 --speed=115200\nterminal_output --append serial\necho CREATIVE: GRUB laeuft\n'; cat "$EFI/EFI/fedora/grub.cfg"; } > "$W/stub.cfg"
+{ printf 'serial --unit=0 --speed=115200\nterminal_output --append serial\necho CREATIVE: GRUB laeuft lockdown=$lockdown shim_lock=$shim_lock\n'; cat "$EFI/EFI/fedora/grub.cfg"; } > "$W/stub.cfg"
 cp "$W/stub.cfg" "$EFI/EFI/fedora/grub.cfg"
 cp "$EFI/EFI/fedora/grub.cfg" "$EFI/EFI/BOOT/grub.cfg"
 echo "--- EFI-grub.cfg ---"; cat "$EFI/EFI/fedora/grub.cfg"
