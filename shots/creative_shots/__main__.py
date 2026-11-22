@@ -53,6 +53,41 @@ def main():
         assert shots._image.width() == 50 and shots._image.height() == 40
         print("Shots: Selbsttest bestanden")
         return 0
+    if "--layout-test" in sys.argv:
+        # Werkzeugleiste bei verschiedenen Fensterbreiten: Knöpfe dürfen sich nie überlappen
+        from PySide6.QtGui import QImage
+        from PySide6.QtQuick import QQuickItem
+        out_dir = Path(sys.argv[sys.argv.index("--layout-test") + 1])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        img = QImage(1600, 900, QImage.Format.Format_RGB32)
+        img.fill(0xFF2A3040)
+        shots._set_image(img)
+        win.show()
+        bad = []
+        widths = [640, 820, 1040, 1280]
+
+        def step():
+            if not widths:
+                print("Shots-Werkzeugleiste:", "FEHLER " + ", ".join(bad) if bad else "keine Überlappung")
+                app.exit(1 if bad else 0)
+                return
+            w = widths.pop(0)
+            win.setWidth(w)
+
+            def check():
+                edit = win.findChild(QQuickItem, "editArea")
+                right = win.findChild(QQuickItem, "rightTools")
+                left = win.findChild(QQuickItem, "leftTools")
+                er = edit.mapRectToScene(edit.boundingRect())
+                rr = right.mapRectToScene(right.boundingRect())
+                lr = left.mapRectToScene(left.boundingRect())
+                if er.right() > rr.left() + 0.5 or lr.right() > er.left() + 0.5 or lr.right() > rr.left():
+                    bad.append(f"{w}px (links bis {lr.right():.0f}, Werkzeuge {er.left():.0f}–{er.right():.0f}, rechts ab {rr.left():.0f})")
+                win.grabWindow().save(str(out_dir / f"shots-{w}.png"))
+                step()
+            QTimer.singleShot(400, check)
+        QTimer.singleShot(300, step)
+        return app.exec()
     app.aboutToQuit.connect(shots.shutdown)
     if "--record" in sys.argv:              # gleich ein Video aufnehmen
         shots.set_close_after(True)

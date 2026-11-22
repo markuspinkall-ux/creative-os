@@ -27,9 +27,12 @@ Item {
     property real shift: shown ? 0 : -height
     Behavior on shift { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
     transform: Translate { y: root.shift }
-    // Eingefahren ganz unsichtbar (kein stehengebliebener Rest oben links)
+    // Eingefahren ganz unsichtbar (kein stehengebliebener Rest oben links): erst ausblenden,
+    // dann ganz abschalten, Weichzeichner sofort aus und neu zeichnen lassen.
     opacity: shown ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: 200 } }
+    visible: shown || opacity > 0.01
+    onVisibleChanged: if (Window.window) Window.window.update()
     readonly property int trayRight: left.x + left.width + 24
 
     onHoveredChanged: {
@@ -42,7 +45,11 @@ Item {
     }
     Timer { id: leaveTimer; interval: 500; onTriggered: root.peek = root.hovered }
     onAutoHideChanged: { if (!autoHide) peek = false; updateInput() }
-    onShownChanged: { updateInput(); blurTimer.restart() }
+    onShownChanged: {
+        updateInput()
+        if (!shown) shell.setBlur(Window.window, [])      // Glas sofort weg, nicht erst nach dem Einfahren
+        blurTimer.restart()
+    }
     Timer { id: blurTimer; interval: 240; onTriggered: root.updateBlur() }
 
     function updateInput() {

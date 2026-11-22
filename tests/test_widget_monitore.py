@@ -87,3 +87,11 @@ def test_widgets_glas():
     assert "component GlassBackdrop" in qml and "id: wallLayerItem" in qml and "import QtQuick.Effects" in qml
     for target in ("widget", "extra", "statsBox", "shelfBox"):
         assert f"target: {target}" in qml, target
+
+
+def test_glas_aus_wird_neu_gezeichnet():
+    # Ohne neues Bild bleibt unter Wayland das alte Glas stehen (Streifen oben links)
+    glas = (ROOT / "shell/creative_shell/glas.py").read_text(encoding="utf-8")
+    assert '"update", "requestUpdate"' in glas
+    top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
+    assert "if (!shown) shell.setBlur(Window.window, [])" in top

@@ -75,4 +75,14 @@ def set_blur(window, rects):
     except (TypeError, RuntimeError):
         return False
     fn(win_ptr, not region.isEmpty(), reg_ptr)
+    # Unter Wayland gilt die Änderung erst mit dem nächsten Bild der Fläche. Ohne neues Bild blieb
+    # z. B. das Glas der eingefahrenen oberen Leiste als verschwommener Streifen oben links stehen.
+    for repaint in ("update", "requestUpdate"):
+        f = getattr(window, repaint, None)
+        if callable(f):
+            try:
+                f()
+                break
+            except (TypeError, RuntimeError):
+                continue
     return True

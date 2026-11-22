@@ -13,6 +13,8 @@ jobs:
   pruefen:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Werkzeuge
@@ -32,3 +34,16 @@ jobs:
           grep -q "codec_type=video" /tmp/info.txt
           grep -q "codec_type=audio" /tmp/info.txt
           python3 -c "import re,sys; d=float(re.search(r'duration=([0-9.]+)', open('/tmp/info.txt').read()).group(1)); print('Dauer', d); sys.exit(0 if d > 2 else 1)"
+      - name: Werkzeugleiste bei schmalen Fenstern (keine überlappenden Knöpfe)
+        run: |
+          sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 fonts-dejavu-core >/dev/null
+          pip install -q "PySide6==6.8.*"
+          cd shots
+          QT_QPA_PLATFORM=offscreen python3 -m creative_shots --layout-test /tmp/shots-fotos
+      - name: Fotos im Branch „shots-fotos“
+        if: always()
+        run: |
+          cd /tmp/shots-fotos 2>/dev/null || exit 0
+          git init -q -b shots-fotos && git add . \
+            && git -c user.name=bot -c user.email=bot@localhost commit -qm "Shots ${GITHUB_SHA}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" shots-fotos
