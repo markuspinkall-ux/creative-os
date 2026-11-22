@@ -48,6 +48,19 @@ DEV=$(PYTHONPATH=/usr/lib/creative-broadcast python3 -c "from creative_broadcast
 echo "Gibeon Kamera: $DEV"
 v4l2-ctl -d "$DEV" --all 2>/dev/null | head -30 || true
 
+log "Diagnose GStreamer"
+command -v v4l2-ctl && v4l2-ctl -d "$DEV" --list-formats-ext 2>&1 | head -20
+gst-inspect-1.0 --version 2>&1 | head -2
+gst-inspect-1.0 v4l2src 2>&1 | grep -i -E "version|source" | head -3
+GST_DEBUG=2 timeout 15 gst-launch-1.0 -v v4l2src device="$DEV" num-buffers=3 ! fakesink 2>&1 | grep -v "^$" | head -30
+echo "--- mit decodebin"
+GST_DEBUG=3 timeout 15 gst-launch-1.0 -v v4l2src device="$DEV" num-buffers=3 ! decodebin ! fakesink 2>&1 | grep -i -E "caps|warn|error|not" | head -30
+echo "--- ffmpeg liest"
+timeout 15 ffmpeg -hide_banner -loglevel info -f v4l2 -i "$DEV" -frames:v 3 -y "$OUT/ffmpeg-%d.png" 2>&1 | tail -8
+log "Studios eigener Weg (engine.py)"
+SRC=$(PYTHONPATH=/usr/lib/gibeon-studio python3 -c "import sys; from gibeon_studio import engine; print(engine.video_source({'type':'video','device':sys.argv[1]}))" "$DEV")
+echo "Studio-Quelle: $SRC"
+GST_DEBUG=3 timeout 15 gst-launch-1.0 $SRC ! videoconvert ! fakesink num-buffers=5 2>&1 | grep -i -E "warn|error|not|setting" | head -20
 log "Zuschauen wie Studio (GStreamer v4l2src ! decodebin)"
 if command -v gst-launch-1.0 >/dev/null; then
   timeout 40 gst-launch-1.0 -q v4l2src device="$DEV" do-timestamp=true num-buffers=400 ! decodebin ! videoconvert ! \
