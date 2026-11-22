@@ -43,8 +43,9 @@ def main():
     if not selftest and _raise_running():
         return 0
 
-    from .backend import Preview, Studio
+    from .backend import Preview, ProjectorView, Studio
     qmlRegisterType(Preview, "Studio", 1, 0, "Preview")
+    qmlRegisterType(ProjectorView, "Studio", 1, 0, "ProjectorView")
     studio = Studio(selftest=selftest)
     if selftest:
         out = os.path.join(tempfile.mkdtemp(), "selbsttest.mp4")

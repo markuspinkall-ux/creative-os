@@ -9,7 +9,8 @@
       "Podcasts im Player zeigen jetzt Kacheln mit Cover – beim Öffnen die beliebtesten Podcasts in Deutschland, dazu Themen zum Stöbern",
       "Studio: Rechtsklick auf eine Quelle – in der Liste oder direkt in der Vorschau – bietet Löschen, Ein-/Ausblenden, Bildfüllend und Nach vorne/hinten",
       "Studio: Spiel-Aufnahmen – unter Einstellungen › Aufnahme wählst du, was in die Aufnahme kommt: „Alles wie im Bild“, „Spiel + Kamera“ oder „Nur das Spiel“. Overlays, Bilder, Browserquellen, Alerts und Umfragen bleiben dann aus der Aufnahme draußen, der Stream sieht weiter alles",
-      "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme"
+      "Studio: „Aufnahme in 4K umwandeln …“ – eine fertige Aufnahme auswählen und nachträglich auf 4K hochskalieren (mit KI, wenn die Grafikkarte das kann). Automatisch nach jeder Aufnahme geht weiterhin unter Einstellungen › Aufnahme",
+      "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü"
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",

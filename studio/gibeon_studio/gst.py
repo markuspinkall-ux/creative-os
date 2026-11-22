@@ -387,13 +387,26 @@ def pad_name(pad):
     return name_of(pad)
 
 
-def relay_sample(appsink, appsrc):
+def relay_sample(appsink, appsrc, grab=None):
     """Ein Bild von einer Zuliefer-Pipeline ins Mischpult geben. Die Zeit setzt das Mischpult
-    selbst (appsrc do-timestamp), deshalb werden die Zeitstempel gelöscht."""
+    selbst (appsrc do-timestamp), deshalb werden die Zeitstempel gelöscht.
+    grab: fn(bytes, b, h) bekommt das Bild zusätzlich (Monitor-Anzeige einer Capture-Karte)."""
     s = pull_sample_blocking(appsink)
     if not s:
         return
     try:
+        if grab is not None:
+            caps = sample_caps(s)
+            st = caps_structure(caps, 0) if caps else None
+            w, h = ctypes.c_int(), ctypes.c_int()
+            if st and structure_get_int(st, b"width", ctypes.byref(w)) and structure_get_int(st, b"height", ctypes.byref(h)):
+                buf = sample_buffer(s)
+                info = MapInfo()
+                if buf_map(buf, info):
+                    try:
+                        grab(ctypes.string_at(info.data, info.size), w.value, h.value)
+                    finally:
+                        buffer_unmap(buf, ctypes.byref(info))
         if appsrc is None:
             return
         out = buffer_copy(sample_buffer(s))

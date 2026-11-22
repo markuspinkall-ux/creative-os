@@ -65,8 +65,60 @@ ApplicationWindow {
         MenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
         MenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
         MenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
+        // Capture-Karte / Kamera pur auf einem anderen Monitor zeigen (ohne Overlays)
+        MenuSeparator { visible: projItems.count > 0 }
+        Instantiator {
+            id: projItems
+            model: sourceMenu.it && (sourceMenu.it.kind === "capture" || sourceMenu.it.kind === "camera") ? Qt.application.screens : []
+            delegate: MenuItem {
+                required property var modelData
+                text: "Auf „" + modelData.name + "“ zeigen" + (modelData.model ? " (" + modelData.model + ")" : "")
+                onTriggered: studio.projectItem(sourceMenu.pos, modelData.name)
+            }
+            onObjectAdded: (i, o) => sourceMenu.insertItem(sourceMenu.count - 3, o)
+            onObjectRemoved: (i, o) => sourceMenu.removeItem(o)
+        }
+        MenuItem {
+            text: "Monitor-Anzeige beenden"
+            visible: !!(st.projector && st.projector.screen)
+            height: visible ? implicitHeight : 0
+            onTriggered: studio.stopProjector()
+        }
         MenuSeparator {}
         MenuItem { text: "Löschen"; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
+    }
+
+    // Monitor-Anzeige: nur Bild (und Ton) der Capture-Karte, ganz ohne Studio-Overlays
+    Window {
+        id: projectorWin
+        readonly property var p: st.projector || ({})
+        readonly property var target: {
+            const list = Qt.application.screens
+            for (let i = 0; i < list.length; i++)
+                if (list[i].name === p.screen) return list[i]
+            return null
+        }
+        visible: !!p.screen && target !== null
+        screen: target || Qt.application.screens[0]
+        x: target ? target.virtualX : 0
+        y: target ? target.virtualY : 0
+        width: target ? target.width : 1280
+        height: target ? target.height : 720
+        flags: Qt.Window | Qt.FramelessWindowHint
+        color: "black"
+        title: "Studio – " + (p.label || "Capture-Karte")
+        onVisibleChanged: if (visible) showFullScreen()
+        onClosing: studio.stopProjector()
+        ProjectorView { anchors.fill: parent }
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: containsMouse && hideCursor.running ? Qt.ArrowCursor : Qt.BlankCursor
+            onPositionChanged: hideCursor.restart()
+            onDoubleClicked: studio.stopProjector()
+            Timer { id: hideCursor; interval: 2000 }
+        }
+        Shortcut { sequence: "Esc"; onActivated: studio.stopProjector() }
     }
     readonly property int selIndex: items.findIndex(i => i.id === win.selected)
     readonly property var selItem: selIndex >= 0 ? items[selIndex] : null

@@ -84,6 +84,14 @@ if f:
     d, w, h = s.mixer.frame()
     b, g, r = px(0.6 + 0.12, 0.06 + 0.05)
     check(r > 200 and g > 160 and b < 120, "Verschieben wirkt sofort (ohne Neuaufbau)")
+    # Monitor-Anzeige: Kamera/Capture-Karte pur (ohne das Bild darüber) an einen anderen Monitor
+    s.projectItem(1, "Monitor 2")
+    time.sleep(0.8)
+    pi = backend.PROJ._img
+    check(not pi.isNull() and s._state()["projector"].get("screen") == "Monitor 2",
+          f"Monitor-Anzeige bekommt Bilder ({pi.width()}×{pi.height()})")
+    s.stopProjector()
+    check(not s.projector, "Monitor-Anzeige beendet")
     # abgerundete Kamera: Ecke zeigt das Testbild darunter, Mitte die Kamera
 s.set("audio.mic.muted", True)
 s.addScene()
@@ -123,6 +131,7 @@ check(wanted.get("twitch") == "rtmp://ingest.global-contribute.live-video.net/ap
 
 # ---- Oberfläche --------------------------------------------------------------------------------
 qmlRegisterType(backend.Preview, "Studio", 1, 0, "Preview")
+qmlRegisterType(backend.ProjectorView, "Studio", 1, 0, "ProjectorView")
 engine = QQmlApplicationEngine()
 engine.addImportPath(str(ROOT / "shell" / "creative_shell" / "qml"))
 engine.rootContext().setContextProperty("studio", s)

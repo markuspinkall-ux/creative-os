@@ -240,8 +240,10 @@ class Feeder:
         if gst.set_state(self.pipe, gst.STATE_PLAYING) == 0:
             self._failed("lässt sich nicht starten")
 
+    tap = None                          # fn(bytes, b, h): Bild zusätzlich auf einen Monitor (Projektor)
+
     def _on_sample(self, sink):
-        gst.relay_sample(sink, self.appsrc)
+        gst.relay_sample(sink, self.appsrc, self.tap)
         return gst.FLOW_OK
 
     def _failed(self, text):
@@ -1042,6 +1044,12 @@ class Mixer:
             gst.set_prop(el, "volume", f"{max(0.0, min(2.0, volume)):.3f}")
             gst.set_prop(el, "mute", bool(muted))
             gst.object_unref(el)
+
+    def set_tap(self, key, fn):
+        """Bild einer Kamera/Capture-Karte zusätzlich an fn geben (None = aus). False: Quelle fehlt."""
+        for k, f in self.feeders.items():
+            f.tap = fn if k == key else None
+        return key in self.feeders or fn is None
 
     def frame(self):
         return self.last_frame if self.pipe else None
