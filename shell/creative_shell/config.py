@@ -31,6 +31,7 @@ DEFAULTS = {
     # Interpret und Titel des laufenden Liedes mittig in der Taskleiste
     "taskbarNowPlaying": True,
     "trayPosition": "oben",          # Systemtray: „oben“ (oben links) oder „taskleiste“ (vor der Uhr)
+    "startMenuStyle": "kategorien",  # Startmenü: „kategorien“ (Standard), „alphabet“ (A–Z), „kacheln“
     "loginSound": True,
     # Ablage oben mittig auf dem Schreibtisch (Verknüpfungen, wie das Dock bei macOS)
     "desktopShelf": True,

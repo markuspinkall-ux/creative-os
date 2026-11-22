@@ -204,6 +204,19 @@ SettingsPage {
                     primary: look.trayPosition === "taskleiste"
                     onClicked: look.setTrayPosition("taskleiste")
                 }
+        title: "Startmenü"
+        subtitle: "Wie die Apps im Startmenü sortiert sind"
+        SettingRow {
+            label: "Ansicht"
+            hint: look.startMenuStyle === "alphabet" ? "Alle Apps von A bis Z, wie früher"
+                  : (look.startMenuStyle === "kacheln" ? "Oben eine Leiste mit Kategorien, darunter die Apps als Kacheln"
+                                                       : "Apps nach Kategorien (Internet, Kreativ und Medien, Büro, Spiele …), immer aufgeklappt")
+            last: true
+            Row {
+                spacing: 8
+                CButton { text: "Kategorien"; primary: look.startMenuStyle === "kategorien"; onClicked: look.setStartMenuStyle("kategorien") }
+                CButton { text: "A–Z"; primary: look.startMenuStyle === "alphabet"; onClicked: look.setStartMenuStyle("alphabet") }
+                CButton { text: "Kacheln"; primary: look.startMenuStyle === "kacheln"; onClicked: look.setStartMenuStyle("kacheln") }
             }
         }
     }
@@ -278,8 +291,8 @@ SettingsPage {
     property bool startMenuOpen: false
 
     Card {
-        title: "Startmenü"
-        subtitle: "Apps, die du per Rechtsklick › „Aus Startmenü entfernen“ ausgeblendet hast"
+        title: "Ausgeblendete Apps"
+        subtitle: "Apps, die du im Startmenü per Rechtsklick › „Aus Startmenü entfernen“ ausgeblendet hast"
         HoverHandler {
             onHoveredChanged: if (hovered && look.hiddenApps.length > 1) root.startMenuOpen = true
         }

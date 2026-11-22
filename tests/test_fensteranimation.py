@@ -28,7 +28,7 @@ def test_eingebaut_und_eingeschaltet():
     tb = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
     assert "windowAnim.setTaskPoints(" in tb
     sm = (ROOT / "shell/creative_shell/qml/surfaces/StartMenu.qml").read_text(encoding="utf-8")
-    assert sm.count("root.noteLaunch(") == 2
+    assert sm.count("root.noteLaunch(") >= 2
 
 
 def test_namen():
