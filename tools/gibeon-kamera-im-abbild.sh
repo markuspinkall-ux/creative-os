@@ -30,7 +30,7 @@ except Exception as e:
 PY
 
 # Was Studio beim Hinzufügen der Gibeon Kamera tut (broadcast_camera)
-PYTHONPATH=/usr/lib/gibeon-studio python3 - <<'PY' 2>&1 || true
+PYTHONPATH=/neu/studio:/usr/lib/gibeon-studio python3 - <<'PY' 2>&1 || true
 try:
     from gibeon_studio import backend
     print("broadcast_camera():", backend.broadcast_camera())
@@ -58,28 +58,15 @@ GST_DEBUG=3 timeout 15 gst-launch-1.0 -v v4l2src device="$DEV" num-buffers=3 ! d
 echo "--- ffmpeg liest"
 timeout 15 ffmpeg -hide_banner -loglevel info -f v4l2 -i "$DEV" -frames:v 3 -y "$OUT/ffmpeg-%d.png" 2>&1 | tail -8
 log "Studios eigener Weg (engine.py)"
-SRC=$(PYTHONPATH=/usr/lib/gibeon-studio python3 -c "import sys; from gibeon_studio import engine; print(engine.video_source({'type':'video','device':sys.argv[1]}))" "$DEV")
+STUDIO_PY=/usr/lib/gibeon-studio; [ -d /neu/studio/gibeon_studio ] && STUDIO_PY=/neu/studio
+SRC=$(PYTHONPATH=$STUDIO_PY python3 -c "import sys; from gibeon_studio import engine; print(engine.video_source({'type':'video','device':sys.argv[1]}))" "$DEV")
 echo "Studio-Quelle: $SRC"
-GST_DEBUG=3 timeout 15 gst-launch-1.0 $SRC ! videoconvert ! fakesink num-buffers=5 2>&1 | grep -i -E "warn|error|not|setting" | head -20
+GST_DEBUG=3 timeout 15 gst-launch-1.0 -v $SRC ! videoconvert ! fakesink num-buffers=5 2>&1 | grep -i -E "warn|error|not|setting" | head -20
 log "Zuschauen wie Studio (GStreamer v4l2src ! decodebin)"
-if command -v gst-launch-1.0 >/dev/null; then
-  timeout 40 gst-launch-1.0 -q v4l2src device="$DEV" do-timestamp=true num-buffers=400 ! decodebin ! videoconvert ! \
-    videorate ! video/x-raw,framerate=2/1 ! jpegenc ! multifilesink location="$OUT/gst-%03d.jpg" >"$OUT/gst.log" 2>&1 &
-  GST=$!
-else
-  echo "kein gst-launch im Abbild – Studios Weg über Python/GStreamer"
-  timeout 40 python3 - "$DEV" "$OUT" >"$OUT/gst.log" 2>&1 <<'PY' &
-import sys, gi
-gi.require_version("Gst", "1.0"); from gi.repository import Gst
-Gst.init(None)
-p = Gst.parse_launch(f"v4l2src device={sys.argv[1]} do-timestamp=true num-buffers=400 ! decodebin ! videoconvert ! videorate ! video/x-raw,framerate=2/1 ! jpegenc ! multifilesink location={sys.argv[2]}/gst-%03d.jpg")
-p.set_state(Gst.State.PLAYING)
-msg = p.get_bus().timed_pop_filtered(38 * Gst.SECOND, Gst.MessageType.ERROR | Gst.MessageType.EOS)
-print("Ende:", msg.type if msg else "Zeit", msg.parse_error() if msg and msg.type == Gst.MessageType.ERROR else "")
-p.set_state(Gst.State.NULL)
-PY
-  GST=$!
-fi
+echo "Pipeline: $SRC ! videoconvert ! videorate ! … ! jpegenc"
+timeout 40 gst-launch-1.0 -q $SRC ! videoconvert ! videorate ! video/x-raw,framerate=2/1 ! jpegenc ! \
+  multifilesink location="$OUT/gst-%03d.jpg" >"$OUT/gst.log" 2>&1 &
+GST=$!
 for i in 1 2 3 4 5 6 7; do sleep 4; echo "t=$((i*4))s: $(cat $XDG_RUNTIME_DIR/creative-broadcast/status.json)"; done
 wait $GST; echo "gst exit=$?"; cat "$OUT/gst.log" | tail -5
 ls "$OUT" | head -50

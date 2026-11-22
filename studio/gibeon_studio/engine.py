@@ -112,6 +112,9 @@ def mode_caps(mode):
     return f" ! video/x-raw,format={fmt},{size}" if fmt else ""
 
 
+RAW_OR_JPEG = 'capsfilter caps="video/x-raw;image/jpeg"'
+
+
 def video_source(src):
     """Beschreibung einer Bildquelle. src: {"type": "screen"|"video"|"test", …}"""
     t = src.get("type")
@@ -122,7 +125,10 @@ def video_source(src):
         caps = mode_caps(src.get("mode"))
         if caps:
             return f"v4l2src device={_q(src['device'])} do-timestamp=true{caps}"
-        return f"v4l2src device={_q(src['device'])} do-timestamp=true ! decodebin"
+        # Ohne feste Einstellung: GStreamer ab 1.26 bietet v4l2loopback-Geräte (Gibeon Kamera) und manche
+        # Webcams als DMABuf (format=DMA_DRM) an – das kann videoconvert nicht verarbeiten, die Quelle bleibt
+        # dann leer. Darum nur normales Bild im Arbeitsspeicher (oder MJPEG) zulassen.
+        return f"v4l2src device={_q(src['device'])} do-timestamp=true ! {RAW_OR_JPEG} ! decodebin"
     if t == "test":
         return f"videotestsrc is-live=true pattern={src.get('pattern', 'smpte')}"
     return None

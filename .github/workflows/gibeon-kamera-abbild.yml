@@ -41,7 +41,7 @@ jobs:
         run: |
           mkdir -p out
           sudo podman run --rm --device /dev/video42 --device /dev/video43 \
-            -v "$PWD/tools/gibeon-kamera-im-abbild.sh:/test.sh:ro,z" -v "$PWD/out:/out:z" \
+            -v "$PWD/tools/gibeon-kamera-im-abbild.sh:/test.sh:ro,z" -v "$PWD/out:/out:z" -v "$PWD/studio:/neu/studio:ro,z" \
             --entrypoint /bin/bash ghcr.io/markuspinkall-ux/creative-os:${{ matrix.variant }}-testing /test.sh 2>&1 | tee out/protokoll.txt
           exit ${PIPESTATUS[0]}
       - name: Bilder in den Zweig kamera-fotos
