@@ -286,10 +286,20 @@ SettingsPage {
         id: dsCard
         title: "Datenschutz"
         subtitle: "Gibeon OS sammelt nichts über dich. Verbindungen nach außen entstehen nur, wenn du die jeweilige Funktion nutzt."
+        SettingRow {
+            label: "Land anonym mitteilen"
+            hint: "Freiwillig: Einmal im Monat wird nur dein Land" + (regionConsent.land ? " (" + regionConsent.land + ", aus der Zeitzone)" : "")
+                  + " an den Entwickler gemeldet, damit er sieht, wo Gibeon OS genutzt wird. Keine IP, kein Name, keine Kennung. Empfänger: Cloudflare (USA) im Auftrag des Entwicklers."
+            CSwitch {
+                checked: regionConsent.enabled
+                label: "Land anonym mitteilen"
+                onToggled: (v) => regionConsent.setEnabled(v)
+            }
+        }
         Repeater {
             id: dsRows
             model: [
-                { t: "Keine Datensammlung", d: "Keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte, kein Konto. Der Entwickler von Gibeon OS erhält keine Daten von deinem Rechner." },
+                { t: "Keine Datensammlung", d: "Keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte, kein Konto. Der Entwickler von Gibeon OS erhält keine Daten von deinem Rechner – außer du schaltest oben „Land anonym mitteilen“ ein (dann nur das Land) oder meldest selbst einen Fehler." },
                 { t: "Updates und Software", d: "Updates kommen aus der GitHub Container Registry (GitHub Inc., USA), Apps von Flathub und den Fedora- und RPM-Fusion-Spiegeln. Diese Dienste sehen dabei deine IP-Adresse und was geladen wird." },
                 { t: "Nur auf deinem Rechner", d: "KI-Sprachmodell und Stimme, Broadcast (Rauschfilter, Freistellung), Sicherungen, Notizen, Fotos und Dokumente bleiben lokal." },
                 { t: "KI-Helfer", d: "Für Wissensfragen schickt er deine Suchbegriffe an die deutsche Wikipedia (Wikimedia Foundation, USA). Die Modelle lädt er einmalig von Hugging Face." },

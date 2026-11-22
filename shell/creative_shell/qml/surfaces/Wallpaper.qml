@@ -882,6 +882,7 @@ Item {
         defaultY: 24
         width: 340
         height: 96 + 21 * devStats.rows.length + 22 * Math.max(1, Math.min(8, devStats.reports.length))
+                + (devStats.regionsSetup ? 34 + 20 * Math.max(1, devStats.regions.length) : 0)
                 + (devStats.message.length > 0 ? 34 : 0)
         body: Column {
             id: devBody
@@ -909,6 +910,40 @@ Item {
                         elide: Text.ElideRight
                     }
                     Text { text: modelData.value; color: Theme.text; font.pixelSize: 13; font.bold: true }
+                }
+            }
+            // Regionen: woher die Nutzer kommen (nur gemeldet mit Zustimmung, nur das Land)
+            Item { width: 1; height: 6; visible: devStats.regionsSetup }
+            RowLayout {
+                visible: devStats.regionsSetup
+                width: parent.width
+                Text { Layout.fillWidth: true; text: "Regionen"; color: Theme.text; font.bold: true }
+                Text { text: "Installiert · aktiv " + devStats.regionsMonth; color: Theme.textMuted; font.pixelSize: 11 }
+            }
+            Text {
+                visible: devStats.regionsSetup && devStats.regions.length === 0
+                text: devStats.busy ? "Wird geladen …" : "Noch keine Meldungen"
+                color: Theme.textMuted
+                font.pixelSize: 12
+            }
+            Repeater {
+                model: devStats.regionsSetup ? devStats.regions : []
+                delegate: RowLayout {
+                    required property var modelData
+                    width: devBody.width
+                    Text {
+                        Layout.fillWidth: true
+                        text: modelData.land
+                        color: Theme.textMuted
+                        font.pixelSize: 12
+                        elide: Text.ElideRight
+                    }
+                    Text {
+                        text: modelData.inst + " · " + modelData.aktiv
+                        color: Theme.text
+                        font.pixelSize: 12
+                        font.bold: true
+                    }
                 }
             }
             Item { width: 1; height: 6 }

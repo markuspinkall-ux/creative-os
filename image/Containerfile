@@ -209,6 +209,8 @@ COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicol
 COPY --chmod=755 tools/fehler-melden/gibeon-fehler-melden /usr/bin/gibeon-fehler-melden
 COPY tools/fehler-melden/gibeon-fehler-melden.desktop /usr/share/applications/gibeon-fehler-melden.desktop
 COPY tools/fehler-melden/gibeon-fehler-melden.svg /usr/share/icons/hicolor/scalable/apps/gibeon-fehler-melden.svg
+# Regionen: Sammelstelle für die (nur mit Zustimmung) gemeldeten Länder – leer = nichts melden
+COPY image/regionen.json /usr/share/creative-os/regionen.json
 # Entwickler-Widget ein-/ausschalten (nur für den Besitzer des Repos)
 COPY --chmod=755 shell/bin/gibeon-entwickler /usr/bin/gibeon-entwickler
 

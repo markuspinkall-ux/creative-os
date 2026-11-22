@@ -20,6 +20,7 @@ from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 from creative_shell.network import NetworkModel  # noqa: E402
 from creative_shell.vpn import VpnModel  # noqa: E402
 from creative_shell.session import SessionModel  # noqa: E402
+from creative_shell.region import RegionConsent  # noqa: E402
 
 from .displays import DisplayModel  # noqa: E402
 from .backup import BackupModel  # noqa: E402
@@ -74,6 +75,7 @@ def main():
         "displays": DisplayModel(),
         "sound": SoundModel(),
         "system": SystemModel(),
+        "regionConsent": RegionConsent(),
         "printerList": PrinterListModel(),
         "server": ServerModel(),
         "drives": DrivesModel(),

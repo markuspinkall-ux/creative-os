@@ -134,10 +134,15 @@ def reports_from(issues):
     return out
 
 
-def fetch(token, repo=REPO):
+def fetch(token, repo=REPO, regionen_url="", regionen_key=""):
     """Alle Zahlen auf einmal (läuft im Hintergrund). Fehler einzelner Teile stören die anderen nicht."""
     data = {"views": None, "uniques": None, "image": None, "iso": None, "apps": {}, "reports": [],
-            "fehler": []}
+            "regionen": None, "fehler": []}
+    if regionen_url and regionen_key:
+        try:
+            data["regionen"] = regionen(regionen_url, regionen_key)
+        except (OSError, ValueError) as e:
+            data["fehler"].append(f"Regionen: {e}")
     try:
         v = _get(f"{API}/repos/{repo}/traffic/views", token)
         data["views"], data["uniques"] = int(v.get("count") or 0), int(v.get("uniques") or 0)
@@ -158,6 +163,43 @@ def fetch(token, repo=REPO):
     except (OSError, ValueError) as e:
         data["fehler"].append(f"Fehlermeldungen: {e}")
     return data
+
+
+LAENDER = {
+    "DE": "Deutschland", "AT": "Österreich", "CH": "Schweiz", "NL": "Niederlande", "BE": "Belgien",
+    "LU": "Luxemburg", "FR": "Frankreich", "IT": "Italien", "ES": "Spanien", "PT": "Portugal",
+    "GB": "Großbritannien", "IE": "Irland", "PL": "Polen", "CZ": "Tschechien", "SK": "Slowakei",
+    "HU": "Ungarn", "DK": "Dänemark", "SE": "Schweden", "NO": "Norwegen", "FI": "Finnland",
+    "GR": "Griechenland", "RO": "Rumänien", "BG": "Bulgarien", "HR": "Kroatien", "SI": "Slowenien",
+    "RS": "Serbien", "TR": "Türkei", "UA": "Ukraine", "RU": "Russland", "US": "USA", "CA": "Kanada",
+    "MX": "Mexiko", "BR": "Brasilien", "AR": "Argentinien", "AU": "Australien", "NZ": "Neuseeland",
+    "JP": "Japan", "CN": "China", "KR": "Südkorea", "IN": "Indien", "ZA": "Südafrika",
+}
+
+
+def land_name(code):
+    return LAENDER.get(code, code)
+
+
+def regionen(url, key, token_unused=None):
+    """Zahlen von der Regionen-Sammelstelle (Cloudflare Worker)."""
+    req = urllib.request.Request(url.rstrip("/") + "/zahlen",
+                                 headers={"Authorization": f"Bearer {key}", "User-Agent": "GibeonOS-Entwickler"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read(1_000_000))
+
+
+def regionen_rows(data, limit=8):
+    inst = data.get("installationen") or {}
+    aktiv = data.get("aktiv") or {}
+    codes = sorted(set(inst) | set(aktiv), key=lambda c: (-int(inst.get(c, 0)), -int(aktiv.get(c, 0)), c))
+    rows = [{"land": land_name(c), "code": c, "inst": int(inst.get(c, 0)), "aktiv": int(aktiv.get(c, 0))}
+            for c in codes[:limit]]
+    rest = codes[limit:]
+    if rest:
+        rows.append({"land": f"{len(rest)} weitere Länder", "code": "",
+                     "inst": sum(int(inst.get(c, 0)) for c in rest), "aktiv": sum(int(aktiv.get(c, 0)) for c in rest)})
+    return rows
 
 
 def _fmt(n):
@@ -191,6 +233,7 @@ if QObject is not None:
             super().__init__(parent)
             self._conf = load_conf()
             self._rows, self._reports, self._message = [], [], ""
+            self._regions, self._regions_month = [], ""
             self._busy = False
             self._timer = QTimer(self)
             self._timer.setInterval(30 * 60 * 1000)
@@ -222,10 +265,11 @@ if QObject is not None:
             self._message = "Wird geladen …" if not self._rows else ""
             self.changed.emit()
             token, repo = self._conf["token"], self._conf.get("repo") or REPO
+            rurl, rkey = self._conf.get("regionen_url", ""), self._conf.get("regionen_key", "")
 
             def run():
                 try:
-                    result = fetch(token, repo)
+                    result = fetch(token, repo, rurl, rkey)
                 except Exception as e:  # noqa: BLE001
                     result = {"fehler": [str(e)]}
                 post(self._done, result)
@@ -236,6 +280,9 @@ if QObject is not None:
             self._busy = False
             self._rows = rows_from(data)
             self._reports = data.get("reports") or []
+            reg = data.get("regionen")
+            self._regions = regionen_rows(reg) if reg else []
+            self._regions_month = (reg or {}).get("monat", "")
             self._message = "; ".join(data.get("fehler") or [])[:200]
             self.changed.emit()
 
@@ -260,5 +307,8 @@ if QObject is not None:
         rows = Property("QVariantList", lambda self: self._rows, notify=changed)
         reports = Property("QVariantList", lambda self: self._reports, notify=changed)
         message = Property(str, lambda self: self._message, notify=changed)
+        regions = Property("QVariantList", lambda self: self._regions, notify=changed)
+        regionsMonth = Property(str, lambda self: self._regions_month, notify=changed)
+        regionsSetup = Property(bool, lambda self: bool(self._conf.get("regionen_url")), notify=changed)
         posX = Property(float, lambda self: float(self._conf.get("x", -1.0)), notify=changed)
         posY = Property(float, lambda self: float(self._conf.get("y", -1.0)), notify=changed)
