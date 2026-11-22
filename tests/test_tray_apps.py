@@ -59,7 +59,7 @@ def test_deck_status(tmp_path):
 
 
 def test_deck_im_tray_und_autostart():
-    qml = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")   # Tray sitzt oben
+    qml = (ROOT / "shell/creative_shell/qml/surfaces/TrayIcons.qml").read_text(encoding="utf-8")   # Tray (oben oder Taskleiste)
     assert "deckTray.open()" in qml and 'focusApp("creative-deck.desktop")' in qml
     main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
     assert '"deckTray": DeckTray()' in main

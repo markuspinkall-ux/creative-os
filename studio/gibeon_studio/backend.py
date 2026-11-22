@@ -166,6 +166,30 @@ def broadcast_green():
     return True
 
 
+def broadcast_device(video_list):
+    """Welche echte Kamera Broadcast für die Gibeon Kamera abfilmt (Einstellung oder erste Webcam)."""
+    path = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "creative-os" / "broadcast.json"
+    try:
+        dev = json.loads(path.read_text(encoding="utf-8")).get("cameraDevice") or ""
+    except (OSError, ValueError, AttributeError):
+        dev = ""
+    if dev:
+        return dev
+    webcams = sorted((d for d in video_list if not d.get("virtual") and not d.get("capture")),
+                     key=lambda d: d.get("node", ""))
+    return webcams[0]["node"] if webcams else ""
+
+
+def broadcast_status():
+    """Status von Broadcast (was die Kamera gerade macht) – oder {}."""
+    base = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    try:
+        data = json.loads((Path(base) / "creative-broadcast" / "status.json").read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def broadcast_camera():
     """Für die Gibeon Kamera: Broadcast muss laufen und seine Kamera eingeschaltet haben – sonst
     schreibt niemand in die virtuelle Kamera und Studio bekommt kein Bild. Schaltet beides ein
@@ -470,6 +494,9 @@ class Studio(QObject):
         self.twitch_chat = konten.TwitchChat(self.accounts["twitch"])
         self._async.connect(self._run_async)
         self._rebuild_timer = QTimer(self, singleShot=True, interval=350, timeout=self._rebuild)
+        # Gibeon Kamera leer? Broadcast sagt in seinem Status, warum (keine Webcam, Webcam belegt …)
+        self._bc_status_timer = QTimer(self, interval=5000, timeout=self._check_broadcast_status)
+        self._bc_status_said = ""
         self._save_later = QTimer(self, singleShot=True, interval=600, timeout=self._save)
         self.mixer.on_frame = self._on_frame
         self._poll = QTimer(self, interval=100, timeout=self._poll_engine)
@@ -863,7 +890,43 @@ class Studio(QObject):
                            "volume": a["volume"], "muted": a["muted"], "monitorable": slot == "extra"}
         if self.selftest:
             audio = {"mic": {"type": "test", "freq": 440}, "desktop": {"type": "test", "freq": 660}}
+        self._warn_camera_conflict(out)
         return out, audio
+
+    def _check_broadcast_status(self):
+        uses_virtual = any(d.get("virtual") and any(it.get("device") == d["id"] for sc in self.cfg["scenes"]
+                                                     for it in sc["items"]) for d in self.video_list)
+        if not uses_virtual:
+            self._bc_status_timer.stop()
+            return
+        text = broadcast_status().get("camera", "")
+        if text and text != self._bc_status_said and ("keine Kamera" in text or "benutzt" in text):
+            self._bc_status_said = text
+            hint = ("Schließ eine Webcam an oder wähle sie in Broadcast aus."
+                    if "keine Kamera" in text else "Schließ das andere Programm oder nimm die Webcam dort heraus.")
+            self.toast.emit(f"Gibeon Kamera bleibt leer – Broadcast: {text}. {hint}")
+
+    def _warn_camera_conflict(self, srcs):
+        """Gibeon Kamera + dieselbe echte Webcam gleichzeitig in Studio: Eine Webcam kann immer nur ein
+        Programm abfilmen. Studio hält sie dann selbst fest, Broadcast bekommt kein Bild – und die Gibeon
+        Kamera bleibt leer. Einmal deutlich sagen, statt nur einen leeren Rahmen zu zeigen."""
+        devices = {s.get("device") for s in srcs if s.get("type") == "video" and s.get("device")}
+        virtual = {d["id"] for d in self.video_list if d.get("virtual")}
+        if not devices & virtual:
+            return
+        timer = getattr(self, "_bc_status_timer", None)
+        if timer is not None and not timer.isActive():
+            timer.start()
+        bc = broadcast_device(self.video_list)
+        if not bc:
+            return
+        clash = next((d for d in devices - virtual if os.path.realpath(d) == os.path.realpath(bc)), None)
+        if clash and not getattr(self, "_conflict_warned", False):
+            self._conflict_warned = True
+            name = next((d["name"] for d in self.video_list if d["id"] == clash), "deine Webcam")
+            self.toast.emit(f"„{name}“ ist zweimal in Studio: direkt und über die Gibeon Kamera. Eine Webcam kann "
+                            "nur ein Programm gleichzeitig benutzen – nimm sie entweder direkt oder als Gibeon Kamera "
+                            "(Quelle per Rechtsklick löschen).")
 
     def _layout(self):
         """Anordnung der aktiven Szene in Pixeln + Ecken: ({key: (x, y, b, h, z)}, {key: radius})."""

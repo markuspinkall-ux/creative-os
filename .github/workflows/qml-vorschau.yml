@@ -4,7 +4,7 @@ name: Systemsteuerung Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [settings/**, shell/creative_shell/qml/**, tools/tasktip-vorschau.py, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
+    paths: [settings/creative_settings/cleanup.py, settings/**, shell/creative_shell/qml/**, tools/tasktip-vorschau.py, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -32,6 +32,10 @@ jobs:
           mkdir -p vorschau
           CREATIVE_SCREENSHOT=vorschau/neuerungen.png timeout 40 python3 -m creative_settings --neuerungen 2>&1 | tail -20 || true
           CREATIVE_SCREENSHOT=vorschau/updates.png timeout 40 python3 -m creative_settings --page updates 2>&1 | tail -5 || true
+          mkdir -p "$HOME/.cache/thumbnails/large" "$HOME/.cache/mozilla" "$HOME/.local/share/Trash/files"
+          head -c 3000000 /dev/zero > "$HOME/.cache/thumbnails/large/a.png"; head -c 9000000 /dev/zero > "$HOME/.cache/mozilla/c"
+          head -c 5000000 /dev/zero > "$HOME/.local/share/Trash/files/alt.txt"
+          CREATIVE_CLEANUP_AUTO=1 CREATIVE_SCREENSHOT=vorschau/bereinigung.png timeout 40 python3 -m creative_settings --page bereinigung 2>&1 | tail -5 || true
           CREATIVE_SCREENSHOT=vorschau/benutzerkonten.png timeout 40 python3 -m creative_settings --page users 2>&1 | tail -5 || true
           CREATIVE_SCREENSHOT=vorschau/darstellung-unten.png CREATIVE_SCREENSHOT_SCROLL=1 timeout 40 python3 -m creative_settings --page look 2>&1 | tail -5 || true
           (cd ../shell && CREATIVE_SCREENSHOT=../settings/vorschau/creative-widgets.png timeout 40 python3 -m creative_shell.widgets_app 2>&1 | tail -5) || true

@@ -20,6 +20,7 @@ ROWS = [("Dateien", "creative-files.desktop", "files", True), ("Mail", "creative
         ("Notes", "creative-notes.desktop", "notes", False), ("Pictures", "creative-pictures.desktop", "pictures", False),
         ("Steam", "steam.desktop", "games", True), ("Taschenrechner", "creative-calculator.desktop", "calculator", False)]
 calls = []
+autostart_on = set()
 
 
 class Apps(QAbstractListModel):
@@ -40,6 +41,16 @@ class Apps(QAbstractListModel):
     folderName = Property(str, lambda self: "", notify=folderChanged)
     filterText = Property(str, lambda self: "", lambda self, v: None, notify=folderChanged)
 
+    style = Property(str, lambda self: "alphabet", notify=folderChanged)
+    category = Property(str, lambda self: "", notify=folderChanged)
+    categories = Property("QVariantList", lambda self: [], notify=folderChanged)
+
+    @Slot()
+    def refreshStyle(self): pass
+
+    @Slot(str)
+    def setCategory(self, c): pass
+
     @Slot()
     def closeFolder(self): pass
 
@@ -48,6 +59,14 @@ class Apps(QAbstractListModel):
 
     @Slot(str, result=bool)
     def isPinned(self, d): return any(r[1] == d and r[3] for r in ROWS)
+
+    @Slot(str, result=bool)
+    def isAutostart(self, d): return d in autostart_on
+
+    @Slot(str, bool)
+    def setAutostart(self, d, on):
+        calls.append(("autostart", d, on))
+        (autostart_on.add if on else autostart_on.discard)(d)
 
     @Slot(str)
     def pin(self, d): calls.append(("pin", d))
@@ -60,6 +79,10 @@ class Apps(QAbstractListModel):
 
 
 class Icons(QObject):
+    @Slot(str, result=str)
+    def app(self, name):
+        return self.url(name)
+
     @Slot(str, result=str)
     def url(self, name):
         p = ROOT / "shell/creative_shell/qml/Creative/icons" / f"{name}.svg"
@@ -156,6 +179,23 @@ def step():
         QTest.mouseClick(view, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, row_point("Notes"))
         QTest.qWait(300)
         assert find("pinRow").property("active") is True
+        # 2b) Autostart: an und wieder aus
+        auto = find("autostartRow")
+        assert auto and auto.isVisible() and "Beim Anmelden starten" in auto.property("label"), auto.property("label")
+        shot("startmenue-autostart.png")
+        click_item(auto)
+        QTest.qWait(200)
+        assert calls == [("autostart", "creative-notes.desktop", True)], calls
+        QTest.mouseClick(view, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, row_point("Notes"))
+        QTest.qWait(300)
+        assert "ausschalten" in find("autostartRow").property("label"), find("autostartRow").property("label")
+        click_item(find("autostartRow"))
+        QTest.qWait(200)
+        assert calls[-1] == ("autostart", "creative-notes.desktop", False), calls
+        calls.clear()
+        ok.append("Autostart per Rechtsklick an und aus")
+        QTest.mouseClick(view, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, row_point("Notes"))
+        QTest.qWait(300)
         # 3) Entfernen fragt nach
         click_item(find("hideRow"))
         QTest.qWait(300)

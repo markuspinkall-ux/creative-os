@@ -128,6 +128,12 @@ elif command -v creative-welcome >/dev/null 2>&1 && id -nG 2>/dev/null | tr ' ' 
     (sleep 3; creative-welcome) >"$HOME/.cache/creative-welcome.log" 2>&1 &
 fi
 
+# Autostart: Programme aus ~/.config/autostart (Startmenü › Rechtsklick › „Beim Anmelden starten“,
+# oder von den Programmen selbst angelegt, z. B. Steam/Discord) – nicht in der Live-Sitzung
+if [ ! -e /run/creative-live ]; then
+    ( sleep 6; PYTHONPATH=/usr/lib/creative-shell python3 -m creative_shell.autostart 2>&1 | systemd-cat -t creative-autostart ) &
+fi
+
 # Game Launcher beim Start öffnen (Systemsteuerung › System › Game Launcher)
 if [ ! -e /run/creative-live ] && command -v creative-gamelauncher >/dev/null 2>&1 \
    && grep -q '"autostart": *true' "${XDG_CONFIG_HOME:-$HOME/.config}/creative-os/gamelauncher.json" 2>/dev/null; then
