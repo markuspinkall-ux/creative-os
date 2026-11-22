@@ -39,3 +39,10 @@ def test_namen():
     from creative_shell.fensteranimation import names_for
     n = names_for("org.kde.dolphin", "org.kde.dolphin.desktop", [{"app": "org.kde.dolphin", "cls": "Dolphin"}])
     assert n[:2] == ["org.kde.dolphin", "dolphin"]
+
+
+def test_effekt_ablauf():
+    import pytest
+    if not shutil.which("node"):
+        pytest.skip("node fehlt")
+    subprocess.run(["node", str(ROOT / "tests/effekt_mock.js"), str(EFFECT / "contents/code/main.js")], check=True)

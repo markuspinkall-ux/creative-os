@@ -3,7 +3,7 @@
 # lädt er, laufen Öffnen/Minimieren/Wiederherstellen/Schließen ohne Skriptfehler durch?
 #   docker run --rm -v "$PWD:/src" -w /src registry.fedoraproject.org/fedora:44 sh tools/fenster-effekt-test.sh
 set -eu
-dnf -y -q install kwin-wayland python3-pyside6 dbus-daemon dbus-tools plasma-breeze mesa-dri-drivers qt6-qtwayland kf6-kconfig >/dev/null
+dnf -y -q install kwin-wayland python3-pyside6 dbus-daemon dbus-tools plasma-breeze mesa-dri-drivers qt6-qtwayland kf6-kconfig kf6-kpackage >/dev/null
 export XDG_RUNTIME_DIR=/tmp/xdg XDG_CONFIG_HOME=/tmp/cfg XDG_DATA_HOME=/tmp/data
 mkdir -p -m 700 "$XDG_RUNTIME_DIR"; mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME/kwin/effects"
 cp -r shell/kwin/gibeon-fenster "$XDG_DATA_HOME/kwin/effects/"
@@ -23,13 +23,17 @@ app.exec()
 PY
 dbus-run-session -- sh -c '
   QT_LOGGING_RULES="kwin_scripting.debug=true;kwin_effects.debug=true" \
-  /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-7 >/tmp/kwin.log 2>&1 &
+  KWIN_COMPOSE=Q /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-7 >/tmp/kwin.log 2>&1 &
   # warten, bis KWin seine Effekte auf D-Bus anbietet
   i=0
   until dbus-send --session --print-reply --dest=org.kde.KWin /Effects org.freedesktop.DBus.Introspectable.Introspect >/dev/null 2>&1; do
       i=$((i+1)); [ $i -gt 40 ] && break; sleep 1
   done
   echo "KWin bereit nach $i s"
+  for prop in active compositingType compositingPossible compositingNotPossibleReason; do
+      dbus-send --session --print-reply --dest=org.kde.KWin /Compositor org.freedesktop.DBus.Properties.Get string:org.kde.kwin.Compositing string:$prop 2>&1 | tail -n 1
+  done
+  kpackagetool6 --type KWin/Effect --list 2>&1 | grep -i gibeon || echo "kpackagetool: gibeon-fenster nicht gefunden"
   dbus-send --session --print-reply --dest=org.kde.KWin / org.freedesktop.DBus.Introspectable.Introspect | grep -o "node name=\"[^\"]*\"" | head -20
   # wie die Shell: Symbol-Lage eintragen und den Effekt neu laden
   kwriteconfig6 --file kwinrc --group Effect-gibeon-fenster --key Tasten "[{\"n\":[\"org.kde.dolphin\",\"dolphin\"],\"x\":300,\"y\":975}]"
