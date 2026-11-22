@@ -128,9 +128,7 @@ ApplicationWindow {
             Card {
                 id: sourcesPane
                 Layout.fillWidth: true
-                Layout.fillHeight: !cfg.chat_open
-                // mit Chat: so hoch wie nötig, höchstens gut die Hälfte – der Rest gehört dem Chat
-                Layout.preferredHeight: cfg.chat_open ? Math.min(srcCol.implicitHeight + 32, leftCol.height * 0.58) : -1
+                Layout.fillHeight: true
                 Flickable {
                     anchors.fill: parent
                     anchors.margins: 16
@@ -272,124 +270,44 @@ ApplicationWindow {
                 }
             }
 
-            // ---------------- Chat ----------------
+            // ---------------- Umfrage ----------------
             Card {
-                id: chatPane
+                id: pollPane
                 Layout.fillWidth: true
-                Layout.fillHeight: !!cfg.chat_open
-                Layout.preferredHeight: cfg.chat_open ? -1 : 52
-
+                Layout.preferredHeight: pollCol.implicitHeight + 28
+                readonly property var p: st.poll || ({})
+                readonly property bool running: p.phase === "laeuft"
                 ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 10
-                    visible: cfg.chat_open
-
+                    id: pollCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 14
+                    spacing: 8
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Heading { text: "Umfrage"; Layout.fillWidth: true }
+                        Badge {
+                            visible: pollPane.running
+                            text: Math.floor((pollPane.p.remaining || 0) / 60) + ":" + String((pollPane.p.remaining || 0) % 60).padStart(2, "0")
+                            fill: win.redLive
+                            pulse: true
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: pollPane.running ? (pollPane.p.question || "") + " · " + (pollPane.p.total || 0) + " Stimmen"
+                              : pollPane.p.phase === "ergebnis" ? "Ergebnis: " + (pollPane.p.total || 0) + " Stimmen"
+                              : "Frage stellen – der Chat stimmt mit !1, !2 … ab, das Ergebnis erscheint im Bild."
+                        color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
+                    }
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 6
-                        Repeater {
-                            model: ["twitch", "youtube"].concat(acc.kick && acc.kick.connected ? ["kick"] : [])
-                            delegate: Pill {
-                                required property string modelData
-                                Layout.fillWidth: true
-                                text: modelData === "twitch" ? "Twitch" : modelData === "kick" ? "Kick" : "YouTube"
-                                dot: modelData === "twitch" ? "#9f7aea" : modelData === "kick" ? "#53fc18" : "#ff4e45"
-                                checked: win.chatTab === modelData
-                                onClicked: win.chatTab = modelData
-                            }
-                        }
-                        IconBtn { icon: "chevron-down"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
+                        CButton { Layout.fillWidth: true; primary: !pollPane.running; text: pollPane.running ? "Ansehen" : "Neue Umfrage …"; onClicked: pollDialog.open = true }
+                        CButton { visible: pollPane.running; text: "Beenden"; onClicked: studio.endPoll() }
                     }
-
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        readonly property var a: acc[win.chatTab] || ({})
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Theme.radiusRow
-                            color: Theme.raised
-                            clip: true
-                            WebEngineView {
-                                id: chatView
-                                anchors.fill: parent
-                                anchors.margins: 1
-                                visible: !!parent.parent.a.chat
-                                url: parent.parent.a.chat || "about:blank"
-                                backgroundColor: Theme.raised
-                                settings.javascriptCanOpenWindows: false
-                                profile: WebEngineProfile {
-                                    storageName: "gibeon-studio-chat"
-                                    offTheRecord: false
-                                    persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
-                                }
-                                // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
-                                onLoadingChanged: (info) => {
-                                    if (info.status !== WebEngineView.LoadSucceededStatus)
-                                        return
-                                    const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
-                                        + "{display:none!important} body{background:" + Theme.raised + "!important}"
-                                    runJavaScript("(function(){var s=document.createElement('style');s.textContent="
-                                                  + JSON.stringify(css) + ";document.head.appendChild(s);})()")
-                                }
-                            }
-                            Column {
-                                anchors.centerIn: parent
-                                width: parent.width - 40
-                                spacing: 12
-                                visible: !chatView.visible
-                                Text {
-                                    width: parent.width
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    color: Theme.textMuted
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 13
-                                    text: win.chatTab === "kick" ? "Kick-Chat wird geladen …" : !parent.parent.parent.a.connected
-                                          ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
-                                          : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
-                                }
-                                CButton {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: !parent.parent.parent.a.connected
-                                    primary: true
-                                    text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
-                                    onClicked: studio.login(win.chatTab)
-                                }
-                                CButton {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
-                                    text: "Neu laden"
-                                    onClicked: studio.reloadChannel("youtube")
-                                }
-                            }
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-                        visible: win.chatTab !== "kick"            // bei Kick schreibst du direkt im Chat oben
-                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
-                        opacity: enabled ? 1 : 0.5
-                        Field {
-                            id: chatInput
-                            Layout.fillWidth: true
-                            placeholderText: "Nachricht an den Chat"
-                            onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
-                        }
-                        IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
-                    }
-                }
-                RowLayout {
-                    visible: !cfg.chat_open
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 8
-                    Text { text: "Chat"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true; Layout.fillWidth: true }
-                    IconBtn { icon: "chevron-down"; turn: 180; tip: "Chat zeigen"; onClicked: studio.set("chat_open", true) }
                 }
             }
         }
@@ -784,11 +702,6 @@ ApplicationWindow {
                 }
                 IconBtn { icon: "plus"; tip: "Neue Szene"; onClicked: { win.selected = ""; studio.addScene() } }
                 Item { Layout.fillWidth: true }
-                CButton {
-                    text: st.poll && st.poll.phase === "laeuft" ? "Umfrage · " + Math.floor(st.poll.remaining / 60) + ":" + String(st.poll.remaining % 60).padStart(2, "0") : "Umfrage"
-                    primary: !!(st.poll && st.poll.phase === "laeuft")
-                    onClicked: pollDialog.open = true
-                }
                 Text {
                     text: "Strg+1 … 9 wechselt die Szene"
                     color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11
@@ -805,10 +718,138 @@ ApplicationWindow {
             }
         }
 
-        // ---------------- Quellen ----------------
-        Card {
+        // ---------------- Rechts: Chat, Einstellungen, Live / Aufnahme ----------------
+        ColumnLayout {
+            id: rightCol
             Layout.fillHeight: true
-            Layout.preferredWidth: 290
+            Layout.preferredWidth: 320
+            spacing: 14
+
+            // ---------------- Chat ----------------
+            Card {
+                id: chatPane
+                Layout.fillWidth: true
+                Layout.fillHeight: !!cfg.chat_open
+                Layout.preferredHeight: cfg.chat_open ? -1 : 52
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
+                    visible: cfg.chat_open
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Repeater {
+                            model: ["twitch", "youtube"].concat(acc.kick && acc.kick.connected ? ["kick"] : [])
+                            delegate: Pill {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: modelData === "twitch" ? "Twitch" : modelData === "kick" ? "Kick" : "YouTube"
+                                dot: modelData === "twitch" ? "#9f7aea" : modelData === "kick" ? "#53fc18" : "#ff4e45"
+                                checked: win.chatTab === modelData
+                                onClicked: win.chatTab = modelData
+                            }
+                        }
+                        IconBtn { icon: "chevron-down"; tip: "Chat einklappen"; onClicked: studio.set("chat_open", false) }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        readonly property var a: acc[win.chatTab] || ({})
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Theme.radiusRow
+                            color: Theme.raised
+                            clip: true
+                            WebEngineView {
+                                id: chatView
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                visible: !!parent.parent.a.chat
+                                url: parent.parent.a.chat || "about:blank"
+                                backgroundColor: Theme.raised
+                                settings.javascriptCanOpenWindows: false
+                                profile: WebEngineProfile {
+                                    storageName: "gibeon-studio-chat"
+                                    offTheRecord: false
+                                    persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
+                                }
+                                // Eigenes Eingabefeld unten – das der Seite ausblenden, Hintergrund angleichen
+                                onLoadingChanged: (info) => {
+                                    if (info.status !== WebEngineView.LoadSucceededStatus)
+                                        return
+                                    const css = ".chat-input, .chat-input-tray__open, yt-live-chat-message-input-renderer, #input-panel"
+                                        + "{display:none!important} body{background:" + Theme.raised + "!important}"
+                                    runJavaScript("(function(){var s=document.createElement('style');s.textContent="
+                                                  + JSON.stringify(css) + ";document.head.appendChild(s);})()")
+                                }
+                            }
+                            Column {
+                                anchors.centerIn: parent
+                                width: parent.width - 40
+                                spacing: 12
+                                visible: !chatView.visible
+                                Text {
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                    wrapMode: Text.WordWrap
+                                    color: Theme.textMuted
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 13
+                                    text: win.chatTab === "kick" ? "Kick-Chat wird geladen …" : !parent.parent.parent.a.connected
+                                          ? "Melde dich bei " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " an – dann erscheint hier dein Chat."
+                                          : (win.chatTab === "youtube" ? "Der YouTube-Chat erscheint, sobald deine Übertragung bereit ist." : "Chat wird geladen …")
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: !parent.parent.parent.a.connected
+                                    primary: true
+                                    text: "Mit " + (win.chatTab === "twitch" ? "Twitch" : "YouTube") + " anmelden"
+                                    onClicked: studio.login(win.chatTab)
+                                }
+                                CButton {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: parent.parent.parent.a.connected && win.chatTab === "youtube"
+                                    text: "Neu laden"
+                                    onClicked: studio.reloadChannel("youtube")
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        visible: win.chatTab !== "kick"            // bei Kick schreibst du direkt im Chat oben
+                    enabled: !!(acc[win.chatTab] && acc[win.chatTab].connected)
+                        opacity: enabled ? 1 : 0.5
+                        Field {
+                            id: chatInput
+                            Layout.fillWidth: true
+                            placeholderText: "Nachricht an den Chat"
+                            onAccepted: { studio.sendChat(win.chatTab, text); text = "" }
+                        }
+                        IconBtn { icon: "send"; tip: "Senden"; onClicked: { studio.sendChat(win.chatTab, chatInput.text); chatInput.text = "" } }
+                    }
+                }
+                RowLayout {
+                    visible: !cfg.chat_open
+                    anchors.fill: parent
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 8
+                    Text { text: "Chat"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true; Layout.fillWidth: true }
+                    IconBtn { icon: "chevron-down"; turn: 180; tip: "Chat zeigen"; onClicked: studio.set("chat_open", true) }
+                }
+            }
+
+        Card {
+            Layout.fillWidth: true
+            Layout.fillHeight: !cfg.chat_open
+            Layout.preferredHeight: cfg.chat_open ? Math.min(side.implicitHeight + buttons.height + 60, rightCol.height * 0.6) : -1
 
             Flickable {
                 anchors.fill: parent
@@ -823,37 +864,11 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 10
 
-                    Heading { text: "Live senden an" }
-                    Repeater {
-                        model: [["twitch", "Twitch"], ["youtube", "YouTube"], ["kick", "Kick"], ["tiktok", "TikTok"], ["custom", "Eigener Server"]]
-                        delegate: RowLayout {
-                            id: tg
-                            required property var modelData
-                            readonly property string key: modelData[0]
-                            readonly property bool ready: key === "twitch" ? !!((acc.twitch && acc.twitch.connected && acc.twitch.target) || cfg.twitch_key)
-                                                        : key === "youtube" ? !!((acc.youtube && acc.youtube.connected && acc.youtube.target) || cfg.youtube_key)
-                                                        : !!cfg[key + "_url"]
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Rectangle { width: 8; height: 8; radius: 4; color: tg.ready ? Theme.ok : Theme.tint(0.25) }
-                            Column {
-                                Layout.fillWidth: true
-                                Text { text: tg.modelData[1]; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
-                                Text {
-                                    text: tg.ready ? "bereit" : "einrichten …"
-                                    color: tg.ready ? Theme.textMuted : Theme.accent
-                                    font.family: Theme.fontFamily; font.pixelSize: 11
-                                    MouseArea { anchors.fill: parent; enabled: !tg.ready; cursorShape: Qt.PointingHandCursor; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
-                                }
-                            }
-                            CSwitch { checked: !!(cfg.targets && cfg.targets[tg.key]); enabled: !st.live; label: tg.modelData[1]; onToggled: (v) => studio.set("targets." + tg.key, v) }
-                        }
-                    }
-
-                    Divider { Layout.fillWidth: true; Layout.topMargin: 6 }
                     Heading { text: "Einstellungen" }
                     Repeater {
                         model: [
+                            ["Live an", ["twitch", "youtube", "kick", "tiktok", "custom"].filter(k => cfg.targets && cfg.targets[k])
+                                         .map(k => ({ twitch: "Twitch", youtube: "YouTube", kick: "Kick", tiktok: "TikTok", custom: "Eigener Server" })[k]).join(", ") || "noch kein Ziel"],
                             ["Bild", (st.canvasHeight === 2160 ? "4K" : st.canvasHeight + "p") + " · " + st.canvasFps + " Bilder/s"],
                             ["Stream", (cfg.stream_res && cfg.stream_res !== "gleich" ? cfg.stream_res + "p" : "wie Bild") + (cfg.stream_fps === "30" && st.canvasFps > 30 ? " · 30 Bilder/s" : "") + " · " + ((cfg.kbps || 6000) / 1000).toFixed(1) + " Mbit/s"],
                             ["Aufnahme", (cfg.format || "mp4").toUpperCase() + " · " + ({ normal: "Normal", hoch: "Hoch", "sehr-hoch": "Sehr hoch" })[cfg.rec_quality || "normal"] + (cfg.upscale && cfg.upscale !== "aus" ? " · danach 4K" : "")],
@@ -867,6 +882,7 @@ ApplicationWindow {
                         }
                     }
                     CButton { Layout.fillWidth: true; text: "Einstellungen …"; onClicked: settingsDialog.open = true }
+                    CButton { Layout.fillWidth: true; text: "Plattformen einrichten …"; onClicked: { settingsDialog.tab = "ziele"; settingsDialog.open = true } }
                     CButton { Layout.fillWidth: true; text: "Aufnahmen öffnen"; onClicked: studio.openRecordings() }
                     // laufendes Hochskalieren
                     Rectangle {
@@ -917,6 +933,7 @@ ApplicationWindow {
                     onClicked: studio.toggleRecord()
                 }
             }
+        }
         }
     }
 
@@ -1049,7 +1066,7 @@ ApplicationWindow {
                 }
                 Seg {
                     Layout.fillWidth: true
-                    options: [["bild", "Bild"], ["stream", "Stream"], ["ziele", "Ziele"], ["aufnahme", "Aufnahme"]]
+                    options: [["bild", "Bild"], ["stream", "Stream"], ["ziele", "Plattformen"], ["aufnahme", "Aufnahme"]]
                     value: settingsDialog.tab
                     onPicked: (v) => settingsDialog.tab = v
                 }
