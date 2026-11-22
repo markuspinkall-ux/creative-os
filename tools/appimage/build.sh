@@ -39,22 +39,22 @@ pip_in() {   # pip_in <appdir> pakete…
 }
 site_of() { echo "$1/opt/python$PYVER/lib/python$PYVER/site-packages"; }
 
-# Teile von Qt, die keine der Apps braucht (spart gut 200 MB)
+# Teile von Qt, die keine der Apps braucht (spart gut 200 MB). Positioning bleibt: WebEngine braucht es.
 trim_qt() {
     local qt; qt="$(site_of "$1")/PySide6"
     rm -rf "$qt"/Qt/lib/libQt63D* "$qt"/Qt/lib/libQt6Quick3D* "$qt"/Qt/lib/libQt6Charts* \
            "$qt"/Qt/lib/libQt6DataVisualization* "$qt"/Qt/lib/libQt6Graphs* "$qt"/Qt/lib/libQt6Designer* \
            "$qt"/Qt/lib/libQt6Bluetooth* "$qt"/Qt/lib/libQt6Sensors* "$qt"/Qt/lib/libQt6SerialPort* \
-           "$qt"/Qt/lib/libQt6Location* "$qt"/Qt/lib/libQt6Positioning* "$qt"/Qt/lib/libQt6RemoteObjects* \
+           "$qt"/Qt/lib/libQt6RemoteObjects* \
            "$qt"/Qt/lib/libQt6Scxml* "$qt"/Qt/lib/libQt6SpatialAudio* "$qt"/Qt/lib/libQt6VirtualKeyboard* \
            "$qt"/Qt/qml/Qt3D "$qt"/Qt/qml/QtQuick3D "$qt"/Qt/qml/QtCharts "$qt"/Qt/qml/QtDataVisualization \
-           "$qt"/Qt/qml/QtGraphs "$qt"/Qt/qml/QtLocation "$qt"/Qt/qml/QtPositioning "$qt"/Qt/qml/QtSensors \
+           "$qt"/Qt/qml/QtGraphs "$qt"/Qt/qml/QtSensors \
            "$qt"/Qt/qml/QtScxml "$qt"/Qt/qml/QtRemoteObjects "$qt"/Qt/qml/QtQuick/VirtualKeyboard \
            "$qt"/designer "$qt"/assistant "$qt"/linguist "$qt"/lupdate "$qt"/Qt/translations/qt_help_* \
            "$qt"/examples "$qt"/glue "$qt"/include "$qt"/typesystems 2>/dev/null || true
     find "$qt" -name "Qt3D*.so" -o -name "QtCharts*.so" -o -name "QtDataVisualization*.so" -o -name "QtGraphs*.so" \
          -o -name "QtDesigner*.so" -o -name "QtBluetooth*.so" -o -name "QtSensors*.so" -o -name "QtQuick3D*.so" \
-         -o -name "QtLocation*.so" -o -name "QtPositioning*.so" -o -name "QtScxml*.so" -o -name "QtRemoteObjects*.so" \
+         -o -name "QtScxml*.so" -o -name "QtRemoteObjects*.so" \
          | xargs -r rm -f
     find "$1" -name "__pycache__" -prune -exec rm -rf {} +
 }
