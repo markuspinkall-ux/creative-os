@@ -51,6 +51,10 @@ printf '# creative-os: GRUB-Textmeldungen unsichtbar\nset color_normal=black/bla
 export CREATIVE_GRUB_SRC="$SRC" CREATIVE_BOOT_DIRS="$BOOT/grub2" CREATIVE_GRUB_AUS="$W/aus" CREATIVE_GRUB_ZEIGEN="$W/zeigen"
 sh image/grub-theme/creative-grub-menue
 sh image/grub-theme/creative-grub-design
+if [ -n "${SPUR:-}" ]; then
+    python3 tools/grub-spur.py "$BOOT/grub2/grub.cfg" grub
+    python3 tools/grub-spur.py "$BOOT/grub2/user.cfg" user
+fi
 echo "--- grub.cfg ---"; cat "$BOOT/grub2/grub.cfg"; echo "--- user.cfg ---"; cat "$BOOT/grub2/user.cfg"
 
 # ---- Festplatte: EFI-Partition (shim, GRUB) + /boot (FAT, reicht GRUB) ------------------------

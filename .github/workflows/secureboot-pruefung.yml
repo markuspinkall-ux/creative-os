@@ -3,7 +3,7 @@ name: Secure Boot prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [image/grub-theme/**, image/quiet-boot/**, tools/secureboot-test.sh, .github/workflows/secureboot-pruefung.yml]
+    paths: [image/grub-theme/**, image/quiet-boot/**, tools/secureboot-test.sh, tools/grub-spur.py, .github/workflows/secureboot-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:
@@ -15,7 +15,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - run: sh tools/secureboot-test.sh secureboot-fotos
+      - run: SPUR=1 sh tools/secureboot-test.sh secureboot-fotos
       - name: Fotos im Branch „secureboot-fotos“ ablegen
         if: always()
         run: |
