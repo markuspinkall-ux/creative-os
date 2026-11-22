@@ -220,6 +220,8 @@ if QObject is not None:
             self._rows = [dict(c, size=0, sizeText="", note="", checked=c["on"], done=False) for c in CATEGORIES]
             self._busy, self._phase, self._summary = False, "", ""
             self._done.connect(self._apply)
+            if os.environ.get("CREATIVE_CLEANUP_AUTO"):       # nur für Vorschau-Fotos
+                self.analyze()
 
         def _run(self, phase, work):
             if self._busy:
