@@ -22,8 +22,15 @@ for i, f in enumerate(steps):
 app.exec()
 PY
 dbus-run-session -- sh -c '
+  QT_LOGGING_RULES="kwin_scripting.debug=true;kwin_effects.debug=true" \
   /tmp/kwin_wayland --virtual --width 1600 --height 1000 --no-lockscreen --no-global-shortcuts --socket wayland-7 >/tmp/kwin.log 2>&1 &
-  sleep 5
+  # warten, bis KWin seine Effekte auf D-Bus anbietet
+  i=0
+  until dbus-send --session --print-reply --dest=org.kde.KWin /Effects org.freedesktop.DBus.Introspectable.Introspect >/dev/null 2>&1; do
+      i=$((i+1)); [ $i -gt 40 ] && break; sleep 1
+  done
+  echo "KWin bereit nach $i s"
+  dbus-send --session --print-reply --dest=org.kde.KWin / org.freedesktop.DBus.Introspectable.Introspect | grep -o "node name=\"[^\"]*\"" | head -20
   # wie die Shell: Symbol-Lage eintragen und den Effekt neu laden
   kwriteconfig6 --file kwinrc --group Effect-gibeon-fenster --key Tasten "[{\"n\":[\"org.kde.dolphin\",\"dolphin\"],\"x\":300,\"y\":975}]"
   kwriteconfig6 --file kwinrc --group Effect-gibeon-fenster --key Start "40,900,$(date +%s)000"
@@ -31,7 +38,7 @@ dbus-run-session -- sh -c '
   WAYLAND_DISPLAY=wayland-7 QT_QPA_PLATFORM=wayland timeout 30 python3 /tmp/fenster.py || true
   dbus-send --session --print-reply --dest=org.kde.KWin /Effects org.freedesktop.DBus.Properties.Get string:org.kde.kwin.Effects string:loadedEffects > /tmp/geladen.txt 2>&1 || true
 ' || true
-tail -20 /tmp/kwin.log
+echo '--- kwin.log ---'; tail -40 /tmp/kwin.log; echo '---'
 cat /tmp/geladen.txt
 if grep -iE "gibeon-fenster.*(error|TypeError|ReferenceError)|(TypeError|ReferenceError|SyntaxError)" /tmp/kwin.log; then
     echo "FEHLER im Effekt"; exit 1
