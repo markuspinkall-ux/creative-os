@@ -759,6 +759,8 @@ def main():
     watcher.directoryChanged.connect(look_changed)
     # Systemtray oben links ↔ Taskleiste (Systemsteuerung › Darstellung) sofort übernehmen
     watcher.directoryChanged.connect(lambda _p=None: QTimer.singleShot(150, shell.reload_tray_pos))
+    # Startmenü-Ansicht (Kategorien / A–Z / Kacheln) sofort übernehmen, nicht erst nach dem Neustart
+    watcher.directoryChanged.connect(lambda _p=None: QTimer.singleShot(150, apps.refreshStyle))
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)

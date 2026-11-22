@@ -57,7 +57,9 @@
       "Oben links blieb bei maximiertem Fenster ein verschwommener Streifen über der Titelleiste stehen: Das Glas der eingefahrenen oberen Leiste wurde zwar abgeschaltet, aber nie neu gezeichnet. Jetzt verschwindet es sofort",
       "Gibeon Kamera in Studio blieb leer: Broadcast griff sich ohne feste Wahl auch Capture-Karten (z. B. Live Gamer Mini) statt der Webcam und blieb an einer belegten Kamera hängen. Jetzt nimmt es nur Webcams, überspringt belegte Kameras, und Studio sagt, wenn die Gibeon Kamera kein Bild bekommen kann",
       "Browser: Bei Lesezeichen mit langem Namen wurde das Symbol zu einem Strich zusammengedrückt. Jetzt bleibt es immer ganz, und Lesezeichen zeigen das echte Symbol der Seite (sonst den Anfangsbuchstaben)",
-      "Browser: Symbole in der Lesezeichenleiste wurden bei manchen Seiten falsch oder verzerrt angezeigt."
+      "Browser: Symbole in der Lesezeichenleiste wurden bei manchen Seiten falsch oder verzerrt angezeigt.",
+      "Startmenü: Die Ansicht A–Z oder Kacheln aus der Systemsteuerung wird jetzt sofort übernommen (vorher blieb das Menü bei den Kategorien).",
+      "Systemtray in der Taskleiste: Widgets lassen sich jetzt bis an den oberen Bildschirmrand schieben. Kommt der Tray wieder nach oben, rücken sie automatisch darunter."
     ]
   },
   {
