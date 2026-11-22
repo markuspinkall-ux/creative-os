@@ -37,6 +37,28 @@ async function run(ctx) {
     console.log('--background-primary =', bg);
     check(/#1a1e27|#f4f7fb/i.test(bg), `Gibeon-Farben in Discord aktiv (${bg})`);
     fs.writeFileSync(path.join(out, 'discord-gibeon.png'), (await wc.capturePage()).toPNG());
+    // Erkunden: welche Discord-Variablen färben Knopf, Kasten und Eingabefeld wirklich?
+    const info = await wc.executeJavaScript(`(() => {
+      const root = document.querySelector('.theme-dark, .theme-light') || document.documentElement;
+      const cs = getComputedStyle(root);
+      const names = new Set();
+      for (const sh of document.styleSheets) { try { for (const r of sh.cssRules) { if (r.style) for (const n of r.style) if (n.startsWith('--')) names.add(n); } } catch (_) {} }
+      const probe = document.createElement('div'); document.body.appendChild(probe);
+      const norm = (v) => { probe.style.color = ''; probe.style.color = v; return getComputedStyle(probe).color; };
+      const pick = (el) => el ? getComputedStyle(el).backgroundColor : '';
+      const btn = document.querySelector('button[type=submit]');
+      const box = btn && btn.closest('form') ? btn.closest('form').firstElementChild : null;
+      const inp = document.querySelector('input');
+      const want = { button: pick(btn), box: pick(box), input: pick(inp), text: btn ? getComputedStyle(btn).color : '' };
+      const hits = {};
+      for (const [k, col] of Object.entries(want)) {
+        hits[k] = [col];
+        for (const n of names) { const v = cs.getPropertyValue(n).trim(); if (v && !v.includes('var(') && norm(v) === col) hits[k].push(n); }
+      }
+      return JSON.stringify({ count: names.size, hits, sample: [...names].filter(n => /control|brand|button|surface|base|mod|text-/.test(n)).slice(0, 400) });
+    })()`);
+    fs.writeFileSync(path.join(out, 'discord-variablen.json'), info);
+    console.log('Variablen:', info.slice(0, 3000));
     setTheme(false);
     await sleep(1500);
     fs.writeFileSync(path.join(out, 'discord-original.png'), (await wc.capturePage()).toPNG());
