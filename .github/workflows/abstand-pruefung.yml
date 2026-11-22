@@ -1,10 +1,10 @@
-name: Fensterabstand prüfen
-# Abstand in echtem KWin (Fedora 44, virtueller Bildschirm): maximieren → Abstand statt randlos,
-# nochmal maximieren → alte Größe.
+name: Maximieren prüfen
+# Maximieren in echtem KWin (Fedora 44, virtueller Bildschirm): randlos bis zur Taskleiste,
+# wiederherstellen → alte Größe; dazu keine Fehler im Skript creative-tasks.
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/kwin/creative-abstand/**, shell/kwin/creative-tasks/**, tools/abstand-test.sh, tools/abstand-client.py, .github/workflows/abstand-pruefung.yml]
+    paths: [shell/kwin/kwinrc, shell/kwin/creative-abstand/**, shell/kwin/creative-tasks/**, tools/abstand-test.sh, tools/abstand-client.py, .github/workflows/abstand-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:

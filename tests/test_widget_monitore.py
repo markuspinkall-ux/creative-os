@@ -6,10 +6,42 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_ziehen_ueber_monitore():
     qml = (ROOT / "shell/creative_shell/qml/surfaces/Wallpaper.qml").read_text(encoding="utf-8")
-    # alle verschiebbaren Widgets: RSS/Wetter, Uhr & Co., Leistungsanzeige
-    assert qml.count("root.crossDragMove(") == 3
-    assert qml.count("root.crossDragDrop(") == 3
+    # alle verschiebbaren Widgets: RSS/Wetter, Uhr & Co., Leistungsanzeige, Ablage
+    assert qml.count("root.crossDragMove(") == 4
+    assert qml.count("root.crossDragDrop(") == 4
     assert "shell.widgetGhost" in qml and "visible: g.screen === root.screenName" in qml
+    # Dateien und Ordner genauso – der alte Rechtsklick „Auf … verschieben“ ist weg
+    assert "root.iconCrossTarget(p.x, p.y)" in qml and "desktop.placeDragged(path, crossIcon.screen" in qml
+    assert "MonitorGripMenu" not in qml and "monitorMenu" not in qml and '"screen:"' not in qml
+
+
+def test_obere_leiste_bei_maximiert():
+    """Maximiertes Fenster: obere Leiste weg, kein Abstand, Uhr unten in der Taskleiste."""
+    main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
+    assert "shell.watch_tasks(tasks)" in main and "tasks.maximized_outputs()" in main
+    js = (ROOT / "shell/kwin/creative-tasks/contents/code/main.js").read_text(encoding="utf-8")
+    assert "maximized: isMaximized(w)" in js and "fullscreen: !!w.fullScreen" in js
+    assert "creative-abstandEnabled=false" in (ROOT / "shell/kwin/kwinrc").read_text(encoding="utf-8")
+    bar = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
+    assert "id: clockPill" in bar and "anchors.right: clockPill.left" in bar
+    top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
+    assert "toggleCalendar" not in top
+
+
+def test_maximized_outputs():
+    import sys
+    import pytest
+    pytest.importorskip("PySide6")
+    sys.path.insert(0, str(ROOT / "shell"))
+    from creative_shell.tasks import TaskModel
+    m = TaskModel.__new__(TaskModel)
+    m._windows = [
+        {"output": "DP-1", "maximized": True},
+        {"output": "DP-2", "maximized": True, "minimized": True},
+        {"output": "HDMI-A-1", "fullscreen": True},
+        {"output": "DP-3"},
+    ]
+    assert m.maximized_outputs() == {"DP-1", "HDMI-A-1"}
     main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
     for part in ("def screenAt(", "def screenGeometry(", "def setWidgetGhost("):
         assert part in main
@@ -18,10 +50,11 @@ def test_ziehen_ueber_monitore():
 def test_obere_leiste_fluid():
     """Fluid-Design: Tray oben links, Uhrzeit rechts, Taskleiste unten ohne Tray, Menüs oben."""
     top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
-    assert "shell.toggleQuickPanel(root.screenName)" in top and "shell.toggleCalendar(root.screenName)" in top
+    assert "shell.toggleQuickPanel(root.screenName)" in top
     assert "trayApps.items" in top and 'text: "Gibeon OS"' in top
     bar = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
     assert "toggleQuickPanel" not in bar and "trash.open()" in bar
+    assert "shell.toggleCalendar(root.screenName)" in bar
     main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
     assert '"Topbar.qml"' in main and "TOP_HEIGHT = 50" in main
     host = (ROOT / "shell/creative_shell/qml/HostLayer.qml").read_text(encoding="utf-8")

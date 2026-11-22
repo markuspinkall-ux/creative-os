@@ -1,4 +1,5 @@
-"""Startpunkt: `creative-shots` (Fenster) oder `creative-shots --snip` (sofort Auswahl)."""
+"""Startpunkt: `creative-shots` (Fenster), `creative-shots --snip` (sofort Auswahl) oder
+`creative-shots --record` (gleich ein Video vom Desktop aufnehmen)."""
 
 import signal
 import sys
@@ -52,7 +53,11 @@ def main():
         assert shots._image.width() == 50 and shots._image.height() == 40
         print("Shots: Selbsttest bestanden")
         return 0
-    if snip:
+    app.aboutToQuit.connect(shots.shutdown)
+    if "--record" in sys.argv:              # gleich ein Video aufnehmen
+        shots.set_close_after(True)
+        QTimer.singleShot(150, shots.startRecording)
+    elif snip:
         QTimer.singleShot(150, shots.startSnip)
     else:
         win.show()

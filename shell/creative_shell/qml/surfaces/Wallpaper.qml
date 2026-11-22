@@ -216,15 +216,10 @@ Item {
         y: g.y || 0
         width: g.w || 0
         height: g.h || 0
-        radius: 22
+        radius: g.icon ? 10 : 22
         color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
         border.color: Theme.accent
         border.width: 2
-    }
-
-    function openMonitorMenu(key, x, y) {
-        monitorMenu.widgetKey = key
-        monitorMenu.openAt(x, y)
     }
 
     // Ziehen: Schreibtisch-Symbol → Ablage, oder Ablage-Eintrag heraus (= entfernen)
@@ -282,9 +277,54 @@ Item {
         moveFolder = moveShelf ? "" : folderAt(px, py)
         moveCell = (moveShelf || moveFolder !== "") ? null : nearestFree.apply(null, icons.cellAt(px, py))
     }
+    // ---- Symbol auf einen anderen Monitor ziehen (wie bei den Widgets) ------------------------
+    // Liegt der Zeiger über dem Schreibtisch eines anderen Monitors, zeigt der dort einen Umriss
+    // im Raster; beim Loslassen landet das Symbol (samt Auswahl) genau in dieser Zelle.
+    // Der Platz wird wie gewohnt gespeichert (desktopIconCells).
+    property var crossIcon: null          // { screen, col, row } oder null
+
+    function iconCrossTarget(px, py) {
+        const here = shell.screenGeometry(root.screenName)
+        if (here.width === undefined)
+            return null
+        const gx = here.x + px, gy = here.y + py
+        const name = shell.screenAt(gx, gy)
+        if (!name || name === root.screenName)
+            return null
+        const g = shell.screenGeometry(name)
+        const lx = gx - g.x, ly = gy - g.y
+        if (tasks.windowAt(name, lx, ly))
+            return null                   // über einem Fenster: an das Programm übergeben
+        // gleiches Raster wie „icons“ auf jedem Monitor
+        const left = icons.x, top = root.topSpace + 12
+        const cols = Math.max(1, Math.floor((g.width - 24) / icons.cellWidth))
+        const rows = Math.max(1, Math.floor((g.height - root.barSpace - root.topSpace - 24) / icons.cellHeight))
+        const col = Math.max(0, Math.min(cols - 1, Math.floor((lx - left) / icons.cellWidth)))
+        const row = Math.max(0, Math.min(rows - 1, Math.floor((ly - top) / icons.cellHeight)))
+        return { screen: name, col: col, row: row,
+                 x: left + col * icons.cellWidth, y: top + row * icons.cellHeight }
+    }
+
+    function crossIconMove(t) {
+        crossIcon = t
+        moveCell = null
+        moveFolder = ""
+        moveShelf = false
+        shell.setWidgetGhost({ key: "icon", icon: true, screen: t.screen, x: t.x, y: t.y,
+                               w: icons.cellWidth, h: icons.cellHeight })
+    }
+
+    function clearCrossIcon() {
+        crossIcon = null
+        if (shell.widgetGhost.key === "icon")
+            shell.setWidgetGhost({})
+    }
+
     function finishMove() {
         const path = movePath
-        if (moveShelf) {
+        if (crossIcon) {
+            desktop.placeDragged(path, crossIcon.screen, crossIcon.col, crossIcon.row)
+        } else if (moveShelf) {
             const sel = desktop.selectedPaths()
             ;(sel.includes(path) ? sel : [path]).forEach(p => shelf.addPath(p))
         } else if (moveFolder !== "") {
@@ -297,6 +337,7 @@ Item {
         cancelMove()
     }
     function cancelMove() {
+        clearCrossIcon()
         movePath = ""
         moveCell = null
         moveFolder = ""
@@ -502,17 +543,6 @@ Item {
         }
     }
 
-    component MonitorGripMenu: MouseArea {
-        required property string widgetKey
-        anchors.fill: parent
-        anchors.margins: -7
-        acceptedButtons: Qt.RightButton
-        onClicked: (mouse) => {
-            const p = mapToItem(root, mouse.x, mouse.y)
-            root.openMonitorMenu(widgetKey, p.x, p.y)
-        }
-    }
-
     DesktopFeed {
         id: feedRss
         source: rssWidget
@@ -588,7 +618,6 @@ Item {
                 }
                 onCanceled: { root.crossDragCancel(widget.widgetKey, widget); widget.restorePosition() }
             }
-            MonitorGripMenu { widgetKey: widget.widgetKey }
         }
 
         Column {
@@ -714,7 +743,6 @@ Item {
                 }
                 onCanceled: { root.crossDragCancel(extra.key, extra); extra.restorePosition() }
             }
-            MonitorGripMenu { widgetKey: extra.key }
         }
     }
 
@@ -1161,7 +1189,6 @@ Item {
                 }
                 onCanceled: { root.crossDragCancel("stats", statsBox); statsBox.restoreBindings() }
             }
-            MonitorGripMenu { widgetKey: "stats" }
         }
 
         Grid {
@@ -1376,10 +1403,17 @@ Item {
                     }
                     if (root.movePath !== model.path)
                         return
-                    // Über einem Fenster oder außerhalb dieses Monitors: an das Programm bzw. den
-                    // anderen Monitor übergeben (System-Ziehen, z. B. in Discord, Brave oder „Dateien“)
-                    if (p.x < 0 || p.y < 0 || p.x > root.width || p.y > root.height
-                            || tasks.windowAt(root.screenName, p.x, p.y)) {
+                    const outside = p.x < 0 || p.y < 0 || p.x > root.width || p.y > root.height
+                    // Über dem Schreibtisch eines anderen Monitors: dort im Raster ablegen
+                    const cross = outside ? root.iconCrossTarget(p.x, p.y) : null
+                    if (cross) {
+                        root.crossIconMove(cross)
+                        return
+                    }
+                    root.clearCrossIcon()
+                    // Über einem Fenster: an das Programm übergeben
+                    // (System-Ziehen, z. B. in Discord, Brave oder „Dateien“)
+                    if (outside || tasks.windowAt(root.screenName, p.x, p.y)) {
                         root.cancelMove()
                         root.dragUris = desktop.dragUris(model.path)
                         root.dragPath = model.path
@@ -1559,16 +1593,19 @@ Item {
                 const p = mapToItem(root, mouse.x, mouse.y)
                 shelfBox.x = Math.max(8, Math.min(shelfBox.maxX, origin.x + p.x - start.x))
                 shelfBox.y = Math.max(root.minY, Math.min(shelfBox.maxY, origin.y + p.y - start.y))
+                root.crossDragMove("shelf", shelfBox, shelfMove, mouse)
             }
             onReleased: (mouse) => {
                 if (!shelfBox.moving) return
                 shelfBox.moving = false
-                if (Math.abs(shelfBox.x - origin.x) + Math.abs(shelfBox.y - origin.y) > 3)
+                const moved = root.crossDragDrop("shelf", shelfBox, shelfMove, mouse, (x, y) => shelf.setPos(x, y))
+                if (!moved && Math.abs(shelfBox.x - origin.x) + Math.abs(shelfBox.y - origin.y) > 3)
                     root.saveWidgetPosition("shelf", shelf, shelfBox)
                 shelfBox.rebind()
             }
             onCanceled: {
                 shelfBox.moving = false
+                root.crossDragCancel("shelf", shelfBox)
                 shelfBox.rebind()
             }
             onClicked: (mouse) => {
@@ -1635,7 +1672,7 @@ Item {
                             anchors.fill: parent
                             sourceSize.width: 76
                             sourceSize.height: 76
-                            source: slot.modelData.kind === "app" ? iconFiles.url(slot.modelData.icon) : ""
+                            source: slot.modelData.kind === "app" ? iconFiles.app(slot.modelData.icon) : ""
                             // The icon provider creates QPixmaps on the GUI thread.
                             asynchronous: false
                             smooth: true
@@ -1779,7 +1816,7 @@ Item {
             anchors.centerIn: parent
             width: 38; height: 38
             sourceSize.width: 76; sourceSize.height: 76
-            source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? iconFiles.url(root.dragShelfItem.icon) : ""
+            source: root.dragShelfItem && root.dragShelfItem.kind === "app" ? iconFiles.app(root.dragShelfItem.icon) : ""
         }
         FileIcon {
             visible: root.dragPath !== "" || root.movePath !== "" || (root.dragShelfItem !== null && root.dragShelfItem.kind !== "app")
@@ -1815,36 +1852,14 @@ Item {
     DesktopMenu {
         id: shelfBgMenu
         entries: [
-            { label: "Auf Monitor verschieben", icon: "settings", act: "monitor" },
             { label: "Ablage oben mittig anordnen", icon: "restore", act: "center" },
             { label: "Ablage ausblenden", icon: "close", act: "hide" }
         ]
         onTriggered: (act) => {
-            if (act === "monitor") root.openMonitorMenu("shelf", shelfBgMenu.x, shelfBgMenu.y)
-            else if (act === "center") {
+            if (act === "center") {
                 if (root.onFallback("shelf")) root.setFallbackPosition("shelf", -1, -1)
                 else shelf.resetPos()
             } else if (act === "hide") shelf.setEnabled(false)
-        }
-    }
-    DesktopMenu {
-        id: monitorMenu
-        property string widgetKey: ""
-        entries: {
-            const selected = shell.widgetScreens[widgetKey] || ""
-            const entries = [{ label: (selected ? "" : "✓  ") + "Hauptmonitor (automatisch)",
-                               icon: "settings", act: "" }]
-            for (const name of shell.screenNames)
-                entries.push({ label: (name === selected ? "✓  " : "") + name
-                                      + (name === shell.primaryScreen ? " (Hauptmonitor)" : ""),
-                               icon: "settings", act: name })
-            return entries
-        }
-        onTriggered: (name) => {
-            shell.setWidgetScreen(widgetKey, name)
-            const positions = Object.assign({}, root.fallbackPositions)
-            delete positions[widgetKey]
-            root.fallbackPositions = positions
         }
     }
     DesktopMenu {
@@ -1857,12 +1872,9 @@ Item {
             { label: "Kopieren", icon: "files", act: "copy" }
         ].concat(desktop.selectedCount === 1 ? [{ label: "Umbenennen  ·  F2", icon: "rename", act: "rename" }] : []).concat([
             { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
-        ]).concat(shell.screenNames.filter(name => name !== root.screenName).map(name => ({
-            label: "Auf " + name + " verschieben", icon: "settings", act: "screen:" + name
-        }))).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
+        ]).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
         onTriggered: (act) => {
-            if (act.startsWith("screen:")) desktop.moveToScreen(desktop.selectedPaths(), act.slice(7))
-            else if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
+            if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
             else if (act === "open") desktop.openSelected()
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()

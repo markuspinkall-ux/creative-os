@@ -217,6 +217,34 @@ class ShellController(QObject):
         self._app.screenAdded.connect(self._add_screen)
         self._app.screenRemoved.connect(self._remove_screen)
 
+    # ---- Obere Leiste bei maximierten Fenstern ausblenden ---------------------
+    # Ist auf einem Monitor ein Fenster maximiert (oder im Vollbild), verschwindet dort
+    # die obere Leiste samt ihrer Sperrzone – das Fenster bekommt den ganzen Platz bis
+    # zur Taskleiste. Die Taskleiste bleibt; nur echtes Vollbild deckt sie zu.
+    def watch_tasks(self, tasks):
+        self._tasks = tasks
+        self._top_hidden = set()
+        tasks.revisionChanged.connect(self._update_topbars)
+
+    def _update_topbars(self):
+        tasks = getattr(self, "_tasks", None)
+        if tasks is None:
+            return
+        wanted = tasks.maximized_outputs() & set(self._surfaces)
+        if wanted == self._top_hidden:
+            return
+        for name in wanted - self._top_hidden:
+            win = self._surfaces[name].get("top")
+            if win is not None:
+                if self._open.get("panel") == name:
+                    self.closePopups()
+                _win_hide(win)
+        for name in self._top_hidden - wanted:
+            entry = self._surfaces.get(name)
+            if entry and entry.get("top") is not None:
+                _win_show(entry["top"])
+        self._top_hidden = wanted
+
     # ---- Monitore -----------------------------------------------------------
     def _add_screen(self, screen):
         name = screen.name()
@@ -237,11 +265,13 @@ class ShellController(QObject):
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
         screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
         self.screensChanged.emit()
+        self._update_topbars()
 
     def _remove_screen(self, screen):
         entry = self._surfaces.pop(screen.name(), None)
         if not entry:
             return
+        getattr(self, "_top_hidden", set()).discard(screen.name())
         for key in ("bg", "bar", "top") + SURFACES:
             win = entry.get(key)
             if win is not None:
@@ -282,6 +312,8 @@ class ShellController(QObject):
             self._relayout(name)
             for key in ("bg", "bar", "top"):
                 win = entry.get(key)
+                if key == "top" and name in getattr(self, "_top_hidden", ()):
+                    continue
                 if win is not None:
                     _win_show(win)
                     QMetaObject.invokeMethod(win, "requestUpdate")
@@ -681,6 +713,7 @@ def main():
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)
+    shell.watch_tasks(tasks)
     shell.start()
     # Anmelde-Ton, sobald der Desktop gezeichnet ist (einmal pro Sitzung)
     QTimer.singleShot(1500, play_login_sound)

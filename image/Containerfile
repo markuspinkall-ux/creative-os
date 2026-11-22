@@ -659,7 +659,7 @@ RUN /usr/libexec/gibeon-round-icons /usr/share/icons/hicolor/scalable/apps/creat
  && for n in com.obsproject.Studio obs obs-studio obs-tray obs-tray-active creative-obs; do \
         rm -f /usr/share/icons/Creative/apps/scalable/$n.png /usr/share/icons/CreativePorzellan/apps/scalable/$n.png; \
         cp /usr/share/icons/hicolor/scalable/apps/creative-obs.svg /usr/share/icons/Creative/apps/scalable/$n.svg; \
-        sed -e 's/#232836/#edf0f5/gI; s/#8fb3ff/#5b6576/gI; s/#dce6ff/#1c2433/gI' \
+        sed -e 's/#10131a/#d6dce6/gI; s/#232836/#edf0f5/gI; s/#8fb3ff/#5b6576/gI; s/#dce6ff/#1c2433/gI' \
             /usr/share/icons/hicolor/scalable/apps/creative-obs.svg \
             > /usr/share/icons/CreativePorzellan/apps/scalable/$n.svg; \
     done \
@@ -835,6 +835,7 @@ RUN python3 /tmp/qml-check.py \
         /usr/lib/creative-pictures/creative_pictures/qml/Viewer.qml \
         /usr/lib/creative-shots/creative_shots/qml/Main.qml \
         /usr/lib/creative-shots/creative_shots/qml/SnipOverlay.qml \
+        /usr/lib/creative-shots/creative_shots/qml/RecordBar.qml \
         /usr/lib/creative-broadcast/creative_broadcast/qml/Main.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Taskbar.qml \
         /usr/lib/creative-shell/creative_shell/qml/surfaces/Topbar.qml \
@@ -856,7 +857,9 @@ RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/deck-home timeout 6
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-shots --selftest \
     || echo "SHOTS-SELBSTTEST FEHLGESCHLAGEN"; \
     QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/shots-home timeout 60 /usr/bin/creative-pictures --selftest \
-    || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home
+    || echo "PICTURES-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/shots-home; \
+    cd /usr/lib/creative-shots && timeout 90 python3 -m creative_shots.recorder --selftest /tmp/shots-aufnahme.mp4 \
+    || echo "SHOTS-AUFNAHME-SELBSTTEST FEHLGESCHLAGEN"; rm -f /tmp/shots-aufnahme.mp4 /tmp/shots-aufnahme.webm
 # Player: startet er (mit eingebautem Browser für YouTube Music)?
 RUN QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR=/tmp HOME=/tmp/player-home QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox" \
     timeout 90 /usr/bin/creative-player --selftest || echo "PLAYER-SELBSTTEST FEHLGESCHLAGEN"; rm -rf /tmp/player-home

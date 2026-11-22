@@ -107,6 +107,36 @@ Window {
                 Accessible.name: "Neues Bildschirmfoto"
             }
 
+            // Video: Desktop aufnehmen
+            Rectangle {
+                id: recBtn
+                width: recRow.implicitWidth + 24
+                height: 38
+                radius: 12
+                color: rcm.pressed ? Theme.pressed : (rcm.containsMouse ? Theme.hover : Theme.tint(0.05))
+                Row {
+                    id: recRow
+                    anchors.centerIn: parent
+                    spacing: 7
+                    Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 12; height: 12; radius: 6; color: "#ff4d5e" }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Aufnehmen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; font.bold: true }
+                }
+                MouseArea { id: rcm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: shots.startRecording() }
+                Accessible.role: Accessible.Button
+                Accessible.name: "Video vom Desktop aufnehmen"
+                Accessible.onPressAction: shots.startRecording()
+            }
+            // Ton mit aufnehmen
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 38; height: 38
+                icon: shots.recordAudio ? "volume" : "volume-off"
+                iconSize: 16
+                label: shots.recordAudio ? "Ton wird mit aufgenommen (klicken: ohne Ton)" : "Ohne Ton (klicken: mit Ton)"
+                active: shots.recordAudio
+                onClicked: shots.recordAudio = !shots.recordAudio
+            }
+
             // Modus
             Rectangle {
                 width: modeRow.implicitWidth + 8
@@ -325,7 +355,7 @@ Window {
             spacing: 8
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "Wähle oben einen Modus und klicke auf „Neu“."
+                text: "Wähle oben einen Modus und klicke auf „Neu“ – oder „Aufnehmen“ für ein Video."
                 color: Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
@@ -336,6 +366,27 @@ Window {
                 color: Theme.textMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: 12
+            }
+            // Nach einer Video-Aufnahme: ansehen oder Ordner öffnen
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: shots.lastVideo !== ""
+                spacing: 14
+                Text {
+                    text: "▶  " + shots.lastVideo + " ansehen"
+                    color: Theme.accent
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.bold: true
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: shots.openLastVideo() }
+                }
+                Text {
+                    text: "Ordner öffnen"
+                    color: Theme.accent
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: shots.openVideosFolder() }
+                }
             }
         }
 
@@ -512,6 +563,9 @@ Window {
     Shortcut { sequence: StandardKey.Save; enabled: shots.hasImage; onActivated: shots.save(win.strokes) }
     Shortcut { sequence: "Ctrl+Shift+S"; enabled: shots.hasImage; onActivated: saveDialog.open() }
     Shortcut { sequence: "Esc"; onActivated: { win.tool = ""; win.cropRect = null } }
+
+    // Während der Video-Aufnahme: kleine Leiste mit Laufzeit und „Stopp“
+    RecordBar {}
 
     // Eine Auswahl-Ebene je Monitor
     Instantiator {
