@@ -274,11 +274,11 @@ ApplicationWindow {
             Card {
                 id: pollPane
                 Layout.fillWidth: true
-                Layout.preferredHeight: pollCol.implicitHeight + 28
+                Layout.preferredHeight: pollPaneCol.implicitHeight + 28
                 readonly property var p: st.poll || ({})
                 readonly property bool running: p.phase === "laeuft"
                 ColumnLayout {
-                    id: pollCol
+                    id: pollPaneCol
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
