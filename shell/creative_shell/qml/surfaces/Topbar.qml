@@ -10,14 +10,54 @@ Item {
 
     property string screenName
 
+    // ---- Einfahren bei maximiertem Fenster ------------------------------------------------
+    // Ist auf diesem Monitor ein Fenster maximiert, reserviert die Leiste keinen Platz und fährt
+    // nach oben weg. Nur ein schmaler Streifen am oberen Rand nimmt dann die Maus an: geht sie
+    // dorthin, fährt die Leiste herein; verlässt sie die Leiste, fährt sie wieder ein.
+    readonly property bool autoHide: Window.window ? Window.window.autoHide : false
+    readonly property bool hovered: Window.window ? Window.window.hovered : false
+    readonly property bool menuOpen: shell.trayMenuOpenOn === root.screenName
+                                     || shell.quickPanelOpenOn === root.screenName
+    property bool peek: false
+    readonly property bool shown: !autoHide || peek || menuOpen
+    readonly property int edge: 3            // Streifen, der die Maus fängt
+    property real shift: shown ? 0 : -height
+    Behavior on shift { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    transform: Translate { y: root.shift }
+
+    onHoveredChanged: {
+        if (hovered) {
+            leaveTimer.stop()
+            peek = true
+        } else {
+            leaveTimer.restart()
+        }
+    }
+    Timer { id: leaveTimer; interval: 500; onTriggered: root.peek = root.hovered }
+    onAutoHideChanged: { if (!autoHide) peek = false; updateInput() }
+    onShownChanged: { updateInput(); blurTimer.restart() }
+    Timer { id: blurTimer; interval: 240; onTriggered: root.updateBlur() }
+
+    function updateInput() {
+        if (!Window.window) return
+        if (!autoHide || shown)
+            shell.setInputRect(Window.window, 0, 0, 0, 0)          // ganze Fläche
+        else
+            shell.setInputRect(Window.window, 0, 0, width, edge)   // nur der Streifen oben
+    }
+
     // Fluid-Glas: nur unter den beiden Feldern weichzeichnen
     function updateBlur() {
+        if (!shown) {
+            shell.setBlur(Window.window, [])
+            return
+        }
         shell.setBlur(Window.window, [
             { x: left.x, y: left.y, w: left.width, h: left.height, r: 17 }
         ])
     }
     Component.onCompleted: Qt.callLater(updateBlur)
-    onWidthChanged: Qt.callLater(updateBlur)
+    onWidthChanged: { Qt.callLater(updateBlur); updateInput() }
 
     // Glas-Feld: durchscheinend, feine Kante, Lichtkante oben
     component Pill: Rectangle {

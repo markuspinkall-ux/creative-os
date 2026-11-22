@@ -8,7 +8,7 @@
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
-      "Ist ein Fenster maximiert, verschwindet die obere Leiste: das Fenster nutzt den ganzen Platz bis zur Taskleiste, ohne Abstand an den Seiten. Nur im Vollbild wird auch die Taskleiste verdeckt",
+      "Ist ein Fenster maximiert, fährt die obere Leiste nach oben weg: das Fenster nutzt den ganzen Platz bis zur Taskleiste, ohne Abstand an den Seiten. Geht die Maus an den oberen Rand, fährt die Leiste mit dem Tray herein und verschwindet wieder, wenn die Maus weggeht. Nur im Vollbild wird auch die Taskleiste verdeckt",
       "Die runden Flächen hinter den App-Symbolen sind dunkler und heben sich besser vom Startmenü ab. Auch Symbole fremder Apps (z. B. selbst gebaute) bekommen automatisch diese runde Fläche",
       "Die Ablage lässt sich ebenfalls auf einen anderen Monitor ziehen; „Auf Monitor verschieben“ im Rechtsklick-Menü ist dafür weggefallen"
     ],
