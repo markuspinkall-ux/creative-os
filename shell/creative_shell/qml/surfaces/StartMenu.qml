@@ -303,6 +303,7 @@ Item {
                             appMenu.desktopId = tile.desktopId
                             appMenu.appName = tile.name
                             appMenu.pinned = apps.isPinned(tile.desktopId)
+                            appMenu.autostart = apps.isAutostart(tile.desktopId)
                             appMenu.confirming = false
                             const p = tile.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
