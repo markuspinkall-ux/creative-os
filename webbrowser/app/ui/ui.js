@@ -36,6 +36,14 @@ const P = {
   play: '<path d="M8 5l11 7-11 7z"/>',
   power: '<path d="M12 3v8M6.3 7a8 8 0 1 0 11.4 0"/>',
   bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
+  pip: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11" width="7" height="6" rx="1.2"/>',
+  reader: '<path d="M4 5.5h6.5a2 2 0 0 1 1.5.7 2 2 0 0 1 1.5-.7H20v13h-6.5a2 2 0 0 0-1.5.7 2 2 0 0 0-1.5-.7H4z"/><path d="M12 6.2v13"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l3 3"/>',
+  translate: '<path d="M4 5h9M8.5 3v2c0 4-2 7-5 8.5M6 9c1 2 3 3.5 5.5 4"/><path d="M13 20l4-9 4 9M14.3 17h5.4"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  sleep: '<path d="M9 5h6l-6 7h6M14 14h5l-5 6h5"/>',
+  import: '<path d="M12 15V4M7 10l5 5 5-5"/><path d="M4 15v4h16v-4"/>',
   shield: '<path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
 };
 const icon = (name, size = 18, fill = false) =>
@@ -44,6 +52,10 @@ const icon = (name, size = 18, fill = false) =>
 for (const [id, name] of [['newtab', 'plus'], ['back', 'back'], ['forward', 'forward'], ['reload', 'reload'], ['home', 'home'],
   ['menu-btn', 'menu'], ['find-prev', 'up'], ['find-next', 'down'], ['find-close', 'close']]) $(id).innerHTML = icon(name);
 $('downloads-btn').insertAdjacentHTML('beforeend', icon('download'));
+$('pip-btn').innerHTML = icon('pip');
+$('reader-btn').innerHTML = icon('reader');
+$('pip-btn').onclick = () => api.cmd('pip');
+$('reader-btn').onclick = () => api.cmd('reader');
 $('menu-btn').innerHTML = icon('menu', 18, true);
 
 const isPrivate = new URLSearchParams(location.search).get('privat') === '1';
@@ -136,8 +148,9 @@ function renderTabs() {
     const el = tabEl(t);
     if (box.children[i] !== el) box.insertBefore(el, box.children[i] || null);
     el.classList.toggle('active', S.active && t.id === S.active.id);
+    el.classList.toggle('sleeping', !!t.sleeping);
     el.setAttribute('aria-selected', String(S.active && t.id === S.active.id));
-    el.title = t.title;
+    el.title = t.sleeping ? `${t.title} (schläft – wird beim Anklicken neu geladen)` : t.title;
     const title = el.querySelector('.title');
     if (title.textContent !== t.title) title.textContent = t.title;
     const fav = el.querySelector('.fav');
@@ -171,7 +184,8 @@ function tabMenu(id, x, y) {
     { label: 'Neu laden', icon: 'reload', run: () => api.cmd('reload-tab', id) },
     { label: 'Duplizieren', icon: 'window', run: () => api.cmd('duplicate-tab', id) },
     { label: 'In neues Fenster verschieben', icon: 'open', enabled: S.tabs.length > 1, run: () => api.cmd('tear-off', id) },
-    { label: t.muted ? 'Ton wieder an' : 'Tab stummschalten', icon: t.muted ? 'speaker' : 'muted', run: () => api.cmd('mute-tab', id) },
+    { label: t.muted ? 'Ton wieder an' : 'Tab stummschalten', icon: t.muted ? 'speaker' : 'muted', enabled: !t.sleeping, run: () => api.cmd('mute-tab', id) },
+    { label: 'Tab schlafen legen', icon: 'sleep', enabled: !t.sleeping && !(S.active && S.active.id === id) && !t.start && !t.audible, run: () => api.cmd('sleep-tab', id) },
     '-',
     { label: 'Andere Tabs schließen', run: () => api.cmd('close-others', id), enabled: S.tabs.length > 1 },
     { label: 'Tab schließen', icon: 'close', key: 'Strg+W', run: () => api.cmd('close-tab', id) },
@@ -204,6 +218,8 @@ function renderNav() {
   $('star').classList.toggle('on', !!a.bookmarked);
   $('star').hidden = !a.url;
   renderShield(a.adblock);
+  $('pip-btn').classList.toggle('show', !!a.hasVideo);
+  $('reader-btn').classList.toggle('show', !!a.web);
   renderBoost(a);
   $('zoom-badge').textContent = `${a.zoom || 100} %`;
   $('zoom-badge').classList.toggle('show', !!a.zoom && a.zoom !== 100);
@@ -363,34 +379,88 @@ function renderBookmarks() {
     bar.innerHTML = '<span class="bm-empty">Lesezeichen mit dem Stern in der Adressleiste hinzufügen</span>';
     return;
   }
-  bar.innerHTML = S.bookmarks.map((b, i) => `<button class="bm" data-i="${i}" title="${esc(b.title)}\n${esc(b.url)}">
-      <span class="ico"><img src="${esc(faviconFor(b.url))}" width="16" height="16" alt="" data-letter="${letterFor(b.title, b.url)}"></span>
-      <span>${esc(b.title)}</span></button>`).join('');
+  const folderNames = [];
+  for (const b of S.bookmarks) if (b.folder && !folderNames.includes(b.folder)) folderNames.push(b.folder);
+  // Ordner zuerst (wie in anderen Browsern), dann die einzelnen Lesezeichen
+  bar.innerHTML = folderNames.map((f) => `<button class="bm folder" data-folder="${esc(f)}" title="${esc(f)}">
+      <span class="ico">${icon('folder', 16)}</span><span>${esc(f)}</span></button>`).join('')
+    + S.bookmarks.map((b, i) => (b.folder ? '' : `<button class="bm" data-i="${i}" title="${esc(b.title)}\n${esc(b.url)}">
+      <span class="ico"><img src="${esc(b.icon || faviconFor(b.url))}" width="16" height="16" alt="" data-letter="${letterFor(b.title, b.url)}" data-fallback="${b.icon ? esc(faviconFor(b.url)) : ''}"></span>
+      <span>${esc(b.title)}</span></button>`)).join('');
   bar.querySelectorAll('img[data-letter]').forEach((img) => {
-    img.addEventListener('error', () => {
+    const toLetter = () => {
       const d = document.createElement('div');
       d.className = 'letter';
       d.textContent = img.dataset.letter;
       img.replaceWith(d);
-    }, { once: true });
+    };
+    // erst das Symbol der Seite, dann /favicon.ico, sonst der Anfangsbuchstabe
+    img.addEventListener('error', function onErr() {
+      if (img.dataset.fallback) { const f = img.dataset.fallback; img.dataset.fallback = ''; img.src = f; return; }
+      img.removeEventListener('error', onErr);
+      toLetter();
+    });
+    // Winzige oder leere Bilder (z. B. 1×1-Platzhalter) gelten nicht als Symbol
+    img.addEventListener('load', () => { if (img.naturalWidth < 8 || img.naturalHeight < 8) toLetter(); }, { once: true });
   });
-  bar.querySelectorAll('.bm').forEach((el) => {
-    const b = S.bookmarks[Number(el.dataset.i)];
-    el.addEventListener('click', (e) => api.cmd(e.ctrlKey ? 'open-url-tab' : 'open-url', b.url, true));
-    el.addEventListener('auxclick', (e) => { if (e.button === 1) api.cmd('open-url-tab', b.url, true); });
+  bar.querySelectorAll('.bm.folder').forEach((el) => {
+    const f = el.dataset.folder;
+    el.addEventListener('click', () => {
+      const r = el.getBoundingClientRect();
+      const items = S.bookmarks.filter((b) => b.folder === f);
+      showMenu($('ctx'), [
+        ...items.map((b) => ({ label: b.title || b.url, icon: 'globe', run: () => api.cmd('open-url', b.url, true), ctx: b })),
+        '-',
+        { label: `Alle ${items.length} in Tabs öffnen`, icon: 'plus', enabled: items.length > 0, run: () => items.forEach((b) => api.cmd('open-url-tab', b.url, true)) },
+      ], r.left, r.bottom + 4);
+      // Rechtsklick auf ein Lesezeichen im Ordner
+      $('ctx').querySelectorAll('.item').forEach((btn, i) => {
+        if (i < items.length) btn.addEventListener('contextmenu', (e) => { e.preventDefault(); bookmarkMenu(items[i], -1, e.clientX, e.clientY); });
+      });
+    });
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showMenu($('ctx'), [
-        { label: 'Öffnen', icon: 'open', run: () => api.cmd('open-url', b.url) },
-        { label: 'In neuem Tab öffnen', icon: 'plus', run: () => api.cmd('open-url-tab', b.url, false) },
-        '-',
-        { label: 'Umbenennen …', run: () => renameBookmark(b) },
-        { label: 'Nach links', enabled: Number(el.dataset.i) > 0, run: () => api.cmd('move-bookmark', b.url, Number(el.dataset.i) - 1) },
-        { label: 'Nach rechts', enabled: Number(el.dataset.i) < S.bookmarks.length - 1, run: () => api.cmd('move-bookmark', b.url, Number(el.dataset.i) + 1) },
-        { label: 'Entfernen', icon: 'trash', run: () => api.cmd('remove-bookmark', b.url) },
+        { label: 'Ordner umbenennen …', run: () => renameFolder(f) },
+        { label: 'Ordner auflösen', icon: 'trash', run: () => api.cmd('folder-dissolve', f) },
       ], e.clientX, e.clientY);
     });
   });
+  bar.querySelectorAll('.bm:not(.folder)').forEach((el) => {
+    const b = S.bookmarks[Number(el.dataset.i)];
+    el.addEventListener('click', (e) => api.cmd(e.ctrlKey ? 'open-url-tab' : 'open-url', b.url, true));
+    el.addEventListener('auxclick', (e) => { if (e.button === 1) api.cmd('open-url-tab', b.url, true); });
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); bookmarkMenu(b, Number(el.dataset.i), e.clientX, e.clientY); });
+  });
+}
+function bookmarkMenu(b, i, x, y) {
+  const folderNames = [...new Set(S.bookmarks.map((v) => v.folder).filter(Boolean))];
+  showMenu($('ctx'), [
+    { label: 'Öffnen', icon: 'open', run: () => api.cmd('open-url', b.url) },
+    { label: 'In neuem Tab öffnen', icon: 'plus', run: () => api.cmd('open-url-tab', b.url, false) },
+    '-',
+    { label: 'Umbenennen …', run: () => renameBookmark(b) },
+    ...(i >= 0 ? [
+      { label: 'Nach links', enabled: i > 0, run: () => api.cmd('move-bookmark', b.url, i - 1) },
+      { label: 'Nach rechts', enabled: i < S.bookmarks.length - 1, run: () => api.cmd('move-bookmark', b.url, i + 1) },
+    ] : []),
+    { html: '<div class="label">IN ORDNER</div>' },
+    ...folderNames.filter((f) => f !== b.folder).map((f) => ({ label: f, icon: 'folder', run: () => api.cmd('bm-folder', b.url, f) })),
+    { label: 'Neuer Ordner …', icon: 'plus', run: () => newFolder(b) },
+    ...(b.folder ? [{ label: 'Aus dem Ordner nehmen', run: () => api.cmd('bm-folder', b.url, '') }] : []),
+    '-',
+    { label: 'Entfernen', icon: 'trash', run: () => api.cmd('remove-bookmark', b.url) },
+  ], x, y);
+}
+function newFolder(b) {
+  dialog(`<h3>Neuer Ordner</h3><input type="text" id="dlg-input" placeholder="Name des Ordners">
+    <div class="row"><button class="btn" id="dlg-no">Abbrechen</button><button class="btn primary" id="dlg-yes">Anlegen</button></div>`,
+  () => { const v = $('dlg-input').value.trim(); if (v) api.cmd('bm-folder', b.url, v); });
+}
+function renameFolder(f) {
+  dialog(`<h3>Ordner umbenennen</h3><input type="text" id="dlg-input" value="${esc(f)}">
+    <div class="row"><button class="btn" id="dlg-no">Abbrechen</button><button class="btn primary" id="dlg-yes">Speichern</button></div>`,
+  () => { const v = $('dlg-input').value.trim(); if (v) api.cmd('folder-rename', f, v); });
 }
 function renameBookmark(b) {
   dialog(`<h3>Lesezeichen umbenennen</h3><input type="text" id="dlg-input" value="${esc(b.title)}">
@@ -441,9 +511,20 @@ $('menu-btn').onclick = () => {
     { label: 'Downloads', icon: 'download', key: 'Strg+J', run: () => openDownloads() },
     { label: 'Auf der Seite suchen', icon: 'search', key: 'Strg+F', run: () => openFind() },
     { label: 'Drucken …', icon: 'print', key: 'Strg+P', run: () => api.cmd('print') },
+    { label: 'Leseansicht', icon: 'reader', enabled: !!a.web, run: () => api.cmd('reader') },
+    { label: 'Seite übersetzen', icon: 'translate', enabled: !!a.web, run: () => api.cmd('translate') },
+    { label: 'Ganze Seite als Bild speichern', icon: 'camera', enabled: !!a.web, run: () => api.cmd('fullshot') },
     { label: 'Entwicklerwerkzeuge', icon: 'code', key: 'F12', run: () => api.cmd('devtools') },
     '-',
+    { label: 'Lesezeichen importieren …', icon: 'import', run: () => openImport() },
+    { label: 'Passwörter …', icon: 'key', run: () => openPasswords() },
+    '-',
     { label: 'Werbeblocker', check: !!S.settings.adblock, run: () => api.cmd('adblock', !S.settings.adblock) },
+    { label: 'Gesponserte Abschnitte überspringen (YouTube)', check: !!S.settings.sponsorblock, run: () => api.cmd('set-setting', 'sponsorblock', !S.settings.sponsorblock) },
+    { label: 'Dunkelmodus für helle Seiten', check: !!S.settings.darkPages, run: () => api.cmd('set-setting', 'darkPages', !S.settings.darkPages) },
+    ...(S.settings.darkPages && a.web ? [{ label: `Dunkelmodus auf ${a.site || 'dieser Seite'}`, check: !a.darkSkipped, run: () => api.cmd('dark-site', !a.darkSkipped) }] : []),
+    { label: 'Unbenutzte Tabs schlafen legen', check: !!S.settings.sleepTabs, run: () => api.cmd('set-setting', 'sleepTabs', !S.settings.sleepTabs) },
+    ...(isPrivate ? [] : [{ label: 'Passwörter speichern anbieten', check: !!S.settings.passwords, run: () => api.cmd('set-setting', 'passwords', !S.settings.passwords) }]),
     { label: 'Lesezeichenleiste anzeigen', check: !!S.settings.bookmarksBar, run: () => api.cmd('toggle-bookmarks-bar') },
     { label: 'Tabs beim Start wiederherstellen', check: !!S.settings.restoreSession, run: () => api.cmd('restore-session', !S.settings.restoreSession) },
     { html: '<div class="label">SUCHMASCHINE</div>' },
@@ -564,6 +645,84 @@ function answer(allow) {
 $('perm-allow').onclick = () => answer(true);
 $('perm-deny').onclick = () => answer(false);
 
+// ---- Passwort speichern? ----
+const pwQueue = [];
+api.on('pw-offer', (p) => { if (!pwQueue.some((q) => q.site === p.site && q.user === p.user)) pwQueue.push(p); showPw(); });
+function showPw() {
+  const p = pwQueue[0];
+  $('pwbar').hidden = !p;
+  if (!p) return;
+  $('pw-text').innerHTML = `${icon('key', 15)} ${p.update ? 'Passwort aktualisieren' : 'Passwort speichern'} für <b>${esc(p.user || 'ohne Namen')}</b> auf <b>${esc(p.site)}</b>?`;
+}
+function pwAnswer(choice) { const p = pwQueue.shift(); if (p) api.cmd('pw-answer', p.id, choice); showPw(); }
+$('pw-yes').onclick = () => pwAnswer('save');
+$('pw-no').onclick = () => pwAnswer('no');
+$('pw-never').onclick = () => pwAnswer('never');
+
+async function openPasswords() {
+  const data = (await api.call('passwords-list')) || { items: [], never: [], available: false };
+  const rows = data.items;
+  dialog(`<h3>${icon('key', 18)} Gespeicherte Passwörter</h3>
+    ${data.available ? '' : '<p class="hint">Der Schlüsselbund des Systems ist nicht erreichbar – Passwörter können gerade nicht gespeichert werden.</p>'}
+    <div class="pwlist">${rows.length ? rows.map((r, i) => `<div class="pw" data-i="${i}"><div class="info"><div>${esc(r.site)}</div>
+      <div class="sub">${esc(r.user || '(ohne Namen)')}</div></div>
+      <button class="btn" data-a="copy">Kopieren</button><button class="icon small" data-a="del" title="Löschen">${icon('trash', 16)}</button></div>`).join('')
+    : '<p>Noch keine Passwörter gespeichert. Wenn du dich auf einer Seite anmeldest, fragt der Browser, ob er das Passwort speichern soll.</p>'}</div>
+    ${data.never.length ? `<div class="label">NIE SPEICHERN</div><div class="pwlist">${data.never.map((o, i) => `<div class="pw" data-n="${i}"><div class="info"><div>${esc(o.replace(/^https?:\/\/(www\.)?/, ''))}</div></div>
+      <button class="icon small" data-a="unnever" title="Entfernen">${icon('close', 16)}</button></div>`).join('')}</div>` : ''}
+    <p class="hint">Passwörter werden mit dem Schlüsselbund deines Benutzerkontos verschlüsselt. Beim Kopieren wird die Zwischenablage nach 30 Sekunden geleert.</p>
+    <div class="row"><button class="btn" id="dlg-no">Schließen</button><button class="btn primary" id="dlg-yes">Fertig</button></div>`, () => {});
+  $('dialog').querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => {
+    const row = b.closest('.pw');
+    if (b.dataset.a === 'unnever') { api.cmd('pw-never-remove', data.never[Number(row.dataset.n)]); row.remove(); return; }
+    const r = rows[Number(row.dataset.i)];
+    if (b.dataset.a === 'copy') { api.cmd('pw-copy', r.origin, r.user); toast('Passwort kopiert'); }
+    if (b.dataset.a === 'del') { api.cmd('pw-remove', r.origin, r.user); row.remove(); }
+  }));
+}
+
+// ---- Lesezeichen importieren ----
+let importSources = null;
+async function loadImportSources() { importSources = (await api.call('import-sources')) || []; return importSources; }
+async function openImport() {
+  const list = await loadImportSources();
+  dialog(`<h3>${icon('import', 18)} Lesezeichen importieren</h3>
+    ${list.length ? `<p>Aus welchem Browser? Ordner bleiben erhalten, doppelte Lesezeichen werden übersprungen.</p>
+      <div class="implist">${list.map((s, i) => `<button class="btn" data-i="${i}">${esc(s.name)}</button>`).join('')}</div>`
+    : '<p>Kein anderer Browser mit Lesezeichen gefunden (Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Firefox, LibreWolf, Zen).</p>'}
+    <div class="row"><button class="btn" id="dlg-no">Schließen</button><button class="btn primary" id="dlg-yes" hidden>OK</button></div>`, () => {});
+  $('dialog').querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => runImport(list[Number(b.dataset.i)])));
+}
+async function runImport(src) {
+  closeLayer();
+  const r = await api.call('import-run', src.id);
+  $('importbar').hidden = true;
+  if (!r || r.error) toast(`Import ging nicht: ${(r && r.error) || 'unbekannter Fehler'}`);
+  else toast(r.count ? `${r.count} Lesezeichen aus ${r.name} importiert` : `Keine neuen Lesezeichen in ${r.name}`);
+}
+let importOffered = false;
+async function maybeOfferImport() {
+  if (importOffered || isPrivate || document.body.classList.contains('appmode') || S.settings.importDone !== false) return;
+  importOffered = true;
+  const list = await loadImportSources();
+  if (!list.length || S.settings.importDone) return;
+  $('import-text').innerHTML = `${icon('import', 15)} Lesezeichen aus <b>${esc(list[0].name)}</b>${list.length > 1 ? ` (oder ${list.length - 1} weiteren Browsern)` : ''} übernehmen?`;
+  $('importbar').hidden = false;
+  $('import-yes').onclick = () => (list.length > 1 ? openImport() : runImport(list[0]));
+  $('import-no').onclick = () => { $('importbar').hidden = true; api.cmd('import-dismiss'); };
+}
+
+// ---- Kurze Hinweise ----
+let toastTimer = 0;
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+}
+api.on('toast', toast);
+
 // ---- Zustand ----
 function applyLook(look, isPriv) {
   if (!look) return;
@@ -580,5 +739,6 @@ api.on('state', (s) => {
   renderNav();
   renderBookmarks();
   renderDownloadButton();
+  maybeOfferImport();
 });
 window.addEventListener('resize', () => renderTabs());

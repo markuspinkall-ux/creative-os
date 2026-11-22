@@ -3,7 +3,7 @@ name: Browser prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [webbrowser/**, browser/startpage/**, shell/webapps/**, .github/workflows/browser-pruefung.yml]
+    paths: [webbrowser/**, tests/browser_funktionen_test.js, browser/startpage/**, shell/webapps/**, .github/workflows/browser-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,7 +28,9 @@ jobs:
           [ -x node_modules/electron/dist/electron ] || node node_modules/electron/install.js
           ls node_modules/electron/dist | head
           /tmp/el/node_modules/electron/dist/electron --no-sandbox --version
-          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js','preload-videoad.js','adblock.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+          node -e "for (const f of ['store.js','selftest.js','preload-ui.js','ui/ui.js','whatsapp/selftest.js','whatsapp/settings.js','whatsapp/wa-preload.js','preload-videoad.js','adblock.js','passwords.js','preload-pass.js','page-tools.js','import-bookmarks.js']) new Function(require('fs').readFileSync('webbrowser/app/'+f,'utf8').replace(/^'use strict';/,''))" 2>&1 | head -5 || true
+      - name: Lesezeichen-Import, Ordner und Passwörter (ohne Electron)
+        run: node tests/browser_funktionen_test.js
       - name: Wie im Abbild verpacken (App als resources/app, ohne default_app.asar)
         run: |
           cp -a /tmp/el/node_modules/electron/dist /tmp/pkg
