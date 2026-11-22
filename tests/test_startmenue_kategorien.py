@@ -34,3 +34,10 @@ def test_standard_ist_kategorien(tmp_path, monkeypatch):
     assert apps.start_menu_style() == "alphabet"
     config.set_value("startMenuStyle", "quatsch")
     assert apps.start_menu_style() == "kategorien"
+
+
+def test_kategorien_aus_desktop_datei(tmp_path):
+    f = tmp_path / "x.desktop"
+    f.write_text("[Desktop Entry]\nType=Application\nName=X\nExec=true\nCategories=Graphics;3DGraphics;\n", encoding="utf-8")
+    e = apps.parse_desktop_file(f, "x.desktop", ["de"])
+    assert e.categories == ["Graphics", "3DGraphics"] and apps.category_of(e) == "Kreativ und Medien"

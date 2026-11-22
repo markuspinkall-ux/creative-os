@@ -201,6 +201,7 @@ def parse_desktop_file(path, desktop_id, langs):
         s.get("Terminal", "").lower() == "true",
     )
     entry.hidden = no_display or desktop_id in ALWAYS_HIDDEN
+    entry.categories = [c for c in s.get("Categories", "").split(";") if c]
     return entry
 
 
