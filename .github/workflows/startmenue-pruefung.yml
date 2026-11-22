@@ -3,7 +3,7 @@ name: Startmenü prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/qml/surfaces/StartMenu.qml, shell/creative_shell/qml/Creative/**, tools/startmenue-vorschau.py, .github/workflows/startmenue-pruefung.yml]
+    paths: [shell/creative_shell/qml/surfaces/StartMenu.qml, shell/creative_shell/apps.py, tools/startmenue-stile.py, shell/creative_shell/qml/Creative/**, tools/startmenue-vorschau.py, .github/workflows/startmenue-pruefung.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -21,7 +21,9 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           QT_QUICK_BACKEND: software
-        run: timeout 60 python3 tools/startmenue-vorschau.py fotos
+        run: |
+          timeout 60 python3 tools/startmenue-vorschau.py fotos
+          timeout 60 python3 tools/startmenue-stile.py fotos
       - name: Ablegen
         if: always()
         run: |

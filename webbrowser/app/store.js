@@ -15,7 +15,9 @@ const ENGINES = {
 
 const DEFAULTS = () => ({
   version: 1,
-  settings: { engine: 'brave', restoreSession: true, bookmarksBar: true, adblock: true, adblockAllow: [] },
+  settings: { engine: 'brave', restoreSession: true, bookmarksBar: true, adblock: true, adblockAllow: [],
+    sleepTabs: true, sleepMinutes: 30, darkPages: false, darkSkip: [], sponsorblock: true, passwords: true,
+    importDone: false },
   bookmarks: [
     { title: 'YouTube', url: 'https://www.youtube.com/' },
     { title: 'Twitch', url: 'https://www.twitch.tv/' },
@@ -61,13 +63,62 @@ class Store {
 
   // ---- Lesezeichen ----
   isBookmarked(url) { return this.data.bookmarks.some((b) => b.url === url); }
-  toggleBookmark(url, title) {
+  toggleBookmark(url, title, icon) {
     const i = this.data.bookmarks.findIndex((b) => b.url === url);
     if (i >= 0) this.data.bookmarks.splice(i, 1);
-    else this.data.bookmarks.push({ title: title || url, url });
+    else this.data.bookmarks.push({ title: title || url, url, ...(/^https?:|^data:image\//.test(icon || '') ? { icon } : {}) });
     this.save();
     return i < 0;
   }
+  // Symbol einer Seite merken (aus dem Tab), damit die Lesezeichenleiste das richtige zeigt
+  setBookmarkIcon(url, icon) {
+    if (!/^https?:|^data:image\//.test(icon || '') || icon.length > 200000) return false;
+    const b = this.data.bookmarks.find((x) => x.url === url);
+    if (!b || b.icon === icon) return false;
+    b.icon = icon;
+    this.save();
+    return true;
+  }
+  // ---- Ordner (ein Lesezeichen hat optional „folder“; leer = direkt in der Leiste) ----
+  folders() {
+    const seen = [];
+    for (const b of this.data.bookmarks) if (b.folder && !seen.includes(b.folder)) seen.push(b.folder);
+    return seen;
+  }
+  setBookmarkFolder(url, folder) {
+    const b = this.data.bookmarks.find((x) => x.url === url);
+    if (!b) return;
+    const f = String(folder || '').trim().slice(0, 80);
+    if (f) b.folder = f; else delete b.folder;
+    this.save();
+  }
+  renameFolder(from, to) {
+    const t = String(to || '').trim().slice(0, 80);
+    if (!t) return;
+    for (const b of this.data.bookmarks) if (b.folder === from) b.folder = t;
+    this.save();
+  }
+  dissolveFolder(name) {
+    for (const b of this.data.bookmarks) if (b.folder === name) delete b.folder;
+    this.save();
+  }
+  // Import: nur neue Adressen, Reihenfolge bleibt
+  addImported(list) {
+    const have = new Set(this.data.bookmarks.map((b) => b.url));
+    let n = 0;
+    for (const it of list || []) {
+      if (!it || !/^https?:/.test(it.url) || have.has(it.url)) continue;
+      have.add(it.url);
+      const b = { title: String(it.title || it.url).slice(0, 300), url: it.url };
+      if (it.folder) b.folder = String(it.folder).slice(0, 80);
+      this.data.bookmarks.push(b);
+      n += 1;
+    }
+    this.data.settings.importDone = true;
+    this.save();
+    return n;
+  }
+
   removeBookmark(url) {
     this.data.bookmarks = this.data.bookmarks.filter((b) => b.url !== url);
     this.save();

@@ -4,6 +4,11 @@ if (process.argv.includes('--whatsapp')) {
   require('./whatsapp/main.js');
   return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
 }
+// Discord (Discord Web im Gibeon-Look) ebenso – eigene App in discord/
+if (process.argv.includes('--discord')) {
+  require('./discord/main.js');
+  return;   // eslint-disable-line no-unreachable -- CommonJS: Rest des Browsers nicht laden
+}
 // Browser – Hauptprozess.
 // Jedes Fenster: unten die Tabs (je ein WebContentsView), darüber die Oberfläche (ui/), ein
 // durchsichtiger WebContentsView. Öffnet die Oberfläche ein Menü, wird sie kurz fensterhoch.
@@ -13,9 +18,13 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const {
   app, BaseWindow, BrowserWindow, WebContentsView, ipcMain, session, protocol, net, clipboard, shell, nativeTheme,
+  safeStorage, Notification,
 } = require('electron');
 const { Store, ENGINES } = require('./store');
 const { AdBlock } = require('./adblock');
+const { Passwords } = require('./passwords');
+const importer = require('./import-bookmarks');
+const tools = require('./page-tools');
 
 const APP_DIR = __dirname;
 const START_URL = 'creative://start/';
@@ -136,6 +145,11 @@ function boostScript(g) {
 
 let store;
 let adblock;
+let passwords;
+const readerPages = new Map();      // creative://lesen/<n> → HTML der Leseansicht
+let nextReaderId = 1;
+const sponsorCache = new Map();     // YouTube-Video → Abschnitte (SponsorBlock)
+const SB_WORLD = 1002;
 const windows = new Set();
 const downloads = [];
 let nextTabId = 1;
@@ -194,10 +208,21 @@ function prepareSession(ses, isPrivate) {
   try {
     ses.registerPreloadScript({ type: 'frame', id: 'creative-videoad', filePath: path.join(APP_DIR, 'preload-videoad.js') });
   } catch (e) { console.error('Browser: Videowerbung-Preload:', e.message); }
+  // Passwörter ausfüllen und speichern (nur in normalen Fenstern) – siehe preload-pass.js
+  if (!isPrivate) {
+    try {
+      ses.registerPreloadScript({ type: 'frame', id: 'creative-pass', filePath: path.join(APP_DIR, 'preload-pass.js') });
+    } catch (e) { console.error('Browser: Passwort-Preload:', e.message); }
+  }
   try { ses.setSpellCheckerLanguages(['de-DE']); } catch (_) { /* Wörterbuch nicht verfügbar */ }
 
   ses.protocol.handle('creative', (req) => {
     const u = new URL(req.url);
+    if (u.host === 'lesen') {
+      const html = readerPages.get(u.pathname.replace(/^\/+/, ''));
+      return html ? new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } })
+        : new Response('Leseansicht abgelaufen – Seite neu öffnen.', { status: 404 });
+    }
     if (u.host === 'fehler') {
       return new Response(errorPage(req.url), { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
@@ -347,9 +372,11 @@ class Win {
     this.pushTimer = null;
     windows.add(this);
 
+    this.sleepTimer = setInterval(() => this.checkSleep(), 60000);
     this.win.on('resize', () => this.layout());
     this.win.on('close', () => { if (!isPrivate && !appMode) this.remember(); });
     this.win.on('closed', () => {
+      clearInterval(this.sleepTimer);
       for (const t of this.tabs) this.destroyTab(t);
       this.ui.webContents.close?.();
       windows.delete(this);
@@ -385,7 +412,7 @@ class Win {
   layout() {
     const [w, h] = this.win.getContentSize();
     const top = this.fullscreen ? 0 : this.chromeH;
-    for (const t of this.tabs) t.view.setVisible(t === this.active);
+    for (const t of this.tabs) if (!t.sleeping) t.view.setVisible(t === this.active);
     if (this.active) this.active.view.setBounds({ x: 0, y: top, width: w, height: Math.max(0, h - top) });
     this.ui.setBounds({ x: 0, y: 0, width: w, height: this.fullscreen ? 0 : (this.overlay ? h : this.chromeH) });
   }
@@ -396,7 +423,8 @@ class Win {
       ? new WebContentsView({ webContents })
       : new WebContentsView({ webPreferences: { session: this.ses, sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: true } });
     const tab = { id: nextTabId++, view, wc: view.webContents, title: 'Neuer Tab', url, favicon: '',
-      loading: false, audible: false, muted: false, crashed: false, find: null, boost: 1, win: this };
+      loading: false, audible: false, muted: false, crashed: false, find: null, boost: 1, win: this,
+      sleeping: false, lastActive: Date.now(), hasVideo: false, darkKey: null };
     view.setBackgroundColor(look.light ? '#ffffff' : '#12151b');
     const at = index == null ? (this.active ? this.tabs.indexOf(this.active) + 1 : this.tabs.length) : index;
     this.tabs.splice(at, 0, tab);
@@ -418,21 +446,31 @@ class Win {
       tab.title = title; if (!tab.win.isPrivate) store.title(wc.getURL(), title); upd();
       if (tab === tab.win.active) tab.win.setTitle();
     });
-    wc.on('page-favicon-updated', (_e, icons) => { tab.favicon = icons[0] || ''; upd(); });
+    wc.on('page-favicon-updated', (_e, icons) => {
+      tab.favicon = icons[0] || '';
+      // Lesezeichen dieser Seite bekommt das echte Symbol (auch für ältere Lesezeichen ohne Symbol)
+      if (tab.favicon && store.setBookmarkIcon(wc.getURL(), tab.favicon)) broadcast();
+      upd();
+    });
     wc.on('did-start-loading', () => { tab.loading = true; tab.crashed = false; upd(); });
     wc.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
       const main = e && e.isMainFrame !== undefined ? e.isMainFrame : isMainFrame;
       const same = e && e.isSameDocument !== undefined ? e.isSameDocument : isInPlace;
       if (main && !same) adblock.resetCount(wc.id);   // Zähler gilt pro Seite
     });
-    wc.on('did-stop-loading', () => { tab.loading = false; upd(); tab.win.applyBoost(tab); });
+    wc.on('did-stop-loading', () => {
+      tab.loading = false; upd(); tab.win.applyBoost(tab);
+      wc.executeJavaScript(tools.HAS_VIDEO_SCRIPT).then((v) => { if (tab.hasVideo !== !!v) { tab.hasVideo = !!v; upd(); } }).catch(() => {});
+    });
+    wc.on('dom-ready', () => { tab.darkKey = null; tab.win.applyDark(tab); });
+    wc.on('did-finish-load', () => tab.win.applySponsor(tab));
     wc.on('did-navigate', (_e, url) => {
       tab.url = url; tab.favicon = url.startsWith('creative:') ? '' : tab.favicon;
       if (!tab.win.isPrivate) store.visit(url, wc.getTitle());
       upd();
     });
-    wc.on('did-navigate-in-page', (_e, url, isMain) => { if (isMain) { tab.url = url; upd(); } });
-    wc.on('audio-state-changed', (e) => { tab.audible = e.audible; upd(); });
+    wc.on('did-navigate-in-page', (_e, url, isMain) => { if (isMain) { tab.url = url; upd(); tab.win.applySponsor(tab); } });
+    wc.on('audio-state-changed', (e) => { tab.audible = e.audible; if (e.audible) tab.hasVideo = tab.hasVideo || true; upd(); });
     wc.on('did-fail-load', (_e, code, desc, url, isMain) => {
       if (!isMain || code === -3 || url.startsWith('creative:')) return;
       const r = ERRORS[String(code)] || `${desc} (${code})`;
@@ -490,6 +528,7 @@ class Win {
   // Tab aus der Leiste gezogen: eigenes Fenster. KWin öffnet es auf dem Bildschirm mit dem Mauszeiger.
   tearOff(tab) {
     if (!tab || this.tabs.length < 2) return null;
+    if (tab.sleeping) this.wake(tab);
     const i = this.tabs.indexOf(tab);
     this.tabs.splice(i, 1);
     try { this.win.contentView.removeChildView(tab.view); } catch (_) { /* schon entfernt */ }
@@ -518,13 +557,129 @@ class Win {
   }
 
   destroyTab(tab) {
-    try { this.win.contentView.removeChildView(tab.view); } catch (_) { /* Fenster schon zu */ }
+    if (!tab.sleeping) {
+      try { this.win.contentView.removeChildView(tab.view); } catch (_) { /* Fenster schon zu */ }
+    }
     if (!tab.wc.isDestroyed()) (tab.wc.close ? tab.wc.close() : tab.wc.destroy());
+  }
+
+  // ---- Tabs schlafen legen: lange nicht benutzte Tabs geben ihren Speicher frei ----------------
+  sleepTab(tab) {
+    if (!tab || tab.sleeping || tab === this.active || tab.audible || tab.loading || tab.url.startsWith(START_URL)) return false;
+    if (tab.wc.isDestroyed()) return false;
+    tab.url = tab.wc.getURL() || tab.url;
+    tab.sleeping = true;
+    try { this.win.contentView.removeChildView(tab.view); } catch (_) { /* schon weg */ }
+    tab.wc.close ? tab.wc.close() : tab.wc.destroy();
+    this.pushState();
+    return true;
+  }
+
+  wake(tab) {
+    if (!tab || !tab.sleeping) return tab;
+    const view = new WebContentsView({ webPreferences: { session: this.ses, sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: true } });
+    view.setBackgroundColor(look.light ? '#ffffff' : '#12151b');
+    tab.view = view;
+    tab.wc = view.webContents;
+    tab.sleeping = false;
+    tab.crashed = false;
+    this.win.contentView.addChildView(view, 0);
+    view.setVisible(false);
+    this.wire(tab);
+    tab.wc.loadURL(tab.url).catch(() => {});
+    return tab;
+  }
+
+  checkSleep() {
+    if (!store.settings.sleepTabs) return;
+    const limit = Math.max(5, Number(store.settings.sleepMinutes) || 30) * 60000;
+    const now = Date.now();
+    for (const t of this.tabs) if (t !== this.active && now - (t.lastActive || now) > limit) this.sleepTab(t);
+  }
+
+  // ---- Dunkelmodus für Webseiten (nur Seiten ohne eigenes dunkles Aussehen) --------------------
+  async applyDark(tab) {
+    if (!tab || tab.sleeping || tab.wc.isDestroyed()) return;
+    const url = tab.wc.getURL();
+    const want = store.settings.darkPages && /^https?:/.test(url) && !(store.settings.darkSkip || []).includes(siteOf(url));
+    if (!want) {
+      if (tab.darkKey) { try { await tab.wc.removeInsertedCSS(tab.darkKey); } catch (_) { /* neu geladen */ } tab.darkKey = null; }
+      return;
+    }
+    if (tab.darkKey) return;
+    try {
+      if (await tab.wc.executeJavaScript(tools.IS_LIGHT_SCRIPT)) tab.darkKey = await tab.wc.insertCSS(tools.DARK_CSS);
+    } catch (_) { /* Seite noch nicht bereit */ }
+  }
+
+  // ---- SponsorBlock: gesponserte Abschnitte in YouTube-Videos überspringen ---------------------
+  async applySponsor(tab) {
+    if (!store.settings.sponsorblock || !tab || tab.sleeping || tab.wc.isDestroyed()) return;
+    const id = tools.youtubeId(tab.wc.getURL());
+    if (!id) return;
+    try {
+      let segs = sponsorCache.get(id);
+      if (!segs) { segs = await tools.sponsorSegments(net, id); sponsorCache.set(id, segs); }
+      if (!segs.length || tab.wc.isDestroyed()) return;
+      await tab.wc.executeJavaScriptInIsolatedWorld(SB_WORLD, [{ code: tools.sponsorScript(id, segs) }]);
+    } catch (e) { console.error('SponsorBlock:', e.message); }
+  }
+
+  // ---- Leseansicht ---------------------------------------------------------------------------------
+  async reader(tab) {
+    if (!tab || tab.wc.isDestroyed()) return;
+    let art = null;
+    try { art = await tab.wc.executeJavaScript(tools.READER_EXTRACT); } catch (_) { /* geht nicht */ }
+    if (!art) { this.send('toast', 'Für diese Seite gibt es keine Leseansicht.'); return; }
+    const id = String(nextReaderId++);
+    readerPages.set(id, tools.readerPage(art, look));
+    if (readerPages.size > 20) readerPages.delete(readerPages.keys().next().value);
+    this.addTab(`creative://lesen/${id}`);
+  }
+
+  async fullShot(tab) {
+    if (!tab || tab.wc.isDestroyed()) return;
+    try {
+      const file = await tools.fullPageShot(tab.wc, path.join(app.getPath('pictures'), 'Bildschirmfotos'));
+      this.send('toast', `Ganze Seite gespeichert: Bilder › Bildschirmfotos › ${path.basename(file)}`);
+      if (Notification.isSupported() && !SELFTEST) {
+        const n = new Notification({ title: 'Ganze Seite als Bild gespeichert', body: path.basename(file), silent: true });
+        n.on('click', () => shell.showItemInFolder(file));
+        n.show();
+      }
+      return file;
+    } catch (e) { this.send('toast', `Seitenfoto ging nicht: ${e.message}`); return null; }
+  }
+
+  async pip(tab) {
+    if (!tab || tab.wc.isDestroyed()) return '';
+    try { return await tab.wc.executeJavaScript(tools.PIP_SCRIPT, true); } catch (_) { return 'fehler'; }
+  }
+
+  // ---- Passwort speichern? -----------------------------------------------------------------------
+  askPassword(origin, user, pass) {
+    if (this.isPrivate || !store.settings.passwords || !passwords.needsAsk(origin, user, pass)) return;
+    const id = nextPromptId++;
+    const update = passwords.users(origin).includes(user);
+    this.pwPrompts = this.pwPrompts || new Map();
+    this.pwPrompts.set(id, { origin, user, pass });
+    this.send('pw-offer', { id, site: origin.replace(/^https?:\/\/(www\.)?/, ''), user, update });
+  }
+
+  answerPassword(id, choice) {
+    const p = this.pwPrompts && this.pwPrompts.get(id);
+    if (!p) return;
+    this.pwPrompts.delete(id);
+    if (choice === 'save') passwords.store(p.origin, p.user, p.pass);
+    else if (choice === 'never') passwords.never(p.origin);
   }
 
   activate(tab) {
     if (!tab) return;
     if (this.active && this.active !== tab && this.active.find) this.active.wc.stopFindInPage('clearSelection');
+    if (this.active && this.active !== tab) this.active.lastActive = Date.now();
+    if (tab.sleeping) this.wake(tab);
+    tab.lastActive = Date.now();
     this.active = tab;
     this.layout();
     this.setTitle();
@@ -591,7 +746,7 @@ class Win {
         fullscreen: this.fullscreen,
         tabs: this.tabs.map((t) => ({ id: t.id, title: t.title || displayUrl(t.url) || 'Neuer Tab',
           favicon: t.favicon, loading: t.loading, audible: t.audible, muted: t.wc.isDestroyed() ? false : t.wc.isAudioMuted(),
-          crashed: t.crashed, start: t.url.startsWith(START_URL) })),
+          crashed: t.crashed, start: t.url.startsWith(START_URL), sleeping: !!t.sleeping })),
         active: a ? {
           id: a.id, url: displayUrl(a.url), start: a.url.startsWith(START_URL),
           canBack: wc ? wc.navigationHistory.canGoBack() : false,
@@ -600,11 +755,16 @@ class Win {
           zoom: wc ? Math.round(100 * 1.2 ** wc.getZoomLevel()) : 100,
           bookmarked: store.isBookmarked(a.url),
           adblock: adblock.info(wc),
-          boost: a.boost || 1, audible: a.audible,
+          boost: a.boost || 1, audible: a.audible, hasVideo: !!a.hasVideo,
+          web: /^https?:/.test(a.url), site: siteOf(a.url),
+          darkSkipped: (store.settings.darkSkip || []).includes(siteOf(a.url)),
         } : null,
         bookmarks: store.data.bookmarks,
         settings: { engine: store.settings.engine, bookmarksBar: store.settings.bookmarksBar,
-          restoreSession: store.settings.restoreSession, adblock: store.settings.adblock !== false },
+          restoreSession: store.settings.restoreSession, adblock: store.settings.adblock !== false,
+          sleepTabs: !!store.settings.sleepTabs, darkPages: !!store.settings.darkPages,
+          sponsorblock: !!store.settings.sponsorblock, passwords: store.settings.passwords !== false,
+          importDone: !!store.settings.importDone },
         engines: Object.entries(ENGINES).map(([id, e]) => ({ id, name: e.name })),
         downloads: downloads.filter((d) => this.isPrivate || !d.private).slice(0, 30).map((d) => ({
           id: d.id, name: d.name, received: d.received, total: d.total, state: d.state, paused: d.paused })),
@@ -654,8 +814,9 @@ class Win {
       add('img-copy-url', 'Bildadresse kopieren');
       sep();
     }
-    if (p.mediaType === 'video' && p.srcURL && !p.srcURL.startsWith('blob:')) {
-      add('video-save', 'Video speichern');
+    if (p.mediaType === 'video') {
+      add('pip', 'Bild im Bild');
+      if (p.srcURL && !p.srcURL.startsWith('blob:')) add('video-save', 'Video speichern');
       sep();
     }
     if (p.isEditable) {
@@ -668,6 +829,7 @@ class Win {
       add('copy', 'Kopieren');
       const s = p.selectionText.trim().replace(/\s+/g, ' ');
       add('search', `Mit ${store.engine().name} suchen: „${s.length > 24 ? `${s.slice(0, 24)}…` : s}“`);
+      add('translate-text', 'Auswahl übersetzen');
       sep();
     }
     if (!p.linkURL && p.mediaType === 'none' && !p.isEditable && !p.selectionText) {
@@ -675,6 +837,12 @@ class Win {
       add('forward', 'Vorwärts', tab.wc.navigationHistory.canGoForward());
       add('reload', 'Neu laden');
       sep();
+      if (/^https?:/.test(tab.url)) {
+        add('reader', 'Leseansicht');
+        add('translate', 'Seite übersetzen');
+        add('fullshot', 'Ganze Seite als Bild speichern');
+        sep();
+      }
       add('save-page', 'Seite speichern');
       add('print', 'Drucken …');
       sep();
@@ -705,6 +873,11 @@ class Win {
       case 'paste': return wc.paste();
       case 'select-all': return wc.selectAll();
       case 'search': return this.addTab(toUrl(p.selectionText), {});
+      case 'translate-text': return this.addTab(tools.translateTextUrl(p.selectionText.trim()), {});
+      case 'translate': return this.addTab(tools.translatePageUrl(wc.getURL()), {});
+      case 'reader': return this.reader(tab);
+      case 'fullshot': return this.fullShot(tab);
+      case 'pip': return this.pip(tab);
       case 'back': return wc.navigationHistory.goBack();
       case 'forward': return wc.navigationHistory.goForward();
       case 'reload': return wc.reload();
@@ -803,9 +976,9 @@ class Win {
       case 'close-tab': this.closeTab(this.tabById(arg1)); break;
       case 'activate': this.activate(this.tabById(arg1)); break;
       case 'move-tab': this.moveTab(this.tabById(arg1), arg2); break;
-      case 'mute-tab': { const t = this.tabById(arg1); if (t) { t.wc.setAudioMuted(!t.wc.isAudioMuted()); this.pushState(); } break; }
-      case 'duplicate-tab': { const t = this.tabById(arg1); if (t) this.addTab(t.wc.getURL(), { background: true }); break; }
-      case 'reload-tab': { const t = this.tabById(arg1); if (t) t.wc.reload(); break; }
+      case 'mute-tab': { const t = this.tabById(arg1); if (t && !t.sleeping) { t.wc.setAudioMuted(!t.wc.isAudioMuted()); this.pushState(); } break; }
+      case 'duplicate-tab': { const t = this.tabById(arg1); if (t) this.addTab(t.sleeping ? t.url : t.wc.getURL(), { background: true }); break; }
+      case 'reload-tab': { const t = this.tabById(arg1); if (t) { if (t.sleeping) this.wake(t); else t.wc.reload(); } break; }
       case 'close-others': this.tabs.filter((t) => t.id !== arg1).forEach((t) => this.closeTab(t)); break;
       case 'navigate': if (wc) { wc.loadURL(toUrl(arg1)).catch(() => {}); wc.focus(); } break;
       case 'open-url': if (wc) wc.loadURL(arg1).catch(() => {}); break;
@@ -815,7 +988,7 @@ class Win {
       case 'reload': if (wc) wc.reload(); break;
       case 'stop': if (wc) wc.stop(); break;
       case 'home': if (wc) wc.loadURL(START_URL); break;
-      case 'toggle-bookmark': if (wc && /^https?:/.test(wc.getURL())) { store.toggleBookmark(wc.getURL(), a.title); broadcast(); } break;
+      case 'toggle-bookmark': if (wc && /^https?:/.test(wc.getURL())) { store.toggleBookmark(wc.getURL(), a.title, a.favicon); broadcast(); } break;
       case 'remove-bookmark': store.removeBookmark(arg1); broadcast(); break;
       case 'rename-bookmark': store.renameBookmark(arg1, arg2); broadcast(); break;
       case 'move-bookmark': store.moveBookmark(arg1, arg2); broadcast(); break;
@@ -852,6 +1025,36 @@ class Win {
       case 'downloads-clear': for (let i = downloads.length - 1; i >= 0; i -= 1) if (downloads[i].state !== 'progressing') downloads.splice(i, 1); broadcast(); break;
       case 'downloads-folder': shell.openPath(app.getPath('downloads')); break;
       case 'quit': app.quit(); break;
+      case 'pip': this.pip(a); break;
+      case 'reader': this.reader(a); break;
+      case 'translate': if (wc && /^https?:/.test(wc.getURL())) this.addTab(tools.translatePageUrl(wc.getURL())); break;
+      case 'fullshot': this.fullShot(a); break;
+      case 'sleep-tab': this.sleepTab(this.tabById(arg1)); break;
+      case 'set-setting': {
+        const BOOL = ['sleepTabs', 'darkPages', 'sponsorblock', 'passwords'];
+        if (BOOL.includes(arg1)) {
+          store.settings[arg1] = !!arg2; store.save();
+          if (arg1 === 'darkPages') for (const w of windows) for (const t of w.tabs) w.applyDark(t);
+          broadcast();
+        }
+        break;
+      }
+      case 'dark-site': if (a && /^https?:/.test(a.url)) {
+        const site = siteOf(a.url);
+        const list = (store.settings.darkSkip || []).filter((x) => x !== site);
+        if (arg1) list.push(site);          // arg1 = true: auf dieser Seite aus
+        store.settings.darkSkip = list; store.save();
+        for (const w of windows) for (const t of w.tabs) w.applyDark(t);
+        broadcast();
+      } break;
+      case 'pw-answer': this.answerPassword(arg1, arg2); break;
+      case 'pw-remove': passwords.remove(arg1, arg2); broadcast(); break;
+      case 'pw-copy': { const v = passwords.reveal(arg1, arg2); if (v != null) { clipboard.writeText(v); setTimeout(() => { if (clipboard.readText() === v) clipboard.clear(); }, 30000); } break; }
+      case 'pw-never-remove': passwords.removeNever(arg1); broadcast(); break;
+      case 'bm-folder': store.setBookmarkFolder(arg1, arg2); broadcast(); break;
+      case 'folder-rename': store.renameFolder(arg1, arg2); broadcast(); break;
+      case 'folder-dissolve': store.dissolveFolder(arg1); broadcast(); break;
+      case 'import-dismiss': store.settings.importDone = true; store.save(); broadcast(); break;
       default: break;
     }
   }
@@ -883,6 +1086,32 @@ ipcMain.on('cmd', (e, cmd, a1, a2) => {
 // Preload fragt beim Seitenstart synchron: Videowerbung hier überspringen?
 ipcMain.on('creative-videoad', (e, host) => { e.returnValue = !!(adblock && adblock.videoAdFor(host)); });
 ipcMain.handle('suggest', (_e, text) => store.suggest(text));
+// Passwörter: Ursprung immer aus dem Absender-Rahmen, nie aus den Angaben der Seite
+const senderOrigin = (e) => Passwords.origin((e.senderFrame && e.senderFrame.url) || e.sender.getURL());
+const isUi = (e) => [...windows].some((w) => w.ui.webContents === e.sender);
+ipcMain.handle('pw-users', (e) => (store.settings.passwords !== false && passwords ? passwords.users(senderOrigin(e)) : []));
+ipcMain.handle('pw-reveal', (e, _o, user) => (store.settings.passwords !== false && passwords ? passwords.reveal(senderOrigin(e), String(user || '')) : null));
+ipcMain.on('pw-offer', (e, d) => {
+  const w = windowOf(e.sender);
+  const origin = senderOrigin(e);
+  if (w && origin && d && typeof d.pass === 'string') w.askPassword(origin, String(d.user || '').slice(0, 200), d.pass.slice(0, 500));
+});
+// Nur die Browser-Oberfläche darf Passwortliste und Import abrufen
+ipcMain.handle('ui-call', async (e, name, a1) => {
+  if (!isUi(e)) return null;
+  if (name === 'passwords-list') return passwords.list();
+  if (name === 'import-sources') return importer.findSources().map(({ id, name: n, kind }) => ({ id, name: n, kind }));
+  if (name === 'import-run') {
+    const src = importer.findSources().find((x) => x.id === a1);
+    if (!src) return { error: 'Nicht gefunden' };
+    try {
+      const n = store.addImported(importer.readSource(src));
+      broadcast();
+      return { count: n, name: src.name };
+    } catch (err) { return { error: err.message }; }
+  }
+  return null;
+});
 
 // ---- Start ----------------------------------------------------------------------------------------
 const single = SELFTEST ? true : app.requestSingleInstanceLock();
@@ -903,10 +1132,11 @@ if (!single) {
   app.whenReady().then(() => {
     store = new Store(app.getPath('userData'));
     adblock = new AdBlock(app.getPath('userData'), store, () => broadcast());
+    passwords = new Passwords(app.getPath('userData'), safeStorage);
     setLook(readLook());
     watchLook();
     app.userAgentFallback = cleanUserAgent(app.userAgentFallback);
-    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads }); return; }
+    if (SELFTEST) { require('./selftest').run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads, getPasswords: () => passwords }); return; }
     if (APP_URL) { new Win({ urls: [APP_URL], appMode: true }); return; }
     const urls = process.argv.slice(1).filter((x) => /^(https?|file|creative):/i.test(x));
     if (process.argv.includes('--privat')) { new Win({ isPrivate: true, urls }); return; }

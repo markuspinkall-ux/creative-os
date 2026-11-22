@@ -86,6 +86,48 @@ def _plain(text):
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().casefold()
 
 
+# Startmenü nach Kategorien (Systemsteuerung › Darstellung › Startmenü: „kategorien“ = Standard,
+# „alphabet“ = die alte A–Z-Liste, „kacheln“ = Kategorie-Leiste oben, Apps als Kacheln)
+CATEGORY_ORDER = ["Internet", "Kreativ und Medien", "Büro", "Spiele", "Werkzeuge", "Entwicklung", "System", "Sonstige"]
+FREEDESKTOP = [            # erste passende Hauptkategorie gewinnt (Reihenfolge = Vorrang)
+    ("Game", "Spiele"),
+    ("WebBrowser", "Internet"), ("Email", "Internet"), ("InstantMessaging", "Internet"), ("Chat", "Internet"),
+    ("Network", "Internet"),
+    ("Office", "Büro"), ("WordProcessor", "Büro"), ("Spreadsheet", "Büro"), ("Presentation", "Büro"),
+    ("AudioVideo", "Kreativ und Medien"), ("Audio", "Kreativ und Medien"), ("Video", "Kreativ und Medien"),
+    ("Graphics", "Kreativ und Medien"), ("Photography", "Kreativ und Medien"),
+    ("Development", "Entwicklung"), ("IDE", "Entwicklung"),
+    ("Settings", "System"), ("System", "System"), ("PackageManager", "System"), ("Monitor", "System"),
+    ("Utility", "Werkzeuge"), ("Accessories", "Werkzeuge"), ("Education", "Büro"), ("Science", "Werkzeuge"),
+]
+CATEGORY_OVERRIDE = {      # eigene Apps, wo die Freedesktop-Kategorie nicht passt
+    "creative-notes.desktop": "Büro",
+    "creative-deck.desktop": "Kreativ und Medien",
+    "creative-shots.desktop": "Kreativ und Medien",
+    "gibeon-android.desktop": "Werkzeuge",
+    "creative-iso.desktop": "Werkzeuge",
+    "creative-files.desktop": "Werkzeuge",
+    "gibeon-fehler-melden.desktop": "System",
+    "creative-gamelauncher.desktop": "Spiele",
+}
+STYLES = ("kategorien", "alphabet", "kacheln")
+
+
+def category_of(entry):
+    if entry.desktop_id in CATEGORY_OVERRIDE:
+        return CATEGORY_OVERRIDE[entry.desktop_id]
+    cats = set(entry.categories or ())
+    for key, group in FREEDESKTOP:
+        if key in cats:
+            return group
+    return "Sonstige"
+
+
+def start_menu_style():
+    style = config.load().get("startMenuStyle", "kategorien")
+    return style if style in STYLES else "kategorien"
+
+
 def _letter(name):
     plain = _plain(name).strip()
     return plain[0].upper() if plain and plain[0].isalpha() else "#"
@@ -93,7 +135,7 @@ def _letter(name):
 
 class AppEntry:
     __slots__ = ("desktop_id", "path", "name", "icon", "comment", "keywords", "exec", "terminal", "search", "hidden",
-                 "members", "suite")
+                 "members", "suite", "categories")
 
     def __init__(self, desktop_id, path, name, icon, comment, keywords, exec_line, terminal):
         self.desktop_id = desktop_id
@@ -109,6 +151,7 @@ class AppEntry:
         self.terminal = terminal
         self.hidden = False   # im Startmenü ausgeblendet, aber startbar (z. B. Taskleiste)
         self.members = None   # nur beim Ordner „Gibeon OS Suite“: die Apps darin
+        self.categories = []  # Freedesktop-Kategorien aus der .desktop-Datei
         self.search = _plain(" ".join([name, comment, keywords, desktop_id]))
 
 
@@ -158,6 +201,7 @@ def parse_desktop_file(path, desktop_id, langs):
         s.get("Terminal", "").lower() == "true",
     )
     entry.hidden = no_display or desktop_id in ALWAYS_HIDDEN
+    entry.categories = [c for c in s.get("Categories", "").split(";") if c]
     return entry
 
 
@@ -172,6 +216,9 @@ class AppModel(QAbstractListModel):
         self._shown = []
         self._filter = ""
         self._folder = ""
+        self._style = start_menu_style()
+        self._category = ""          # Kachel-Ansicht: gewählte Kategorie ("" = alle)
+        self._categories = []
         self._pinned = []
         cfg = config.load()
         # None = Grundausstattung; sonst die eigene Liste (Desktop-IDs in Reihenfolge)
@@ -250,7 +297,16 @@ class AppModel(QAbstractListModel):
             self._shown = hits
         else:
             creative = [e for e in visible if is_creative(e)] if USE_FOLDER else []
-            if not USE_FOLDER:
+            present = {category_of(e) for e in visible}
+            self._categories = [c for c in CATEGORY_ORDER if c in present]
+            if self._category and self._category not in present:
+                self._category = ""
+            if self._style in ("kategorien", "kacheln"):
+                order = {c: i for i, c in enumerate(CATEGORY_ORDER)}
+                pool = visible if not (self._style == "kacheln" and self._category) else \
+                    [e for e in visible if category_of(e) == self._category]
+                self._shown = sorted(pool, key=lambda e: (order[category_of(e)], _plain(e.name)))
+            elif not USE_FOLDER:
                 self._shown = sorted(visible, key=lambda e: (_letter(e.name) == "#", _plain(e.name)))
             elif self._folder:
                 self._shown = creative
@@ -272,6 +328,24 @@ class AppModel(QAbstractListModel):
         config.set_value("taskbarApps", self._user_pins)
         config.set_value("taskbarAppsSet", True)
         self._update_pinned()
+
+    @Slot(str, result=bool)
+    def isAutostart(self, desktop_id):
+        """Startet diese App beim Anmelden (~/.config/autostart)?"""
+        from . import autostart
+        return autostart.is_enabled(desktop_id)
+
+    @Slot(str, bool)
+    def setAutostart(self, desktop_id, on):
+        from . import autostart
+        entry = self._by_id.get(desktop_id)
+        try:
+            if on and entry is not None:
+                autostart.enable(desktop_id, entry.path)
+            elif not on:
+                autostart.disable(desktop_id)
+        except OSError as e:
+            print(f"creative-shell: Autostart {desktop_id}: {e}")
 
     @Slot(str, result=bool)
     def isPinned(self, desktop_id):
@@ -349,8 +423,10 @@ class AppModel(QAbstractListModel):
         if role == DESKTOP_ID:
             return e.desktop_id
         if role == LETTER:
-            # Bei der Suche keine Buchstaben-Überschriften
-            return "" if (self._filter.strip() or self._folder) else _letter(e.name)
+            # Bei der Suche keine Überschriften; je nach Stil Kategorie oder Anfangsbuchstabe
+            if self._filter.strip() or self._folder or self._style == "kacheln":
+                return ""
+            return category_of(e) if self._style == "kategorien" else _letter(e.name)
         if role == COMMENT:
             return e.comment
         if role == IS_FOLDER:
@@ -360,6 +436,30 @@ class AppModel(QAbstractListModel):
         if role == FOLDER_COUNT:
             return len(e.members or [])
         return None
+
+    # ---- Startmenü-Stil und Kategorien --------------------------------------------
+    styleChanged = Signal()
+
+    @Slot()
+    def refreshStyle(self):
+        """Beim Öffnen des Startmenüs: Stil aus der Systemsteuerung übernehmen."""
+        style = start_menu_style()
+        if style != self._style:
+            self._style = style
+            self._category = ""
+            self._apply_filter()
+            self.styleChanged.emit()
+
+    @Slot(str)
+    def setCategory(self, category):
+        if category != self._category:
+            self._category = category
+            self._apply_filter()
+            self.styleChanged.emit()
+
+    style = Property(str, lambda self: self._style, notify=styleChanged)
+    category = Property(str, lambda self: self._category, notify=styleChanged)
+    categories = Property("QVariantList", lambda self: list(self._categories), notify=styleChanged)
 
     # ---- Für QML ------------------------------------------------------------
     def _get_filter(self):

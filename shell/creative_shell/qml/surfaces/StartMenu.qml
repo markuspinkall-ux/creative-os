@@ -12,6 +12,13 @@ Item {
 
     // Wird beim Öffnen aufgerufen
     // Fluid-Glas unter dem Menü
+    // Startmenü-Stil (Kategorien / A–Z / Kacheln) aus der Systemsteuerung beim Öffnen übernehmen
+    Connections {
+        target: Window.window
+        function onVisibleChanged() { if (Window.window && Window.window.visible) apps.refreshStyle() }
+    }
+    Component.onCompleted: apps.refreshStyle()
+
     // Fenster wachsen aus dem angeklickten Eintrag (KWin-Effekt „gibeon-fenster“).
     // Das Startmenü sitzt links unten direkt über der Taskleiste (52 px, BAR_HEIGHT).
     function noteLaunch(item) {
@@ -177,8 +184,146 @@ Item {
             }
         }
 
+        // Kachel-Ansicht: Kategorien zum Antippen (Systemsteuerung › Darstellung › Startmenü)
+        readonly property bool tilesMode: apps.style === "kacheln" && search.text.length === 0 && apps.folder === ""
+        Flickable {
+            id: chips
+            visible: menu.tilesMode
+            anchors.top: heading.bottom
+            anchors.topMargin: 6
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            height: visible ? 32 : 0
+            clip: true
+            contentWidth: chipRow.width
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            Row {
+                id: chipRow
+                spacing: 6
+                Repeater {
+                    model: [""].concat(apps.categories)
+                    delegate: Rectangle {
+                        required property string modelData
+                        readonly property bool on: apps.category === modelData
+                        height: 28
+                        width: chipText.implicitWidth + 22
+                        radius: 14
+                        color: on ? Theme.accent : (chipMouse.containsMouse ? Theme.hover : Theme.tint(0.06))
+                        Text {
+                            id: chipText
+                            anchors.centerIn: parent
+                            text: parent.modelData === "" ? "Alle" : parent.modelData
+                            color: parent.on ? Theme.accentText : Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                            font.bold: parent.on
+                        }
+                        MouseArea {
+                            id: chipMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: apps.setCategory(parent.modelData)
+                        }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Kategorie " + chipText.text
+                    }
+                }
+            }
+        }
+
+        GridView {
+            id: tiles
+            objectName: "startTiles"
+            visible: menu.tilesMode
+            anchors {
+                top: chips.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: footer.top
+                leftMargin: 10
+                rightMargin: 10
+                bottomMargin: 6
+            }
+            clip: true
+            model: menu.tilesMode ? apps : null
+            cellWidth: Math.floor(width / 3)
+            cellHeight: 92
+            boundsBehavior: Flickable.StopAtBounds
+            delegate: Item {
+                id: tile
+                required property int index
+                required property string name
+                required property string icon
+                required property string desktopId
+                width: tiles.cellWidth
+                height: tiles.cellHeight
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: 14
+                    color: tileMouse.pressed ? Theme.pressed : (tileMouse.containsMouse ? Theme.tint(Theme.light ? 0.06 : 0.10) : "transparent")
+                }
+                Image {
+                    id: tileIcon
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 12
+                    width: 40; height: 40
+                    sourceSize.width: 80; sourceSize.height: 80
+                    source: iconFiles.app(tile.icon)
+                    asynchronous: true
+                    smooth: true
+                }
+                Text {
+                    anchors.top: tileIcon.bottom
+                    anchors.topMargin: 6
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    horizontalAlignment: Text.AlignHCenter
+                    text: tile.name
+                    elide: Text.ElideRight
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                }
+                MouseArea {
+                    id: tileMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            appMenu.desktopId = tile.desktopId
+                            appMenu.appName = tile.name
+                            appMenu.pinned = apps.isPinned(tile.desktopId)
+                            appMenu.autostart = apps.isAutostart(tile.desktopId)
+                            appMenu.confirming = false
+                            const p = tile.mapToItem(menu, mouse.x, mouse.y)
+                            appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
+                            appMenu.y = Math.min(p.y, menu.height - appMenu.height - 8)
+                            appMenu.visible = true
+                            return
+                        }
+                        root.noteLaunch(tile)
+                        if (apps.launchAt(tile.index))
+                            shell.closePopups()
+                    }
+                }
+                Accessible.role: Accessible.Button
+                Accessible.name: tile.name
+            }
+        }
+
         ListView {
             id: list
+            visible: !menu.tilesMode
 
             function launchCurrent() {
                 if (count === 0)
@@ -333,6 +478,7 @@ Item {
                             appMenu.desktopId = row.desktopId
                             appMenu.appName = row.name
                             appMenu.pinned = apps.isPinned(row.desktopId)
+                            appMenu.autostart = apps.isAutostart(row.desktopId)
                             appMenu.confirming = false
                             const p = row.mapToItem(menu, mouse.x, mouse.y)
                             appMenu.x = Math.min(p.x, menu.width - appMenu.width - 8)
@@ -524,6 +670,7 @@ Item {
             property string desktopId: ""
             property string appName: ""
             property bool pinned: false
+            property bool autostart: false
             property bool confirming: false
             visible: false
             z: 3
@@ -585,6 +732,15 @@ Item {
                     active: !appMenu.pinned
                     label: appMenu.pinned ? "In der Taskleiste angeheftet" : "An die Taskleiste anheften"
                     onTriggered: { apps.pin(appMenu.desktopId); appMenu.visible = false }
+                }
+                MenuRow {
+                    objectName: "autostartRow"
+                    icon: appMenu.autostart ? "check" : "power"
+                    label: appMenu.autostart ? "Startet beim Anmelden – ausschalten" : "Beim Anmelden starten (Autostart)"
+                    onTriggered: {
+                        apps.setAutostart(appMenu.desktopId, !appMenu.autostart)
+                        appMenu.visible = false
+                    }
                 }
                 MenuRow {
                     objectName: "hideRow"

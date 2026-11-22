@@ -41,18 +41,8 @@ RUN (dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
 RUN dnf install -y steam steam-devices gamemode mangohud vulkan-tools \
  && dnf clean all
 
-# Discord fest im System (RPM Fusion). Discord will sich sonst selbst
-# aktualisieren und startet dann nicht – Updates kommen mit dem System.
-# (/opt ist auf Atomic-Systemen beschreibbar und beim Bauen leer – Discord wird
-#  darum nach /usr/lib verschoben und über einen Link wieder unter /opt eingehängt)
-RUN mkdir -p /var/opt \
- && dnf install -y discord \
- && if [ -d /var/opt/discord ]; then \
-        mv /var/opt/discord /usr/lib/discord \
-     && printf 'L+ /var/opt/discord - - - - /usr/lib/discord\n' > /usr/lib/tmpfiles.d/creative-discord.conf; \
-    fi \
- && dnf clean all
-COPY shell/webapps/discord-settings.json /etc/skel/.config/discord/settings.json
+# Discord: das offizielle Discord Web im Gibeon-Look (webbrowser/app/discord, gleiche Electron-
+# Laufzeit wie der Browser) – ersetzt den Client von RPM Fusion, heißt aber weiter „Discord“.
 RUN mkdir -p /etc/skel/Bilder
 
 # Secure Boot: öffentlicher Schlüssel der Gibeon-OS-Treiber und Signier-Werkzeug
@@ -326,13 +316,18 @@ COPY webbrowser/bin/creative-browser /usr/bin/creative-browser
 COPY webbrowser/bin/creative-whatsapp /usr/bin/creative-whatsapp
 COPY webbrowser/creative-browser.desktop /usr/share/applications/creative-browser.desktop
 COPY webbrowser/creative-whatsapp.desktop /usr/share/applications/creative-whatsapp.desktop
+COPY --chmod=755 webbrowser/bin/discord /usr/bin/discord
+COPY webbrowser/discord.desktop /usr/share/applications/discord.desktop
+COPY shell/creative_shell/qml/Creative/icons/discord.svg /usr/share/icons/hicolor/scalable/apps/discord.svg
 COPY webbrowser/creative-webbrowser.svg /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg
 COPY theme/icons/tile-icons.py /tmp/tile-icons.py
 RUN chmod 755 /usr/bin/creative-browser /usr/bin/creative-whatsapp \
  && rsvg-convert -w 256 -h 256 /usr/share/icons/hicolor/scalable/apps/creative-webbrowser.svg -o /usr/lib/creative-browser/electron/resources/app/icon.png \
  && python3 /tmp/tile-icons.py --file /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg /tmp/whatsapp-kachel.svg \
  && rsvg-convert -w 256 -h 256 /tmp/whatsapp-kachel.svg -o /usr/lib/creative-browser/electron/resources/app/whatsapp/icon.png \
- && rm -f /tmp/tile-icons.py /tmp/whatsapp-kachel.svg \
+ && python3 /tmp/tile-icons.py --file /usr/share/icons/hicolor/scalable/apps/discord.svg /tmp/discord-kachel.svg \
+ && rsvg-convert -w 256 -h 256 /tmp/discord-kachel.svg -o /usr/lib/creative-browser/electron/resources/app/discord/icon.png \
+ && rm -f /tmp/tile-icons.py /tmp/whatsapp-kachel.svg /tmp/discord-kachel.svg \
  && ELECTRON_RUN_AS_NODE=1 /usr/lib/creative-browser/electron/electron -e "const p=require('path'),fs=require('fs');const a=p.join(p.dirname(process.execPath),'resources','app','package.json');console.log('Browser: Electron '+process.versions.electron+', App '+JSON.parse(fs.readFileSync(a)).version)" \
     || echo "CREATIVE BROWSER: ELECTRON STARTET NICHT"
 

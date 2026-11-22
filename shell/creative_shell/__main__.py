@@ -148,6 +148,8 @@ class ShellController(QObject):
         self._last_auto_close = ("", 0.0)
         self._widget_ghost = {}
         self._tray_side = {}
+        # Systemtray: „oben“ (oben links in der oberen Leiste) oder „taskleiste“ (vor der Uhr)
+        self._tray_pos = self._read_tray_pos()
         self._widget_screens = {
             key: name for key, name in config.load()["desktopWidgetScreens"].items()
             if key in DESKTOP_WIDGETS and isinstance(name, str) and name
@@ -229,6 +231,38 @@ class ShellController(QObject):
         self._top_hidden = set()
         tasks.revisionChanged.connect(self._update_topbars)
 
+    @staticmethod
+    def _read_tray_pos():
+        return "taskleiste" if config.load().get("trayPosition") == "taskleiste" else "oben"
+
+    def _tray_home(self):
+        """Wo die Tray-Menüs aufgehen: oben links oder (Tray in der Taskleiste) unten rechts."""
+        return "right" if self._tray_pos == "taskleiste" else "topleft"
+
+    def reload_tray_pos(self, *_):
+        pos = self._read_tray_pos()
+        if pos == self._tray_pos:
+            return
+        self.closePopups()
+        self._tray_pos = pos
+        self._tray_side = {}
+        for entry in self._surfaces.values():
+            self._apply_tray_pos(entry)
+        self.trayPosChanged.emit()
+
+    def _apply_tray_pos(self, entry):
+        """Tray in der Taskleiste: die obere Leiste wird nicht gebraucht und verschwindet ganz."""
+        win = entry.get("top")
+        if win is None:
+            return
+        if self._tray_pos == "taskleiste":
+            _win_hide(win)
+        else:
+            _win_show(win)
+
+    trayPosChanged = Signal()
+    trayInTaskbar = Property(bool, lambda self: self._tray_pos == "taskleiste", notify=trayPosChanged)
+
     def _update_topbars(self):
         tasks = getattr(self, "_tasks", None)
         if tasks is None:
@@ -265,6 +299,7 @@ class ShellController(QObject):
         _win_show(entry["bar"])
         entry["top"] = self._create(screen, "top", "Topbar.qml", geo.width(), TOP_HEIGHT, False)
         _win_show(entry["top"])
+        self._apply_tray_pos(entry)
         screen.geometryChanged.connect(lambda _g, n=name: self._relayout(n))
         screen.geometryChanged.connect(lambda _g: self.refreshPrimary())
         self.screensChanged.emit()
@@ -319,6 +354,7 @@ class ShellController(QObject):
                 if win is not None:
                     _win_show(win)
                     QMetaObject.invokeMethod(win, "requestUpdate")
+            self._apply_tray_pos(entry)
         self.refreshPrimary()
 
     def _popup_height(self, screen, wanted):
@@ -360,7 +396,7 @@ class ShellController(QObject):
         if entry is None:
             return None
         # Tray-Menüs: oben links oder (Kalender) oben rechts – bei Seitenwechsel neu anlegen
-        side = self._tray_side.get(key, "topleft") if key in TRAY_POPUPS else None
+        side = self._tray_side.get(key, self._tray_home()) if key in TRAY_POPUPS else None
         if side and entry[key] is not None and entry[key].property("placement") != side:
             _win_hide(entry[key])
             entry[key].deleteLater()
@@ -430,12 +466,12 @@ class ShellController(QObject):
     @Slot(str)
     def toggleQuickPanel(self, name):
         self._panel_focus = ""
-        self._side_for("panel", "topleft", name)
+        self._side_for("panel", self._tray_home(), name)
         self._toggle(name, "panel")
 
     def _side_for(self, key, side, name):
         """Menü auf die richtige Seite holen; ein offenes auf der anderen Seite erst schließen."""
-        if self._tray_side.get(key, "topleft") != side:
+        if self._tray_side.get(key, self._tray_home()) != side:
             if self._open.get(key):
                 self.closePopups()
             self._tray_side[key] = side
@@ -721,6 +757,8 @@ def main():
         if _look.read() != started_look:
             QTimer.singleShot(400, lambda: app.exit(75))
     watcher.directoryChanged.connect(look_changed)
+    # Systemtray oben links ↔ Taskleiste (Systemsteuerung › Darstellung) sofort übernehmen
+    watcher.directoryChanged.connect(lambda _p=None: QTimer.singleShot(150, shell.reload_tray_pos))
     ctx.setContextProperty("shell", shell)
     for name, model in models.items():
         ctx.setContextProperty(name, model)

@@ -13,7 +13,22 @@
       "Studio: Capture-Karte auf einem anderen Monitor zeigen – Rechtsklick auf die Quelle › „Auf … zeigen“. Dort läuft nur das Bild der Karte im Vollbild (samt ihrem Ton), ohne Overlays, Kamera-Ecke oder Umfrage. Beenden mit Esc, Doppelklick oder im Rechtsklick-Menü",
       "Fenster öffnen sich jetzt dynamisch: Sie wachsen aus dem Symbol heraus, auf das du geklickt hast (Startmenü oder Taskleiste), schrumpfen beim Minimieren in ihr Taskleisten-Symbol zurück und kommen beim Wiederherstellen von dort wieder heraus",
       "„Fehler melden“ im Startmenü: öffnet ein kurzes Meldeformular, die Version von Gibeon OS ist schon eingetragen. Auch auf der Webseite lassen sich Fehler melden – jede Meldung landet direkt beim Entwickler",
-      "Freiwillig: „Land anonym mitteilen“ – beim Einrichten und in Einstellungen › System › Datenschutz. Ist es eingeschaltet, meldet Gibeon OS einmal im Monat nur das Land (aus der Zeitzone), damit der Entwickler sieht, wo Gibeon OS genutzt wird. Keine IP, kein Name, keine Kennung; standardmäßig aus"
+      "Freiwillig: „Land anonym mitteilen“ – beim Einrichten und in Einstellungen › System › Datenschutz. Ist es eingeschaltet, meldet Gibeon OS einmal im Monat nur das Land (aus der Zeitzone), damit der Entwickler sieht, wo Gibeon OS genutzt wird. Keine IP, kein Name, keine Kennung; standardmäßig aus",
+      "Systemtray wahlweise oben links oder in der Taskleiste vor der Uhr (Systemsteuerung › Darstellung › Systemtray). In der Taskleiste sieht er aus wie die Uhr, die obere Leiste entfällt dann und die Menüs gehen unten rechts auf",
+      "Bereinigung in der Systemsteuerung (wie CCleaner): Analysieren zeigt, wie viel Platz frei wird – dann Papierkorb, Vorschaubilder, Browser- und Programm-Zwischenspeicher und ungenutzte Flatpak-Reste aufräumen. Optional: Shader-Cache, KI-Modelle, Systemprotokolle. Eigene Dateien bleiben immer unberührt",
+      "Autostart: Rechtsklick auf eine App im Startmenü › „Beim Anmelden starten“ – die App öffnet sich dann nach jeder Anmeldung. Gilt auch für Programme, die das selbst anbieten (z. B. Steam oder Discord „mit dem System starten“)",
+      "Startmenü nach Kategorien sortiert (Internet, Kreativ und Medien, Büro, Spiele, Werkzeuge, System …), immer aufgeklappt. In Systemsteuerung › Darstellung › Startmenü lässt sich auch die alte A–Z-Liste oder die Kachel-Ansicht mit Kategorie-Leiste wählen",
+      "Discord im Gibeon-Look: Discord läuft jetzt als offizielles Discord Web in einem eigenen Fenster mit Graphit- bzw. Porzellan-Farben, deiner Akzentfarbe und runden Formen – mit Zähler an der Taskleiste, Benachrichtigungen, Tray-Symbol und Bildschirm teilen. Einmal neu anmelden (auch per QR-Code mit dem Handy). Das Design lässt sich per Rechtsklick abschalten",
+      "Browser: Lesezeichen aus Chrome, Edge, Brave, Vivaldi, Opera, Firefox, LibreWolf und Zen übernehmen – beim ersten Start fragt der Browser von selbst, später im Menü „Lesezeichen importieren …“. Ordner bleiben erhalten.",
+      "Browser: Lesezeichen-Ordner in der Leiste – Rechtsklick auf ein Lesezeichen › „In Ordner“; Ordner lassen sich umbenennen und auflösen.",
+      "Browser: Passwörter speichern und automatisch ausfüllen – verschlüsselt mit dem Schlüsselbund deines Kontos, Übersicht im Menü „Passwörter …“.",
+      "Browser: Bild im Bild – sobald ein Video läuft, erscheint ein Knopf in der Leiste (auch per Rechtsklick aufs Video).",
+      "Browser: Leseansicht – Artikel ohne Werbung, Menüs und Ablenkung lesen (Knopf in der Leiste oder Rechtsklick).",
+      "Browser: Seite übersetzen und markierten Text übersetzen (Rechtsklick).",
+      "Browser: Ganze Seite als Bild speichern – auch alles unterhalb des Fensters, landet in Bilder › Bildschirmfotos.",
+      "Browser: Gesponserte Abschnitte in YouTube-Videos werden übersprungen (SponsorBlock, im Menü abschaltbar).",
+      "Browser: Dunkelmodus für helle Webseiten (im Menü einschalten, pro Seite abschaltbar).",
+      "Browser: Tabs, die 30 Minuten nicht benutzt wurden, schlafen und geben Arbeitsspeicher frei – beim Anklicken laden sie neu (auch per Rechtsklick auf den Tab)."
     ],
     "verbessert": [
       "Uhrzeit, Datum und Akku sitzen jetzt unten in der Taskleiste hinter dem Papierkorb – nur leicht abgesetzt",
@@ -39,7 +54,10 @@
       "Android-Apps öffnen sich nach dem Hochfahren gleich als eigenes Fenster – nicht mehr erst in der großen LineageOS-Oberfläche",
       "Die Meldung „prohibited by secure boot policy“ beim Start ist weg: Mit eingeschaltetem Secure Boot lädt die Startauswahl keine eigenen Schriften mehr nach (das verbietet Secure Boot) und bleibt beim schlichten Menü",
       "Shots: Bei schmalerem Fenster überlappten sich die Knöpfe in der Werkzeugleiste (z. B. Zuschneiden und Kopieren). Jetzt werden Beschriftungen weggelassen und die Zeichenwerkzeuge lassen sich zur Seite wischen",
-      "Oben links blieb bei maximiertem Fenster ein verschwommener Streifen über der Titelleiste stehen: Das Glas der eingefahrenen oberen Leiste wurde zwar abgeschaltet, aber nie neu gezeichnet. Jetzt verschwindet es sofort"
+      "Oben links blieb bei maximiertem Fenster ein verschwommener Streifen über der Titelleiste stehen: Das Glas der eingefahrenen oberen Leiste wurde zwar abgeschaltet, aber nie neu gezeichnet. Jetzt verschwindet es sofort",
+      "Gibeon Kamera in Studio blieb leer: Broadcast griff sich ohne feste Wahl auch Capture-Karten (z. B. Live Gamer Mini) statt der Webcam und blieb an einer belegten Kamera hängen. Jetzt nimmt es nur Webcams, überspringt belegte Kameras, und Studio sagt, wenn die Gibeon Kamera kein Bild bekommen kann",
+      "Browser: Bei Lesezeichen mit langem Namen wurde das Symbol zu einem Strich zusammengedrückt. Jetzt bleibt es immer ganz, und Lesezeichen zeigen das echte Symbol der Seite (sonst den Anfangsbuchstaben)",
+      "Browser: Symbole in der Lesezeichenleiste wurden bei manchen Seiten falsch oder verzerrt angezeigt."
     ]
   },
   {

@@ -47,7 +47,7 @@ const VIDEO_JS = `(() => new Promise((resolve) => {
   }, 5000);
 }))()`;
 
-async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads = [] }) {
+async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adblock, downloads = [], getPasswords = () => null }) {
   const dir = arg('creative-selftest');
   setTimeout(() => { console.log('Browser: Prüfung hängt – Abbruch'); app.exit(2); }, 240000).unref?.();
   fs.mkdirSync(dir, { recursive: true });
@@ -296,6 +296,7 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
       check('Download aus einer Web-App (blob, neues Fenster)', downloads.length > vorher);
       try { appWin.win.close(); } catch (_) { /* egal */ }
     }
+    await neueFunktionen({ Win, store, check, result, dir, getPasswords });
     result.ok = Object.values(result.checks).every(Boolean);
   } catch (e) {
     result.error = String(e && e.stack || e);
@@ -306,5 +307,154 @@ async function run({ Win, windows, store, START_URL, arg, setLook, lookFor, adbl
   console.log(result.ok ? 'Browser: alle Prüfungen bestanden' : 'Browser: Prüfung FEHLGESCHLAGEN');
   app.exit(result.ok ? 0 : 1);
 }
+
+// ---- Neue Browser-Funktionen (Nov. 2026) --------------------------------------------------------
+async function neueFunktionen({ Win, store, check, result, dir, getPasswords }) {
+  const http = require('http');
+  const { pathToFileURL } = require('url');
+  const pages = {
+    '/artikel': `<!doctype html><html><head><title>Ein langer Artikel</title></head><body style="background:#fff;color:#111">
+      <nav>Menü · Start · Kontakt</nav><article><h1>Ein langer Artikel</h1>${'<p>Gibeon OS ist ein Betriebssystem für Kreative. Dieser Absatz ist lang genug, damit die Leseansicht ihn als Inhalt erkennt und nicht als Navigation. </p>'.repeat(12)}</article>
+      <footer>Impressum</footer></body></html>`,
+    '/lang': `<!doctype html><html><head><title>Lange Seite</title></head><body style="margin:0;background:#fff">
+      <div style="height:3200px;background:linear-gradient(#fff,#f2c)">oben</div><div>unten</div></body></html>`,
+    '/anmelden': `<!doctype html><html><head><title>Anmelden</title></head><body style="background:#fff">
+      <form id="f" onsubmit="event.preventDefault(); document.title='abgeschickt'">
+      <input id="u" type="text" autocomplete="username"><input id="p" type="password"><button>Anmelden</button></form></body></html>`,
+  };
+  const server = http.createServer((req, res) => {
+    const html = pages[req.url.split('?')[0]];
+    res.writeHead(html ? 200 : 404, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(html || 'nicht da');
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const w = new Win({ urls: [`${base}/artikel`] });
+  w.win.setSize(1360, 860);
+  try {
+    await waitLoad(w.ui.webContents);
+    await sleep(600);
+    await waitLoad(w.active.wc);
+    await sleep(800);
+
+    // Leseansicht
+    const vorher = w.tabs.length;
+    await w.reader(w.active);
+    await sleep(300);
+    if (w.active) await waitLoad(w.active.wc);
+    await sleep(500);
+    const lesen = w.active && w.active.url.startsWith('creative://lesen/');
+    const lesenText = lesen ? await within(w.active.wc.executeJavaScript('document.body.innerText'), 3000, '') : '';
+    check('Leseansicht öffnet sich', lesen && w.tabs.length === vorher + 1);
+    check('Leseansicht ohne Menü/Fußzeile', /Gibeon OS ist ein Betriebssystem/.test(lesenText) && !/Impressum/.test(lesenText));
+    await shot(w, dir, '11-leseansicht');
+
+    // Dunkelmodus für helle Seiten
+    store.settings.darkPages = true;
+    w.addTab(`${base}/artikel?dunkel`);
+    await waitLoad(w.active.wc);
+    await sleep(900);
+    const filter = await within(w.active.wc.executeJavaScript('getComputedStyle(document.documentElement).filter'), 3000, '');
+    result.darkFilter = filter;
+    check('Dunkelmodus auf heller Seite', /invert/.test(filter));
+    await shot(w, dir, '12-dunkelmodus');
+    store.settings.darkPages = false;
+    await w.applyDark(w.active);
+    await sleep(200);
+    const filterAus = await within(w.active.wc.executeJavaScript('getComputedStyle(document.documentElement).filter'), 3000, '');
+    check('Dunkelmodus wieder aus', !/invert/.test(filterAus));
+
+    // Ganze Seite als Bild
+    w.addTab(`${base}/lang`);
+    await waitLoad(w.active.wc);
+    await sleep(600);
+    const file = await w.fullShot(w.active);
+    let hoehe = 0;
+    try {
+      const buf = fs.readFileSync(file);
+      hoehe = buf.readUInt32BE(20);
+      fs.copyFileSync(file, path.join(dir, '13-ganze-seite.png'));
+    } catch (_) { /* nicht gespeichert */ }
+    result.fullShotHeight = hoehe;
+    check('Ganze Seite als Bild (länger als das Fenster)', hoehe >= 3000);
+
+    // Tabs schlafen legen und wecken
+    const hinten = w.addTab(`${base}/artikel?schlaf`, { background: true });
+    await waitLoad(hinten.wc);
+    await sleep(300);
+    const alt = hinten.wc;
+    const schlaeft = w.sleepTab(hinten);
+    await sleep(300);
+    check('Tab schläft (Speicher frei)', schlaeft && hinten.sleeping && alt.isDestroyed());
+    w.activate(hinten);
+    await waitLoad(hinten.wc);
+    await sleep(400);
+    check('Schlafender Tab wacht auf', !hinten.sleeping && !hinten.wc.isDestroyed() && /Ein langer Artikel/.test(hinten.wc.getTitle()));
+
+    // Video erkannt → Bild-im-Bild-Knopf
+    const video = arg2('creative-video');
+    if (video) {
+      w.addTab(video);
+      await waitLoad(w.active.wc);
+      await sleep(1500);
+      check('Video erkannt (Bild im Bild)', w.active.hasVideo);
+      result.pip = await within(w.pip(w.active), 4000, 'zeit');
+    }
+
+    // Lesezeichen-Ordner
+    store.toggleBookmark(`${base}/artikel`, 'Artikel');
+    store.setBookmarkFolder(`${base}/artikel`, 'Test-Ordner');
+    w.pushState();
+    await sleep(400);
+    const ordner = await within(w.ui.webContents.executeJavaScript(
+      `[...document.querySelectorAll('.bm.folder')].map((e) => e.textContent.trim())`), 3000, []);
+    check('Lesezeichen-Ordner in der Leiste', ordner.includes('Test-Ordner'));
+    await w.ui.webContents.executeJavaScript(`document.querySelector('.bm.folder').click()`);
+    await sleep(400);
+    await shot(w, dir, '14-ordner');
+    w.ui.webContents.send('close-overlays');
+    await sleep(200);
+
+    // Passwort speichern und wieder ausfüllen
+    const pw = getPasswords();
+    result.passwordsAvailable = pw ? pw.available() : null;
+    if (pw && pw.available()) {
+      w.addTab(`${base}/anmelden`);
+      await waitLoad(w.active.wc);
+      await sleep(700);
+      await w.active.wc.executeJavaScript(`(() => {
+        const set = (el, v) => { el.focus(); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+        set(document.getElementById('u'), 'markus'); set(document.getElementById('p'), 'geheim123');
+        document.querySelector('button').click(); })()`, true);
+      await sleep(800);
+      const frage = w.pwPrompts && [...w.pwPrompts.entries()].find(([, v]) => v.user === 'markus');
+      check('Passwort: Browser fragt nach dem Anmelden', !!frage);
+      await shot(w, dir, '15-passwort-frage');
+      if (frage) w.answerPassword(frage[0], 'save');
+      w.addTab(`${base}/anmelden?neu`);
+      await waitLoad(w.active.wc);
+      await sleep(1500);
+      const felder = await within(w.active.wc.executeJavaScript(
+        `[document.getElementById('u').value, document.getElementById('p').value]`), 3000, []);
+      check('Passwort wird ausgefüllt', felder[0] === 'markus' && felder[1] === 'geheim123');
+      pw.remove(`${base}`, 'markus');
+    } else {
+      console.log('Browser: kein Schlüsselbund im Test – Passwortprüfung übersprungen');
+    }
+
+    // SponsorBlock-Skript lässt sich übersetzen
+    const tools = require('./page-tools');
+    try { new Function(tools.sponsorScript('abc', [{ segment: [1, 2], category: 'sponsor' }])); check('SponsorBlock-Skript', true); }
+    catch (_) { check('SponsorBlock-Skript', false); }
+    check('Übersetzen-Adresse', /translate/.test(tools.translatePageUrl('https://example.org/x')));
+  } catch (e) {
+    result.neuFehler = String(e && e.stack || e);
+    check('neue Funktionen ohne Fehler', false);
+  } finally {
+    try { w.win.close(); } catch (_) { /* egal */ }
+    server.close();
+  }
+}
+const arg2 = (name) => { const a = process.argv.find((x) => x.startsWith(`--${name}=`)); return a ? a.slice(name.length + 3) : null; };
 
 module.exports = { run };
