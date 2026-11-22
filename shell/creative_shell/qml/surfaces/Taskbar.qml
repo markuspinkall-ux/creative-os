@@ -292,10 +292,43 @@ Item {
             Accessible.onPressAction: shell.toggleCalendar(root.screenName)
         }
 
-        // Papierkorb vor der Uhr
+        // Systemtray vor der Uhr – wenn in Systemsteuerung › Darstellung so eingestellt.
+        // Gleiche Darstellung wie die Uhr; Klick auf freie Stelle öffnet den Schnellzugriff.
+        Rectangle {
+            id: trayPill
+            visible: shell.trayInTaskbar
+            anchors.right: clockPill.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            width: visible ? trayIcons.implicitWidth + 28 : 0
+            height: 34
+            radius: 17
+            readonly property color base: Theme.glassSolid
+            readonly property bool lit: trayMouse.containsMouse || shell.quickPanelOpenOn === root.screenName
+            color: Qt.rgba(base.r, base.g, base.b, lit ? 0.22 : 0.10)
+            border.color: Theme.tint(0.05)
+            border.width: 1
+            MouseArea {
+                id: trayMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: shell.toggleQuickPanel(root.screenName)
+            }
+            TrayIcons {
+                id: trayIcons
+                anchors.centerIn: parent
+                screenName: root.screenName
+            }
+            Accessible.role: Accessible.Button
+            Accessible.name: "Schnellzugriff: WLAN, Lautstärke, Bluetooth, Helligkeit"
+            Accessible.onPressAction: shell.toggleQuickPanel(root.screenName)
+        }
+
+        // Papierkorb vor dem Tray bzw. der Uhr
         Rectangle {
             id: trashBtn
-            anchors.right: clockPill.left
+            anchors.right: trayPill.visible ? trayPill.left : clockPill.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             width: 40

@@ -59,9 +59,10 @@ def test_obere_leiste_fluid():
     """Fluid-Design: Tray oben links, Uhrzeit rechts, Taskleiste unten ohne Tray, Menüs oben."""
     top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
     assert "shell.toggleQuickPanel(root.screenName)" in top
-    assert "trayApps.items" in top and 'text: "Gibeon OS"' in top
+    tray = (ROOT / "shell/creative_shell/qml/surfaces/TrayIcons.qml").read_text(encoding="utf-8")
+    assert "trayApps.items" in tray and 'text: "Gibeon OS"' in top
     bar = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
-    assert "toggleQuickPanel" not in bar and "trash.open()" in bar
+    assert ("toggleQuickPanel" not in bar or "visible: shell.trayInTaskbar" in bar) and "trash.open()" in bar
     assert "shell.toggleCalendar(root.screenName)" in bar
     main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
     assert '"Topbar.qml"' in main and "TOP_HEIGHT = 50" in main
@@ -95,3 +96,15 @@ def test_glas_aus_wird_neu_gezeichnet():
     assert '"update", "requestUpdate"' in glas
     top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
     assert "if (!shown) shell.setBlur(Window.window, [])" in top
+
+
+def test_tray_position():
+    tb = (ROOT / "shell/creative_shell/qml/surfaces/Taskbar.qml").read_text(encoding="utf-8")
+    top = (ROOT / "shell/creative_shell/qml/surfaces/Topbar.qml").read_text(encoding="utf-8")
+    tray = (ROOT / "shell/creative_shell/qml/surfaces/TrayIcons.qml").read_text(encoding="utf-8")
+    main = (ROOT / "shell/creative_shell/__main__.py").read_text(encoding="utf-8")
+    assert "visible: shell.trayInTaskbar" in tb and "TrayIcons {" in tb and "TrayIcons {" in top
+    assert "root." not in tray                       # eigenständig, Monitor über screenName
+    assert 'return "right" if self._tray_pos == "taskleiste" else "topleft"' in main
+    look = (ROOT / "settings/creative_settings/qml/pages/LookPage.qml").read_text(encoding="utf-8")
+    assert 'look.setTrayPosition("taskleiste")' in look and 'look.setTrayPosition("oben")' in look

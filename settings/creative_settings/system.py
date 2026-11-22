@@ -638,6 +638,7 @@ class LookModel(QObject):
         self._viz_opacity = float(cfg.get("visualizerOpacity", 0.1))
         self._stats_on = bool(cfg.get("desktopStats", True))
         self._np_on = bool(cfg.get("taskbarNowPlaying", True))
+        self._tray_pos = "taskleiste" if cfg.get("trayPosition") == "taskleiste" else "oben"
         self._login_sound = bool(cfg.get("loginSound", True))
         self._wall_anim = bool(cfg.get("wallpaperAnimated", True))
         self._gadgets = {}
@@ -840,6 +841,13 @@ class LookModel(QObject):
         self.changed.emit()
 
     @Slot(str)
+    def setTrayPosition(self, pos):
+        """Systemtray oben links („oben“) oder in der Taskleiste vor der Uhr („taskleiste“)."""
+        self._tray_pos = "taskleiste" if pos == "taskleiste" else "oben"
+        shell_config.set_value("trayPosition", self._tray_pos)
+        self.changed.emit()
+
+    @Slot(str)
     def setWallpaper(self, path):
         if path and not any(image["path"] == path for image in self._images):
             return
@@ -878,6 +886,7 @@ class LookModel(QObject):
     visualizerOpacity = Property(float, lambda self: self._viz_opacity, notify=changed)
     desktopStats = Property(bool, lambda self: self._stats_on, notify=changed)
     nowPlaying = Property(bool, lambda self: self._np_on, notify=changed)
+    trayPosition = Property(str, lambda self: self._tray_pos, notify=changed)
     widgets = Property("QVariantMap", lambda self: dict(self._gadgets), notify=changed)
     loginSound = Property(bool, lambda self: self._login_sound, notify=changed)
     wallpaperAnimated = Property(bool, lambda self: self._wall_anim, notify=changed)

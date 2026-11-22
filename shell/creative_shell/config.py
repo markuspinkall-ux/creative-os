@@ -30,6 +30,7 @@ DEFAULTS = {
     "visualizerOpacity": 0.1,
     # Interpret und Titel des laufenden Liedes mittig in der Taskleiste
     "taskbarNowPlaying": True,
+    "trayPosition": "oben",          # Systemtray: „oben“ (oben links) oder „taskleiste“ (vor der Uhr)
     "loginSound": True,
     # Ablage oben mittig auf dem Schreibtisch (Verknüpfungen, wie das Dock bei macOS)
     "desktopShelf": True,

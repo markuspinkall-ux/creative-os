@@ -184,6 +184,31 @@ SettingsPage {
     }
 
     Card {
+        title: "Systemtray"
+        subtitle: "WLAN, Ton, Bluetooth, Tastatur und die Symbole anderer Programme"
+        SettingRow {
+            label: "Position"
+            hint: look.trayPosition === "taskleiste"
+                  ? "In der Taskleiste vor der Uhr, im gleichen Glasfeld wie die Uhr. Die obere Leiste entfällt."
+                  : "Oben links in der oberen Leiste. Bei maximiertem Fenster fährt sie weg und kommt wieder, wenn die Maus oben links an den Rand geht."
+            last: true
+            Row {
+                spacing: 8
+                CButton {
+                    text: "Oben links"
+                    primary: look.trayPosition !== "taskleiste"
+                    onClicked: look.setTrayPosition("oben")
+                }
+                CButton {
+                    text: "Taskleiste (vor der Uhr)"
+                    primary: look.trayPosition === "taskleiste"
+                    onClicked: look.setTrayPosition("taskleiste")
+                }
+            }
+        }
+    }
+
+    Card {
         title: "Gerade läuft"
         subtitle: "Interpret und Titel des laufenden Liedes mittig in der Taskleiste"
         SettingRow {
