@@ -16,6 +16,12 @@ Window {
     property int surfaceWidth: 400
     property int surfaceHeight: 52
     property bool wantsKeyboard: false
+    // Obere Leiste bei maximiertem Fenster: kein Platz reservieren, Leiste fährt ein (Topbar.qml)
+    property bool autoHide: false
+    readonly property bool hovered: hostHover.hovered
+
+    // Maus über der Fläche (liegt außerhalb des Inhalts, damit er sich frei verschieben darf)
+    HoverHandler { id: hostHover }
 
     width: surfaceWidth
     height: surfaceHeight
@@ -42,7 +48,7 @@ Window {
                 : (LayerShell.Window.AnchorRight | (isTop ? LayerShell.Window.AnchorTop : LayerShell.Window.AnchorBottom)))
     // Leiste reserviert ihre Höhe; Menüs (0) setzen sich darüber;
     // das Hintergrundbild (-1) füllt den ganzen Bildschirm.
-    LayerShell.Window.exclusionZone: isBar ? surfaceHeight : (isBackground ? -1 : 0)
+    LayerShell.Window.exclusionZone: isBar ? (autoHide ? 0 : surfaceHeight) : (isBackground ? -1 : 0)
     LayerShell.Window.keyboardInteractivity: wantsKeyboard
         ? LayerShell.Window.KeyboardInteractivityOnDemand
         : LayerShell.Window.KeyboardInteractivityNone

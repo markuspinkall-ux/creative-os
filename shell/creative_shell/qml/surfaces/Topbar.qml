@@ -3,22 +3,61 @@ import QtQuick.Window
 import Creative
 
 // Obere Leiste (Fluid-Design): links der Tray – WLAN, Ton, Bluetooth, Tastatur und die
-// Symbole anderer Programme –, in der Mitte „Gibeon OS“, rechts Uhrzeit, Datum und Akku.
-// Klick links öffnet den Schnellzugriff darunter, Klick auf die Uhr den Kalender rechts.
+// Symbole anderer Programme –, in der Mitte „Gibeon OS“. Uhrzeit, Datum und Akku sitzen
+// unten in der Taskleiste hinter dem Papierkorb. Klick links öffnet den Schnellzugriff.
 Item {
     id: root
 
     property string screenName
 
+    // ---- Einfahren bei maximiertem Fenster ------------------------------------------------
+    // Ist auf diesem Monitor ein Fenster maximiert, reserviert die Leiste keinen Platz und fährt
+    // nach oben weg. Nur ein schmaler Streifen am oberen Rand nimmt dann die Maus an: geht sie
+    // dorthin, fährt die Leiste herein; verlässt sie die Leiste, fährt sie wieder ein.
+    readonly property bool autoHide: Window.window ? Window.window.autoHide : false
+    readonly property bool hovered: Window.window ? Window.window.hovered : false
+    readonly property bool menuOpen: shell.trayMenuOpenOn === root.screenName
+                                     || shell.quickPanelOpenOn === root.screenName
+    property bool peek: false
+    readonly property bool shown: !autoHide || peek || menuOpen
+    readonly property int edge: 3            // Streifen, der die Maus fängt
+    property real shift: shown ? 0 : -height
+    Behavior on shift { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    transform: Translate { y: root.shift }
+
+    onHoveredChanged: {
+        if (hovered) {
+            leaveTimer.stop()
+            peek = true
+        } else {
+            leaveTimer.restart()
+        }
+    }
+    Timer { id: leaveTimer; interval: 500; onTriggered: root.peek = root.hovered }
+    onAutoHideChanged: { if (!autoHide) peek = false; updateInput() }
+    onShownChanged: { updateInput(); blurTimer.restart() }
+    Timer { id: blurTimer; interval: 240; onTriggered: root.updateBlur() }
+
+    function updateInput() {
+        if (!Window.window) return
+        if (!autoHide || shown)
+            shell.setInputRect(Window.window, 0, 0, 0, 0)          // ganze Fläche
+        else
+            shell.setInputRect(Window.window, 0, 0, width, edge)   // nur der Streifen oben
+    }
+
     // Fluid-Glas: nur unter den beiden Feldern weichzeichnen
     function updateBlur() {
+        if (!shown) {
+            shell.setBlur(Window.window, [])
+            return
+        }
         shell.setBlur(Window.window, [
-            { x: left.x, y: left.y, w: left.width, h: left.height, r: 17 },
-            { x: right.x, y: right.y, w: right.width, h: right.height, r: 17 }
+            { x: left.x, y: left.y, w: left.width, h: left.height, r: 17 }
         ])
     }
     Component.onCompleted: Qt.callLater(updateBlur)
-    onWidthChanged: Qt.callLater(updateBlur)
+    onWidthChanged: { Qt.callLater(updateBlur); updateInput() }
 
     // Glas-Feld: durchscheinend, feine Kante, Lichtkante oben
     component Pill: Rectangle {
@@ -298,85 +337,5 @@ Item {
         font.family: Theme.fontFamily
         font.pixelSize: 14
         Accessible.ignored: true
-    }
-
-    // ---- rechts: Uhrzeit, Datum, Akku ----
-    Pill {
-        id: right
-        anchors.right: parent.right
-        anchors.rightMargin: 14
-        y: 10
-        width: rightRow.implicitWidth + 28
-        onWidthChanged: Qt.callLater(root.updateBlur)
-        onXChanged: Qt.callLater(root.updateBlur)
-        lit: rightMouse.containsMouse
-
-        MouseArea {
-            id: rightMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: shell.toggleCalendar(root.screenName)
-        }
-
-        Row {
-            id: rightRow
-            anchors.centerIn: parent
-            spacing: 12
-            Text {
-                id: clock
-                anchors.verticalCenter: parent.verticalCenter
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-                font.bold: true
-            }
-            Text {
-                id: date
-                anchors.verticalCenter: parent.verticalCenter
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-            }
-            // Akku (nur bei Laptops)
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: akku.present && widgetExtras.akkuInstalled
-                spacing: 6
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: akku.percent + " %"
-                    color: akku.low ? Theme.flame : Theme.text
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                }
-                BatteryGlyph {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 24; height: 12
-                    level: akku.percent
-                    charging: akku.charging
-                    low: akku.low
-                }
-                Accessible.role: Accessible.StaticText
-                Accessible.name: "Akku " + akku.percent + " Prozent, " + akku.statusText
-            }
-        }
-
-        Accessible.role: Accessible.Button
-        Accessible.name: "Kalender – " + clock.text + ", " + date.text
-        Accessible.onPressAction: shell.toggleCalendar(root.screenName)
-    }
-
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: {
-            const now = new Date()
-            clock.text = Qt.formatTime(now, "HH:mm")
-            // z. B. „Sa., 21. Nov.“
-            date.text = now.toLocaleDateString(Qt.locale("de_DE"), "ddd, d. MMM")
-        }
     }
 }

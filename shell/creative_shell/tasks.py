@@ -86,6 +86,15 @@ class TaskModel(QObject):
     def active_output(self):
         return self._active_output
 
+    def maximized_outputs(self):
+        """Monitore, auf denen gerade ein maximiertes oder Vollbild-Fenster offen ist
+        (nicht minimiert) – dort blendet die Shell die obere Leiste aus."""
+        return {
+            w.get("output") for w in self._windows
+            if w.get("output") and not w.get("minimized")
+            and (w.get("maximized") or w.get("fullscreen"))
+        }
+
     def request_snapshot(self):
         self._kwin.request_snapshot()
 

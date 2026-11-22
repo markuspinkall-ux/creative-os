@@ -35,7 +35,7 @@ Item {
         width: 30
         height: 30
         radius: 15
-        color: Theme.light ? "#edf0f5" : "#232836"
+        color: Theme.light ? "#d6dce6" : "#10131a"
     }
     SvgIcon {
         anchors.centerIn: parent
@@ -52,7 +52,7 @@ Item {
         height: 32
         sourceSize.width: 64
         sourceSize.height: 64
-        source: root.icon.length === 0 ? iconFiles.url(root.themeIcon) : ""
+        source: root.icon.length === 0 ? iconFiles.app(root.themeIcon) : ""
         asynchronous: true
         smooth: true
     }

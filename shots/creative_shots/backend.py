@@ -15,6 +15,7 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -58,6 +59,22 @@ def shots_dir():
     if pictures is None:
         pictures = Path.home() / ("Bilder" if (Path.home() / "Bilder").exists() else "Pictures")
     d = pictures / "Bildschirmfotos"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def videos_dir():
+    """~/Videos/Bildschirmaufnahmen (Ordnername wie in xdg-user-dirs)."""
+    videos = None
+    try:
+        r = subprocess.run(["xdg-user-dir", "VIDEOS"], capture_output=True, text=True, timeout=3)
+        if r.returncode == 0 and r.stdout.strip() and r.stdout.strip() != str(Path.home()):
+            videos = Path(r.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if videos is None:
+        videos = Path.home() / "Videos"
+    d = videos / "Bildschirmaufnahmen"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -124,6 +141,8 @@ class Shots(QObject):
     showEditor = Signal()
     hideEditor = Signal()
     _captured = Signal(str, str)        # Pfad, Fehler
+    recordChanged = Signal()
+    _recorder_line = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -145,6 +164,135 @@ class Shots(QObject):
         self._msg_timer.setSingleShot(True)
         self._msg_timer.timeout.connect(lambda: self._set_message(""))
         self._portal_token = ""
+        # Video-Aufnahme
+        self._rec = None                # Prozess creative_shots.recorder
+        self._rec_state = ""            # "" | "starting" | "recording" | "stopping"
+        self._rec_start = 0.0
+        self._rec_seconds = 0
+        self._rec_audio = True
+        self._last_video = ""
+        self._recorder_line.connect(self._on_recorder_line)
+        self._rec_timer = QTimer(self)
+        self._rec_timer.setInterval(500)
+        self._rec_timer.timeout.connect(self._tick_record)
+
+    # ---- Video: Desktop aufnehmen (Aufnehmen / Stopp) -----------------------------------------
+    @Slot()
+    def startRecording(self):
+        """Aufnahme starten – KDE fragt kurz, welcher Bildschirm aufgenommen werden soll."""
+        if self._rec is not None:
+            return
+        if self._overlay:
+            self._overlay = False
+            self.overlayChanged.emit()
+            self._drop_full()
+        self.hideEditor.emit()
+        out = videos_dir() / time.strftime("Bildschirmaufnahme_%Y-%m-%d_%H-%M-%S.mp4")
+        cmd = [sys.executable, "-m", "creative_shots.recorder", "--out", str(out)]
+        if not self._rec_audio:
+            cmd.append("--no-audio")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parent.parent) + (
+            os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+        try:
+            self._rec = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.DEVNULL, text=True, env=env)
+        except OSError as e:
+            self._rec = None
+            self._set_message(f"Aufnahme konnte nicht starten ({e})")
+            self.showEditor.emit()
+            return
+        self._set_rec_state("starting")
+        proc = self._rec
+
+        def read():
+            for line in proc.stdout:
+                self._recorder_line.emit(line)
+            proc.wait()
+            self._recorder_line.emit('{"exit": true}')
+
+        threading.Thread(target=read, daemon=True).start()
+
+    @Slot()
+    def stopRecording(self):
+        if self._rec is None or self._rec_state == "stopping":
+            return
+        self._set_rec_state("stopping")
+        try:
+            self._rec.stdin.close()          # Recorder beendet die Aufnahme sauber
+        except OSError:
+            pass
+
+    @Slot()
+    def toggleRecording(self):
+        if self._rec is None:
+            self.startRecording()
+        else:
+            self.stopRecording()
+
+    def _on_recorder_line(self, line):
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            return
+        if msg.get("recording"):
+            self._rec_start = time.monotonic()
+            self._rec_seconds = 0
+            self._rec_timer.start()
+            self._set_rec_state("recording")
+        elif msg.get("done"):
+            self._last_video = msg["done"]
+            self._finish_recording("Aufnahme gespeichert unter „Videos › Bildschirmaufnahmen“.")
+        elif msg.get("error"):
+            text = msg["error"]
+            self._finish_recording("" if text == "abgebrochen" else text)
+        elif msg.get("exit") and self._rec is not None:
+            self._finish_recording("Die Aufnahme wurde beendet.")
+
+    def _finish_recording(self, text):
+        self._rec_timer.stop()
+        self._rec = None
+        self._set_rec_state("")
+        if self._close_after and not text and self._image is None:
+            QGuiApplication.quit()
+            return
+        if text:
+            self._set_message(text)
+        self.recordChanged.emit()
+        self.showEditor.emit()
+
+    def _tick_record(self):
+        secs = int(time.monotonic() - self._rec_start)
+        if secs != self._rec_seconds:
+            self._rec_seconds = secs
+            self.recordChanged.emit()
+
+    def _set_rec_state(self, st):
+        self._rec_state = st
+        self.recordChanged.emit()
+
+    def _set_rec_audio(self, on):
+        if bool(on) != self._rec_audio:
+            self._rec_audio = bool(on)
+            self.recordChanged.emit()
+
+    @Slot()
+    def openLastVideo(self):
+        if self._last_video and os.path.exists(self._last_video):
+            subprocess.Popen(["xdg-open", self._last_video], start_new_session=True)
+
+    @Slot()
+    def openVideosFolder(self):
+        subprocess.Popen(["xdg-open", str(videos_dir())], start_new_session=True)
+
+    def shutdown(self):
+        """Beim Beenden eine laufende Aufnahme sauber abschließen."""
+        if self._rec is not None:
+            try:
+                self._rec.stdin.close()
+                self._rec.wait(timeout=20)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
 
     # ---- Aufnahme ---------------------------------------------------------------------------
     @Slot()
@@ -447,3 +595,8 @@ class Shots(QObject):
     scale = Property(float, _scale, notify=overlayChanged)
     windows = Property("QVariantList", lambda self: self._windows, notify=overlayChanged)
     message = Property(str, lambda self: self._message, notify=messageChanged)
+    recordState = Property(str, lambda self: self._rec_state, notify=recordChanged)
+    recording = Property(bool, lambda self: self._rec is not None, notify=recordChanged)
+    recordSeconds = Property(int, lambda self: self._rec_seconds, notify=recordChanged)
+    recordAudio = Property(bool, lambda self: self._rec_audio, _set_rec_audio, notify=recordChanged)
+    lastVideo = Property(str, lambda self: Path(self._last_video).name if self._last_video else "", notify=recordChanged)

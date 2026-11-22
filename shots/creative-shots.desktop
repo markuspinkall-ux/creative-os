@@ -2,14 +2,14 @@
 Type=Application
 Name=Shots
 GenericName=Bildschirmfoto
-Comment=Bildschirmfotos aufnehmen und beschriften – Rechteck, Fenster, Vollbild oder Freihand
-Keywords=Bildschirmfoto;Screenshot;Snipping;Ausschneiden;Druck;Aufnahme;
+Comment=Bildschirmfotos aufnehmen und beschriften – oder den Desktop als Video aufnehmen
+Keywords=Bildschirmfoto;Screenshot;Snipping;Ausschneiden;Druck;Aufnahme;Video;Bildschirmaufnahme;Recorder;
 Exec=creative-shots
 Icon=creative-shots
 Terminal=false
 Categories=Utility;Graphics;
 StartupWMClass=creative-shots
-Actions=Snip;Screen;
+Actions=Snip;Screen;Record;
 NoDisplay=true
 X-Orbit-Tray=true
 
@@ -20,3 +20,7 @@ Exec=creative-shots --snip
 [Desktop Action Screen]
 Name=Ganzen Bildschirm aufnehmen
 Exec=creative-shots --snip --screen
+
+[Desktop Action Record]
+Name=Desktop als Video aufnehmen
+Exec=creative-shots --record

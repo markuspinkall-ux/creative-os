@@ -11,6 +11,19 @@ function relevant(w) {
     return w.normalWindow && !w.skipTaskbar;
 }
 
+// Ganz maximiert? KWin 6 kennt maximizeMode (3 = waagerecht + senkrecht); sonst
+// vergleichen wir mit der Fläche, die KWin zum Maximieren nimmt.
+function isMaximized(w) {
+    if (w.maximizeMode !== undefined) return w.maximizeMode === 3;
+    try {
+        const a = workspace.clientArea(KWin.MaximizeArea, w);
+        const g = w.frameGeometry;
+        return !!g && g.x === a.x && g.y === a.y && g.width === a.width && g.height === a.height;
+    } catch (e) {
+        return false;
+    }
+}
+
 function snapshot() {
     const active = workspace.activeWindow;
     const windows = [];
@@ -28,6 +41,8 @@ function snapshot() {
             title: w.caption || "",
             output: w.output ? w.output.name : "",
             minimized: !!w.minimized,
+            maximized: isMaximized(w),
+            fullscreen: !!w.fullScreen,
             active: w === active,
         });
     }
