@@ -107,6 +107,22 @@ body.private #private-badge { display: block; }
 .bm:hover { background: var(--hover); }
 .bm-empty { color: var(--muted); padding-left: 6px; }
 
+#pwbar, #importbar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-top: 1px solid var(--line); }
+#pwbar[hidden], #importbar[hidden] { display: none; }
+#pwbar > span, #importbar > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pip-btn, #reader-btn { display: none; }
+#pip-btn.show, #reader-btn.show { display: grid; }
+.tab.sleeping .fav, .tab.sleeping .title { opacity: .45; }
+.bm.folder .ico { color: var(--accent); }
+#toast { display: flex; align-items: center; height: 34px; padding: 0 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+#toast[hidden] { display: none; }
+.pwlist { max-height: 360px; overflow: auto; display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.pwlist .pw { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--hover, rgba(255,255,255,.04)); }
+.pwlist .pw .info { flex: 1; min-width: 0; }
+.pwlist .pw .info div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwlist .pw .sub { color: var(--muted); font-size: 12px; }
+.implist { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.implist .btn { justify-content: flex-start; text-align: left; }
 #permission, #findbar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-top: 1px solid var(--line); }
 #permission[hidden], #findbar[hidden] { display: none; }
 #perm-text { flex: 1; }

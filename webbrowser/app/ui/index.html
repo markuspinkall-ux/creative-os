@@ -26,6 +26,8 @@
       <button id="shield" class="icon small" title="Werbeblocker" aria-label="Werbeblocker"><span id="shield-count"></span></button>
       <button id="star" class="icon small" title="Lesezeichen (Strg+D)" aria-label="Lesezeichen"></button>
     </div>
+    <button id="pip-btn" class="icon" title="Bild im Bild" aria-label="Bild im Bild"></button>
+    <button id="reader-btn" class="icon" title="Leseansicht" aria-label="Leseansicht"></button>
     <button id="boost-btn" class="icon" title="Lautstärke-Verstärker" aria-label="Lautstärke-Verstärker"><span id="boost-badge"></span></button>
     <button id="downloads-btn" class="icon" title="Downloads (Strg+J)" aria-label="Downloads"><span id="dl-ring"></span></button>
     <button id="menu-btn" class="icon" title="Menü" aria-label="Menü"></button>
@@ -37,6 +39,18 @@
     <button id="perm-deny" class="btn">Blockieren</button>
     <button id="perm-allow" class="btn primary">Erlauben</button>
   </div>
+  <div id="pwbar" hidden>
+    <span id="pw-text"></span>
+    <button id="pw-never" class="btn">Nie für diese Seite</button>
+    <button id="pw-no" class="btn">Nein</button>
+    <button id="pw-yes" class="btn primary">Speichern</button>
+  </div>
+  <div id="importbar" hidden>
+    <span id="import-text"></span>
+    <button id="import-no" class="btn">Nein danke</button>
+    <button id="import-yes" class="btn primary">Importieren</button>
+  </div>
+  <div id="toast" hidden role="status"></div>
   <div id="findbar" hidden>
     <input id="find-input" type="text" spellcheck="false" placeholder="Auf der Seite suchen" aria-label="Auf der Seite suchen">
     <span id="find-count"></span>
