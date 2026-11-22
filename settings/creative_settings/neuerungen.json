@@ -38,7 +38,8 @@
       "Android-Apps öffnen sich nach dem Hochfahren gleich als eigenes Fenster – nicht mehr erst in der großen LineageOS-Oberfläche",
       "Die Meldung „prohibited by secure boot policy“ beim Start ist weg: Mit eingeschaltetem Secure Boot lädt die Startauswahl keine eigenen Schriften mehr nach (das verbietet Secure Boot) und bleibt beim schlichten Menü",
       "Shots: Bei schmalerem Fenster überlappten sich die Knöpfe in der Werkzeugleiste (z. B. Zuschneiden und Kopieren). Jetzt werden Beschriftungen weggelassen und die Zeichenwerkzeuge lassen sich zur Seite wischen",
-      "Oben links blieb bei maximiertem Fenster ein verschwommener Streifen über der Titelleiste stehen: Das Glas der eingefahrenen oberen Leiste wurde zwar abgeschaltet, aber nie neu gezeichnet. Jetzt verschwindet es sofort"
+      "Oben links blieb bei maximiertem Fenster ein verschwommener Streifen über der Titelleiste stehen: Das Glas der eingefahrenen oberen Leiste wurde zwar abgeschaltet, aber nie neu gezeichnet. Jetzt verschwindet es sofort",
+      "Gibeon Kamera in Studio blieb leer: Broadcast griff sich ohne feste Wahl auch Capture-Karten (z. B. Live Gamer Mini) statt der Webcam und blieb an einer belegten Kamera hängen. Jetzt nimmt es nur Webcams, überspringt belegte Kameras, und Studio sagt, wenn die Gibeon Kamera kein Bild bekommen kann"
     ]
   },
   {
