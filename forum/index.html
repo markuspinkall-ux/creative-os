@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gibeon-Forum – Gibeon OS</title>
+<meta name="description" content="Das Forum zu Gibeon OS: Fragen, Hilfe, Ideen und Fehlermeldungen.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>(function(){try{var d=localStorage.getItem("creative-design");if(d==="porzellan")document.documentElement.setAttribute("data-design","porzellan");}catch(e){}})();</script>
+<style>
+:root{
+  --ground:#12151b; --surface:#1a1e27; --raised:#232836; --alt:#1d2230; --track:#3a4252;
+  --text:#dce6ff; --muted:rgba(220,230,255,.64); --faint:rgba(220,230,255,.42);
+  --accent:#8fb3ff; --accent-text:#12151b; --flame:#ffb07a; --ok:#6fdcc0;
+  --line:rgba(255,255,255,.07); --hover:rgba(255,255,255,.04); --soft:rgba(143,179,255,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.18);
+}
+html[data-design="porzellan"]{
+  --ground:#eef1f6; --surface:#ffffff; --raised:#f3f5f9; --alt:#f8f9fc; --track:#d5dae3;
+  --text:#1a2030; --muted:rgba(26,32,48,.66); --faint:rgba(26,32,48,.45);
+  --accent:#3d6fe0; --accent-text:#fff; --flame:#c96a22; --ok:#1f9b7d;
+  --line:rgba(0,0,0,.07); --hover:rgba(0,0,0,.025); --soft:rgba(61,111,224,.1);
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(20,30,60,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:14.5px/1.55 Arial,"Liberation Sans",Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;cursor:pointer}
+a:hover{text-decoration:underline}
+.wrap{width:min(1200px,calc(100% - 32px));margin:0 auto}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.demo{background:var(--flame);color:#12151b;text-align:center;font-size:12.5px;font-weight:700;padding:5px}
+.top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--ground) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:22px;height:64px}
+.brand{white-space:nowrap;display:flex;align-items:center;gap:11px;font-weight:700;font-size:17px;color:var(--text)}
+.brand:hover{text-decoration:none}
+.brand .logo{width:36px;height:36px;border-radius:11px;background:#8fb3ff;display:grid;place-items:center}
+.brand .logo svg{width:23px;height:23px}
+.brand small{display:none}
+.navbar{display:contents}
+.navbar .wrap{display:contents}
+.navbar a{white-space:nowrap;padding:7px 11px;border-radius:9px;color:var(--muted);font-weight:700;font-size:14px}
+.navbar a.on{color:var(--text);background:var(--raised)}
+.navbar a:hover{text-decoration:none;color:var(--text);background:var(--hover)}
+.navbar .s{margin-left:auto;display:flex;align-items:center}
+.navbar input{height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:0 12px;font:inherit;font-size:13.5px;width:190px;outline:none}
+.top .right{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--line);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--text);background:var(--raised);transition:transform .1s,background .1s}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);color:var(--accent-text);border-color:transparent}
+.btn.primary:hover{transform:translateY(-1px);filter:brightness(1.07)}
+.crumbs{margin:22px 0 12px;font-size:13px;color:var(--faint)}
+.crumbs b{color:var(--text)}
+.notice{background:linear-gradient(120deg,var(--soft),transparent 70%),var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow)}
+.notice b{font-size:17px;display:block;margin-bottom:2px}
+.block{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:18px;background:var(--surface);box-shadow:var(--shadow)}
+.bhead{padding:14px 18px 10px;font-weight:700;font-size:15.5px;display:flex;align-items:baseline;gap:8px}
+.bhead small{font-weight:400;color:var(--faint);font-size:13px}
+.cols{display:grid;font-size:11.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+.cols div{padding:0 18px 8px}
+.row{display:grid;border-top:1px solid var(--line);align-items:center;transition:background .1s}
+.cols + .row{border-top:0}
+.row:hover{background:var(--hover)}
+.row > div{padding:14px 18px}
+.g-forum{grid-template-columns:66px 1fr 74px 74px 260px}
+.g-thread{grid-template-columns:58px 1fr 80px 80px 200px}
+.g-forum>div:first-child,.g-thread>div:first-child{padding-right:0}
+.ficon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#12151b}
+.ficon svg{width:21px;height:21px}
+.ficon.old{opacity:.5}
+.ftitle a{font-weight:700;font-size:15px;color:var(--text)}
+.fdesc{font-size:13px;color:var(--muted)}
+.subs{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.subs a{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--raised);color:var(--muted)}
+.subs a:hover{text-decoration:none;color:var(--text)}
+.num{text-align:center;color:var(--muted);font-size:13px}
+.num b{display:block;color:var(--text);font-size:15px}
+.last{font-size:12.5px;color:var(--faint);display:flex;gap:10px;align-items:center}
+.mini{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#12151b;flex:none}
+.last a{font-weight:700;color:var(--text)}
+.prefix{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:#12151b;margin-right:6px;vertical-align:1px}
+.sticky{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--flame) 20%,transparent);color:var(--flame);margin-right:6px;vertical-align:1px}
+.tmeta{font-size:12.5px;color:var(--faint);margin-top:2px}
+.pages{display:flex;gap:4px;align-items:center;font-size:12.5px;color:var(--faint)}
+.pages span{min-width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:var(--surface);border:1px solid var(--line);padding:0 8px}
+.pages span.on{background:var(--accent);color:var(--accent-text);border-color:transparent;font-weight:700}
+.tools{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tools .pages{margin-left:auto}
+.post{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:14px;background:var(--surface);box-shadow:var(--shadow)}
+.phead{display:none}
+.pbody{display:grid;grid-template-columns:200px 1fr}
+.pbit{padding:20px 16px;border-right:1px solid var(--line);font-size:12.5px;color:var(--muted);text-align:center}
+.pbit .bigava{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font-size:30px;font-weight:700;color:#12151b;margin:0 auto 10px;box-shadow:0 0 0 4px var(--surface),0 0 0 6px var(--line)}
+.pbit .uname{font-weight:700;font-size:15px;color:var(--text)}
+.pbit .rank{display:inline-block;font-size:11.5px;font-weight:700;margin:4px 0 10px;padding:2px 9px;border-radius:999px;background:var(--raised)}
+.pbit .rank.team{background:color-mix(in srgb,var(--flame) 22%,transparent);color:var(--flame)}
+.pbit .stars{display:none}
+.pbit dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center}
+.pbit dl > div{background:var(--raised);border-radius:10px;padding:6px 4px}
+.pbit dt{color:var(--faint);font-size:11px}
+.pbit dd{margin:0;color:var(--text);font-weight:700}
+.ptext{padding:18px 22px;font-size:15px;display:flex;flex-direction:column}
+.ptext .when{display:flex;font-size:12.5px;color:var(--faint);margin-bottom:10px}
+.ptext .when span{margin-left:auto}
+.ptext .title{font-weight:700;margin-bottom:10px;font-size:19px;letter-spacing:-.2px}
+.ptext code{background:var(--raised);padding:1px 7px;border-radius:6px;font-family:"DejaVu Sans Mono",Consolas,monospace;font-size:13px}
+.quote{border-left:3px solid var(--accent);background:var(--soft);border-radius:0 12px 12px 0;padding:10px 14px;margin:0 0 12px;font-size:14px}
+.quote b{display:block;font-size:12px;color:var(--accent);margin-bottom:2px}
+.sig{margin-top:auto;padding-top:14px;font-size:12.5px;color:var(--faint)}
+.pfoot{display:flex;gap:6px;padding:10px 16px;border-top:1px solid var(--line)}
+.pfoot .btn{height:30px;font-size:12.5px;padding:0 11px;background:transparent}
+.pfoot .btn:hover{background:var(--raised)}
+.pfoot .like{margin-left:auto}
+.pfoot .mod{color:var(--flame)}
+.compose{padding:0 18px 18px}
+.compose textarea,.compose input,.compose select{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:12px;color:var(--text);font:inherit;padding:12px;outline:none}
+.compose textarea:focus,.compose input:focus{border-color:var(--accent)}
+.compose textarea{min-height:130px;resize:vertical}
+.ed{display:flex;gap:4px;margin-bottom:8px}
+.ed span{width:32px;height:30px;display:grid;place-items:center;border-radius:8px;background:var(--raised);font-weight:700;font-size:12.5px;color:var(--muted)}
+.compose .act{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--faint)}
+.compose .act .btn{margin-left:auto}
+.layout{display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start}
+.side .block{padding-bottom:6px}
+.stat{padding:4px 18px 14px;font-size:13.5px;color:var(--muted)}
+.stat b{color:var(--text)}
+.online{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 14px}
+.online span{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#12151b;position:relative}
+.online span::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 18px 14px}
+.kv div{background:var(--raised);border-radius:12px;padding:10px 12px}
+.kv b{display:block;font-size:19px}
+.kv small{color:var(--faint);font-size:12px}
+footer{border-top:1px solid var(--line);margin-top:20px;padding:20px 0 34px;color:var(--faint);font-size:12.5px}
+footer a{margin-right:14px;color:var(--muted)}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.navbar a:not(.on){display:none}.navbar .s{display:none}}
+@media (max-width:760px){
+  .g-forum,.g-thread{grid-template-columns:58px 1fr}.g-forum>:nth-child(n+3),.g-thread>:nth-child(n+3){display:none}
+  .pbody{grid-template-columns:1fr}.pbit{border-right:0;border-bottom:1px solid var(--line)}}
+
+.msg{padding:40px 20px;text-align:center;color:var(--muted)}
+.err{background:color-mix(in srgb,#e0634f 16%,var(--surface));border:1px solid color-mix(in srgb,#e0634f 40%,transparent);border-radius:12px;padding:10px 14px;margin:14px 0;font-size:13.5px}
+.ok{background:color-mix(in srgb,var(--ok) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);border-radius:12px;padding:10px 14px;margin:14px 0;font-size:13.5px}
+.modbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;margin-bottom:12px;border:1px dashed color-mix(in srgb,var(--flame) 50%,transparent);border-radius:12px;font-size:12.5px;color:var(--flame)}
+.modbar .btn{height:30px;font-size:12.5px}
+.modbar select{height:30px;border-radius:9px;background:var(--raised);color:var(--text);border:1px solid var(--line);font:inherit;font-size:12.5px}
+.gone{color:var(--faint);font-style:italic}
+.hidden-post{opacity:.55}
+.pages a{min-width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:var(--surface);border:1px solid var(--line);padding:0 8px;color:var(--text)}
+.pages a:hover{text-decoration:none;background:var(--hover)}
+.ptext .body a{word-break:break-all}
+.prose{padding:0 18px 18px;color:var(--muted);font-size:14px}
+.prose h3{color:var(--text);font-size:15px;margin:16px 0 4px}
+.liked{color:var(--accent)!important;border-color:color-mix(in srgb,var(--accent) 40%,transparent)!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="rocket" viewBox="0 0 24 24"><path d="M7.5 12.5L5 15.5v3l2.8-1.6z" fill="#12151b"/><path d="M16.5 12.5L19 15.5v3l-2.8-1.6z" fill="#12151b"/><path d="M12 2c3 2.5 4.6 6 4.6 10v4.6H7.4V12C7.4 8 9 4.5 12 2z" fill="#12151b"/><circle cx="12" cy="9.2" r="1.9" fill="#8fb3ff"/><path d="M10 17.6h4l-2 4.4z" fill="#ffb07a"/></symbol>
+<symbol id="gh" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 1.5a10.5 10.5 0 0 0-3.3 20.5c.5.1.7-.2.7-.5v-1.8c-2.9.6-3.5-1.4-3.5-1.4-.5-1.2-1.2-1.5-1.2-1.5-1-.7 0-.7 0-.7 1 .1 1.6 1.1 1.6 1.1.9 1.6 2.5 1.1 3.1.9.1-.7.4-1.1.7-1.4-2.3-.3-4.8-1.2-4.8-5.2 0-1.1.4-2.1 1.1-2.8-.1-.3-.5-1.4.1-2.8 0 0 .9-.3 2.9 1.1a10 10 0 0 1 5.3 0c2-1.4 2.9-1.1 2.9-1.1.6 1.4.2 2.5.1 2.8.7.7 1.1 1.7 1.1 2.8 0 4-2.5 4.9-4.8 5.2.4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10.5 10.5 0 0 0 12 1.5z"/></symbol>
+<symbol id="chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+<symbol id="bug" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 7V4M7 12H3M21 12h-4M7 17l-3 2M17 17l3 2M7 9L4 7M17 9l3-2"/></symbol>
+<symbol id="bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></symbol>
+<symbol id="pad" viewBox="0 0 24 24"><path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 14h-4l-1 1.6A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4zM7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01"/></symbol>
+<symbol id="img" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+<symbol id="news" viewBox="0 0 24 24"><path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2M7 9h7M7 13h7M7 16h4"/></symbol>
+<symbol id="wrench" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5a4 4 0 0 0-2-2z"/></symbol>
+<symbol id="cup" viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3"/></symbol>
+</defs></svg>
+<div class="top"><div class="wrap">
+  <a class="brand" href="#/"><span class="logo"><svg><use href="#rocket"/></svg></span><span>Gibeon-Forum</span></a>
+  <div class="navbar"><div class="wrap">
+    <a data-r="" href="#/">Forum</a><a data-r="neue" href="#/neue">Neue Beiträge</a><a data-r="regeln" href="#/regeln">Forenregeln</a><a id="modlink" data-r="meldungen" href="#/meldungen" style="display:none">Meldungen</a><a href="../">Zur Webseite</a>
+    <form class="s" onsubmit="suchen(event)"><input id="q" placeholder="Themen durchsuchen …" aria-label="Themen durchsuchen"></form>
+  </div></div>
+  <div class="right">
+    <button class="btn" title="Hell / Dunkel" aria-label="Hell / Dunkel" style="padding:0 10px" onclick="design()"><svg class="i" style="width:17px;height:17px"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+    <span id="login"></span>
+  </div>
+</div></div>
+<main class="wrap" id="main"><div class="msg">Wird geladen …</div></main>
+<footer><div class="wrap"><a href="../impressum.html">Impressum</a><a href="../datenschutz.html#forum">Datenschutz</a><a href="#/regeln">Forenregeln</a> · Beiträge werden als Dateien auf GitHub gespeichert · Anmeldung über GitHub</div></footer>
+<script>
+// Gibeon-Forum – Webseite. Alle Daten kommen vom Forum-Helfer (Cloudflare Worker).
+const API = "__API__";
+const SEITE = location.origin + location.pathname;
+const PRO_SEITE_THEMEN = 30, PRO_SEITE_BEITRAEGE = 20;
+const COL = ["#8fb3ff", "#ffb07a", "#6fdcc0", "#c9a6ff", "#f2d36b", "#ff9a8a"];
+let daten = null, sitzung = null, hinweis = null;
+
+// ---------- Speicher (kann im privaten Modus fehlen)
+const speicher = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+};
+sitzung = speicher.get("gibeon-forum-sitzung");
+
+// Rückkehr von der GitHub-Anmeldung
+(function () {
+  const h = location.hash;
+  if (h.startsWith("#sitzung=")) { sitzung = h.slice(9); speicher.set("gibeon-forum-sitzung", sitzung); hinweis = { ok: "Du bist angemeldet." }; }
+  else if (h.startsWith("#fehler=")) hinweis = { err: decodeURIComponent(h.slice(8)) };
+  else return;
+  const ziel = speicher.get("gibeon-forum-ziel") || "#/";
+  speicher.set("gibeon-forum-ziel", null);
+  history.replaceState(null, "", SEITE + ziel);
+})();
+
+// ---------- Hilfen
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function fmt(text) {
+  let s = esc(text);
+  const codes = [];
+  s = s.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<i>$2</i>");
+  s = s.replace(/\bhttps?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)]/g, (u) => `<a href="${u}" target="_blank" rel="nofollow noopener noreferrer ugc">${u}</a>`);
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
+  return s.replace(/\n/g, "<br>");
+}
+const col = (n) => COL[[...String(n || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % COL.length];
+const ava = (n, cls = "mini") => `<span class="${cls}" style="background:${n ? col(n) : "var(--track)"}">${n ? esc(n[0].toUpperCase()) : "?"}</span>`;
+function wann(iso) {
+  const d = new Date(iso), jetzt = new Date();
+  const uhr = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const tag = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = (tag(jetzt) - tag(d)) / 86400e3;
+  if (diff === 0) return "Heute, " + uhr;
+  if (diff === 1) return "Gestern, " + uhr;
+  return d.toLocaleDateString("de-DE") + ", " + uhr;
+}
+function rang(info) {
+  if (info?.team) return ["Entwickler", "team"];
+  const n = info?.beitraege || 0;
+  return [n < 5 ? "Neuling" : n < 25 ? "Mitglied" : n < 100 ? "Stammgast" : "Urgestein", ""];
+}
+const ich = () => daten?.ich || null;
+const admin = () => !!ich()?.admin;
+const alleForen = () => (daten?.foren?.bereiche || []).flatMap((b) => b.foren);
+const forumVon = (id) => alleForen().find((f) => f.id === id);
+
+async function api(pfad, body) {
+  const r = await fetch(API + pfad, {
+    method: body ? "POST" : "GET",
+    headers: { ...(sitzung ? { Authorization: "Bearer " + sitzung } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && sitzung) { sitzung = null; speicher.set("gibeon-forum-sitzung", null); }
+  if (!r.ok) throw new Error(j.fehler || "Fehler " + r.status);
+  return j;
+}
+function anmelden() {
+  speicher.set("gibeon-forum-ziel", location.hash || "#/");
+  location.href = API + "/login?zurueck=" + encodeURIComponent(SEITE);
+}
+function abmelden() { sitzung = null; speicher.set("gibeon-forum-sitzung", null); daten = null; laden(); }
+
+// ---------- Kopf
+function kopf() {
+  document.getElementById("login").innerHTML = ich()
+    ? `<span style="display:flex;align-items:center;gap:8px">${ava(ich().name)}<a href="#/konto" style="font-weight:700;color:var(--text)">${esc(ich().name)}</a></span>`
+    : `<button class="btn primary" onclick="anmelden()"><svg class="i"><use href="#gh"/></svg>Mit GitHub anmelden</button>`;
+  const r = location.hash.split("/")[1] || "";
+  document.querySelectorAll(".navbar a[data-r]").forEach((a) => a.classList.toggle("on", a.dataset.r === r));
+  document.getElementById("modlink").style.display = admin() ? "" : "none";
+}
+const crumbs = (teile) => `<div class="crumbs"><a href="#/">Gibeon-Forum</a>${teile.map((p) => " › " + p).join("")}</div>`;
+function meldung() {
+  if (!hinweis) return "";
+  const h = hinweis; hinweis = null;
+  return h.err ? `<div class="err">${esc(h.err)}</div>` : `<div class="ok">${esc(h.ok)}</div>`;
+}
+function seiten(akt, gesamt, basis) {
+  if (gesamt <= 1) return `<div class="pages">Seite 1 von 1</div>`;
+  let h = `<div class="pages">Seite ${akt} von ${gesamt}`;
+  for (let i = 1; i <= gesamt; i++) h += i === akt ? ` <span class="on">${i}</span>` : ` <a href="${basis}/${i}">${i}</a>`;
+  return h + "</div>";
+}
+const letzterSpalte = (t) => t?.letzter
+  ? `${ava(t.letzter.von)}<div><a href="#/thema/${t.id}/${Math.ceil(t.letzter.n / PRO_SEITE_BEITRAEGE)}">${esc(t.titel.length > 28 ? t.titel.slice(0, 28) + "…" : t.titel)}</a><br>${esc(t.letzter.von || "gelöscht")} · ${wann(t.letzter.am)}</div>`
+  : "Noch keine Beiträge";
+
+// ---------- Seiten
+function startseite() {
+  const s = daten.statistik;
+  return crumbs([]) + meldung() + `<div class="layout"><div>
+    <div class="notice"><b>Willkommen im Gibeon-Forum</b>Zum Schreiben meldest du dich mit deinem GitHub-Konto an – ein eigenes Passwort fürs Forum brauchst du nicht.</div>` +
+    daten.foren.bereiche.map((b) => `<div class="block"><div class="bhead">${esc(b.name)}${b.beschreibung ? ` <small>– ${esc(b.beschreibung)}</small>` : ""}</div>
+      ${b.foren.map((f) => {
+        const ts = daten.themen.filter((t) => t.forum === f.id);
+        const beitr = ts.reduce((a, t) => a + t.antworten + 1, 0);
+        return `<div class="row g-forum"><div><span class="ficon" style="background:${esc(f.farbe)}"><svg class="i"><use href="#${esc(f.symbol)}"/></svg></span></div>
+          <div><div class="ftitle"><a href="#/forum/${f.id}">${esc(f.name)}</a></div><div class="fdesc">${esc(f.beschreibung)}</div></div>
+          <div class="num"><b>${ts.length}</b>Themen</div><div class="num"><b>${beitr}</b>Beiträge</div>
+          <div class="last">${ts.length ? letzterSpalte(ts[0]) : "Noch keine Beiträge"}</div></div>`;
+      }).join("")}</div>`).join("") +
+    `</div><aside class="side">
+      <div class="block"><div class="bhead">Wer ist online? <small>letzte 15 Min.</small></div>
+      <div class="online">${daten.online.length ? daten.online.map((n) => `<span title="${esc(n)}" style="background:${col(n)}">${esc(n[0].toUpperCase())}</span>`).join("") : `<small style="color:var(--faint)">Gerade niemand aktiv</small>`}</div></div>
+      <div class="block"><div class="bhead">Statistik</div>
+      <div class="kv"><div><b>${s.themen}</b><small>Themen</small></div><div><b>${s.beitraege}</b><small>Beiträge</small></div><div><b>${s.mitglieder}</b><small>Mitglieder</small></div><div><b>${daten.online.length}</b><small>Online</small></div></div>
+      ${s.neuestes ? `<div class="stat">Neuestes Mitglied: <b>${esc(s.neuestes)}</b></div>` : ""}</div>
+      <div class="block"><div class="bhead">Forenregeln</div><div class="stat">Freundlich bleiben, keine Werbung, keine fremden Daten oder Raubkopien. <a href="#/regeln">Alle Regeln</a></div></div>
+    </aside></div>`;
+}
+
+function forumSeite(id, seite = 1) {
+  const f = forumVon(id);
+  if (!f) return crumbs([]) + `<div class="msg">Dieses Forum gibt es nicht.</div>`;
+  const alle = daten.themen.filter((t) => t.forum === id).sort((a, b) => (b.angeheftet ? 1 : 0) - (a.angeheftet ? 1 : 0));
+  const gesamt = Math.max(1, Math.ceil(alle.length / PRO_SEITE_THEMEN));
+  const ts = alle.slice((seite - 1) * PRO_SEITE_THEMEN, seite * PRO_SEITE_THEMEN);
+  const darf = !f.nurTeam || admin();
+  return crumbs([`<b>${esc(f.name)}</b>`]) + meldung() + `<div class="tools">${darf ? `<a class="btn primary" href="#/neu/${f.id}">+ Neues Thema</a>` : `<span class="tmeta">Hier schreibt nur das Team.</span>`}${seiten(seite, gesamt, "#/forum/" + id)}</div>
+  <div class="block"><div class="bhead">${esc(f.name)} <small>– ${esc(f.beschreibung)}</small></div>
+  ${ts.length ? ts.map((t) => `<div class="row g-thread${t.versteckt ? " hidden-post" : ""}"><div><span class="ficon" style="background:${esc(f.farbe)};width:38px;height:38px;border-radius:50%"><svg class="i" style="width:18px;height:18px"><use href="#chat"/></svg></span></div>
+    <div>${t.angeheftet ? '<span class="sticky">Wichtig</span>' : ""}${t.praefix ? `<span class="prefix" style="background:${col(t.praefix)}">${esc(t.praefix)}</span>` : ""}${t.geschlossen ? '<span class="tmeta">🔒 </span>' : ""}${t.versteckt ? '<span class="tmeta">[versteckt] </span>' : ""}<a style="font-weight:700" href="#/thema/${t.id}">${esc(t.titel)}</a><div class="tmeta">${esc(t.von || "gelöscht")} · ${wann(t.am)}</div></div>
+    <div class="num"><b>${t.antworten}</b>Antworten</div><div></div><div class="last">${t.letzter ? `${ava(t.letzter.von)}<div>${esc(t.letzter.von || "gelöscht")}<br>${wann(t.letzter.am)}</div>` : ""}</div></div>`).join("")
+    : `<div class="stat" style="padding:18px">In diesem Forum gibt es noch keine Themen.${darf ? " Mach den Anfang!" : ""}</div>`}</div>`;
+}
+
+let themaCache = null;
+function beitrag(b, t, leute) {
+  if (b.geloescht) return `<div class="post"><div class="ptext"><div class="when">${wann(b.am)}<span>#${b.n}</span></div><div class="gone">Dieser Beitrag wurde gelöscht.</div></div></div>`;
+  if (b.versteckt && !admin()) return `<div class="post"><div class="ptext"><div class="when">${wann(b.am)}<span>#${b.n}</span></div><div class="gone">Dieser Beitrag wurde vom Team ausgeblendet.</div></div></div>`;
+  const info = leute[b.von] || {};
+  const [r, kl] = rang(info);
+  const meins = ich() && ich().name === b.von;
+  const liked = ich() && (b.likes || []).includes(ich().name);
+  return `<div class="post${b.versteckt ? " hidden-post" : ""}" id="b${b.n}"><div class="pbody">
+    <div class="pbit">${ava(b.von, "bigava")}<div class="uname">${esc(b.von)}</div><div class="rank ${kl}">${r}</div>
+      <dl><div><dt>Beiträge</dt><dd>${info.beitraege || 0}</dd></div><div><dt>Dabei seit</dt><dd>${info.seit ? new Date(info.seit).toLocaleDateString("de-DE", { month: "short", year: "numeric" }) : "–"}</dd></div></dl></div>
+    <div class="ptext"><div class="when">${wann(b.am)}${b.versteckt ? " · [ausgeblendet]" : ""}<span>#${b.n}</span></div>${b.n === 1 ? `<div class="title">${esc(t.titel)}</div>` : ""}
+      ${b.zitat ? `<div class="quote"><b>Zitat von ${esc(b.zitat.von || "gelöscht")}:</b>${fmt(b.zitat.text)}</div>` : ""}<div class="body">${fmt(b.text)}</div></div></div>
+    <div class="pfoot">
+      ${ich() && !t.geschlossen ? `<button class="btn" onclick="zitieren(${b.n})">Zitieren</button>` : ""}
+      ${ich() && !meins ? `<button class="btn" onclick="melden('${t.id}',${b.n})">Melden</button>` : ""}
+      ${meins || admin() ? `<button class="btn" onclick="loeschen('${t.id}',${b.n})">Löschen</button>` : ""}
+      ${admin() ? `<button class="btn mod" onclick="mod('${b.versteckt ? "beitrag-zeigen" : "beitrag-verstecken"}',{id:'${t.id}',n:${b.n}})">${b.versteckt ? "Einblenden" : "Ausblenden"}</button>${!meins ? `<button class="btn mod" onclick="sperren('${esc(b.von)}')">Sperren</button>` : ""}` : ""}
+      <button class="btn like ${liked ? "liked" : ""}" ${ich() && !meins ? `onclick="gefaellt('${t.id}',${b.n})"` : "disabled"}>👍 ${(b.likes || []).length || ""}${(b.likes || []).length ? "" : "Gefällt mir"}</button>
+    </div></div>`;
+}
+function themaSeite(id, seite) {
+  if (!themaCache || themaCache.thema.id !== id) return `<div class="msg">Wird geladen …</div>`;
+  const { thema: t, leute } = themaCache;
+  const f = forumVon(t.forum) || { name: "Forum", id: t.forum };
+  const gesamt = Math.max(1, Math.ceil(t.beitraege.length / PRO_SEITE_BEITRAEGE));
+  seite = Math.min(seite || 1, gesamt);
+  const bs = t.beitraege.slice((seite - 1) * PRO_SEITE_BEITRAEGE, seite * PRO_SEITE_BEITRAEGE);
+  const praef = ["", "info", "frage", "geloest", "behoben", "idee"], praefName = ["kein Präfix", "Info", "Frage", "Gelöst", "Behoben", "Idee"];
+  return crumbs([`<a href="#/forum/${f.id}">${esc(f.name)}</a>`, `<b>${esc(t.titel)}</b>`]) + meldung() +
+    (admin() ? `<div class="modbar">Moderation:
+      <button class="btn" onclick="mod('${t.angeheftet ? "loesen" : "anheften"}',{id:'${t.id}'})">${t.angeheftet ? "Lösen" : "Anheften"}</button>
+      <button class="btn" onclick="mod('${t.geschlossen ? "oeffnen" : "schliessen"}',{id:'${t.id}'})">${t.geschlossen ? "Öffnen" : "Schließen"}</button>
+      <select onchange="mod('praefix',{id:'${t.id}',praefix:this.value})">${praef.map((p, i) => `<option value="${p}" ${praefName[i] === t.praefix || (!t.praefix && !p) ? "selected" : ""}>${praefName[i]}</option>`).join("")}</select>
+      <button class="btn" onclick="mod('${t.versteckt ? "zeigen" : "verstecken"}',{id:'${t.id}'})">${t.versteckt ? "Thema zeigen" : "Thema verstecken"}</button></div>` : "") +
+    `<div class="tools">${ich() && !t.geschlossen ? `<button class="btn primary" onclick="document.getElementById('reply').focus()">Antworten</button>` : t.geschlossen ? `<span class="tmeta">🔒 Dieses Thema ist geschlossen.</span>` : `<button class="btn primary" onclick="anmelden()">Zum Antworten anmelden</button>`}${seiten(seite, gesamt, "#/thema/" + id)}</div>` +
+    bs.map((b) => beitrag(b, t, leute)).join("") +
+    (t.geschlossen ? "" : `<div class="block"><div class="bhead">Antworten</div><div class="compose">${ich()
+      ? `${editor("reply")}<textarea id="reply" placeholder="Deine Antwort …" maxlength="8000"></textarea><div id="zitatinfo" class="tmeta"></div><div id="aktionfehler"></div><div class="act">Wird öffentlich mit deinem GitHub-Namen gespeichert.<button class="btn primary" id="sendbtn" onclick="antworten('${t.id}')">Antwort absenden</button></div>`
+      : `<div class="act" style="margin:0">Du musst angemeldet sein, um zu antworten.<button class="btn primary" onclick="anmelden()"><svg class="i"><use href="#gh"/></svg>Mit GitHub anmelden</button></div>`}</div></div>`);
+}
+const editor = (feld) => `<div class="ed"><span title="Fett" onclick="umgeben('${feld}','**','**')">B</span><span title="Kursiv" onclick="umgeben('${feld}','*','*')"><i>I</i></span><span title="Code" onclick="umgeben('${feld}','\`','\`')">&lt;/&gt;</span></div>`;
+function neuSeite(fid) {
+  const f = forumVon(fid);
+  if (!f) return `<div class="msg">Dieses Forum gibt es nicht.</div>`;
+  if (!ich()) return crumbs([`<a href="#/forum/${f.id}">${esc(f.name)}</a>`]) + `<div class="block"><div class="bhead">Neues Thema</div><div class="compose"><div class="act" style="margin:0">Zum Schreiben bitte anmelden.<button class="btn primary" onclick="anmelden()"><svg class="i"><use href="#gh"/></svg>Mit GitHub anmelden</button></div></div></div>`;
+  return crumbs([`<a href="#/forum/${f.id}">${esc(f.name)}</a>`, "<b>Neues Thema</b>"]) + meldung() + `<div class="block"><div class="bhead">Neues Thema in „${esc(f.name)}“</div><div class="compose">
+    <input id="nTitel" placeholder="Titel – kurz und klar" maxlength="120"><div style="height:8px"></div>${editor("nText")}
+    <textarea id="nText" placeholder="Dein Beitrag … Bei Fehlern bitte die Version aus Systemsteuerung › System angeben." maxlength="8000"></textarea><div id="aktionfehler"></div>
+    <div class="act">Öffentlich sichtbar mit deinem GitHub-Namen. Du kannst ihn jederzeit selbst löschen.<button class="btn primary" id="sendbtn" onclick="themaAnlegen('${f.id}')">Thema erstellen</button></div></div></div>`;
+}
+function neueSeite() {
+  const ts = daten.themen.slice(0, 40);
+  return crumbs(["<b>Neue Beiträge</b>"]) + `<div class="block"><div class="bhead">Neue Beiträge</div>${ts.map((t) => `<div class="row g-thread"><div>${ava(t.letzter?.von)}</div><div><a style="font-weight:700" href="#/thema/${t.id}/${Math.ceil((t.letzter?.n || 1) / PRO_SEITE_BEITRAEGE)}">${esc(t.titel)}</a><div class="tmeta">in ${esc(forumVon(t.forum)?.name || "")}</div></div><div class="num"><b>${t.antworten}</b>Antworten</div><div></div><div class="last"><div>${esc(t.letzter?.von || "gelöscht")}<br>${t.letzter ? wann(t.letzter.am) : ""}</div></div></div>`).join("") || '<div class="stat">Noch nichts los.</div>'}</div>`;
+}
+function suchSeite(q) {
+  const w = q.toLowerCase();
+  const ts = daten.themen.filter((t) => t.titel.toLowerCase().includes(w));
+  return crumbs([`<b>Suche: „${esc(q)}“</b>`]) + `<div class="block"><div class="bhead">${ts.length} Treffer <small>– durchsucht werden die Thementitel</small></div>${ts.map((t) => `<div class="row g-thread"><div></div><div><a style="font-weight:700" href="#/thema/${t.id}">${esc(t.titel)}</a><div class="tmeta">in ${esc(forumVon(t.forum)?.name || "")} · ${esc(t.von || "gelöscht")}</div></div><div class="num"><b>${t.antworten}</b>Antworten</div><div></div><div></div></div>`).join("")}</div>`;
+}
+function regelnSeite() {
+  return crumbs(["<b>Forenregeln</b>"]) + `<div class="block"><div class="bhead">Forenregeln</div><div class="prose">
+  <h3>1. Freundlich bleiben</h3>Keine Beleidigungen, keine Hetze, keine Diskriminierung. Kritik ja – an der Sache, nicht an Menschen.
+  <h3>2. Keine Werbung und kein Spam</h3>Keine Werbung für fremde Produkte oder Dienste, keine Kettenbriefe, keine Mehrfachbeiträge.
+  <h3>3. Nur Erlaubtes</h3>Keine Raubkopien, keine Anleitungen zu Straftaten, keine fremden Inhalte ohne Erlaubnis. Bilder und Texte nur, wenn du die Rechte daran hast.
+  <h3>4. Keine fremden Daten</h3>Keine Adressen, Telefonnummern oder sonstigen persönlichen Daten anderer Leute. Auch mit deinen eigenen Daten bitte sparsam sein – alles hier ist öffentlich.
+  <h3>5. Melden statt streiten</h3>Siehst du einen Beitrag, der gegen diese Regeln oder gegen Gesetze verstößt, nutze „Melden“. Das Team schaut sich jede Meldung an.
+  <h3>Was passiert bei Verstößen?</h3>Beiträge können ausgeblendet oder gelöscht, Konten gesperrt werden. Rechtswidrige Inhalte werden nach Kenntnis unverzüglich entfernt.
+  <h3>Deine Daten</h3>Du kannst jeden eigenen Beitrag selbst löschen – oder unter <a href="#/konto">Mein Konto</a> alles auf einmal. Mehr in der <a href="../datenschutz.html#forum">Datenschutzerklärung</a>.</div></div>`;
+}
+function kontoSeite() {
+  if (!ich()) return crumbs(["<b>Mein Konto</b>"]) + `<div class="msg"><button class="btn primary" onclick="anmelden()"><svg class="i"><use href="#gh"/></svg>Mit GitHub anmelden</button></div>`;
+  return crumbs(["<b>Mein Konto</b>"]) + meldung() + `<div class="block"><div class="bhead">Mein Konto</div><div class="prose">
+    Angemeldet als <b>${esc(ich().name)}</b> (über GitHub). Das Forum speichert nur deinen GitHub-Namen und deine Beiträge – keine E-Mail-Adresse, kein Passwort, keinen Zugriff auf deine Projekte.
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn" onclick="abmelden()">Abmelden</button>
+    <button class="btn" style="color:#e0634f" onclick="allesLoeschen()">Alle meine Beiträge und Daten löschen</button></div></div></div>`;
+}
+async function meldungenSeite() {
+  if (!admin()) return `<div class="msg">Nur für das Team.</div>`;
+  try {
+    const { meldungen } = await api("/api/meldungen");
+    return crumbs(["<b>Meldungen</b>"]) + `<div class="block"><div class="bhead">Offene Meldungen <small>${meldungen.length}</small></div>${meldungen.map((m) => `<div class="row g-thread"><div></div><div><a style="font-weight:700" href="#/thema/${m.thema}/${Math.ceil(m.n / PRO_SEITE_BEITRAEGE)}">Beitrag #${m.n}</a><div class="tmeta">gemeldet von ${esc(m.von)} · ${wann(m.am)}</div><div>${esc(m.grund || "(kein Grund angegeben)")}</div></div><div></div><div></div><div><button class="btn" onclick="mod('meldung-erledigt',{index:${m.index}})">Erledigt</button></div></div>`).join("") || '<div class="stat" style="padding:18px">Keine offenen Meldungen. 🎉</div>'}</div>`;
+  } catch (e) { return `<div class="err">${esc(e.message)}</div>`; }
+}
+
+// ---------- Aktionen
+function umgeben(id, a, b) {
+  const el = document.getElementById(id); if (!el) return;
+  const s = el.selectionStart, e = el.selectionEnd;
+  el.value = el.value.slice(0, s) + a + el.value.slice(s, e) + b + el.value.slice(e);
+  el.focus(); el.selectionStart = s + a.length; el.selectionEnd = e + a.length;
+}
+let zitat = null;
+function zitieren(n) {
+  const b = themaCache.thema.beitraege.find((x) => x.n === n);
+  zitat = { n, text: (b.text || "").slice(0, 300) };
+  document.getElementById("zitatinfo").innerHTML = `Zitiert Beitrag #${n} von ${esc(b.von)} <a onclick="zitat=null;this.parentNode.textContent=''">entfernen</a>`;
+  document.getElementById("reply").focus();
+}
+async function aktion(fn, nachher) {
+  const btn = document.getElementById("sendbtn"); if (btn) btn.disabled = true;
+  try { await fn(); if (nachher) await nachher(); }
+  catch (e) {
+    const box = document.getElementById("aktionfehler");
+    if (box) box.innerHTML = `<div class="err">${esc(e.message)}</div>`;   // Text im Eingabefeld bleibt erhalten
+    else { hinweis = { err: e.message }; await zeigen(); }
+  }
+  finally { if (btn) btn.disabled = false; }
+}
+function antworten(id) {
+  const text = document.getElementById("reply").value;
+  aktion(async () => { const r = await api("/api/antwort", { id, text, zitat }); zitat = null; themaCache = null; await laden(true); location.hash = `#/thema/${id}/${Math.ceil(r.n / PRO_SEITE_BEITRAEGE)}`; });
+}
+function themaAnlegen(fid) {
+  const titel = document.getElementById("nTitel").value, text = document.getElementById("nText").value;
+  aktion(async () => { const r = await api("/api/thema", { forum: fid, titel, text }); await laden(true); location.hash = "#/thema/" + r.id; });
+}
+function gefaellt(id, n) { aktion(async () => { await api("/api/gefaellt", { id, n }); themaCache = null; await zeigen(); }); }
+function loeschen(id, n) { if (!confirm(n === 1 ? "Diesen Beitrag wirklich löschen? Text und Name werden entfernt." : "Diesen Beitrag wirklich löschen?")) return; aktion(async () => { await api("/api/loeschen", { id, n }); themaCache = null; await laden(true); }); }
+function melden(id, n) { const grund = prompt("Warum meldest du diesen Beitrag? (optional)"); if (grund === null) return; aktion(async () => { await api("/api/melden", { id, n, grund }); hinweis = { ok: "Danke – das Team schaut sich den Beitrag an." }; await zeigen(); }); }
+function mod(a, rest) { aktion(async () => { await api("/api/moderation", { aktion: a, ...rest }); themaCache = null; await laden(true); }); }
+function sperren(name) { if (!confirm(`${name} im Forum sperren? Die Person kann dann nichts mehr schreiben.`)) return; mod("sperren", { name }); }
+function allesLoeschen() {
+  if (!confirm("Wirklich ALLE deine Beiträge, Likes und Meldungen löschen? Das kann nicht rückgängig gemacht werden.")) return;
+  aktion(async () => { await api("/api/meine-daten-loeschen", {}); abmelden(); hinweis = { ok: "Deine Daten wurden gelöscht und du bist abgemeldet." }; });
+}
+function suchen(e) { e.preventDefault(); const q = document.getElementById("q").value.trim(); if (q) location.hash = "#/suche/" + encodeURIComponent(q); }
+function design() {
+  const h = document.documentElement, hell = h.getAttribute("data-design") !== "porzellan";
+  if (hell) h.setAttribute("data-design", "porzellan"); else h.removeAttribute("data-design");
+  speicher.set("creative-design", hell ? "porzellan" : "graphit");
+}
+
+// ---------- Ablauf
+async function laden(still) {
+  const main = document.getElementById("main");
+  if (API.startsWith("__")) { main.innerHTML = `<div class="msg">Das Forum wird gerade eingerichtet – schau bald wieder vorbei.</div>`; return; }
+  if (!still && !daten) main.innerHTML = `<div class="msg">Wird geladen …</div>`;
+  try { daten = await api("/api/start"); }
+  catch (e) { main.innerHTML = `<div class="msg">Das Forum ist gerade nicht erreichbar. Bitte später noch einmal versuchen.<br><small>${esc(e.message)}</small></div>`; return; }
+  await zeigen();
+}
+async function zeigen() {
+  if (!daten) return;
+  kopf();
+  const [, r, a, b] = location.hash.split("/");
+  const main = document.getElementById("main");
+  let html;
+  if (r === "forum") html = forumSeite(a, +b || 1);
+  else if (r === "thema") {
+    if (!themaCache || themaCache.thema.id !== a) {
+      main.innerHTML = `<div class="msg">Wird geladen …</div>`;
+      try { themaCache = await api("/api/thema?id=" + encodeURIComponent(a)); }
+      catch (e) { main.innerHTML = crumbs([]) + `<div class="msg">${esc(e.message)}</div>`; return; }
+    }
+    html = themaSeite(a, +b || 1);
+  }
+  else if (r === "neu") html = neuSeite(a);
+  else if (r === "neue") html = neueSeite();
+  else if (r === "suche") html = suchSeite(decodeURIComponent(a || ""));
+  else if (r === "regeln") html = regelnSeite();
+  else if (r === "konto") html = kontoSeite();
+  else if (r === "meldungen") html = await meldungenSeite();
+  else html = startseite();
+  main.innerHTML = html;
+  const ziel = location.hash.match(/^#\/thema\/[^/]+\/\d+$/) && themaCache;
+  if (!ziel) scrollTo(0, 0);
+}
+addEventListener("hashchange", () => zeigen());
+laden();
+
+</script>
+</body>
+</html>
