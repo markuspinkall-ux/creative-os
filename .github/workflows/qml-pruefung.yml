@@ -14,7 +14,7 @@ jobs:
       - name: Qt installieren
         timeout-minutes: 10
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 libpulse0
           pip install -q PySide6
       - name: Prüfen
         env:
