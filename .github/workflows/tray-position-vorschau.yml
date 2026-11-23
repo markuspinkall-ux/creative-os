@@ -3,7 +3,7 @@ name: Tray-Position Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml, tools/tray-vorschau-bild.py]
+    paths: [shell/creative_shell/qml/Creative/StartButton.qml, tools/startknopf-vorschau.py, shell/creative_shell/qml/surfaces/QuickPanel.qml, tools/schnellzugriff-vorschau.py, shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml, tools/tray-vorschau-bild.py]
   workflow_dispatch:
 permissions:
   contents: write
@@ -35,6 +35,32 @@ jobs:
           done
           ls -la "$GITHUB_WORKSPACE/fotos"
           test -s "$GITHUB_WORKSPACE/fotos/tray-taskleiste.png"
+      - name: Schnellzugriff je Tray-Symbol (Lautstärke, Drucker, Netzwerk, Kalender)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          timeout 30 python3 tools/startknopf-vorschau.py fotos/startknopf-animation.png 2>&1 | tail -3 || true
+          for t in volume printer network calendar; do
+            timeout 30 python3 tools/schnellzugriff-vorschau.py "fotos/teil-$t.png" aus vpn-aus $t 2>&1 | tail -3 || true
+          done
+          python3 - <<'PY'
+          from PIL import Image, ImageChops
+          parts = []
+          for t, title in (("volume", "Lautstärke"), ("printer", "Drucker"), ("network", "Netzwerk"), ("calendar", "Kalender")):
+              im = Image.open(f"fotos/teil-{t}.png").convert("RGB")
+              bg = Image.new("RGB", im.size, im.getpixel((2, 2)))
+              box = ImageChops.difference(im, bg).getbbox()
+              parts.append(im.crop(box) if box else im)
+          w = sum(p.width for p in parts) + 30 * (len(parts) + 1)
+          h = max(p.height for p in parts) + 60
+          out = Image.new("RGB", (w, h), (18, 21, 27))
+          x = 30
+          for p in parts:
+              out.paste(p, (x, 30))
+              x += p.width + 30
+          out.save("fotos/schnellzugriff-teile.png")
+          print("schnellzugriff-teile.png", out.size)
+          PY
       - name: Fotos im Branch „tray-fotos“
         if: always()
         run: |
