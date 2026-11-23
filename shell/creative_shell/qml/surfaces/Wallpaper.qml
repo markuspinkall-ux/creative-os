@@ -505,9 +505,9 @@ Item {
                         x: lay.px * lay.sc - width / 2
                         y: lay.py * lay.sc - height / 2
                         // nach links fliegend: spiegeln statt auf den Kopf drehen
-                        readonly property bool left: Math.abs(lay.heading) > 90
-                        mirror: left
-                        rotation: left ? lay.heading - (lay.heading > 0 ? 180 : -180) : lay.heading
+                        readonly property bool goesLeft: Math.abs(lay.heading) > 90
+                        mirror: goesLeft
+                        rotation: goesLeft ? lay.heading - (lay.heading > 0 ? 180 : -180) : lay.heading
                         source: wallAnim.scene && lay.sprite ? wallAnim.d.folder + lay.ly.file : ""
                         sourceSize: Qt.size((lay.ly.w || 100) * 2, (lay.ly.h || 50) * 2)
                         smooth: true
