@@ -4,7 +4,7 @@ name: Systemsteuerung Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [settings/creative_settings/cleanup.py, settings/**, shell/creative_shell/qml/**, tools/tasktip-vorschau.py, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
+    paths: [settings/creative_settings/cleanup.py, settings/**, shell/creative_shell/qml/**, tools/tasktip-vorschau.py, tools/menue-vorschau.py, shell/creative_shell/widgets_app.py, tools/screenshots/**, .github/workflows/qml-vorschau.yml]
   workflow_dispatch:
 permissions:
   contents: write
@@ -53,6 +53,7 @@ jobs:
           sed -i 's/^          //' /tmp/fake/kscreen-doctor && chmod +x /tmp/fake/kscreen-doctor
           PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/bildschirme.png timeout 40 python3 -m creative_settings --page displays 2>&1 | tail -5 || true
           (cd .. && timeout 30 python3 tools/tasktip-vorschau.py settings/vorschau/taskleiste-name.png 2>&1 | tail -5) || true
+          (cd .. && timeout 90 python3 tools/menue-vorschau.py settings/vorschau/menues.png 2>&1 | tail -8) || true
           ls -la vorschau
         working-directory: settings
       - name: Ablegen
