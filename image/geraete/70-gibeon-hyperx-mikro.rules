@@ -1,0 +1,8 @@
+# HyperX-Mikrofone (QuadCast S/2/2 S, DuoCast): Beleuchtung über QuadcastRGB ohne root
+# – der angemeldete Benutzer bekommt Zugriff (uaccess), wie bei Controllern.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0951", ATTR{idProduct}=="171f", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="0f8b", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="028c", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="048c", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="068c", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="098c", TAG+="uaccess"

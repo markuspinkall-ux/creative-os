@@ -68,3 +68,27 @@ class MikrofonLicht(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MikroQuadcastTests(unittest.TestCase):
+    def test_befehle(self):
+        from creative_settings import mikro_rgb as m
+        self.assertEqual(m.quadcast_args("static", "#4C0099"), ["-a", "solid", "4c0099"])
+        self.assertEqual(m.quadcast_args("direct", "#ff6000"), ["-a", "solid", "ff6000"])
+        self.assertEqual(m.quadcast_args("off", "#ff6000"), ["-a", "solid", "0"])
+        self.assertEqual(m.quadcast_args("rainbow", "#ff6000"), ["-a", "wave"])
+
+    def test_duocast_erkannt(self):
+        import tempfile, pathlib
+        from unittest import mock
+        from creative_settings import mikro_rgb as m
+        with tempfile.TemporaryDirectory() as d:
+            dev = pathlib.Path(d) / "1-4"
+            dev.mkdir()
+            (dev / "idVendor").write_text("03f0\n")
+            (dev / "idProduct").write_text("098c\n")
+            with mock.patch.object(m.shutil, "which", return_value="/usr/bin/quadcastrgb"):
+                self.assertTrue(m.quadcast_ready(d))
+            (dev / "idProduct").write_text("1234\n")
+            with mock.patch.object(m.shutil, "which", return_value="/usr/bin/quadcastrgb"):
+                self.assertFalse(m.quadcast_ready(d))
