@@ -30,6 +30,7 @@ from .google_drive import GoogleDriveModel
 from .drives import DrivesModel  # noqa: E402
 from .server import ServerModel  # noqa: E402
 from .sound import SoundModel  # noqa: E402
+from .mikro_rgb import MicRgbModel  # noqa: E402
 from .users import UsersModel  # noqa: E402
 from .system import LookModel, PrinterListModel, SystemModel  # noqa: E402
 
@@ -78,6 +79,7 @@ def main():
         "session": SessionModel(),
         "displays": DisplayModel(),
         "sound": SoundModel(),
+        "micRgb": MicRgbModel(),
         "system": SystemModel(),
         "regionConsent": RegionConsent(),
         "printerList": PrinterListModel(),

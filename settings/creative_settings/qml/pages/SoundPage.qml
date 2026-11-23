@@ -33,6 +33,81 @@ SettingsPage {
         meter: true
     }
 
+    // Beleuchtung des Mikrofons – vorerst nur HyperX (QuadCast S, DuoCast …)
+    Card {
+        id: micRgbCard
+        visible: micRgb.present
+        title: "Mikrofon-Beleuchtung"
+        subtitle: micRgb.micName
+        property bool expanded: micRgb.startOpen
+        Component.onCompleted: if (expanded) micRgb.scan()
+        SettingRow {
+            label: "RGB-Beleuchtung"
+            hint: "Farbe und Effekt deines Mikrofons – wird gespeichert und beim Anmelden wieder gesetzt"
+            last: !micRgbCard.expanded
+            CButton {
+                objectName: "rgbBtn"
+                text: micRgbCard.expanded ? "Schließen" : "RGB einstellen …"
+                primary: !micRgbCard.expanded
+                onClicked: {
+                    micRgbCard.expanded = !micRgbCard.expanded
+                    if (micRgbCard.expanded && !micRgb.ready) micRgb.scan()
+                }
+            }
+        }
+        Text {
+            visible: micRgbCard.expanded && micRgb.note !== ""
+            width: parent.width
+            text: micRgb.note
+            wrapMode: Text.WordWrap
+            color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
+            topPadding: 6; bottomPadding: 6
+        }
+        SettingRow {
+            visible: micRgbCard.expanded && micRgb.ready
+            label: "Effekt"
+            Row {
+                spacing: 6
+                Repeater {
+                    model: micRgb.modes
+                    delegate: CButton {
+                        required property var modelData
+                        text: modelData.label
+                        primary: micRgb.mode === modelData.key
+                        enabled: !micRgb.busy
+                        onClicked: micRgb.setMode(modelData.key)
+                    }
+                }
+            }
+        }
+        SettingRow {
+            visible: micRgbCard.expanded && micRgb.ready
+            last: true
+            label: "Farbe"
+            Row {
+                spacing: 8
+                Repeater {
+                    model: micRgb.colors
+                    delegate: Rectangle {
+                        required property var modelData
+                        width: 30; height: 30; radius: 15
+                        color: modelData
+                        border.color: micRgb.color === modelData ? Theme.text : Theme.hairline
+                        border.width: micRgb.color === modelData ? 3 : 1
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; enabled: !micRgb.busy; onClicked: micRgb.setColor(modelData) }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Farbe " + modelData
+                    }
+                }
+            }
+        }
+        CButton {
+            visible: micRgbCard.expanded && micRgb.scanned && !micRgb.ready
+            text: "Erneut suchen"
+            onClicked: micRgb.scan()
+        }
+    }
+
     Card {
         title: "Anmelde-Ton"
         subtitle: "Ein kurzer Klang, sobald nach der Anmeldung der Desktop erscheint – wie beim Abmelden"
