@@ -210,6 +210,9 @@ COPY viewer3d/creative-3dansicht.svg /usr/share/icons/hicolor/scalable/apps/crea
 RUN ln -s /usr/lib/creative-3dansicht/creative-3dansicht /usr/bin/creative-3dansicht \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3dansicht --selftest
 COPY shell/webapps/creative-claude.desktop /usr/share/applications/
+# Gibeon-Forum als App im Startmenü (eigenes Fenster, eigene Anmeldung)
+COPY shell/webapps/gibeon-forum.desktop /usr/share/applications/gibeon-forum.desktop
+COPY shell/creative_shell/qml/Creative/icons/forum.svg /usr/share/icons/hicolor/scalable/apps/gibeon-forum.svg
 COPY shell/creative_shell/qml/Creative/icons/claude.svg /usr/share/icons/hicolor/scalable/apps/creative-claude.svg
 COPY shell/creative_shell/qml/Creative/icons/whatsapp.svg /usr/share/icons/hicolor/scalable/apps/creative-whatsapp.svg
 # „Fehler melden“ (Startmenü): Meldeformular mit eingetragener Version – landet im Entwickler-Widget
