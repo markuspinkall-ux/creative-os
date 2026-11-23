@@ -45,5 +45,26 @@ class Grafikkarte(unittest.TestCase):
         self.assertEqual(gpu.parse_openrgb(""), [])
 
 
+class MikrofonLicht(unittest.TestCase):
+    def test_hyperx_erkennen(self):
+        import tempfile
+        from creative_settings import mikro_rgb
+        with tempfile.TemporaryDirectory() as d:
+            for name, maker, product in (("1-3", "HP, Inc", "HyperX QuadCast S"), ("1-4", "HyperX", "DuoCast"),
+                                         ("1-5", "Logitech", "C920"), ("1-6", "Kingston", "HyperX Alloy")):
+                p = Path(d) / name
+                p.mkdir()
+                (p / "manufacturer").write_text(maker)
+                (p / "product").write_text(product)
+            self.assertEqual(sorted(mikro_rgb.hyperx_mics(d)), ["HyperX DuoCast", "HyperX QuadCast S"])
+
+    def test_openrgb_mikrofon(self):
+        from creative_settings import mikro_rgb
+        text = OPENRGB + "2: HyperX Quadcast S\n  Type:           Microphone\n  Modes: [Direct] Static Breathing Rainbow\n"
+        devs = gpu.parse_openrgb(text, "microphone")
+        self.assertEqual([d["name"] for d in devs], ["HyperX Quadcast S"])
+        self.assertEqual([m["label"] for m in mikro_rgb.modes_for(devs[0])], ["Statisch", "Atmen", "Regenbogen", "Aus"])
+
+
 if __name__ == "__main__":
     unittest.main()
