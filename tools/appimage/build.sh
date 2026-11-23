@@ -6,7 +6,7 @@
 #   bash tools/appimage/build.sh <ausgabeordner> <version>
 #
 # Grundlage ist ein fertiges, verschiebbares Python von python-appimage (manylinux2014, läuft auf
-# praktisch allen aktuellen Distributionen). Qt kommt mit PySide6 aus pip. GStreamer, PipeWire,
+# praktisch allen aktuellen Distributionen). Qt kommt mit PySide6 aus pip (mind. 6.9: ContextMenu-Anhang für die Rechtsklick-Menüs). GStreamer, PipeWire,
 # v4l2loopback und podman nimmt das AppImage vom System – siehe README.md daneben.
 set -euo pipefail
 OUT="$(readlink -f "${1:-dist}")"
@@ -78,7 +78,7 @@ finish() {   # finish <appdir> <name> <desktop-id> <icon.svg>
 echo "== Studio + Broadcast"
 A="$WORK/studio.AppDir"
 new_appdir "$A"
-pip_in "$A" "PySide6==6.8.*" numpy opencv-python-headless onnxruntime pillow
+pip_in "$A" "PySide6==6.9.*" numpy opencv-python-headless onnxruntime pillow
 # Bildschirmfreigabe (xdg-desktop-portal): dbus-python, gebaut gegen die libdbus/libglib des Systems
 pip_in "$A" dbus-python || echo "::warning::dbus-python ließ sich nicht bauen – Bildschirmfreigabe fehlt"
 trim_qt "$A"
@@ -148,7 +148,7 @@ finish "$A" Gibeon-Studio gibeon-studio "$ROOT/studio/gibeon-studio.svg"
 echo "== 3D Studio"
 B="$WORK/3d.AppDir"
 new_appdir "$B"
-pip_in "$B" "PySide6==6.8.*" numpy pillow
+pip_in "$B" "PySide6==6.9.*" numpy pillow
 trim_qt "$B"
 D="$B/usr/lib/creative-3d"
 mkdir -p "$D"
