@@ -1,0 +1,29 @@
+{
+ "bilder": 80,
+ "groesse": [
+  720,
+  1280,
+  3
+ ],
+ "mittel_bgr": [
+  11,
+  237,
+  12
+ ],
+ "anteil_graphit": 0.0,
+ "status": {
+  "voice": "aus",
+  "camera": "aktiv",
+  "fps": 21,
+  "engine": "CPU",
+  "mode": "1280×720 · 30 Bilder/s (YUYV)",
+  "output": "1280×720 · 30 Bilder/s",
+  "upscale": "aus",
+  "upscaleMs": 0.0,
+  "budgetMs": 33.3,
+  "captureMs": 0.7,
+  "processingMs": 43.3,
+  "outputMs": 2.6,
+  "slow": true
+ }
+}
