@@ -25,6 +25,7 @@ from creative_shell.region import RegionConsent  # noqa: E402
 from .displays import DisplayModel  # noqa: E402
 from .backup import BackupModel  # noqa: E402
 from .cleanup import CleanupModel  # noqa: E402
+from .gpu import GpuModel  # noqa: E402
 from .google_drive import GoogleDriveModel
 from .drives import DrivesModel  # noqa: E402
 from .server import ServerModel  # noqa: E402
@@ -45,6 +46,7 @@ PAGES = {
     "server": "server", "meinserver": "server", "mein-server": "server",
     "backup": "backup", "sicherung": "backup", "datensicherung": "backup",
     "cleanup": "cleanup", "bereinigung": "cleanup", "aufraeumen": "cleanup",
+    "gpu": "gpu", "grafikkarte": "gpu", "grafik": "gpu",
     "users": "users", "benutzer": "users", "konten": "users", "benutzerkonten": "users",
 }
 
@@ -84,6 +86,7 @@ def main():
         "googleDrive": GoogleDriveModel(),
         "backup": BackupModel(),
         "cleanup": CleanupModel(),
+        "gpu": GpuModel(),
         "users": UsersModel(),
         "look": LookModel(qml_root / "Creative" / "wallpapers"),
     }
