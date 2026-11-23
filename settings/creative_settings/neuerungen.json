@@ -17,7 +17,8 @@
     ],
     "behoben": [
       "Willkommen-Fenster: Der Schalter „Land anonym mitteilen“ war beim ersten Start ohne Funktion und meldete Fehler.",
-      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst)."
+      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst).",
+      "Taskleiste: Über dem Startknopf stand oben ein heller Strich über den Rand hinaus – die Lichtkante liegt jetzt sauber im Kreis."
     ]
   },
   {
