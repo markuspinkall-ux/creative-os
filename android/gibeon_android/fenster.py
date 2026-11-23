@@ -45,14 +45,21 @@ MODE_SERVER_SIDE = 2
 TABLET_DELAY = 0.8          # Sekunden nach dem Öffnen: Fenster aufs Tablet-Format stellen
 RESIZE_DELAY = 0.4          # Größe ziehen: erst nach dem Loslassen an Android weitergeben
 MAX_FDS = 64            # Wayland schickt höchstens 28 pro Nachricht
-# Erster App-Start nach dem Hochfahren: Waydroid zeigt die App zuerst in der ganzen LineageOS-Oberfläche
-# (Fenster „Waydroid“). Erst wenn diese einmal geschlossen wurde, kommen Apps als eigene Fenster.
-# Der waydroid-Wrapper legt dafür die Datei ERSTSTART an; der Vermittler schließt die Oberfläche dann
-# selbst (wie ein Klick aufs X) und meldet das mit ERSTSTART.fertig – danach öffnet der Wrapper die App neu.
+# Waydroid zeigt nach dem Hochfahren die erste App in der ganzen LineageOS-Oberfläche (eigenes Fenster
+# „Waydroid“ bzw. der Startbildschirm/Launcher). Erst wenn diese einmal geschlossen wurde, kommen Apps als
+# eigene Fenster. Darum schließt der Vermittler die Oberfläche selbst (wie ein Klick aufs X) – außer sie
+# wurde bewusst geöffnet („Android“ im Startmenü → Datei OBERFLAECHE) – und öffnet danach die App neu,
+# die zuletzt angeklickt wurde (Datei APP_WUNSCH, schreibt der waydroid-Wrapper).
 FULL_UI_IDS = ("Waydroid", "waydroid")
-ERSTSTART = "gibeon-android-erststart"
-ERSTSTART_MAX_AGE = 300     # Sekunden
+LAUNCHER_PKGS = ("com.android.launcher3", "org.lineageos.trebuchet", "com.android.launcher",
+                 "com.google.android.apps.nexuslauncher", "com.android.quickstep")
+OBERFLAECHE = "gibeon-android-oberflaeche"
+APP_WUNSCH = "gibeon-android-app"
+OBERFLAECHE_MAX_AGE = 180   # Sekunden: so lange gilt „bewusst geöffnet“
+APP_WUNSCH_MAX_AGE = 240
 FULL_UI_CLOSE_DELAY = 1.5
+RELAUNCH_DELAY = 2.5
+MAX_CLOSES_PER_MIN = 3
 
 
 def _xdg(var, fallback):
@@ -315,9 +322,14 @@ class Conn:
             if top is not None:
                 top.app_id = vals[0] or ""
                 m = APP_RE.match(top.app_id)
-                if not m and top.app_id in FULL_UI_IDS and erststart_wanted():
-                    self.log("Erster App-Start: LineageOS-Oberfläche wird geschlossen, App kommt als eigenes Fenster")
-                    self.p.later(FULL_UI_CLOSE_DELAY, lambda cid=cid: self.close_toplevel(cid))
+                self.log(f"Fenster {cid}: app_id={top.app_id!r}")
+                if is_full_ui(top.app_id):
+                    if full_ui_wanted():
+                        self.log("LineageOS-Oberfläche bewusst geöffnet – bleibt offen")
+                    elif self.p.may_close():
+                        self.log("LineageOS-Oberfläche wird geschlossen, damit Apps als eigene Fenster kommen")
+                        self.p.later(FULL_UI_CLOSE_DELAY, lambda cid=cid: self.close_toplevel(cid))
+                        m = None             # Launcher bekommt kein Tablet-Format
                 if m and not top.pkg:
                     top.pkg = m.group(1)
                     if self.p.config()["tablet"]:
@@ -346,7 +358,10 @@ class Conn:
         except OSError:
             pass
         self.p._update_write(self)
-        erststart_done()
+        pkg = take_app_wish()
+        if pkg:
+            self.log(f"App {pkg} wird als eigenes Fenster neu geöffnet")
+            self.p.later(RELAUNCH_DELAY, lambda pkg=pkg: self.p.relaunch(pkg))
 
     def decorate(self, top):
         """Bei KWin den normalen Fensterrahmen für dieses Fenster anfordern."""
@@ -509,6 +524,23 @@ class Helper:
 
 
 class Proxy:
+    def may_close(self):
+        """Höchstens ein paar Mal pro Minute schließen – falls Android den Startbildschirm immer neu öffnet."""
+        now = time.time()
+        self.closes = [t for t in self.closes if now - t < 60]
+        if len(self.closes) >= MAX_CLOSES_PER_MIN:
+            self.log("Oberfläche kam zu oft wieder – lasse sie offen")
+            return False
+        self.closes.append(now)
+        return True
+
+    def relaunch(self, pkg):
+        try:
+            subprocess.Popen(self.relaunch_cmd + [pkg], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        except OSError as e:
+            self.log(f"App {pkg} ließ sich nicht neu öffnen: {e}")
+
     def __init__(self, listen_path, upstream, ifaces=None, log=None, helper=None):
         self.listen_path = listen_path
         self.upstream = upstream
@@ -518,6 +550,8 @@ class Proxy:
         self.sel = selectors.DefaultSelector()
         self.conns = set()
         self.timers = []
+        self.closes = []            # Zeitpunkte, an denen die Oberfläche geschlossen wurde
+        self.relaunch_cmd = ["waydroid", "app", "launch"]
         self._seq = itertools.count()
         self._cfg = (0.0, dict(DEFAULTS))
         self.lsock = None
@@ -651,25 +685,38 @@ def runtime_dir():
     return os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
 
 
-def erststart_wanted():
-    """Hat der Wrapper gerade Android für einen App-Start hochgefahren? (Datei, höchstens 5 Minuten alt)"""
-    f = Path(runtime_dir()) / ERSTSTART
+def is_full_ui(app_id):
+    """Ganze LineageOS-Oberfläche oder Android-Startbildschirm (Launcher)?"""
+    if app_id in FULL_UI_IDS:
+        return True
+    m = APP_RE.match(app_id or "")
+    return bool(m and m.group(1) in LAUNCHER_PKGS)
+
+
+def _fresh(name, max_age):
     try:
-        return time.time() - f.stat().st_mtime < ERSTSTART_MAX_AGE
+        return time.time() - (Path(runtime_dir()) / name).stat().st_mtime < max_age
     except OSError:
         return False
 
 
-def erststart_done():
-    base = Path(runtime_dir())
+def full_ui_wanted():
+    """Wurde die Android-Oberfläche gerade bewusst geöffnet (Startmenü „Android“)?"""
+    return _fresh(OBERFLAECHE, OBERFLAECHE_MAX_AGE)
+
+
+def take_app_wish():
+    """Zuletzt angeklickte App (vom Wrapper) holen und vergessen – nur wenn frisch."""
+    f = Path(runtime_dir()) / APP_WUNSCH
     try:
-        (base / ERSTSTART).unlink()
+        if time.time() - f.stat().st_mtime > APP_WUNSCH_MAX_AGE:
+            f.unlink()
+            return ""
+        pkg = f.read_text(encoding="utf-8").strip()
+        f.unlink()
     except OSError:
-        pass
-    try:
-        (base / (ERSTSTART + ".fertig")).touch()
-    except OSError:
-        pass
+        return ""
+    return pkg if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+", pkg) else ""
 
 
 def upstream_path():
