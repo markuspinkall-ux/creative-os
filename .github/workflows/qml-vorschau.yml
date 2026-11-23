@@ -63,6 +63,10 @@ jobs:
             PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/grafikkarte-radeon.png timeout 40 python3 -m creative_settings --page gpu 2>&1 | tail -5 || true
           printf '[Look]\ndesign=porzellan\n' > /tmp/porz.conf; mkdir -p /tmp/porzhome/creative-os && cp /tmp/porz.conf /tmp/porzhome/creative-os/look.conf
           XDG_CONFIG_HOME=/tmp/porzhome PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/grafikkarte-porzellan.png timeout 40 python3 -m creative_settings --page gpu 2>&1 | tail -5 || true
+          # Ton mit HyperX-Mikrofon (nachgebaut): Knopf und aufgeklappte Beleuchtung
+          printf '#!/bin/sh\ncase "$*" in *list-devices*) printf "0: HyperX Quadcast S\\n  Type:           Microphone\\n  Modes: [Direct] Static Breathing Rainbow\\n";; esac\n' > /tmp/fake/openrgb
+          CREATIVE_MIC_FAKE="HyperX QuadCast S" PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/ton-hyperx.png timeout 40 python3 -m creative_settings --page sound 2>&1 | tail -5 || true
+          CREATIVE_MIC_FAKE="HyperX QuadCast S" CREATIVE_MIC_RGB_OPEN=1 PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/ton-hyperx-rgb.png timeout 40 python3 -m creative_settings --page sound 2>&1 | tail -5 || true
           (cd .. && timeout 90 python3 tools/menue-vorschau.py settings/vorschau/menues.png 2>&1 | tail -8) || true
           ls -la vorschau
         working-directory: settings

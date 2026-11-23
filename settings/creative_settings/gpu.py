@@ -181,8 +181,8 @@ def read_gpu():
 
 
 # ---- Beleuchtung (OpenRGB) ----------------------------------------------------------------------
-def parse_openrgb(text):
-    """Ausgabe von „openrgb --list-devices“ → Grafikkarten [{index, name, modes}]."""
+def parse_openrgb(text, kind="gpu"):
+    """Ausgabe von „openrgb --list-devices“ → Geräte einer Art (kind: gpu, microphone …, None = alle)."""
     devs, cur = [], None
     for line in text.splitlines():
         m = re.match(r"^(\d+):\s*(.+)$", line.strip())
@@ -199,10 +199,11 @@ def parse_openrgb(text):
         if m:
             # z. B.  Modes: [Direct] Static Breathing 'Spectrum Cycle' Rainbow   ([…] = gerade aktiv)
             cur["modes"] = [(q or w).lower() for q, w in re.findall(r"'([^']+)'|\[?([^\s'\[\]]+)\]?", m.group(1))]
-    return [d for d in devs if d["type"].lower() == "gpu"]
+    return [d for d in devs if kind is None or d["type"].lower() == kind]
 
 
-def openrgb_gpus(timeout=25):
+def openrgb_devices(kind="gpu", timeout=25):
+    """Geräte einer Art laut OpenRGB – None, wenn OpenRGB fehlt."""
     exe = shutil.which("openrgb")
     if not exe:
         return None
@@ -211,7 +212,11 @@ def openrgb_gpus(timeout=25):
                              timeout=timeout).stdout
     except (OSError, subprocess.SubprocessError):
         return []
-    return parse_openrgb(out)
+    return parse_openrgb(out, kind)
+
+
+def openrgb_gpus(timeout=25):
+    return openrgb_devices("gpu", timeout)
 
 
 def openrgb_set(index, mode, color):
