@@ -1,8 +1,9 @@
 [
   {
     "datum": "2026-11-23",
-    "titel": "Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio nachstellbar",
+    "titel": "Drei neue bewegte Hintergründe, Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio",
     "neu": [
+      "Drei neue bewegte Hintergründe im Stil von Emerald Earth – Einstellungen › Darstellung › Hintergrundbild: „Umlaufbahn“ (ein Raumschiff kreist um die Erde und fliegt auch hinter ihr vorbei), „Nordlicht“ (wehendes Polarlicht über der Nachtseite, ein Satellit zieht vorbei) und „Mondbasis“ (Erdaufgang über dem Mond, die Rakete schwebt startbereit, die Lichter der Basis blinken). Alle gibt es in Graphit und Porzellan.",
       "Studio: Grünfilter nachträglich verfeinern – „Toleranz“ und „Weiche Kanten“ wirken sofort, ohne dass die Kamera neu startet; „Standard wiederherstellen“ holt die Ausgangswerte zurück.",
       "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo."
     ],
