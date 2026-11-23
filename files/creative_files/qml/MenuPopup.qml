@@ -17,9 +17,11 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
     function openAt(item, px, py) {
+        // Ecke am Mauszeiger; passt es nicht, nach oben bzw. links aufgehen (nicht verrutschen)
         const p = item.mapToItem(parent, px, py)
-        x = Math.min(p.x, parent.width - width - 8)
-        y = Math.min(p.y, parent.height - implicitHeight - 8)
+        const h = implicitHeight
+        x = p.x + width > parent.width - 8 ? Math.max(8, p.x - width) : p.x
+        y = p.y + h > parent.height - 8 ? Math.max(8, p.y - h) : p.y
         open()
     }
 

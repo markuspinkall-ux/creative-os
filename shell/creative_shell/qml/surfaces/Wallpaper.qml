@@ -2130,9 +2130,13 @@ Item {
         property var entries: []
         signal triggered(string act)
 
+        // Wie bei Windows: die Ecke des Menüs sitzt am Mauszeiger. Passt es unten nicht mehr hin,
+        // geht es nach oben auf (Unterkante am Zeiger) statt irgendwo höher zu landen; ebenso links/rechts.
         function openAt(px, py) {
-            x = Math.min(px, root.width - width - 8)
-            y = Math.min(py, root.height - root.barSpace - implicitHeight - 8)
+            const h = implicitHeight
+            const maxY = root.height - root.barSpace - 8
+            x = px + width > root.width - 8 ? Math.max(8, px - width) : px
+            y = py + h > maxY ? Math.max(root.minY || 8, py - h) : py
             open()
         }
 
