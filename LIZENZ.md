@@ -22,12 +22,9 @@ Es gibt keine Gewährleistung.
 ## 2. Enthaltene Open-Source-Software anderer Projekte
 
 Gibeon OS enthält und nutzt Programme anderer Projekte (u. a. Fedora, KDE, Qt/PySide,
-OBS Studio, PipeWire, FFmpeg, Electron/Chromium, Caddy, python-elgato-streamdeck).
+GStreamer, PipeWire, FFmpeg, Electron/Chromium, Caddy, python-elgato-streamdeck).
 Diese stehen unter ihren eigenen Lizenzen (z. B. GPL, LGPL, MIT, Apache); die Lizenztexte
 liegen im installierten System unter `/usr/share/licenses`.
-
-`obs/Yami_CreativeGraphit.ovt` ist eine Abwandlung des OBS-Designs „Yami“ und steht wie
-OBS Studio unter der GNU GPL v2 oder neuer.
 
 ## 3. Name und Logo
 
