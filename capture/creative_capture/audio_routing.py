@@ -185,3 +185,53 @@ def is_capture_audio(source_name, video_id):
     except (OSError, ValueError, subprocess.SubprocessError):
         return True
     return True
+
+
+def _usb_vendor(key):
+    """idVendor des USB-Geräts (Pfad aus device_key) – '' wenn unbekannt."""
+    if key and not key.startswith("pci:"):
+        return _read(Path(key) / "idVendor").lower()
+    return ""
+
+
+def _usb_label(key):
+    if key and not key.startswith("pci:"):
+        return (_read(Path(key) / "manufacturer") + " " + _read(Path(key) / "product")).lower()
+    return ""
+
+
+def capture_audio_source(props, video_target=""):
+    """Gehört diese Tonquelle zu einer Capture-Karte? Webcam- und andere Mikrofone: nein.
+    props: PipeWire-Eigenschaften der Quelle (pactl list sources)."""
+    key = source_usb(props)
+    if video_target and key and key == video_target:
+        return True
+    text = " ".join(str(props.get(k, "")) for k in ("device.description", "device.product.name", "alsa.card_name",
+                                                       "device.vendor.name", "node.description")).lower()
+    text += " " + _usb_label(key)
+    if any(w in text for w in WEBCAM_WORDS) or any(w in text for w in ("webcam", "camera", "kamera", "powerconf")):
+        return False
+    if key.startswith("pci:"):
+        return True                      # PCIe-Karten: Ton liegt auf demselben Steckplatz (siehe pci_parent)
+    vid = _usb_vendor(key) or str(props.get("device.vendor.id", "")).lower().replace("0x", "")
+    if vid in CAPTURE_VENDORS:
+        return True
+    return any(w in text for w in CAPTURE_WORDS)
+
+
+def capture_audio_ids(video_id=""):
+    """PipeWire-Namen aller Tonquellen, die zu Capture-Karten gehören (keine Mikrofone, keine Webcams)."""
+    target = video_usb(video_id) if video_id else ""
+    try:
+        proc = subprocess.run(['pactl', '-f', 'json', 'list', 'sources'], capture_output=True, text=True, timeout=3)
+        sources = json.loads(proc.stdout or "[]")
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return []
+    out = []
+    for source in sources:
+        name = source.get("name", "")
+        if not name or name.endswith(".monitor"):
+            continue
+        if capture_audio_source(source.get("properties") or {}, target):
+            out.append(name)
+    return out

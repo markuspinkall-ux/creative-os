@@ -68,8 +68,17 @@ Window {
         return list.length ? 0 : -1
     }
 
+    // Tonquellen nur von Capture-Karten: Webcam-Mikrofone (z. B. Anker PowerConf) und Headsets nie –
+    // sonst hört man sich selbst als Echo
+    property var audioSources: []
+    function refreshAudioSources() {
+        const ok = capture.captureAudio(hasVideo && cam.cameraDevice ? capture.deviceKey(cam.cameraDevice.id) : "")
+        audioSources = devices.audioInputs.filter(d => ok.indexOf(capture.deviceKey(d.id)) >= 0)
+    }
+
     function pickAudio(dev) {
-        const list = devices.audioInputs
+        refreshAudioSources()
+        const list = win.audioSources
         const videoId = capture.deviceKey(dev.id)
         const saved = capture.savedAudio(videoId)
         if (saved === "none") return null
@@ -140,7 +149,7 @@ Window {
     Component.onCompleted: { if (!selftest) applyDevice(pickVideo()) }
     Connections {
         target: devices
-        function onAudioInputsChanged() { win.applyAudio(win.hasVideo ? cam.cameraDevice : null) }
+        function onAudioInputsChanged() { win.refreshAudioSources(); win.applyAudio(win.hasVideo ? cam.cameraDevice : null) }
         function onVideoInputsChanged() {
             // neu eingesteckt oder abgezogen
             if (win.indexOfDev(win.cards, cam.cameraDevice) < 0) {
@@ -323,11 +332,11 @@ Window {
             Dropdown {
                 id: audioBox
                 width: Math.min(200, barRow.selectorWidth)
-                model: ["Ton aus / Quelle wählen"].concat(devices.audioInputs.map(d => d.description))
-                currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(devices.audioInputs, audioIn.device) + 1) : 0
+                model: ["Ton aus / Quelle wählen"].concat(win.audioSources.map(d => d.description))
+                currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(win.audioSources, audioIn.device) + 1) : 0
                 onActivated: (i) => {
                     if (i === 0) { win.audioOn = false; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), "none") }
-                    else { audioIn.device = devices.audioInputs[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(devices.audioInputs[i - 1].id)); echoCheck.restart() }
+                    else { audioIn.device = win.audioSources[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(win.audioSources[i - 1].id)); echoCheck.restart() }
                     win.updateChannelSource()
                 }
                 Accessible.name: "Tonquelle"

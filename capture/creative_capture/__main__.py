@@ -225,7 +225,14 @@ class Capture(QObject):
 
     @Slot(str, "QVariantList", result=str)
     def matchedAudio(self, video_id, candidates):
-        return matching_audio(video_id, candidates)
+        match = matching_audio(video_id, candidates)
+        return match if match in self.captureAudio(video_id) else ""
+
+    @Slot(str, result="QStringList")
+    def captureAudio(self, video_id):
+        """Nur Tonquellen von Capture-Karten – nie das Mikrofon einer Webcam oder ein Headset."""
+        from .audio_routing import capture_audio_ids
+        return capture_audio_ids(video_id)
 
 
 def _raise_running():

@@ -134,3 +134,24 @@ class EchoTests(unittest.TestCase):
                   {"properties": {"application.name": "gibeon-capture-mithoeren"}}]
         self.assertEqual(other_players(inputs, "alsa_input.usb-Elgato"), ["Studio (Mithören)"])
         self.assertEqual(other_players([{"properties": {"application.name": "Firefox"}}], "x"), [])
+
+
+class NurCaptureTonTests(unittest.TestCase):
+    def test_webcam_mikrofon_nie(self):
+        with patch.object(routing, 'source_usb', return_value='/usb/anker'), \
+             patch.object(routing, '_usb_label', return_value='anker powerconf c200'), \
+             patch.object(routing, '_usb_vendor', return_value='291a'):
+            self.assertFalse(routing.capture_audio_source({"device.description": "PowerConf C200 Analog Stereo"}))
+
+    def test_elgato_ja(self):
+        with patch.object(routing, 'source_usb', return_value='/usb/elgato'), \
+             patch.object(routing, '_usb_label', return_value='elgato game capture hd60 s+'), \
+             patch.object(routing, '_usb_vendor', return_value='0fd9'):
+            self.assertTrue(routing.capture_audio_source({"device.description": "Game Capture HD60 S+"}))
+
+    def test_avermedia_ueber_gleiches_geraet(self):
+        with patch.object(routing, 'source_usb', return_value='/usb/x'), \
+             patch.object(routing, '_usb_label', return_value=''), \
+             patch.object(routing, '_usb_vendor', return_value='1234'):
+            self.assertTrue(routing.capture_audio_source({}, video_target='/usb/x'))
+            self.assertFalse(routing.capture_audio_source({"device.description": "HyperX QuadCast S"}, video_target='/usb/y'))
