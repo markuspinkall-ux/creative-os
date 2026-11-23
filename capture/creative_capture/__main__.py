@@ -191,16 +191,20 @@ class Capture(QObject):
     @Slot(str, int, int, float)
     def playChannel(self, source, channels, channel, volume):
         self.stopMonitor()
-        if not source or source.endswith(".monitor") or not 1 <= channel <= channels <= 32:
+        if not source or source.endswith(".monitor") or not 0 <= channel <= max(channels, 1) or channels > 32:
             return
-        selected = channel - 1
         gain = max(0.0, min(1.0, volume))
+        if channel == 0:
+            mix = f"volume={gain}"
+            channels = max(channels, 2)
+        else:
+            mix = f"pan=stereo|c0=c{channel - 1}|c1=c{channel - 1},volume={gain}"
         self._monitor_active = True
         # setpriv --pdeathsig: endet Capture (auch durch Absturz), endet die Wiedergabe mit –
         # sonst läuft sie weiter und beim nächsten Start hört man den Ton doppelt
         args = ["-nostdin", "-loglevel", "error", "-f", "pulse", "-channels", str(channels),
                 "-fragment_size", "4096", "-name", MONITOR_TAG, "-i", source,
-                "-af", f"pan=stereo|c0=c{selected}|c1=c{selected},volume={gain}",
+                "-af", mix, "-ac", "2",
                 "-f", "pulse", "-name", MONITOR_TAG, "-buffer_duration", "50", "Capture"]
         if shutil.which("setpriv"):
             self._monitor.start("setpriv", ["--pdeathsig", "KILL", "ffmpeg", *args])

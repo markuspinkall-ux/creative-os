@@ -124,6 +124,7 @@ Window {
     property string monitorSource: ""
     property int channelCount: 0
     property int monitorChannel: 0
+    property bool recArmed: false
 
     function updateChannelSource() {
         monitorSource = audioOn ? capture.deviceKey(audioIn.device.id) : ""
@@ -134,7 +135,7 @@ Window {
     }
 
     function syncMonitor() {
-        if (!selftest && audioOn && monitorChannel > 0 && !audioOut.muted)
+        if (!selftest && audioOn && monitorSource && !audioOut.muted)
             capture.playChannel(monitorSource, channelCount, monitorChannel, audioOut.volume)
         else
             capture.stopMonitor()
@@ -167,8 +168,11 @@ Window {
             id: cam
             active: false
         }
-        audioInput: win.audioOn ? audioIn : null
-        audioOutput: win.audioOn && win.monitorChannel === 0 ? audioOut : null
+        // Qt nimmt hier teils die Standardquelle (z. B. Webcam-Mikro) statt der gewählten → Echo.
+        // Deshalb hört man den Ton nie über Qt, sondern über playChannel mit fest gewählter Quelle
+        // (wie Studio). Qt bekommt den Ton nur während einer Aufnahme.
+        audioInput: win.audioOn && win.recArmed ? audioIn : null
+        audioOutput: null
         videoOutput: video
         imageCapture: ImageCapture {
             id: shot
@@ -367,7 +371,7 @@ Window {
                 from: 0; to: 1; stepSize: 0.05
                 value: audioOut.volume
                 enabled: win.audioOn
-                onMoved: { audioOut.volume = value; capture.set("volume", value); if (win.monitorChannel > 0) monitorVolume.restart() }
+                onMoved: { audioOut.volume = value; capture.set("volume", value); monitorVolume.restart() }
                 Accessible.name: "Lautstärke"
             }
 
@@ -403,10 +407,12 @@ Window {
                     onClicked: {
                         if (rec.recorderState === MediaRecorder.RecordingState) {
                             rec.stop()
+                            win.recArmed = false
                         } else {
                             const f = capture.newFile("video")
                             win.lastFile = f
                             rec.outputLocation = capture.fileUrl(f)
+                            win.recArmed = true
                             rec.record()
                         }
                     }
