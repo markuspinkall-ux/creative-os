@@ -36,9 +36,9 @@ ctx("network", available=True, busy=False, connected=True, message="", ssid="Zuh
     wifiEnabled=True, wired=False,
     networks=[{"ssid": "Zuhause", "strength": 80, "secured": True, "inUse": True, "known": True}])
 ctx("brightness", displays=[{"name": "Hauptbildschirm", "key": "1", "value": 70}])
-ctx("printers", attention=False, available=False, name="", statusText="Kein Drucker eingerichtet")
+ctx("printers", attention=False, available=True, name="Brother HL-L2350DW", statusText="Bereit")
 ctx("session", keepAwake=awake, keepAwakeAvailable=True)
-ctx("shell", panelFocus="")
+ctx("shell", panelFocus=section, quickPanelOpenOn="")
 servers = [] if vpn_state == "vpn-leer" else [
     {"uuid": "u1", "name": "Proton VPN · Niederlande (NL-FREE#12)", "country": "Niederlande",
      "server": "NL-FREE#12", "active": vpn_state == "vpn-an"}]
