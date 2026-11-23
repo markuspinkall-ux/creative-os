@@ -212,7 +212,9 @@ def capture_audio_source(props, video_target=""):
     if any(w in text for w in WEBCAM_WORDS) or any(w in text for w in ("webcam", "camera", "kamera", "powerconf")):
         return False
     if key.startswith("pci:"):
-        return True                      # PCIe-Karten: Ton liegt auf demselben Steckplatz (siehe pci_parent)
+        # PCIe: nur echte Capture-Karten (Elgato 4K60 Pro …) – nie der Onboard-Ton oder die Grafikkarte
+        ven = str(props.get("device.vendor.id", "")).lower()
+        return ven in CAPTURE_PCI_VENDORS or any(w in text for w in CAPTURE_WORDS if w != "hdmi")
     vid = _usb_vendor(key) or str(props.get("device.vendor.id", "")).lower().replace("0x", "")
     if vid in CAPTURE_VENDORS:
         return True
@@ -252,3 +254,18 @@ def end_aligned_offset(video_seconds, audio_seconds):
     if video_seconds <= 0 or audio_seconds <= 0:
         return 0.0
     return max(0.0, min(5.0, audio_seconds - video_seconds))
+
+
+def is_capture_source_name(name):
+    """Letzte Sicherung vor Abspielen/Aufnehmen: ist diese Tonquelle eine Capture-Karte?
+    Mikrofone (HyperX, Webcam …) → False, dann bleibt Capture lieber stumm."""
+    if not name or name.endswith(".monitor"):
+        return False
+    try:
+        proc = subprocess.run(['pactl', '-f', 'json', 'list', 'sources'], capture_output=True, text=True, timeout=3)
+        for source in json.loads(proc.stdout or "[]"):
+            if source.get("name") == name:
+                return capture_audio_source(source.get("properties") or {})
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+    return False

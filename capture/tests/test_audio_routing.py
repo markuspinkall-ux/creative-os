@@ -175,3 +175,23 @@ class AufnahmeTonTests(unittest.TestCase):
         self.assertEqual(routing.end_aligned_offset(10.0, 9.0), 0.0)
         self.assertEqual(routing.end_aligned_offset(0, 9.0), 0.0)
         self.assertEqual(routing.end_aligned_offset(10.0, 60.0), 5.0)
+
+
+class EchtePCQuellenTests(unittest.TestCase):
+    """Quellen wie auf Markus' PC (pactl list sources, 23.11.2026)."""
+    def _pick(self, target):
+        src = [("live", {"device.description": "Live Gamer MINI", "alsa.card_name": "Live Gamer MINI", "alsa.card": "4"}, "/u/3-3.1", "07ca", "avermedia live gamer mini"),
+               ("hyperx", {"device.description": "HyperX DuoCast", "alsa.card_name": "HyperX DuoCast", "alsa.card": "5"}, "/u/1-4.4", "03f0", "hp, inc hyperx duocast"),
+               ("anker", {"device.description": "Anker PowerConf C200", "alsa.card": "3"}, "/u/3-1.4", "291a", "anker powerconf c200"),
+               ("intern", {"device.description": "Internes Audio", "alsa.card": "1", "device.vendor.id": "0x8086"}, "pci:0000:00:1f", "", "")]
+        keys = {p["alsa.card"]: k for _, p, k, _, _ in src}
+        ven = {k: v for _, _, k, v, _ in src}
+        lab = {k: l for _, _, k, _, l in src}
+        with patch.object(routing, 'source_usb', lambda p: keys[p["alsa.card"]]), \
+             patch.object(routing, '_usb_vendor', lambda k: ven.get(k, "")), \
+             patch.object(routing, '_usb_label', lambda k: lab.get(k, "")):
+            return routing.pick_console_audio([{"name": n, "properties": p} for n, p, *_ in src], target)
+
+    def test_nur_live_gamer(self):
+        self.assertEqual(self._pick("/u/3-3.1"), ["live"])
+        self.assertEqual(self._pick(""), ["live"])
