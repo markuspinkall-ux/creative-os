@@ -15,7 +15,8 @@
     ],
     "behoben": [
       "Willkommen-Fenster: Der Schalter „Land anonym mitteilen“ war beim ersten Start ohne Funktion und meldete Fehler.",
-      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst)."
+      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst).",
+      "Rechtsklick-Menüs (Schreibtisch, Ablage, Dateien, Browser) gehen jetzt immer direkt am Mauszeiger auf – ist unten kein Platz, öffnen sie nach oben, statt weit über dem Zeiger zu landen."
     ]
   },
   {

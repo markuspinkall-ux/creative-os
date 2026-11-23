@@ -486,8 +486,11 @@ function showMenu(box, items, x, y) {
   openLayer(box.id);
   if (x !== undefined) {
     const w = box.offsetWidth; const h = box.offsetHeight;
-    box.style.left = `${Math.max(6, Math.min(x, innerWidth - w - 6))}px`;
-    box.style.top = `${Math.max(6, Math.min(y, innerHeight - h - 6))}px`;
+    // Ecke am Mauszeiger; passt es nicht, nach oben bzw. links aufgehen statt zu verrutschen
+    const left = x + w > innerWidth - 6 ? x - w : x;
+    const top = y + h > innerHeight - 6 ? y - h : y;
+    box.style.left = `${Math.max(6, Math.min(left, innerWidth - w - 6))}px`;
+    box.style.top = `${Math.max(6, Math.min(top, innerHeight - h - 6))}px`;
     box.style.right = 'auto';
   }
 }
