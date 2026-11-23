@@ -37,17 +37,6 @@ Item {
         color: mouse.pressed ? Qt.darker(Theme.accent, 1.15)
                              : (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent)
 
-        // Lichtkante oben – so schmal und tief, dass sie ganz im Kreis liegt
-        // (vorher stand sie oben über den Rand hinaus und sah aus wie ein Strich über dem Knopf)
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: 3
-            width: parent.width * 0.42
-            height: 1
-            radius: 1
-            color: Qt.rgba(1, 1, 1, 0.4)
-        }
-
         SvgIcon {
             anchors.centerIn: parent
             name: "rocket"
