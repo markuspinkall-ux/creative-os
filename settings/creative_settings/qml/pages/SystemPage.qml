@@ -215,7 +215,7 @@ SettingsPage {
                 { app: "Terminal", base: "Konsole (KDE)" },
                 { app: "Entpacken", base: "Ark (KDE)" },
                 { app: "Laufwerke", base: "UDisks, exfatprogs, ntfsprogs" },
-                { app: "OBS Studio", base: "OBS Studio (OBS Project, GPL v2) – unverändert, nur im Graphit-Look" },
+                { app: "Studio", base: "GStreamer (Aufnehmen, Mischen und Streamen)" },
                 { app: "Broadcast", base: "DeepFilterNet (Rauschfilter), Robust Video Matting (Freistellung), v4l2loopback" },
                 { app: "Iso", base: "bootc-image-builder, Lorax/mkksiso, Anaconda (Fedora-Installer)" },
                 { app: "Automatisches Zurückrollen", base: "greenboot" },
@@ -223,7 +223,8 @@ SettingsPage {
                 { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
                 { app: "YouTube Music im Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
                 { app: "Mein Server", base: "Caddy und PHP" },
-                { app: "Browser, Spiele, Chat", base: "Steam, Discord (unverändert, Eigentum der jeweiligen Firmen)" }
+                { app: "Browser", base: "Electron (Chromium)" },
+                { app: "Spiele, Chat", base: "Steam, Discord Web (unverändert, Eigentum der jeweiligen Firmen)" }
             ]
             delegate: SettingRow {
                 required property var modelData
