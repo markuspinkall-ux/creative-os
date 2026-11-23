@@ -89,6 +89,13 @@ Window {
         audioOn = false
         if (a) { audioIn.device = a; audioOn = true }
         updateChannelSource()
+        if (audioOn && !selftest) echoCheck.restart()
+    }
+    // Echo/Pfeifen: läuft der Ton der Karte schon woanders, oder ist ein Mikrofon gewählt?
+    Timer {
+        id: echoCheck
+        interval: 2500
+        onTriggered: if (win.audioOn) capture.checkEcho(capture.deviceKey(audioIn.device.id), capture.deviceKey(cam.cameraDevice.id))
     }
 
     function applyDevice(dev) {
@@ -320,7 +327,7 @@ Window {
                 currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(devices.audioInputs, audioIn.device) + 1) : 0
                 onActivated: (i) => {
                     if (i === 0) { win.audioOn = false; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), "none") }
-                    else { audioIn.device = devices.audioInputs[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(devices.audioInputs[i - 1].id)) }
+                    else { audioIn.device = devices.audioInputs[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(devices.audioInputs[i - 1].id)); echoCheck.restart() }
                     win.updateChannelSource()
                 }
                 Accessible.name: "Tonquelle"

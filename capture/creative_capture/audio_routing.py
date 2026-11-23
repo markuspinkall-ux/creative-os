@@ -135,3 +135,53 @@ def capture_card(device, sysfs=Path('/sys/class/video4linux')):
     if any(w in label for w in WEBCAM_WORDS):
         return ''
     return 'Capture-Karte' if any(w in label for w in CAPTURE_WORDS) else ''
+
+
+# ---- Doppelter Ton (Echo/Pfeifen) ----------------------------------------------------------------
+MONITOR_TAG = "gibeon-capture-mithoeren"       # Name der eigenen Wiedergabe (ffmpeg) – wiedererkennbar
+
+
+def stale_monitors(ps_text, own_pid=0):
+    """PIDs übrig gebliebener eigener Wiedergaben (z. B. nach einem Absturz von Capture)."""
+    pids = []
+    for line in ps_text.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit() and MONITOR_TAG in parts[1] and "ffmpeg" in parts[1]:
+            pid = int(parts[0])
+            if pid != own_pid:
+                pids.append(pid)
+    return pids
+
+
+def other_players(sink_inputs, source_name):
+    """Programme, die den Ton derselben Capture-Karte schon abspielen (→ Echo).
+    sink_inputs: pactl -f json list sink-inputs; source_name: PipeWire-Name der Tonquelle."""
+    names = []
+    for si in sink_inputs or []:
+        props = si.get("properties") or {}
+        app = str(props.get("application.name") or props.get("node.name") or "")
+        media = str(props.get("media.name") or "")
+        target = str(props.get("node.target") or props.get("target.object") or "")
+        label = f"{app} {media}"
+        if MONITOR_TAG in label or app.startswith("Capture"):
+            continue
+        if "Mithören" in label or (source_name and source_name in target) or "loopback" in label.lower():
+            nice = "Studio (Mithören)" if "Mithören" in label else (app or media or "ein anderes Programm")
+            if nice not in names:
+                names.append(nice)
+    return names
+
+
+def is_capture_audio(source_name, video_id):
+    """Gehört die gewählte Tonquelle zur Capture-Karte (gleiches Gerät)? Sonst z. B. ein Mikrofon."""
+    target = video_usb(video_id)
+    if not target or not source_name:
+        return True
+    try:
+        proc = subprocess.run(['pactl', '-f', 'json', 'list', 'sources'], capture_output=True, text=True, timeout=3)
+        for source in json.loads(proc.stdout or "[]"):
+            if source.get('name') == source_name:
+                return source_usb(source.get('properties') or {}) == target
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return True
+    return True

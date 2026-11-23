@@ -116,3 +116,21 @@ class CaptureCardTests(unittest.TestCase):
             self.assertEqual(capture_card("/dev/video3", v), "")
             self.assertEqual(capture_card("/dev/video4", v), "MacroSilicon")
             self.assertEqual(capture_card("/dev/video5", v), "")
+
+
+class EchoTests(unittest.TestCase):
+    def test_alte_wiedergabe_erkennen(self):
+        stale_monitors = routing.stale_monitors
+        ps = ("  101 /usr/bin/python3 -m creative_capture\n"
+              "  202 ffmpeg -nostdin -f pulse -name gibeon-capture-mithoeren -i alsa_input.x -f pulse Capture\n"
+              "  303 ffmpeg -i film.mp4 out.mkv\n")
+        self.assertEqual(stale_monitors(ps), [202])
+        self.assertEqual(stale_monitors(ps, own_pid=202), [])
+
+    def test_studio_spielt_schon(self):
+        other_players = routing.other_players
+        inputs = [{"properties": {"application.name": "Studio (Mithören)", "media.name": "Studio (Mithören)"}},
+                  {"properties": {"application.name": "Firefox", "media.name": "YouTube"}},
+                  {"properties": {"application.name": "gibeon-capture-mithoeren"}}]
+        self.assertEqual(other_players(inputs, "alsa_input.usb-Elgato"), ["Studio (Mithören)"])
+        self.assertEqual(other_players([{"properties": {"application.name": "Firefox"}}], "x"), [])
