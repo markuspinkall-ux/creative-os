@@ -96,7 +96,7 @@ Window {
     function applyAudio(dev) {
         const a = dev ? pickAudio(dev) : null
         audioOn = false
-        if (a) { audioIn.device = a; audioOn = true }
+        if (a) { audioIn.device = a; chosenAudio = capture.deviceKey(a.id); audioOn = true }
         updateChannelSource()
         if (audioOn && !selftest) echoCheck.restart()
     }
@@ -104,7 +104,7 @@ Window {
     Timer {
         id: echoCheck
         interval: 2500
-        onTriggered: if (win.audioOn) capture.checkEcho(capture.deviceKey(audioIn.device.id), capture.deviceKey(cam.cameraDevice.id))
+        onTriggered: if (win.audioOn) capture.checkEcho(win.chosenAudio, capture.deviceKey(cam.cameraDevice.id))
     }
 
     function applyDevice(dev) {
@@ -122,11 +122,13 @@ Window {
 
     property bool audioOn: false
     property string monitorSource: ""
+    // gewählte Tonquelle als Name – nie aus audioIn.device lesen: Qt setzt das gern still aufs Standard-Mikro zurück
+    property string chosenAudio: ""
     property int channelCount: 0
     property int monitorChannel: 0
 
     function updateChannelSource() {
-        monitorSource = audioOn ? capture.deviceKey(audioIn.device.id) : ""
+        monitorSource = audioOn ? win.chosenAudio : ""
         channelCount = monitorSource ? capture.channelCount(monitorSource) : 0
         const saved = capture.savedChannel(monitorSource)
         monitorChannel = saved <= channelCount ? saved : 0
@@ -199,6 +201,11 @@ Window {
         muted: capture.get("muted") === true
     }
 
+    function indexOfKey(list, key) {
+        for (let i = 0; i < list.length; i++)
+            if (capture.deviceKey(list[i].id) === key) return i
+        return -1
+    }
     function indexOfDev(list, dev) {
         if (!dev) return -1
         for (let i = 0; i < list.length; i++)
@@ -339,10 +346,10 @@ Window {
                 id: audioBox
                 width: Math.min(200, barRow.selectorWidth)
                 model: ["Ton aus / Quelle wählen"].concat(win.audioSources.map(d => d.description))
-                currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(win.audioSources, audioIn.device) + 1) : 0
+                currentIndex: win.audioOn ? Math.max(0, win.indexOfKey(win.audioSources, win.chosenAudio) + 1) : 0
                 onActivated: (i) => {
                     if (i === 0) { win.audioOn = false; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), "none") }
-                    else { audioIn.device = win.audioSources[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(win.audioSources[i - 1].id)); echoCheck.restart() }
+                    else { audioIn.device = win.audioSources[i - 1]; win.chosenAudio = capture.deviceKey(win.audioSources[i - 1].id); win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(win.audioSources[i - 1].id)); echoCheck.restart() }
                     win.updateChannelSource()
                 }
                 Accessible.name: "Tonquelle"

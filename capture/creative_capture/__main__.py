@@ -203,6 +203,10 @@ class Capture(QObject):
         self.stopMonitor()
         if not source or source.endswith(".monitor") or not 0 <= channel <= max(channels, 1) or channels > 32:
             return
+        from .audio_routing import is_capture_source_name
+        if not is_capture_source_name(source):
+            self.toast.emit("Kein Ton: die gewählte Quelle ist keine Capture-Karte")
+            return
         gain = max(0.0, min(1.0, volume))
         if channel == 0:
             mix = f"volume={gain}"
@@ -227,6 +231,9 @@ class Capture(QObject):
         self.stopAudioRec()
         self._arec_file = ""
         if not source or source.endswith(".monitor") or not video_path or channels > 32:
+            return
+        from .audio_routing import is_capture_source_name
+        if not is_capture_source_name(source):
             return
         out = video_path + ".ton.mka"
         args = ["-nostdin", "-loglevel", "error", "-y", "-f", "pulse", "-channels", str(max(channels, 2) if channel == 0 else channels),
