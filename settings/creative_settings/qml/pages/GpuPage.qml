@@ -23,9 +23,40 @@ SettingsPage {
     Card {
         Item {
             width: parent.width
-            height: 150
-            Rectangle {
+            height: 160
+            // Hersteller-Abzeichen (GeForce RTX / Radeon Graphics) mit der Modellnummer dahinter;
+            // andere Karten: Abzeichen aus Schrift
+            readonly property bool rtx: root.g.vendor === "nvidia" && /RTX/i.test(gpu.badge[0] || "")
+            readonly property bool radeon: root.g.vendor === "amd" && /Radeon/i.test(gpu.badge[0] || "")
+            readonly property string modelText: {
+                let m = (gpu.badge[1] || "").replace(/\s*(Laptop GPU|GPU)$/i, "")
+                if (radeon && /\bRX\b/i.test(gpu.badge[0] || "")) m = "RX " + m
+                return m
+            }
+            Row {
                 id: badge
+                visible: parent.rtx || parent.radeon
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 18
+                Image {
+                    id: logo
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: badge.parent.rtx ? "grafik/nvidia-geforce-rtx.png" : badge.parent.radeon ? "grafik/amd-radeon-graphics.png" : ""
+                    height: badge.parent.radeon ? 120 : 100
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: badge.parent.modelText
+                    color: Theme.text
+                    font.family: Theme.fontFamily; font.pixelSize: 56; font.bold: true
+                }
+            }
+            Rectangle {
+                id: textBadge
+                visible: !badge.visible
                 width: 250; height: 130; radius: 18
                 anchors.verticalCenter: parent.verticalCenter
                 gradient: Gradient {
@@ -54,7 +85,7 @@ SettingsPage {
                 }
             }
             Column {
-                x: badge.width + 24
+                x: (badge.visible ? badge.width : textBadge.width) + 32
                 width: parent.width - x
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6

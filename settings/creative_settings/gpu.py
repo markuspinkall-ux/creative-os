@@ -160,6 +160,12 @@ def sysfs_gpus(root="/sys/class/drm"):
 
 
 def read_gpu():
+    fake = os.environ.get("CREATIVE_GPU_FAKE")            # nur für Vorschau-Fotos
+    if fake:
+        try:
+            return json.loads(fake)
+        except ValueError:
+            pass
     if shutil.which("nvidia-smi"):
         try:
             out = subprocess.run(["nvidia-smi", "--query-gpu=" + ",".join(NVSMI_FIELDS),
