@@ -227,11 +227,20 @@ def capture_audio_ids(video_id=""):
         sources = json.loads(proc.stdout or "[]")
     except (OSError, ValueError, subprocess.SubprocessError):
         return []
-    out = []
+    return pick_console_audio(sources, target)
+
+
+def pick_console_audio(sources, target):
+    """Nur der Ton der gerade gewählten Konsole: gleiches Gerät wie das Bild.
+    Nur wenn die Karte ihren Ton als eigenes Gerät meldet, bleiben Capture-Karten-Quellen übrig."""
+    same, cards = [], []
     for source in sources:
         name = source.get("name", "")
         if not name or name.endswith(".monitor"):
             continue
-        if capture_audio_source(source.get("properties") or {}, target):
-            out.append(name)
-    return out
+        props = source.get("properties") or {}
+        if target and source_usb(props) == target:
+            same.append(name)
+        elif capture_audio_source(props, target):
+            cards.append(name)
+    return same if same else cards

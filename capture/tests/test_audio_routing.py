@@ -155,3 +155,15 @@ class NurCaptureTonTests(unittest.TestCase):
              patch.object(routing, '_usb_vendor', return_value='1234'):
             self.assertTrue(routing.capture_audio_source({}, video_target='/usb/x'))
             self.assertFalse(routing.capture_audio_source({"device.description": "HyperX QuadCast S"}, video_target='/usb/y'))
+
+
+class NurKonsolenTonTests(unittest.TestCase):
+    def test_nur_ton_der_gewaehlten_konsole(self):
+        quellen = [{"name": "ps5"}, {"name": "switch"}, {"name": "webcam"}, {"name": "ps5.monitor"}]
+        keys = {"ps5": "/usb/a", "switch": "/usb/b", "webcam": "/usb/c", "ps5.monitor": "/usb/a"}
+        with patch.object(routing, 'source_usb', side_effect=lambda p: keys[p["n"]]), \
+             patch.object(routing, 'capture_audio_source', side_effect=lambda p, t: p["n"] != "webcam"):
+            for q in quellen:
+                q["properties"] = {"n": q["name"]}
+            self.assertEqual(routing.pick_console_audio(quellen, "/usb/a"), ["ps5"])
+            self.assertEqual(routing.pick_console_audio(quellen, "/usb/z"), ["ps5", "switch"])
