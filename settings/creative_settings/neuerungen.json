@@ -11,7 +11,9 @@
       "Rechtsklick-Menüs im Gibeon-Look statt des schwarzen Standardmenüs: in Studio, Deck, Rechner, im Chat von Studio, in YouTube Music im Player und in allen Textfeldern (Rückgängig, Ausschneiden, Kopieren, Einfügen, Alles markieren).",
       "Studio: Bei Kameras steht im Rechtsklick-Menü nicht mehr „Auf HDMI-A-1 zeigen“ und Co. Nur Capture-Karten (z. B. Konsole) bieten noch an, das Spiel auf einem anderen Monitor zu zeigen – mit verständlichen Namen („Monitor 2“)."
     ],
-    "behoben": []
+    "behoben": [
+      "Willkommen-Fenster: Der Schalter „Land anonym mitteilen“ war beim ersten Start ohne Funktion und meldete Fehler."
+    ]
   },
   {
     "datum": "2026-11-22",
