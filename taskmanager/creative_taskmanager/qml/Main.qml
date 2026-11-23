@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -170,6 +171,7 @@ Window {
         }
 
         TextField {
+            GibeonT.ContextMenu.menu: CTextMenu {}
             id: search
             visible: win.page === "processes" || win.page === "details"
             anchors.left: pageTitle.right
@@ -318,6 +320,7 @@ Window {
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
             }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: runField
                 width: parent.width
                 height: 40

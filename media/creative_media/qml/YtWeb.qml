@@ -1,5 +1,6 @@
 import QtQuick
 import QtWebEngine
+import Creative
 
 // Die offizielle YouTube-Music-Webseite als Player (meist unsichtbar: man hört nur die Musik,
 // auch Werbung bleibt hörbar – das Video wird nicht gezeigt). Anmeldung bleibt gespeichert.
@@ -12,6 +13,8 @@ WebEngineView {
     settings.fullScreenSupportEnabled: true
     settings.localStorageEnabled: true
     settings.javascriptCanOpenWindows: false
+    onContextMenuRequested: (request) => webMenu.show(request)
+    CWebMenu { id: webMenu; view: web }
 
 
     // Was läuft gerade? (Titel, Interpret, Bild – für Herz und Favoriten)

@@ -195,6 +195,21 @@ def source_branch(src, w, h, fps, n):
             f"! queue max-size-buffers=2 leaky=downstream")
 
 
+KEY_TOL = (8.0, 70.0, 24.0)       # Grünschlüssel „Toleranz“ (alpha angle): min, max, Standard
+KEY_SOFT = (0.0, 32.0, 3.0)       # „Weiche Kanten“ (alpha noise-level)
+
+
+def key_values(src):
+    """(angle, noise-level) für den Grünschlüssel aus den Einstellungen einer Quelle."""
+    def clamp(v, lim):
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return lim[2]
+        return max(lim[0], min(lim[1], v))
+    return clamp(src.get("keyTol", KEY_TOL[2]), KEY_TOL), clamp(src.get("keySoft", KEY_SOFT[2]), KEY_SOFT)
+
+
 def feeder_description(src, w, h, fps):
     """Zuliefer-Pipeline einer Bildquelle bis appsink „out“ (BGRA in Mischpultgröße).
     src["green"]: grünen Hintergrund durchsichtig machen (z. B. „Gibeon Kamera“ mit Greenscreen)."""
@@ -205,7 +220,9 @@ def feeder_description(src, w, h, fps):
     chain = "videoconvert n-threads=0 ! "
     if src.get("type") in ("video", "test"):
         if src.get("green") and gst.has("alpha"):
-            chain += "alpha method=green angle=24 noise-level=3 black-sensitivity=80 white-sensitivity=80 ! videoconvert n-threads=0 ! "
+            angle, noise = key_values(src)
+            chain += (f"alpha name=key method=green angle={angle:g} noise-level={noise:g} "
+                      "black-sensitivity=80 white-sensitivity=80 ! videoconvert n-threads=0 ! ")
         if gst.has("aspectratiocrop"):
             chain += "aspectratiocrop aspect-ratio=16/9 ! "
     return (f"{desc} ! {chain}videoscale n-threads=0 add-borders=true ! videorate ! {raw} "
@@ -306,12 +323,21 @@ class Feeder:
             self.appsrc = None
 
 
-def pad_props(rect, z):
-    """Pad-Eigenschaften des Mischpults für ein Rechteck (x, y, b, h) – None = ausgeblendet."""
+def pad_props(rect, z, alpha=1.0):
+    """Pad-Eigenschaften des Mischpults für ein Rechteck (x, y, b, h) – None = ausgeblendet.
+    alpha: Deckkraft der Quelle (0–1)."""
     if not rect:
         return {"alpha": 0.0}
     x, y, rw, rh = rect
-    return {"xpos": int(x), "ypos": int(y), "width": _even(rw), "height": _even(rh), "zorder": int(z), "alpha": 1.0}
+    return {"xpos": int(x), "ypos": int(y), "width": _even(rw), "height": _even(rh), "zorder": int(z),
+            "alpha": round(max(0.0, min(1.0, float(alpha))), 3)}
+
+
+def _pp(L):
+    """pad_props für einen Layout-Eintrag (x, y, b, h, z[, deckkraft]) oder None."""
+    if not L:
+        return pad_props(None, 0)
+    return pad_props(L[:4], L[4], L[5] if len(L) > 5 else 1.0)
 
 
 def build_description(cfg, sources, audio, layout=None, rec_layout=None):
@@ -338,11 +364,11 @@ def build_description(cfg, sources, audio, layout=None, rec_layout=None):
         key = src["key"]
         pads[key] = f"sink_{n}"
         L = layout.get(key)
-        props = pad_props(L[:4] if L else None, L[4] if L else 0)
+        props = _pp(L)
         padprops += [f"sink_{n}::{k}={v}" for k, v in props.items()]
         if split:
             R = rec_layout.get(key)
-            rprops += [f"sink_{n}::{k}={v}" for k, v in pad_props(R[:4] if R else None, R[4] if R else 0).items()]
+            rprops += [f"sink_{n}::{k}={v}" for k, v in _pp(R).items()]
             branches.append(f"{d} ! tee name=st_{n} allow-not-linked=true  "
                             f"st_{n}. ! queue max-size-buffers=2 leaky=downstream ! mix.sink_{n}  "
                             f"st_{n}. ! queue max-size-buffers=2 leaky=downstream ! rmix.sink_{n}")
@@ -883,11 +909,29 @@ class Mixer:
                     if not pad:
                         continue
                     L = lay.get(key)
-                    for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
+                    for k, v in _pp(L).items():
                         gst.set_prop(pad, k, v)
                     gst.object_unref(pad)
             finally:
                 gst.object_unref(mix)
+
+    def set_key(self, key, src):
+        """Grünschlüssel einer laufenden Quelle live nachstellen (ohne Neuaufbau, ohne Flackern).
+        False: geht nicht live (Quelle hat noch keinen Schlüssel) – dann neu aufbauen."""
+        f = self.feeders.get(key)
+        if not f or not f.pipe:
+            return False
+        el = gst.bin_by_name(f.pipe, b"key")
+        if not el:
+            return False
+        try:
+            angle, noise = key_values(src)
+            gst.set_prop(el, "angle", angle)
+            gst.set_prop(el, "noise-level", noise)
+        finally:
+            gst.object_unref(el)
+        f.src = dict(f.src, keyTol=src.get("keyTol"), keySoft=src.get("keySoft"))
+        return True
 
     def set_rounds(self, rounds):
         """rounds: {key: anteil} – Ecken der Kameras."""
@@ -909,7 +953,7 @@ class Mixer:
         mix = gst.bin_by_name(self.pipe, b"mix")
         pad = gst.request_pad(mix, b"sink_%u")
         L = (layout or {}).get(src["key"])
-        for k, v in pad_props(L[:4] if L else None, L[4] if L else 0).items():
+        for k, v in _pp(L).items():
             gst.set_prop(pad, k, v)
         gst.bin_add(self.pipe, branch)
         out = gst.static_pad(branch, b"src")

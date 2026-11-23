@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Window
@@ -1139,6 +1140,7 @@ Item {
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 TextArea {
+                    GibeonT.ContextMenu.menu: CTextMenu {}
                     id: notesArea
                     objectName: "notesArea"
                     text: widgetExtras.notesText
@@ -1247,6 +1249,7 @@ Item {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                 TextArea {
+                    GibeonT.ContextMenu.menu: CTextMenu {}
                     id: field
                     selectByMouse: true
                     color: Theme.text
@@ -1601,6 +1604,7 @@ Item {
             }
             // Namen bearbeiten – direkt unter dem Symbol
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: renameField
                 readonly property bool editing: root.renamePath === model.path
                 visible: editing

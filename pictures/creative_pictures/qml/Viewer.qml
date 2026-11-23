@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 
@@ -379,6 +380,7 @@ Item {
             spacing: 14
             Text { text: "Umbenennen"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 17; font.bold: true }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: nameField
                 width: parent.width
                 height: 40

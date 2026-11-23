@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Creative
@@ -49,6 +50,7 @@ Item {
             Layout.fillWidth: true
             spacing: 10
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: field
                 Layout.fillWidth: true
                 implicitHeight: 38

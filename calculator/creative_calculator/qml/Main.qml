@@ -135,16 +135,10 @@ Window {
                 acceptedButtons: Qt.RightButton
                 onClicked: copyMenu.popup()
             }
-            Menu {
+            CMenu {
                 id: copyMenu
-                MenuItem { text: "Kopieren"; onTriggered: { calc.copy(); toast.show("Ergebnis kopiert") } }
-                MenuItem { text: "Einfügen"; onTriggered: calc.paste() }
-                background: Rectangle { implicitWidth: 160; radius: 10; color: Theme.raised; border.color: Theme.hairline }
-                delegate: MenuItem {
-                    id: mi
-                    contentItem: Text { text: mi.text; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; leftPadding: 6 }
-                    background: Rectangle { radius: 8; color: mi.highlighted ? Theme.hover : "transparent" }
-                }
+                CMenuItem { text: "Kopieren"; onTriggered: { calc.copy(); toast.show("Ergebnis kopiert") } }
+                CMenuItem { text: "Einfügen"; onTriggered: calc.paste() }
             }
         }
 

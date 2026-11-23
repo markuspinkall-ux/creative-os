@@ -615,6 +615,8 @@ class Studio(QObject):
             out.append({"id": it["id"], "kind": it["kind"], "label": label, "device": it.get("device", ""),
                         "x": it["x"], "y": it["y"], "w": it["w"], "h": item_height(it),
                         "round": it.get("round", False), "green": it.get("green", False),
+                        "opacity": it.get("opacity", 1.0), "keyTol": it.get("keyTol", engine.KEY_TOL[2]),
+                        "keySoft": it.get("keySoft", engine.KEY_SOFT[2]),
                         "hidden": it.get("hidden", False), "ok": item_key(it) is not None,
                         "virtual": is_virtual(names.get(it.get("device"), "")),
                         "url": it.get("url", ""), "bw": it.get("bw", 800), "bh": it.get("bh", 600)})
@@ -848,7 +850,8 @@ class Studio(QObject):
         if k == "screen":
             return dict(self.screen, key=key) if self.screen else None
         if k in ("camera", "capture"):
-            src = {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green"))}
+            src = {"key": key, "type": "video", "device": it["device"], "green": bool(it.get("green")),
+                   "keyTol": it.get("keyTol", engine.KEY_TOL[2]), "keySoft": it.get("keySoft", engine.KEY_SOFT[2])}
             dev = next((d for d in self.video_list if d["id"] == it["device"]), {})
             if dev.get("virtual") and not self._broadcast_checked:
                 self._broadcast_checked = True          # einmal je Start: Broadcast einschalten
@@ -864,7 +867,8 @@ class Studio(QObject):
                 return None
             return {"key": key, "type": "image", "file": img[0], "w": img[1], "h": img[2]}
         if k == "test":
-            return {"key": key, "type": "test", "pattern": it.get("pattern", "smpte"), "green": bool(it.get("green"))}
+            return {"key": key, "type": "test", "pattern": it.get("pattern", "smpte"), "green": bool(it.get("green")),
+                    "keyTol": it.get("keyTol", engine.KEY_TOL[2]), "keySoft": it.get("keySoft", engine.KEY_SOFT[2])}
         if k in ("browser", "umfrage"):
             return {"key": key, "type": "browser", "w": it.get("bw", 800), "h": it.get("bh", 600)}
         return None
@@ -936,7 +940,7 @@ class Studio(QObject):
             key = item_key(it)
             if not key or it.get("hidden") or key in layout:
                 continue
-            layout[key] = (it["x"] * W, it["y"] * H, it["w"] * W, item_height(it) * H, z)
+            layout[key] = (it["x"] * W, it["y"] * H, it["w"] * W, item_height(it) * H, z, float(it.get("opacity", 1.0)))
             rounds[key] = engine.ROUND if it.get("round") else 0.0
         return layout, rounds
 
@@ -1122,7 +1126,26 @@ class Studio(QObject):
     @Slot(int, str, "QVariant")
     def setItem(self, index, field, value):
         it = self._item(index)
-        if not it or field not in ("device", "round", "hidden", "green", "name", "url", "bw", "bh"):
+        if not it or field not in ("device", "round", "hidden", "green", "name", "url", "bw", "bh",
+                                   "opacity", "keyTol", "keySoft", "keyReset"):
+            return
+        if field == "opacity":
+            it["opacity"] = round(max(0.05, min(1.0, float(value or 0))), 3)
+            self._apply()
+            self._save_later.start()
+            self.changed.emit()
+            return
+        if field in ("keyTol", "keySoft", "keyReset"):
+            if field == "keyReset":
+                it["keyTol"], it["keySoft"] = engine.KEY_TOL[2], engine.KEY_SOFT[2]
+            else:
+                lim = engine.KEY_TOL if field == "keyTol" else engine.KEY_SOFT
+                it[field] = round(max(lim[0], min(lim[1], float(value or 0))), 1)
+            key = item_key(it)
+            if key and not self.mixer.set_key(key, it):
+                self._structure()
+            self._save_later.start()
+            self.changed.emit()
             return
         if field in ("url", "bw", "bh"):
             if field == "url":

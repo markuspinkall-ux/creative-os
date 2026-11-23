@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 
@@ -50,6 +51,7 @@ Item {
             border.color: searchField.activeFocus ? Theme.accent : "transparent"
             SvgIcon { x: 14; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 15 }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: searchField
                 anchors.fill: parent
                 anchors.leftMargin: 36

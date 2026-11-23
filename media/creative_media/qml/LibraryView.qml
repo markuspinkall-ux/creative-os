@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 
@@ -43,6 +44,7 @@ Item {
         spacing: 8
 
         TextField {
+            GibeonT.ContextMenu.menu: CTextMenu {}
             id: search
             width: 280
             height: 38

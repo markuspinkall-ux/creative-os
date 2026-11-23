@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Window
 import Creative
@@ -71,6 +72,7 @@ ApplicationWindow {
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 13
             }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: nameField
                 width: parent.width; height: 44
                 placeholderTextColor: Theme.textMuted
@@ -247,6 +249,7 @@ ApplicationWindow {
                     Row {
                         x: 20; anchors.verticalCenter: parent.verticalCenter; spacing: 10; width: parent.width - 40
                         TextField {
+                            GibeonT.ContextMenu.menu: CTextMenu {}
                             id: input
                             width: parent.width - 52; height: 44
                             enabled: messenger.chatInfo.status === "accepted"
@@ -310,6 +313,7 @@ ApplicationWindow {
                 Row {
                     width: parent.width; spacing: 10
                     TextField {
+                        GibeonT.ContextMenu.menu: CTextMenu {}
                         id: idField
                         width: parent.width - sendReq.width - 10; height: 44
                         placeholderTextColor: Theme.textMuted

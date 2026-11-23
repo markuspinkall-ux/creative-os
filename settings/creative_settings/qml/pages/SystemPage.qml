@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 import ".."
@@ -110,6 +111,7 @@ SettingsPage {
             Row {
                 spacing: 8
                 TextField {
+                    GibeonT.ContextMenu.menu: CTextMenu {}
                     id: nameField
                     width: 260
                     height: 36

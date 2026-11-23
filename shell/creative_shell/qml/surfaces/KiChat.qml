@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Window
@@ -429,6 +430,7 @@ Window {
                     anchors.bottom: parent.bottom
                     anchors.leftMargin: 8
                     TextArea {
+                        GibeonT.ContextMenu.menu: CTextMenu {}
                         id: input
                         placeholderText: "Frag mich etwas …"
                         placeholderTextColor: Theme.textMuted

@@ -1,10 +1,15 @@
 [
   {
     "datum": "2026-11-23",
-    "titel": "Danksagung aktualisiert: OBS raus",
-    "neu": [],
+    "titel": "Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio nachstellbar",
+    "neu": [
+      "Studio: Grünfilter nachträglich verfeinern – „Toleranz“ und „Weiche Kanten“ wirken sofort, ohne dass die Kamera neu startet; „Standard wiederherstellen“ holt die Ausgangswerte zurück.",
+      "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo."
+    ],
     "verbessert": [
-      "System › Über Gibeon OS: OBS Studio steht nicht mehr in der Danksagung (ist ja durch Studio ersetzt). Neu genannt: GStreamer für Studio und Electron für den Browser."
+      "System › Über Gibeon OS: OBS Studio steht nicht mehr in der Danksagung (ist ja durch Studio ersetzt). Neu genannt: GStreamer für Studio und Electron für den Browser.",
+      "Rechtsklick-Menüs im Gibeon-Look statt des schwarzen Standardmenüs: in Studio, Deck, Rechner, im Chat von Studio, in YouTube Music im Player und in allen Textfeldern (Rückgängig, Ausschneiden, Kopieren, Einfügen, Alles markieren).",
+      "Studio: Bei Kameras steht im Rechtsklick-Menü nicht mehr „Auf HDMI-A-1 zeigen“ und Co. Nur Capture-Karten (z. B. Konsole) bieten noch an, das Spiel auf einem anderen Monitor zu zeigen – mit verständlichen Namen („Monitor 2“)."
     ],
     "behoben": []
   },

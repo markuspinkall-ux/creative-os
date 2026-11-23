@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 import ".."
@@ -150,6 +151,7 @@ SettingsPage {
             }
             Text { text: "Name"; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13 }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: nameField
                 width: parent.width
                 height: 38
@@ -230,6 +232,7 @@ SettingsPage {
                 color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12
             }
             TextField {
+                GibeonT.ContextMenu.menu: CTextMenu {}
                 id: renameField
                 width: parent.width
                 height: 38
