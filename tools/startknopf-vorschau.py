@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtCore import QMetaObject, QTimer, QUrl
 from PySide6.QtGui import QGuiApplication, QImage, QPainter, QColor
 from PySide6.QtQuick import QQuickView
 
@@ -17,7 +17,7 @@ import QtQuick
 import Creative
 Rectangle {
     width: 80; height: 80; color: "#1c2029"
-    property alias button: b
+    function go() { b.fly() }
     StartButton { id: b; anchors.centerIn: parent }
 }
 """)
@@ -47,7 +47,7 @@ def grab(i):
 
 
 def start():
-    view.rootObject().property("button").fly()
+    QMetaObject.invokeMethod(view.rootObject(), "go")
     grab(0)
 
 
