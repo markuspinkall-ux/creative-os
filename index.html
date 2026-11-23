@@ -28,11 +28,11 @@ svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.9;stroke
 /* ---------- Navigation ---------- */
 header.nav{position:sticky;top:0;z-index:50;background:rgba(18,21,27,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 header.nav .wrap{display:flex;align-items:center;gap:28px;height:64px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:18px;letter-spacing:-.2px}
+.brand{white-space:nowrap;flex:none;display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:18px;letter-spacing:-.2px}
 .brand .logo{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center}
 .brand .logo svg{width:22px;height:22px}
-nav.links{display:flex;gap:22px;margin-left:auto;font-size:14.5px}
-nav.links a{text-decoration:none;color:var(--muted);transition:color .12s}
+nav.links{display:flex;gap:20px;margin-left:auto;font-size:14.5px}
+nav.links a{white-space:nowrap;text-decoration:none;color:var(--muted);transition:color .12s}
 nav.links a:hover{color:var(--text)}
 .btn{display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 20px;border-radius:12px;border:0;font:inherit;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;transition:transform .12s,background .12s,box-shadow .12s}
 .btn.primary{background:var(--accent);color:var(--accent-text)}
@@ -40,6 +40,8 @@ nav.links a:hover{color:var(--text)}
 .btn.ghost{background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
 .btn.ghost:hover{background:var(--raised)}
 .btn.sm{height:38px;padding:0 16px;font-size:14px;border-radius:10px}
+@media (max-width:1360px){nav.links{gap:16px;font-size:14px} .design-switch span{display:none}}
+@media (max-width:1060px){nav.links a[href="#sicherheit"],nav.links a[href="#anforderungen"]{display:none}}
 @media (max-width:860px){nav.links{display:none} header.nav .btn{margin-left:auto}}
 @media (max-width:520px){header.nav .wrap{gap:10px} header.nav .btn.sm{padding:0 12px} .brand{font-size:16px}}
 
