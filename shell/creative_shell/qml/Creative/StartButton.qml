@@ -8,17 +8,19 @@ Item {
 
     property bool open: false
     signal clicked()
+    // Kreis etwas kleiner als der Platz (40): größer als die App-Symbole (30), aber nicht so wuchtig
+    readonly property int disc: 34
 
     implicitWidth: 40
     implicitHeight: 40
 
     // weiches Leuchten (zwei Ringe, nach außen schwächer)
     Repeater {
-        model: [{ grow: 12, a: 0.10 }, { grow: 6, a: 0.18 }]
+        model: [{ grow: 10, a: 0.10 }, { grow: 5, a: 0.18 }]
         delegate: Rectangle {
             required property var modelData
             anchors.centerIn: parent
-            width: root.width + modelData.grow
+            width: root.disc + modelData.grow
             height: width
             radius: width / 2
             color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b,
@@ -28,7 +30,9 @@ Item {
     }
 
     Rectangle {
-        anchors.fill: parent
+        anchors.centerIn: parent
+        width: root.disc
+        height: root.disc
         radius: width / 2
         color: mouse.pressed ? Qt.darker(Theme.accent, 1.15)
                              : (mouse.containsMouse ? Qt.lighter(Theme.accent, 1.08) : Theme.accent)
@@ -46,7 +50,7 @@ Item {
         SvgIcon {
             anchors.centerIn: parent
             name: "rocket"
-            size: 22
+            size: 19
         }
     }
 
