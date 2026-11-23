@@ -1,5 +1,6 @@
 """Vorschau des Schnellzugriffs (QuickPanel) mit Beispieldaten.
-   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus] [vpn-an|vpn-aus|vpn-leer]"""
+   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus] [vpn-an|vpn-aus|vpn-leer] [teil]
+   teil: network (Standard), volume, printer, calendar – welcher Teil des Schnellzugriffs gezeigt wird"""
 import sys
 from pathlib import Path
 
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 out = sys.argv[1]
 awake = len(sys.argv) > 2 and sys.argv[2] == "an"
 vpn_state = sys.argv[3] if len(sys.argv) > 3 else "vpn-aus"
+section = sys.argv[4] if len(sys.argv) > 4 else ""
 
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)

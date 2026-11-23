@@ -465,8 +465,22 @@ class ShellController(QObject):
 
     @Slot(str)
     def toggleQuickPanel(self, name):
-        self._panel_focus = ""
-        self._side_for("panel", self._tray_home(), name)
+        """Klick auf eine freie Stelle im Tray: Netzwerk-Teil (WLAN, VPN, Helligkeit, Nicht sperren)."""
+        self.toggleQuickSection(name, "network")
+
+    @Slot(str, str)
+    def toggleQuickSection(self, name, section):
+        """Tray-Symbol angeklickt: nur diesen Teil des Schnellzugriffs zeigen (volume/printer/network/calendar).
+        Ist der Schnellzugriff schon mit einem anderen Teil offen, wird nur umgeschaltet."""
+        section = section if section in ("volume", "printer", "network", "calendar") else "network"
+        side = "topright" if section == "calendar" else self._tray_home()
+        if self._open.get("panel") == name and self._panel_focus != section and self._tray_side.get("panel") == side:
+            self._panel_focus = section
+            self.openChanged.emit()
+            return
+        self._panel_focus = section
+        self.openChanged.emit()
+        self._side_for("panel", side, name)
         self._toggle(name, "panel")
 
     def _side_for(self, key, side, name):
@@ -482,11 +496,8 @@ class ShellController(QObject):
 
     @Slot(str)
     def toggleCalendar(self, name):
-        """Klick auf Uhr/Datum: Schnellzugriff öffnen und zum Kalender springen."""
-        self._panel_focus = "calendar"
-        self.openChanged.emit()
-        self._side_for("panel", "topright", name)
-        self._toggle(name, "panel")
+        """Klick auf Uhr/Datum: nur der Kalender."""
+        self.toggleQuickSection(name, "calendar")
 
     @Slot(str)
     def toggleMessenger(self, name):
