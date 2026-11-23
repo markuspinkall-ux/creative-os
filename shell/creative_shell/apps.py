@@ -47,14 +47,15 @@ SUITE = {
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop",
     "creative-writer.desktop", "gibeon-studio.desktop",
 }
-# Broadcast, Deck, Shots, Widgets, Pictures und 3D-Ansicht stehen nicht im Startmenü (NoDisplay):
+# Broadcast, Deck, Shots, Widgets, Pictures, 3D-Ansicht und Taskmanager stehen nicht im Startmenü (NoDisplay):
+# der Taskmanager kommt wie bei Windows mit Strg+Umschalt+Esc oder Strg+Alt+Entf;
 # Broadcast und Deck leben im Tray, Shots startet mit der Druck-Taste, Widgets per Rechtsklick auf den
 # Schreibtisch, Pictures und 3D-Ansicht öffnen sich beim Doppelklick auf ein Bild bzw. eine .glb-Datei.
 # Diese Apps stehen nie im Startmenü und nie im Ordner – auch wenn irgendwo noch eine ältere
 # Desktop-Datei ohne NoDisplay liegt (z. B. eine lokale Kopie unter ~/.local/share/applications).
 ALWAYS_HIDDEN = {"creative-widgets.desktop", "creative-pictures.desktop", "creative-3dansicht.desktop",
                  "creative-broadcast.desktop", "creative-deck.desktop", "creative-shots.desktop",
-                 "creative-chatgpt.desktop"}
+                 "creative-chatgpt.desktop", "creative-taskmanager.desktop"}
 OLD_PREFIX = "Creative "        # alte Namen ohne „Creative“ anzeigen
 
 
