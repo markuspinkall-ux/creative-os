@@ -244,3 +244,11 @@ def pick_console_audio(sources, target):
         elif capture_audio_source(props, target):
             cards.append(name)
     return same if same else cards
+
+
+def end_aligned_offset(video_seconds, audio_seconds):
+    """Ton und Bild enden gleichzeitig (beides stoppt beim selben Klick); der Ton startet etwas
+    früher als das Video – so viel wird vorne abgeschnitten. Unbekannte Länge → 0."""
+    if video_seconds <= 0 or audio_seconds <= 0:
+        return 0.0
+    return max(0.0, min(5.0, audio_seconds - video_seconds))

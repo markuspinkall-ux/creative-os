@@ -24,7 +24,8 @@
       "Kalender: Geht beim Klick auf die Uhr jetzt direkt über der Taskleiste auf – mit demselben Abstand wie die anderen Menüs.",
       "Rechtsklick-Menüs (Schreibtisch, Ablage, Dateien, Browser) gehen jetzt immer direkt am Mauszeiger auf – ist unten kein Platz, öffnen sie nach oben, statt weit über dem Zeiger zu landen.",
       "Capture: Kein doppelter Ton (Echo/Pfeifen) mehr – eine nach einem Absturz übrig gebliebene Ton-Wiedergabe wird beim Start beendet und endet künftig immer mit Capture. Spielt Studio den Ton der Karte schon ab oder ist versehentlich ein Mikrofon als Tonquelle gewählt, sagt Capture Bescheid.",
-      "Capture: kein Echo mehr – der Ton wird jetzt wie bei Studio fest von der gewählten Konsole abgespielt; vorher griff die Wiedergabe teils trotzdem das Webcam-Mikrofon ab. Als Tonquelle steht nur noch der Ton der gewählten Konsole zur Wahl"
+      "Capture: kein Echo mehr – der Ton wird jetzt wie bei Studio fest von der gewählten Konsole abgespielt; vorher griff die Wiedergabe teils trotzdem das Webcam-Mikrofon ab. Als Tonquelle steht nur noch der Ton der gewählten Konsole zur Wahl",
+      "Capture: Videoaufnahmen bekommen jetzt fest den Ton der gewählten Konsole – vorher konnte das Mikrofon statt der Konsole in der Datei landen"
     ]
   },
   {

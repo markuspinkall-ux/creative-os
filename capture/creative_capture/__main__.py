@@ -37,6 +37,15 @@ def user_dir(kind, fallback):
 from .audio_routing import MONITOR_TAG  # noqa: E402
 
 
+
+def _duration(path):
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+        return float(out)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 0.0
+
 class Capture(QObject):
     changed = Signal()
     toast = Signal(str)
@@ -51,6 +60,7 @@ class Capture(QObject):
         self._monitor.errorOccurred.connect(self._monitor_error)
         self._monitor.finished.connect(self._monitor_finished)
         QGuiApplication.instance().aboutToQuit.connect(self.stopMonitor)
+        QGuiApplication.instance().aboutToQuit.connect(self.stopAudioRec)
         self._kill_stale_monitors()
         try:
             data = json.loads(CFG.read_text(encoding="utf-8"))
@@ -210,6 +220,74 @@ class Capture(QObject):
             self._monitor.start("setpriv", ["--pdeathsig", "KILL", "ffmpeg", *args])
         else:
             self._monitor.start("ffmpeg", args)
+
+    # ---- Ton der Aufnahme: fest von der gewählten Konsole (Qt nähme sonst das Standard-Mikro) ----
+    @Slot(str, int, int, str)
+    def startAudioRec(self, source, channels, channel, video_path):
+        self.stopAudioRec()
+        self._arec_file = ""
+        if not source or source.endswith(".monitor") or not video_path or channels > 32:
+            return
+        out = video_path + ".ton.mka"
+        args = ["-nostdin", "-loglevel", "error", "-y", "-f", "pulse", "-channels", str(max(channels, 2) if channel == 0 else channels),
+                "-name", "gibeon-capture-aufnahme", "-i", source]
+        if 1 <= channel <= channels:
+            args += ["-af", f"pan=stereo|c0=c{channel - 1}|c1=c{channel - 1}"]
+        args += ["-ac", "2", "-c:a", "pcm_s16le", out]
+        self._arec = QProcess(self)
+        self._arec.setStandardOutputFile(QProcess.nullDevice())
+        self._arec.setStandardErrorFile(QProcess.nullDevice())
+        if shutil.which("setpriv"):
+            self._arec.start("setpriv", ["--pdeathsig", "TERM", "ffmpeg", *args])
+        else:
+            self._arec.start("ffmpeg", args)
+        self._arec_file = out
+
+    @Slot()
+    def stopAudioRec(self):
+        proc = getattr(self, "_arec", None)
+        if proc and proc.state() != QProcess.ProcessState.NotRunning:
+            proc.terminate()  # ffmpeg schließt die Datei sauber ab
+            if not proc.waitForFinished(3000):
+                proc.kill()
+                proc.waitForFinished(500)
+
+    @Slot(str, result=bool)
+    def finishRecording(self, video_path):
+        """Konsolen-Ton in die Aufnahme legen. True = läuft (Meldung kommt danach)."""
+        audio = getattr(self, "_arec_file", "")
+        self._arec_file = ""
+        if not audio or not os.path.exists(audio) or not os.path.exists(video_path):
+            return False
+        from .audio_routing import end_aligned_offset
+        offset = end_aligned_offset(_duration(video_path), _duration(audio))
+        tmp = video_path + ".tmp.mp4"
+        args = ["-nostdin", "-loglevel", "error", "-y", "-i", video_path, "-ss", f"{offset:.3f}", "-i", audio,
+                "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-shortest", "-movflags", "+faststart", tmp]
+        mux = QProcess(self)
+        mux.setStandardOutputFile(QProcess.nullDevice())
+        mux.setStandardErrorFile(QProcess.nullDevice())
+
+        def done(code, _status):
+            try:
+                if code == 0 and os.path.getsize(tmp) > 0:
+                    os.replace(tmp, video_path)
+                    os.remove(audio)
+                    self.toast.emit("Aufnahme gespeichert")
+                else:
+                    self.toast.emit("Aufnahme gespeichert – der Ton konnte nicht eingefügt werden")
+            except OSError:
+                self.toast.emit("Aufnahme gespeichert – der Ton konnte nicht eingefügt werden")
+            finally:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            mux.deleteLater()
+
+        mux.finished.connect(done)
+        mux.start("ffmpeg", args)
+        self.toast.emit("Aufnahme wird gespeichert …")
+        return True
 
     @Slot(str, result=str)
     def savedAudio(self, video_id):

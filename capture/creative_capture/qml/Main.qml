@@ -124,7 +124,6 @@ Window {
     property string monitorSource: ""
     property int channelCount: 0
     property int monitorChannel: 0
-    property bool recArmed: false
 
     function updateChannelSource() {
         monitorSource = audioOn ? capture.deviceKey(audioIn.device.id) : ""
@@ -171,7 +170,7 @@ Window {
         // Qt nimmt hier teils die Standardquelle (z. B. Webcam-Mikro) statt der gewählten → Echo.
         // Deshalb hört man den Ton nie über Qt, sondern über playChannel mit fest gewählter Quelle
         // (wie Studio). Qt bekommt den Ton nur während einer Aufnahme.
-        audioInput: win.audioOn && win.recArmed ? audioIn : null
+        audioInput: null
         audioOutput: null
         videoOutput: video
         imageCapture: ImageCapture {
@@ -186,7 +185,10 @@ Window {
                 fileFormat: MediaFormat.MPEG4
                 videoCodec: MediaFormat.VideoCodec.H264
             }
-            onRecorderStateChanged: if (recorderState === MediaRecorder.StoppedState && win.lastFile !== "") win.toast("Aufnahme gespeichert")
+            onRecorderStateChanged: if (recorderState === MediaRecorder.StoppedState && win.lastFile !== "") {
+                capture.stopAudioRec()
+                if (!capture.finishRecording(win.lastFile)) win.toast("Aufnahme gespeichert")
+            }
             onErrorOccurred: (err, text) => win.toast("Aufnahme nicht möglich: " + text)
         }
     }
@@ -406,14 +408,14 @@ Window {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         if (rec.recorderState === MediaRecorder.RecordingState) {
+                            capture.stopAudioRec()
                             rec.stop()
-                            win.recArmed = false
                         } else {
                             const f = capture.newFile("video")
                             win.lastFile = f
                             rec.outputLocation = capture.fileUrl(f)
-                            win.recArmed = true
                             rec.record()
+                            if (win.audioOn) capture.startAudioRec(win.monitorSource, win.channelCount, win.monitorChannel, f)
                         }
                     }
                 }
