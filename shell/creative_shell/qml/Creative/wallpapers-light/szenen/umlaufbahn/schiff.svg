@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="140" viewBox="0 0 300 140">
+  <!-- Gibeon OS 3 – Raumschiff -->
+  <path d="M42 60 L2 70 L42 80 Z" fill="#d9773a" fill-opacity="0.9"/>
+  <path d="M42 64 L20 70 L42 76 Z" fill="#fff4dc" fill-opacity="0.85"/>
+  <rect x="38" y="54" width="16" height="32" rx="4" fill="#3d6fe0"/>
+  <path d="M76 50 L100 20 H126 L114 50 Z" fill="#3d6fe0"/>
+  <path d="M76 90 L100 120 H126 L114 90 Z" fill="#3d6fe0"/>
+  <path d="M52 50 H212 C250 50 278 60 292 70 C278 80 250 90 212 90 H52 Z" fill="#ffffff" stroke="#1c2433" stroke-opacity="0.35" stroke-width="1.6"/>
+  <rect x="62" y="67" width="150" height="6" rx="3" fill="#3d6fe0" fill-opacity="0.85"/>
+  <path d="M226 58 C246 59 262 64 272 70 L226 70 Z" fill="#1c2433"/>
+  <circle cx="150" cy="60" r="4" fill="#1c2433"/><circle cx="170" cy="60" r="4" fill="#1c2433"/>
+  <circle cx="190" cy="60" r="4" fill="#1c2433"/>
+</svg>

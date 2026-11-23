@@ -664,6 +664,14 @@ class LookModel(QObject):
         if default.exists():
             images.append({"path": "", "url": QUrl.fromLocalFile(str(default)).toString(),
                            "label": "Emerald Earth (passt zum Design)"})
+        # Bewegte Szenen im Stil von Emerald Earth
+        qml_dir = self._builtin.parent.parent
+        for name, label in _look.SCENES:
+            folder = _look.scene_dir(qml_dir, name)
+            if folder is not None:
+                images.append({"path": _look.SCENE_PREFIX + name,
+                               "url": QUrl.fromLocalFile(str(folder / "bild.svg")).toString(),
+                               "label": label + " (bewegt)"})
         home = Path.home()
         pics = home / "Bilder"
         if not pics.exists() and not pics.is_symlink():

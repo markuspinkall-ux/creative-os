@@ -715,7 +715,17 @@ def main():
 
     shell = ShellController(app, engine, use_layer)
     ctx = engine.rootContext()
+    def _scene():
+        from creative_shell import look
+        raw = config.load().get("wallpaper") or ""
+        if raw.startswith(look.SCENE_PREFIX):
+            return look.scene_dir(QML_DIR, raw[len(look.SCENE_PREFIX):])
+        return None
+
     def wallpaper_url():
+        scene = _scene()
+        if scene is not None:
+            return QUrl.fromLocalFile(str(scene / "bild.svg"))
         path = os.path.expanduser(config.load().get("wallpaper") or "")
         if not path or not os.path.exists(path):
             from creative_shell import look
@@ -723,14 +733,17 @@ def main():
         return QUrl.fromLocalFile(path)
 
     def wallpaper_anim():
-        """Bewegter Hintergrund (nur beim mitgelieferten „Emerald Earth“-Bild und wenn eingeschaltet):
-        Ebenen-Ordner + Daten (Sterne, Rakete) aus wallpapers*/erde/ebenen.json – sonst {}."""
+        """Bewegter Hintergrund (mitgeliefertes „Emerald Earth“ oder eine Szene, wenn eingeschaltet):
+        Ebenen-Ordner + Daten (Sterne, Ebenen) aus ebenen.json – sonst {}."""
         cfg = config.load()
+        if not cfg.get("wallpaperAnimated", True):
+            return {}
+        scene = _scene()
         path = os.path.expanduser(cfg.get("wallpaper") or "")
-        if (path and os.path.exists(path)) or not cfg.get("wallpaperAnimated", True):
+        if scene is None and path and (os.path.exists(path) or path.startswith("szene:")):
             return {}
         from creative_shell import look
-        folder = look.wallpaper_dir(QML_DIR) / "erde"
+        folder = scene if scene is not None else look.wallpaper_dir(QML_DIR) / "erde"
         try:
             data = json.loads((folder / "ebenen.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):

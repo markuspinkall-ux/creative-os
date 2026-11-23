@@ -78,6 +78,19 @@ def wallpaper_dir(qml_dir):
     return Path(qml_dir) / "Creative" / ("wallpapers-light" if is_light() else "wallpapers")
 
 
+# Bewegte Szenen (tools/szenen-wallpaper.py): in den Einstellungen wählbar, gespeichert als „szene:<name>“
+SCENES = (("umlaufbahn", "Umlaufbahn"), ("nordlicht", "Nordlicht"), ("mondbasis", "Mondbasis"))
+SCENE_PREFIX = "szene:"
+
+
+def scene_dir(qml_dir, name):
+    """Ordner einer Szene im aktuellen Design – None, wenn es sie nicht gibt."""
+    if name not in dict(SCENES):
+        return None
+    folder = wallpaper_dir(qml_dir) / "szenen" / name
+    return folder if (folder / "ebenen.json").exists() else None
+
+
 def default_wallpaper(qml_dir):
     folder = wallpaper_dir(qml_dir)
     for name in ("porzellan.svg", "graphit.svg"):
