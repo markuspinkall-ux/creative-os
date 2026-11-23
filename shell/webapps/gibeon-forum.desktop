@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Gibeon-Forum
+GenericName=Community und Hilfe
+Comment=Fragen stellen, Ideen teilen, Fehler melden – das Forum zu Gibeon OS
+Keywords=Forum;Community;Hilfe;Support;Fragen;Gibeon;
+Exec=creative-webapp https://markuspinkall-ux.github.io/creative-os/forum/ forum
+Icon=gibeon-forum
+Terminal=false
+Categories=Network;
+StartupWMClass=creative-forum
+StartupNotify=true
