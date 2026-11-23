@@ -3,6 +3,7 @@
     "datum": "2026-11-23",
     "titel": "Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio nachstellbar",
     "neu": [
+      "Systemsteuerung › Grafikkarte: Modell als großes Abzeichen (z. B. „GeForce RTX 3060“), Grafikspeicher, Treiber, Anbindung – und live Auslastung, Temperatur, belegter Speicher, Leistung, Takt und Lüfter. Dazu die Beleuchtung der Karte: Effekt (Statisch, Atmen, Farbwechsel, Regenbogen, Aus) und Farbe, wird beim Anmelden wiederhergestellt (für Karten mit RGB-Beleuchtung, die OpenRGB unterstützt).",
       "Studio: Grünfilter nachträglich verfeinern – „Toleranz“ und „Weiche Kanten“ wirken sofort, ohne dass die Kamera neu startet; „Standard wiederherstellen“ holt die Ausgangswerte zurück.",
       "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo."
     ],

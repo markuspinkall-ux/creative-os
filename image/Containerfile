@@ -41,6 +41,13 @@ RUN (dnf swap -y mesa-va-drivers mesa-va-drivers-freeworld \
 RUN dnf install -y steam steam-devices gamemode mangohud vulkan-tools \
  && dnf clean all
 
+# Beleuchtung der Grafikkarte (Systemsteuerung › Grafikkarte): OpenRGB spricht RGB-Karten über I²C an.
+# udev-Regeln geben dem angemeldeten Benutzer Zugriff, i2c-dev wird beim Start geladen.
+RUN dnf install -y --skip-unavailable openrgb openrgb-udev-rules i2c-tools \
+ && echo i2c-dev > /usr/lib/modules-load.d/gibeon-i2c.conf \
+ && (command -v openrgb >/dev/null && echo "OpenRGB ok" || echo "OPENRGB FEHLT – Beleuchtung nicht steuerbar") \
+ && dnf clean all
+
 # Discord: das offizielle Discord Web im Gibeon-Look (webbrowser/app/discord, gleiche Electron-
 # Laufzeit wie der Browser) – ersetzt den Client von RPM Fusion, heißt aber weiter „Discord“.
 RUN mkdir -p /etc/skel/Bilder

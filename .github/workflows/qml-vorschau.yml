@@ -53,6 +53,12 @@ jobs:
           sed -i 's/^          //' /tmp/fake/kscreen-doctor && chmod +x /tmp/fake/kscreen-doctor
           PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/bildschirme.png timeout 40 python3 -m creative_settings --page displays 2>&1 | tail -5 || true
           (cd .. && timeout 30 python3 tools/tasktip-vorschau.py settings/vorschau/taskleiste-name.png 2>&1 | tail -5) || true
+          # Grafikkarte: nachgebautes nvidia-smi und OpenRGB (RTX 3060 mit RGB)
+          printf '#!/bin/sh\necho "NVIDIA GeForce RTX 3060, 12288, 3412, 580.95.05, 54, 37, 61.20, 170.00, 1777, 2100, 7500, 42, 4, 16, 94.06.2F.00.9A"\n' > /tmp/fake/nvidia-smi
+          printf '#!/bin/sh\ncase "$*" in *list-devices*) printf "0: ASUS ROG STRIX RTX 3060\\n  Type:           GPU\\n  Modes: [Direct] Static Breathing \x27Spectrum Cycle\x27 Rainbow\\n";; esac\n' > /tmp/fake/openrgb
+          chmod +x /tmp/fake/nvidia-smi /tmp/fake/openrgb
+          PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/grafikkarte.png timeout 40 python3 -m creative_settings --page gpu 2>&1 | tail -5 || true
+          PATH=/tmp/fake:$PATH CREATIVE_SCREENSHOT=vorschau/grafikkarte-unten.png CREATIVE_SCREENSHOT_SCROLL=1 timeout 40 python3 -m creative_settings --page gpu 2>&1 | tail -5 || true
           (cd .. && timeout 90 python3 tools/menue-vorschau.py settings/vorschau/menues.png 2>&1 | tail -8) || true
           ls -la vorschau
         working-directory: settings

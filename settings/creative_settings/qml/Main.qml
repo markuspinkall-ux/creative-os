@@ -21,6 +21,7 @@ ApplicationWindow {
         { key: "vpn", name: "VPN", icon: "shield", file: "VpnPage.qml", words: "proton vpn wireguard privat anonym verschlüsselt tunnel land server" },
         { key: "displays", name: "Bildschirme", icon: "pc", file: "DisplaysPage.qml", words: "monitor auflösung skalierung hz anordnen hauptbildschirm" },
         { key: "sound", name: "Ton", icon: "speaker", file: "SoundPage.qml", words: "lautstärke lautsprecher kopfhörer mikrofon audio sound" },
+        { key: "gpu", name: "Grafikkarte", icon: "gpu", file: "GpuPage.qml", words: "grafik gpu nvidia rtx geforce amd radeon intel beleuchtung rgb licht treiber temperatur vram" },
         { key: "drives", name: "Laufwerke", icon: "drive", file: "DrivesPage.qml", words: "festplatte ssd m2 nvme formatieren einrichten partition laufwerk zustand smart" },
         { key: "google-drive", name: "Google Drive", icon: "drive", file: "GoogleDrivePage.qml", words: "cloud google konto online speicher" },
         { key: "cleanup", name: "Bereinigung", icon: "sparkle", file: "CleanupPage.qml", words: "bereinigen aufräumen ccleaner speicherplatz platz frei cache zwischenspeicher papierkorb müll temporär" },
