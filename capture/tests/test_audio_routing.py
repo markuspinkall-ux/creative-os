@@ -167,3 +167,11 @@ class NurKonsolenTonTests(unittest.TestCase):
                 q["properties"] = {"n": q["name"]}
             self.assertEqual(routing.pick_console_audio(quellen, "/usb/a"), ["ps5"])
             self.assertEqual(routing.pick_console_audio(quellen, "/usb/z"), ["ps5", "switch"])
+
+
+class AufnahmeTonTests(unittest.TestCase):
+    def test_ton_endet_mit_dem_bild(self):
+        self.assertAlmostEqual(routing.end_aligned_offset(10.0, 10.4), 0.4)
+        self.assertEqual(routing.end_aligned_offset(10.0, 9.0), 0.0)
+        self.assertEqual(routing.end_aligned_offset(0, 9.0), 0.0)
+        self.assertEqual(routing.end_aligned_offset(10.0, 60.0), 5.0)
