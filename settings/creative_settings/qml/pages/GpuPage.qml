@@ -35,7 +35,7 @@ SettingsPage {
                 }
                 border.color: Qt.rgba(root.badgeColor.r, root.badgeColor.g, root.badgeColor.b, 0.6)
                 border.width: 2
-                Rectangle { x: 0; y: 0; width: 8; height: parent.height; radius: 4; color: root.badgeColor }
+                Rectangle { x: 12; y: 22; width: 6; height: parent.height - 44; radius: 3; color: root.badgeColor }
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     x: 26
@@ -82,6 +82,7 @@ SettingsPage {
         Flow {
             width: parent.width
             spacing: 10
+            bottomPadding: 8
             Repeater {
                 model: [
                     { t: "Auslastung", v: root.val(root.g.load, "%"), p: root.g.load },
