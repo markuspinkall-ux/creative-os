@@ -3,7 +3,7 @@ name: Tray-Position Vorschau
 on:
   push:
     branches: ["claude/**"]
-    paths: [shell/creative_shell/qml/Creative/StartButton.qml, shell/creative_shell/qml/surfaces/QuickPanel.qml, tools/schnellzugriff-vorschau.py, shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml, tools/tray-vorschau-bild.py]
+    paths: [shell/creative_shell/qml/Creative/StartButton.qml, tools/startknopf-vorschau.py, shell/creative_shell/qml/surfaces/QuickPanel.qml, tools/schnellzugriff-vorschau.py, shell/creative_shell/qml/surfaces/TrayIcons.qml, shell/creative_shell/qml/surfaces/Taskbar.qml, shell/creative_shell/qml/surfaces/Topbar.qml, .github/workflows/tray-position-vorschau.yml, tools/tray-vorschau-bild.py]
   workflow_dispatch:
 permissions:
   contents: write
@@ -39,6 +39,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
+          timeout 30 python3 tools/startknopf-vorschau.py fotos/startknopf-animation.png 2>&1 | tail -3 || true
           for t in volume printer network calendar; do
             timeout 30 python3 tools/schnellzugriff-vorschau.py "fotos/teil-$t.png" aus vpn-aus $t 2>&1 | tail -3 || true
           done
