@@ -10,15 +10,45 @@ Row {
     property string screenName
     spacing: 12
 
-    SvgIcon {
-        anchors.verticalCenter: parent.verticalCenter
-        name: network.wired ? "wired" : (network.connected ? "wifi" : "wifi-off")
-        size: 17
+    // Netzwerk, Lautstärke, Drucker: Klick öffnet nur den passenden Teil des Schnellzugriffs
+    component TrayButton: Item {
+        id: tb
+        property string icon
+        property string section
+        property string label
+        property int iconSize: 17
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        width: iconSize
+        height: iconSize
+        readonly property bool open: shell.quickPanelOpenOn === tray.screenName && shell.panelFocus === section
+        Rectangle {
+            anchors.centerIn: parent
+            width: 30; height: 30; radius: 8
+            color: tbMouse.containsMouse || tb.open ? Theme.hover : "transparent"
+        }
+        SvgIcon { anchors.centerIn: parent; name: tb.icon; size: tb.iconSize }
+        MouseArea {
+            id: tbMouse
+            anchors.fill: parent
+            anchors.margins: -6
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: { shell.noteScreen(tray.screenName); shell.toggleQuickSection(tray.screenName, tb.section) }
+        }
+        Accessible.role: Accessible.Button
+        Accessible.name: tb.label
+        Accessible.onPressAction: shell.toggleQuickSection(tray.screenName, tb.section)
     }
-    SvgIcon {
-        anchors.verticalCenter: parent.verticalCenter
-        name: audioOutput.muted || audioOutput.value === 0 ? "volume-off" : "volume"
-        size: 17
+
+    TrayButton {
+        icon: network.wired ? "wired" : (network.connected ? "wifi" : "wifi-off")
+        section: "network"
+        label: "Netzwerk, VPN und Helligkeit"
+    }
+    TrayButton {
+        icon: audioOutput.muted || audioOutput.value === 0 ? "volume-off" : "volume"
+        section: "volume"
+        label: "Lautstärke"
     }
     Item {
         anchors.verticalCenter: parent.verticalCenter
@@ -35,11 +65,12 @@ Row {
         Accessible.role: Accessible.Button
         Accessible.name: bluetooth.powered ? "Bluetooth eingeschaltet" : "Bluetooth ausgeschaltet"
     }
-    SvgIcon {
-        anchors.verticalCenter: parent.verticalCenter
+    TrayButton {
         visible: printers.available
-        name: printers.attention ? "printer-alert" : "printer"
-        size: 16
+        icon: printers.attention ? "printer-alert" : "printer"
+        iconSize: 16
+        section: "printer"
+        label: "Drucker"
     }
     Text {
         anchors.verticalCenter: parent.verticalCenter

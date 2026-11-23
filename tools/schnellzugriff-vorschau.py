@@ -1,5 +1,6 @@
 """Vorschau des Schnellzugriffs (QuickPanel) mit Beispieldaten.
-   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus] [vpn-an|vpn-aus|vpn-leer]"""
+   QT_QPA_PLATFORM=offscreen python3 tools/schnellzugriff-vorschau.py bild.png [an|aus] [vpn-an|vpn-aus|vpn-leer] [teil]
+   teil: network (Standard), volume, printer, calendar – welcher Teil des Schnellzugriffs gezeigt wird"""
 import sys
 from pathlib import Path
 
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 out = sys.argv[1]
 awake = len(sys.argv) > 2 and sys.argv[2] == "an"
 vpn_state = sys.argv[3] if len(sys.argv) > 3 else "vpn-aus"
+section = sys.argv[4] if len(sys.argv) > 4 else ""
 
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)
@@ -34,9 +36,9 @@ ctx("network", available=True, busy=False, connected=True, message="", ssid="Zuh
     wifiEnabled=True, wired=False,
     networks=[{"ssid": "Zuhause", "strength": 80, "secured": True, "inUse": True, "known": True}])
 ctx("brightness", displays=[{"name": "Hauptbildschirm", "key": "1", "value": 70}])
-ctx("printers", attention=False, available=False, name="", statusText="Kein Drucker eingerichtet")
+ctx("printers", attention=False, available=True, name="Brother HL-L2350DW", statusText="Bereit")
 ctx("session", keepAwake=awake, keepAwakeAvailable=True)
-ctx("shell", panelFocus="")
+ctx("shell", panelFocus=section, quickPanelOpenOn="")
 servers = [] if vpn_state == "vpn-leer" else [
     {"uuid": "u1", "name": "Proton VPN · Niederlande (NL-FREE#12)", "country": "Niederlande",
      "server": "NL-FREE#12", "active": vpn_state == "vpn-an"}]

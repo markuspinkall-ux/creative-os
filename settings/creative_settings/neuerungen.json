@@ -7,16 +7,21 @@
       "Studio: Grünfilter nachträglich verfeinern – „Toleranz“ und „Weiche Kanten“ wirken sofort, ohne dass die Kamera neu startet; „Standard wiederherstellen“ holt die Ausgangswerte zurück.",
       "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo.",
       "Systemsteuerung › Grafikkarte: Modell als großes Abzeichen (z. B. „GeForce RTX 3060“), Grafikspeicher, Treiber, Anbindung – und live Auslastung, Temperatur, belegter Speicher, Leistung, Takt und Lüfter. Dazu die Beleuchtung der Karte: Effekt (Statisch, Atmen, Farbwechsel, Regenbogen, Aus) und Farbe, wird beim Anmelden wiederhergestellt (für Karten mit RGB-Beleuchtung, die OpenRGB unterstützt).",
+      "Startknopf: Beim Klick schießt die Rakete kurz nach oben hinaus (mit Geschwindigkeitsstrichen) und landet wieder im Knopf.",
       "Systemsteuerung › Ton: Ist ein HyperX-Mikrofon angeschlossen (QuadCast S, DuoCast …), gibt es „RGB einstellen …“ – Effekt (Statisch, Atmen, Farbwechsel, Regenbogen, Aus) und Farbe; wird beim Anmelden wiederhergestellt."
     ],
     "verbessert": [
+      "Systemtray: Jedes Symbol öffnet nur seinen eigenen Teil – Lautstärke-Symbol nur die Lautstärke, Drucker-Symbol nur den Drucker, Klick auf die Uhr nur den Kalender. WLAN/Netzwerk-Symbol (und freie Stellen im Tray) zeigt Netzwerk, VPN, Helligkeit und „Nicht sperren“.",
+      "Taskleiste: Der Startknopf ist etwas kleiner – bleibt aber größer als die App-Symbole.",
       "System › Über Gibeon OS: OBS Studio steht nicht mehr in der Danksagung (ist ja durch Studio ersetzt). Neu genannt: GStreamer für Studio und Electron für den Browser.",
       "Rechtsklick-Menüs im Gibeon-Look statt des schwarzen Standardmenüs: in Studio, Deck, Rechner, im Chat von Studio, in YouTube Music im Player und in allen Textfeldern (Rückgängig, Ausschneiden, Kopieren, Einfügen, Alles markieren).",
       "Studio: Bei Kameras steht im Rechtsklick-Menü nicht mehr „Auf HDMI-A-1 zeigen“ und Co. Nur Capture-Karten (z. B. Konsole) bieten noch an, das Spiel auf einem anderen Monitor zu zeigen – mit verständlichen Namen („Monitor 2“)."
     ],
     "behoben": [
       "Willkommen-Fenster: Der Schalter „Land anonym mitteilen“ war beim ersten Start ohne Funktion und meldete Fehler.",
-      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst)."
+      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst).",
+      "Taskleiste: Im Startknopf lag oben ein hellblauer Streifen (falsches Blau, ragte teils über den Rand) – entfernt, der Knopf ist jetzt einfarbig in der Akzentfarbe.",
+      "Kalender: Geht beim Klick auf die Uhr jetzt direkt über der Taskleiste auf – mit demselben Abstand wie die anderen Menüs."
     ]
   },
   {
