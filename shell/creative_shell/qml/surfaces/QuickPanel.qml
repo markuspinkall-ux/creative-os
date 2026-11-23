@@ -80,7 +80,7 @@ Item {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
+                policy: flick.contentHeight > flick.height + 2 ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
                 contentItem: Rectangle { implicitWidth: 4; radius: 2; color: Theme.tint(0.2) }
             }
 
