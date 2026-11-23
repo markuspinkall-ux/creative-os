@@ -1,0 +1,180 @@
+== Geräte
+/sys/class/video4linux/video42: Gibeon Kamera index=0
+/sys/class/video4linux/video43: Test-Webcam index=0
+== Python-Bausteine
+[0;93m2026-11-23 07:00:20.442159696 [W:onnxruntime:Default, device_discovery.cc:283 GetGpuDevices] Failed to detect devices under "/sys/class/drm/card0": device_discovery.cc:93 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+Broadcast: KI-Backend CPU
+loopback: /dev/video42
+kameras: [{'device': '/dev/video43', 'name': 'Test-Webcam', 'capture': False}]
+modell da: True
+numpy 2.5.5 /usr/lib/creative-broadcast/gpu/numpy/__init__.py
+cv2 4.13.0 /usr/lib/python3.14/site-packages/cv2/__init__.py
+onnxruntime 1.26.0 /usr/lib/creative-broadcast/gpu/onnxruntime/__init__.py
+*************** EP Error ***************
+EP Error /onnxruntime_src/onnxruntime/core/providers/cuda/cuda_call.cc:122 std::conditional_t<THRW, void, onnxruntime::common::Status> onnxruntime::CudaCall(ERRTYPE, const char*, const char*, SUCCTYPE, const char*, const char*, int) [with ERRTYPE = cudaError; bool THRW = true; SUCCTYPE = cudaError; std::conditional_t<THRW, void, common::Status> = void] /onnxruntime_src/onnxruntime/core/providers/cuda/cuda_call.cc:114 std::conditional_t<THRW, void, onnxruntime::common::Status> onnxruntime::CudaCall(ERRTYPE, const char*, const char*, SUCCTYPE, const char*, const char*, int) [with ERRTYPE = cudaError; bool THRW = true; SUCCTYPE = cudaError; std::conditional_t<THRW, void, common::Status> = void] CUDA failure 100: no CUDA-capable device is detected ; GPU=-1 ; hostname=ecbe021126b0 ; file=/onnxruntime_src/onnxruntime/core/providers/cuda/cuda_execution_provider.cc ; line=336 ; expr=cudaSetDevice(info_.device_id); 
+
+ when using ['CUDAExecutionProvider', 'CPUExecutionProvider']
+Falling back to ['CPUExecutionProvider'] and retrying.
+****************************************
+matting ok: CPU
+broadcast_camera(): True
+{
+ "camera": true,
+ "effect": "green"
+}
+== Status vor dem Zuschauen
+{"voice": "aus", "camera": "bereit (wird gerade nicht benutzt)", "fps": 0, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0, "budgetMs": 33.3}
+Gibeon Kamera: /dev/video42
+== Diagnose GStreamer
+gst-inspect-1.0 version 1.28.9
+GStreamer 1.28.9
+  Long-name                Video (video4linux2) Source
+  Klass                    Source/Video
+  Version                  1.28.9
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+0:00:00.008572153 [33m        68[00m         70 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+Pipeline is PREROLLED ...
+Setting pipeline to PLAYING ...
+New clock: GstSystemClock
+0:00:00.008940118 [33m        68[00m         70 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+/GstPipeline:pipeline0/GstV4l2Src:v4l2src0.GstPad:src: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstFakeSink:fakesink0.GstPad:sink: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+0:00:00.009018094 [33m        68[00m         70 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 0 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.009022617 [33m        68[00m         70 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 1 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.009024587 [33m        68[00m         70 [33;01mWARN   [00m [00m      v4l2bufferpool gstv4l2bufferpool.c:910:gst_v4l2_buffer_pool_start:<v4l2src0:pool0:src>[00m Uncertain or not enough buffers, enabling copy threshold
+Redistribute latency...
+0:00:00.493857776 [33m        68[00m         70 [33;01mWARN   [00m [00m             v4l2src gstv4l2src.c:1345:gst_v4l2src_create:<v4l2src0>[00m lost frames detected: count = 15 - ts: 0:00:00.484548038
+Got EOS from element "pipeline0".
+Execution ended after 0:00:00.989419910
+Setting pipeline to NULL ...
+Freeing pipeline ...
+--- mit decodebin
+Pipeline is live and does not need PREROLL ...
+0:00:00.010091823 [35m        76[00m         78 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+/GstPipeline:pipeline0/GstV4l2Src:v4l2src0.GstPad:src: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstDecodeBin:decodebin0.GstGhostPad:sink.GstProxyPad:proxypad0: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstDecodeBin:decodebin0/GstTypeFindElement:typefind.GstPad:src: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstFakeSink:fakesink0.GstPad:sink: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstDecodeBin:decodebin0.GstDecodePad:src_0.GstProxyPad:proxypad1: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+0:00:00.010284907 [35m        76[00m         78 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+/GstPipeline:pipeline0/GstDecodeBin:decodebin0/GstTypeFindElement:typefind.GstPad:sink: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+/GstPipeline:pipeline0/GstDecodeBin:decodebin0.GstGhostPad:sink: caps = video/x-raw(memory:DMABuf), format=(string)DMA_DRM, drm-format=(string)YU12, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+0:00:00.010364759 [35m        76[00m         78 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 0 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.010370735 [35m        76[00m         78 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 1 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.010373455 [35m        76[00m         78 [33;01mWARN   [00m [00m      v4l2bufferpool gstv4l2bufferpool.c:910:gst_v4l2_buffer_pool_start:<v4l2src0:pool0:src>[00m Uncertain or not enough buffers, enabling copy threshold
+0:00:00.011192386 [35m        76[00m         78 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+0:00:00.498240863 [35m        76[00m         78 [33;01mWARN   [00m [00m             v4l2src gstv4l2src.c:1345:gst_v4l2src_create:<v4l2src0>[00m lost frames detected: count = 17 - ts: 0:00:00.487264345
+--- ffmpeg liest
+Output #0, image2, to '/out/ffmpeg-%d.png':
+  Metadata:
+    encoder         : Lavf62.12.103
+  Stream #0:0: Video: png, rgb24(pc, gbr/unknown/unknown, progressive), 1280x720, q=2-31, 200 kb/s, 30 fps, 30 tbn
+    Metadata:
+      encoder         : Lavc62.28.103 png
+[out#0/image2 @ 0x563b3e793f40] video:13KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: unknown
+frame=    3 fps=0.0 q=-0.0 Lsize=N/A time=00:00:00.10 bitrate=N/A speed=0.802x elapsed=0:00:00.12    
+== Studios eigener Weg (engine.py)
+Studio-Quelle: v4l2src device="/dev/video42" do-timestamp=true ! capsfilter caps="video/x-raw;image/jpeg" ! decodebin
+Setting pipeline to PAUSED ...
+Pipeline is live and does not need PREROLL ...
+Setting pipeline to PLAYING ...
+0:00:00.024127228 [36m       113[00m        115 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+0:00:00.025910538 [36m       113[00m        115 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_o/GstPipeline:pipeline0/GstFakeSink:fakesink0.GstPad:sink: caps = video/x-raw, format=(string)I420, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)2:4:7:1
+0:00:00.026053748 [36m       113[00m        115 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 0 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.026059220 [36m       113[00m        115 [33;01mWARN   [00m [00m       v4l2allocator gstv4l2allocator.c:277:gst_v4l2_memory_group_new:<v4l2src0:pool0:src:allocator>[00m Driver pretends buffer 1 is queued even if freshly created, this indicates a bug in the driver.
+0:00:00.026062137 [36m       113[00m        115 [33;01mWARN   [00m [00m      v4l2bufferpool gstv4l2bufferpool.c:910:gst_v4l2_buffer_pool_start:<v4l2src0:pool0:src>[00m Uncertain or not enough buffers, enabling copy threshold
+0:00:00.027094285 [36m       113[00m        115 [33;01mWARN   [00m [00m                v4l2 gstv4l2object.c:5145:gst_v4l2_object_get_crop_rect:<v4l2src0:src>[00m VIDIOC_CROPCAP failed
+0:00:00.051544734 [36m       113[00m        115 [33;01mWARN   [00m [00m             v4l2src gstv4l2src.c:1345:gst_v4l2src_create:<v4l2src0>[00m lost frames detected: count = 25 - ts: 0:00:00.026867002
+Setting pipeline to NULL ...
+== Zuschauen wie Studio (GStreamer v4l2src ! decodebin)
+Pipeline: v4l2src device="/dev/video42" do-timestamp=true ! capsfilter caps="video/x-raw;image/jpeg" ! decodebin ! videoconvert ! videorate ! … ! jpegenc
+t=4s: {"voice": "aus", "camera": "aktiv", "fps": 25, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 0.9, "processingMs": 38.2, "outputMs": 1.2, "slow": true}
+t=8s: {"voice": "aus", "camera": "aktiv", "fps": 24, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 0.6, "processingMs": 36.9, "outputMs": 2.2, "slow": true}
+t=12s: {"voice": "aus", "camera": "aktiv", "fps": 24, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 0.7, "processingMs": 38.0, "outputMs": 1.2, "slow": true}
+t=16s: {"voice": "aus", "camera": "aktiv", "fps": 24, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 0.7, "processingMs": 36.4, "outputMs": 1.4, "slow": true}
+t=20s: {"voice": "aus", "camera": "aktiv", "fps": 24, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 1.0, "processingMs": 39.5, "outputMs": 1.2, "slow": true}
+t=24s: {"voice": "aus", "camera": "aktiv", "fps": 25, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 0.7, "processingMs": 37.3, "outputMs": 1.0, "slow": true}
+t=28s: {"voice": "aus", "camera": "aktiv", "fps": 24, "engine": "CPU", "mode": "1280×720 · 30 Bilder/s (YUYV)", "output": "1280×720 · 30 Bilder/s", "upscale": "aus", "upscaleMs": 0.0, "budgetMs": 33.3, "captureMs": 1.0, "processingMs": 38.3, "outputMs": 1.3, "slow": true}
+gst exit=124
+ffmpeg-1.png
+ffmpeg-2.png
+ffmpeg-3.png
+gst-000.jpg
+gst-001.jpg
+gst-002.jpg
+gst-003.jpg
+gst-004.jpg
+gst-005.jpg
+gst-006.jpg
+gst-007.jpg
+gst-008.jpg
+gst-009.jpg
+gst-010.jpg
+gst-011.jpg
+gst-012.jpg
+gst-013.jpg
+gst-014.jpg
+gst-015.jpg
+gst-016.jpg
+gst-017.jpg
+gst-018.jpg
+gst-019.jpg
+gst-020.jpg
+gst-021.jpg
+gst-022.jpg
+gst-023.jpg
+gst-024.jpg
+gst-025.jpg
+gst-026.jpg
+gst-027.jpg
+gst-028.jpg
+gst-029.jpg
+gst-030.jpg
+gst-031.jpg
+gst-032.jpg
+gst-033.jpg
+gst-034.jpg
+gst-035.jpg
+gst-036.jpg
+gst-037.jpg
+gst-038.jpg
+gst-039.jpg
+gst-040.jpg
+gst-041.jpg
+gst-042.jpg
+gst-043.jpg
+gst-044.jpg
+gst-045.jpg
+gst-046.jpg
+== Auswertung
+{
+ "bilder": 80,
+ "groesse": [
+  720,
+  1280,
+  3
+ ],
+ "mittel_bgr": [
+  11,
+  237,
+  12
+ ],
+ "anteil_graphit": 0.0,
+ "status": {
+  "voice": "aus",
+  "camera": "aktiv",
+  "fps": 24,
+  "engine": "CPU",
+  "mode": "1280×720 · 30 Bilder/s (YUYV)",
+  "output": "1280×720 · 30 Bilder/s",
+  "upscale": "aus",
+  "upscaleMs": 0.0,
+  "budgetMs": 33.3,
+  "captureMs": 0.7,
+  "processingMs": 37.7,
+  "outputMs": 1.4,
+  "slow": true
+ }
+}
+GIBEON KAMERA: OK
