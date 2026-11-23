@@ -223,6 +223,7 @@ SettingsPage {
                 { app: "Automatisches Zurückrollen", base: "greenboot" },
                 { app: "Bildschirmfoto-Dienst für Shots", base: "Spectacle (KDE)" },
                 { app: "Ton und Bild", base: "PipeWire, FFmpeg, Qt Multimedia" },
+                { app: "Licht von Grafikkarte und Mikrofon", base: "OpenRGB, QuadcastRGB (Ors1mer)" },
                 { app: "YouTube Music im Player", base: "Offizielle Webseite von YouTube Music, Qt WebEngine (Chromium)" },
                 { app: "Mein Server", base: "Caddy und PHP" },
                 { app: "Browser", base: "Electron (Chromium)" },

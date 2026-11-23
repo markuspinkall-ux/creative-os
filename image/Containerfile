@@ -47,6 +47,16 @@ RUN dnf install -y --skip-unavailable openrgb openrgb-udev-rules i2c-tools \
  && echo i2c-dev > /usr/lib/modules-load.d/gibeon-i2c.conf \
  && (command -v openrgb >/dev/null && echo "OpenRGB ok" || echo "OPENRGB FEHLT – Beleuchtung nicht steuerbar") \
  && dnf clean all
+# Beleuchtung der HyperX-Mikrofone (Systemsteuerung › Ton): QuadcastRGB (Ors1mer, GPL-2.0) hält die
+# Farbe dauerhaft – OpenRGB setzt sie bei QuadCast/DuoCast nur kurz.
+COPY image/geraete/70-gibeon-hyperx-mikro.rules /usr/lib/udev/rules.d/70-gibeon-hyperx-mikro.rules
+RUN dnf install -y --skip-unavailable gcc make git libusb1-devel && dnf clean all \
+ && cd /tmp && git clone -q --depth 1 https://github.com/Ors1mer/QuadcastRGB \
+ && cd QuadcastRGB && make -s \
+ && install -Dm755 "$(find . -maxdepth 2 -type f -name quadcastrgb -perm -u+x | head -1)" /usr/bin/quadcastrgb \
+ && (install -Dm644 LICENSE /usr/share/licenses/quadcastrgb/LICENSE 2>/dev/null || install -Dm644 COPYING /usr/share/licenses/quadcastrgb/COPYING 2>/dev/null || true) \
+ && echo "Mikrofon-Licht: QuadcastRGB ok" || echo "MIKROFON-LICHT: QUADCASTRGB FEHLT"; \
+    cd / && rm -rf /tmp/QuadcastRGB; dnf remove -y libusb1-devel >/dev/null 2>&1; dnf clean all
 
 # Discord: das offizielle Discord Web im Gibeon-Look (webbrowser/app/discord, gleiche Electron-
 # Laufzeit wie der Browser) – ersetzt den Client von RPM Fusion, heißt aber weiter „Discord“.
