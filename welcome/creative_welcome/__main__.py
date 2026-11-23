@@ -69,7 +69,8 @@ def main():
     welcome = Welcome()
     ctx = engine.rootContext()
     ctx.setContextProperty("welcome", welcome)
-    ctx.setContextProperty("regionConsent", RegionConsent())
+    region = RegionConsent()           # festhalten – sonst ist es in QML gleich wieder „null“
+    ctx.setContextProperty("regionConsent", region)
     # Die Modelle müssen in Python festgehalten werden – sonst räumt Python sie weg,
     # QML sieht nur noch „null“ und das Fenster schließt sich scheinbar von selbst.
     network = NetworkModel()

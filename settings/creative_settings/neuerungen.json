@@ -1,18 +1,22 @@
 [
   {
     "datum": "2026-11-23",
-    "titel": "Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio nachstellbar",
+    "titel": "Drei neue bewegte Hintergründe, Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio",
     "neu": [
-      "Systemsteuerung › Grafikkarte: Modell als großes Abzeichen (z. B. „GeForce RTX 3060“), Grafikspeicher, Treiber, Anbindung – und live Auslastung, Temperatur, belegter Speicher, Leistung, Takt und Lüfter. Dazu die Beleuchtung der Karte: Effekt (Statisch, Atmen, Farbwechsel, Regenbogen, Aus) und Farbe, wird beim Anmelden wiederhergestellt (für Karten mit RGB-Beleuchtung, die OpenRGB unterstützt).",
+      "Drei neue bewegte Hintergründe im Stil von Emerald Earth – Einstellungen › Darstellung › Hintergrundbild: „Umlaufbahn“ (ein Raumschiff kreist um die Erde und fliegt auch hinter ihr vorbei), „Nordlicht“ (wehendes Polarlicht über der Nachtseite, ein Satellit zieht vorbei) und „Mondbasis“ (Erdaufgang über dem Mond, die Rakete schwebt startbereit, die Lichter der Basis blinken). Alle gibt es in Graphit und Porzellan.",
       "Studio: Grünfilter nachträglich verfeinern – „Toleranz“ und „Weiche Kanten“ wirken sofort, ohne dass die Kamera neu startet; „Standard wiederherstellen“ holt die Ausgangswerte zurück.",
-      "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo."
+      "Studio: Deckkraft für jede Quelle (Kamera, Bild, Browserquelle …), z. B. für ein halbdurchsichtiges Logo.",
+      "Systemsteuerung › Grafikkarte: Modell als großes Abzeichen (z. B. „GeForce RTX 3060“), Grafikspeicher, Treiber, Anbindung – und live Auslastung, Temperatur, belegter Speicher, Leistung, Takt und Lüfter. Dazu die Beleuchtung der Karte: Effekt (Statisch, Atmen, Farbwechsel, Regenbogen, Aus) und Farbe, wird beim Anmelden wiederhergestellt (für Karten mit RGB-Beleuchtung, die OpenRGB unterstützt)."
     ],
     "verbessert": [
       "System › Über Gibeon OS: OBS Studio steht nicht mehr in der Danksagung (ist ja durch Studio ersetzt). Neu genannt: GStreamer für Studio und Electron für den Browser.",
       "Rechtsklick-Menüs im Gibeon-Look statt des schwarzen Standardmenüs: in Studio, Deck, Rechner, im Chat von Studio, in YouTube Music im Player und in allen Textfeldern (Rückgängig, Ausschneiden, Kopieren, Einfügen, Alles markieren).",
       "Studio: Bei Kameras steht im Rechtsklick-Menü nicht mehr „Auf HDMI-A-1 zeigen“ und Co. Nur Capture-Karten (z. B. Konsole) bieten noch an, das Spiel auf einem anderen Monitor zu zeigen – mit verständlichen Namen („Monitor 2“)."
     ],
-    "behoben": []
+    "behoben": [
+      "Willkommen-Fenster: Der Schalter „Land anonym mitteilen“ war beim ersten Start ohne Funktion und meldete Fehler.",
+      "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst)."
+    ]
   },
   {
     "datum": "2026-11-22",

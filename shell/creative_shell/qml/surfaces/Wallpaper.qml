@@ -397,9 +397,10 @@ Item {
             width: 3840 * s
             height: 2160 * s
 
+            readonly property bool scene: !!d.layers
             NumberAnimation on phase {
                 from: 0; to: 1
-                duration: 24000
+                duration: wallAnim.d.duration || 24000
                 loops: Animation.Infinite
                 running: wallAnim.running
             }
@@ -408,13 +409,15 @@ Item {
                 id: wallGround
                 anchors.fill: parent
                 source: wallAnim.on ? wallAnim.d.folder + "grund.svg" : ""
+                z: -2
                 sourceSize: Qt.size(width, height)
                 asynchronous: true
             }
             // Wolken: zweite Lage mit verschobenen Schleiern, langsam überblendet
             Image {
                 anchors.fill: parent
-                source: wallAnim.on ? wallAnim.d.folder + "wolken.svg" : ""
+                visible: !wallAnim.scene
+                source: wallAnim.on && !wallAnim.scene ? wallAnim.d.folder + "wolken.svg" : ""
                 sourceSize: Qt.size(width, height)
                 asynchronous: true
                 opacity: 0.5 - 0.5 * Math.cos(2 * Math.PI * wallAnim.phase)
@@ -436,12 +439,81 @@ Item {
             Image {
                 id: wallRocket
                 anchors.fill: parent
-                source: wallAnim.on ? wallAnim.d.folder + "rakete.svg" : ""
+                visible: !wallAnim.scene
+                source: wallAnim.on && !wallAnim.scene ? wallAnim.d.folder + "rakete.svg" : ""
                 sourceSize: Qt.size(width, height)
                 asynchronous: true
                 readonly property real heading: ((wallAnim.d.rocket ? wallAnim.d.rocket.angle : 90) - 90) * Math.PI / 180
                 readonly property real bob: 18 * wallAnim.s * Math.sin(2 * Math.PI * wallAnim.phase * 2)
                 transform: Translate { x: wallRocket.bob * Math.cos(wallRocket.heading); y: wallRocket.bob * Math.sin(wallRocket.heading) }
+            }
+            // Bewegte Szenen (Umlaufbahn, Nordlicht, Mondbasis): Ebenen aus ebenen.json, je nach Art bewegt.
+            // grund liegt schon oben (wallGround); Sterne funkeln darüber, die Ebenen darüber.
+            Repeater {
+                model: wallAnim.scene ? wallAnim.d.layers : []
+                delegate: Item {
+                    id: lay
+                    required property var modelData
+                    required property int index
+                    readonly property var ly: modelData
+                    readonly property real sc: wallAnim.s
+                    readonly property real t: 2 * Math.PI * (wallAnim.phase * (ly.speed || 1) + (ly.ph || 0))
+                    readonly property bool sprite: ly.kind === "orbit" || ly.kind === "line"
+                    // Umlaufbahn: Ort und Flugrichtung auf der gekippten Ellipse
+                    readonly property real tilt: (ly.tilt || 0) * Math.PI / 180
+                    readonly property real ox: (ly.rx || 0) * Math.cos(t)
+                    readonly property real oy: (ly.ry || 0) * Math.sin(t)
+                    readonly property real behind: Math.sin(t) < 0 ? 1 : 0       // obere Hälfte = hinter der Erde
+                    readonly property real px: ly.kind === "orbit" ? (ly.cx + ox * Math.cos(tilt) - oy * Math.sin(tilt))
+                                             : ly.kind === "line" ? (ly.x0 + (ly.x1 - ly.x0) * ((wallAnim.phase * (ly.speed || 1) + (ly.ph || 0)) % 1)) : 0
+                    readonly property real py: ly.kind === "orbit" ? (ly.cy + ox * Math.sin(tilt) + oy * Math.cos(tilt))
+                                             : ly.kind === "line" ? (ly.y0 + (ly.y1 - ly.y0) * ((wallAnim.phase * (ly.speed || 1) + (ly.ph || 0)) % 1)) : 0
+                    readonly property real heading: ly.kind === "orbit"
+                        ? Math.atan2(-(ly.rx || 0) * Math.sin(t) * Math.sin(tilt) + (ly.ry || 0) * Math.cos(t) * Math.cos(tilt),
+                                     -(ly.rx || 0) * Math.sin(t) * Math.cos(tilt) - (ly.ry || 0) * Math.cos(t) * Math.sin(tilt)) * 180 / Math.PI
+                        : (ly.angle || 0)
+                    z: ly.kind === "occluder" ? 20 : (ly.kind === "orbit" && behind > 0 ? 10 : 30 + index)
+                    anchors.fill: parent
+                    visible: ly.kind !== "static" && (ly.kind !== "occluder" || occ.behindNow)
+                    QtObject {
+                        id: occ
+                        // Planet vor dem Raumschiff nur zeigen, wenn das Schiff gerade hinter der Erde ist
+                        readonly property bool behindNow: Math.sin(lay.t) < 0
+                    }
+                    opacity: ly.kind === "fade" ? 0.5 - 0.5 * Math.cos(t)
+                           : ly.kind === "sway" ? (ly.min || 0.4) + ((ly.max || 1) - (ly.min || 0.4)) * (0.5 + 0.5 * Math.sin(t))
+                           : ly.kind === "blink" ? 0.35 + 0.65 * Math.max(0, Math.sin(t))
+                           : ly.kind === "orbit" ? (behind > 0 ? 0.85 : 1)
+                           : 1
+                    Image {
+                        visible: !lay.sprite
+                        anchors.fill: parent
+                        source: wallAnim.scene && !lay.sprite && lay.ly.kind !== "static" ? wallAnim.d.folder + lay.ly.file : ""
+                        sourceSize: Qt.size(width, height)
+                        asynchronous: true
+                        transform: Translate {
+                            x: lay.ly.kind === "sway" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t * 0.5)
+                             : lay.ly.kind === "bob" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t) * Math.cos(((lay.ly.angle || 0) - 90) * Math.PI / 180) : 0
+                            y: lay.ly.kind === "bob" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t) * Math.sin(((lay.ly.angle || 0) - 90) * Math.PI / 180) : 0
+                        }
+                    }
+                    Image {
+                        visible: lay.sprite
+                        readonly property real k: (lay.ly.scale || 1) * (lay.ly.kind === "orbit" && lay.behind > 0 ? 0.82 : 1)
+                        width: (lay.ly.w || 100) * lay.sc * k
+                        height: (lay.ly.h || 50) * lay.sc * k
+                        x: lay.px * lay.sc - width / 2
+                        y: lay.py * lay.sc - height / 2
+                        // nach links fliegend: spiegeln statt auf den Kopf drehen
+                        readonly property bool goesLeft: Math.abs(lay.heading) > 90
+                        mirror: goesLeft
+                        rotation: goesLeft ? lay.heading - (lay.heading > 0 ? 180 : -180) : lay.heading
+                        source: wallAnim.scene && lay.sprite ? wallAnim.d.folder + lay.ly.file : ""
+                        sourceSize: Qt.size((lay.ly.w || 100) * 2, (lay.ly.h || 50) * 2)
+                        smooth: true
+                        asynchronous: true
+                    }
+                }
             }
         }
     }

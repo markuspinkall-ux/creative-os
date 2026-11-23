@@ -317,9 +317,9 @@ ApplicationWindow {
                         spacing: 14
                         CSwitch {
                             anchors.verticalCenter: parent.verticalCenter
-                            checked: regionConsent.enabled
+                            checked: !!regionConsent && regionConsent.enabled
                             label: "Land anonym mitteilen"
-                            onToggled: (v) => regionConsent.setEnabled(v)
+                            onToggled: (v) => { if (regionConsent) regionConsent.setEnabled(v) }
                         }
                         Column {
                             id: regionCol
@@ -334,7 +334,7 @@ ApplicationWindow {
                             Text {
                                 width: parent.width
                                 text: "Hilft dem Entwickler zu sehen, wo Gibeon OS genutzt wird. Gesendet wird einmal im Monat nur das Land"
-                                      + (regionConsent.land ? " (" + regionConsent.land + ")" : "")
+                                      + (regionConsent && regionConsent.land ? " (" + regionConsent.land + ")" : "")
                                       + " – keine IP, kein Name, keine Kennung. Freiwillig, jederzeit abschaltbar in Einstellungen › System."
                                 color: Theme.textMuted; font.pixelSize: 12
                                 wrapMode: Text.WordWrap
