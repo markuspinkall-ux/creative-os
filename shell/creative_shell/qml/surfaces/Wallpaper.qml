@@ -455,61 +455,61 @@ Item {
                     id: lay
                     required property var modelData
                     required property int index
-                    readonly property var L: modelData
-                    readonly property real S: wallAnim.s
-                    readonly property real t: 2 * Math.PI * (wallAnim.phase * (L.speed || 1) + (L.ph || 0))
-                    readonly property bool sprite: L.kind === "orbit" || L.kind === "line"
+                    readonly property var ly: modelData
+                    readonly property real sc: wallAnim.s
+                    readonly property real t: 2 * Math.PI * (wallAnim.phase * (ly.speed || 1) + (ly.ph || 0))
+                    readonly property bool sprite: ly.kind === "orbit" || ly.kind === "line"
                     // Umlaufbahn: Ort und Flugrichtung auf der gekippten Ellipse
-                    readonly property real tilt: (L.tilt || 0) * Math.PI / 180
-                    readonly property real ox: (L.rx || 0) * Math.cos(t)
-                    readonly property real oy: (L.ry || 0) * Math.sin(t)
+                    readonly property real tilt: (ly.tilt || 0) * Math.PI / 180
+                    readonly property real ox: (ly.rx || 0) * Math.cos(t)
+                    readonly property real oy: (ly.ry || 0) * Math.sin(t)
                     readonly property real behind: Math.sin(t) < 0 ? 1 : 0       // obere Hälfte = hinter der Erde
-                    readonly property real px: L.kind === "orbit" ? (L.cx + ox * Math.cos(tilt) - oy * Math.sin(tilt))
-                                             : L.kind === "line" ? (L.x0 + (L.x1 - L.x0) * ((wallAnim.phase * (L.speed || 1) + (L.ph || 0)) % 1)) : 0
-                    readonly property real py: L.kind === "orbit" ? (L.cy + ox * Math.sin(tilt) + oy * Math.cos(tilt))
-                                             : L.kind === "line" ? (L.y0 + (L.y1 - L.y0) * ((wallAnim.phase * (L.speed || 1) + (L.ph || 0)) % 1)) : 0
-                    readonly property real heading: L.kind === "orbit"
-                        ? Math.atan2(-(L.rx || 0) * Math.sin(t) * Math.sin(tilt) + (L.ry || 0) * Math.cos(t) * Math.cos(tilt),
-                                     -(L.rx || 0) * Math.sin(t) * Math.cos(tilt) - (L.ry || 0) * Math.cos(t) * Math.sin(tilt)) * 180 / Math.PI
-                        : (L.angle || 0)
-                    z: L.kind === "occluder" ? 20 : (L.kind === "orbit" && behind > 0 ? 10 : 30 + index)
+                    readonly property real px: ly.kind === "orbit" ? (ly.cx + ox * Math.cos(tilt) - oy * Math.sin(tilt))
+                                             : ly.kind === "line" ? (ly.x0 + (ly.x1 - ly.x0) * ((wallAnim.phase * (ly.speed || 1) + (ly.ph || 0)) % 1)) : 0
+                    readonly property real py: ly.kind === "orbit" ? (ly.cy + ox * Math.sin(tilt) + oy * Math.cos(tilt))
+                                             : ly.kind === "line" ? (ly.y0 + (ly.y1 - ly.y0) * ((wallAnim.phase * (ly.speed || 1) + (ly.ph || 0)) % 1)) : 0
+                    readonly property real heading: ly.kind === "orbit"
+                        ? Math.atan2(-(ly.rx || 0) * Math.sin(t) * Math.sin(tilt) + (ly.ry || 0) * Math.cos(t) * Math.cos(tilt),
+                                     -(ly.rx || 0) * Math.sin(t) * Math.cos(tilt) - (ly.ry || 0) * Math.cos(t) * Math.sin(tilt)) * 180 / Math.PI
+                        : (ly.angle || 0)
+                    z: ly.kind === "occluder" ? 20 : (ly.kind === "orbit" && behind > 0 ? 10 : 30 + index)
                     anchors.fill: parent
-                    visible: L.kind !== "static" && (L.kind !== "occluder" || occ.behindNow)
+                    visible: ly.kind !== "static" && (ly.kind !== "occluder" || occ.behindNow)
                     QtObject {
                         id: occ
                         // Planet vor dem Raumschiff nur zeigen, wenn das Schiff gerade hinter der Erde ist
                         readonly property bool behindNow: Math.sin(lay.t) < 0
                     }
-                    opacity: L.kind === "fade" ? 0.5 - 0.5 * Math.cos(t)
-                           : L.kind === "sway" ? (L.min || 0.4) + ((L.max || 1) - (L.min || 0.4)) * (0.5 + 0.5 * Math.sin(t))
-                           : L.kind === "blink" ? 0.35 + 0.65 * Math.max(0, Math.sin(t))
-                           : L.kind === "orbit" ? (behind > 0 ? 0.85 : 1)
+                    opacity: ly.kind === "fade" ? 0.5 - 0.5 * Math.cos(t)
+                           : ly.kind === "sway" ? (ly.min || 0.4) + ((ly.max || 1) - (ly.min || 0.4)) * (0.5 + 0.5 * Math.sin(t))
+                           : ly.kind === "blink" ? 0.35 + 0.65 * Math.max(0, Math.sin(t))
+                           : ly.kind === "orbit" ? (behind > 0 ? 0.85 : 1)
                            : 1
                     Image {
                         visible: !lay.sprite
                         anchors.fill: parent
-                        source: wallAnim.scene && !lay.sprite && lay.L.kind !== "static" ? wallAnim.d.folder + lay.L.file : ""
+                        source: wallAnim.scene && !lay.sprite && lay.ly.kind !== "static" ? wallAnim.d.folder + lay.ly.file : ""
                         sourceSize: Qt.size(width, height)
                         asynchronous: true
                         transform: Translate {
-                            x: lay.L.kind === "sway" ? (lay.L.amp || 0) * lay.S * Math.sin(lay.t * 0.5)
-                             : lay.L.kind === "bob" ? (lay.L.amp || 0) * lay.S * Math.sin(lay.t) * Math.cos(((lay.L.angle || 0) - 90) * Math.PI / 180) : 0
-                            y: lay.L.kind === "bob" ? (lay.L.amp || 0) * lay.S * Math.sin(lay.t) * Math.sin(((lay.L.angle || 0) - 90) * Math.PI / 180) : 0
+                            x: lay.ly.kind === "sway" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t * 0.5)
+                             : lay.ly.kind === "bob" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t) * Math.cos(((lay.ly.angle || 0) - 90) * Math.PI / 180) : 0
+                            y: lay.ly.kind === "bob" ? (lay.ly.amp || 0) * lay.sc * Math.sin(lay.t) * Math.sin(((lay.ly.angle || 0) - 90) * Math.PI / 180) : 0
                         }
                     }
                     Image {
                         visible: lay.sprite
-                        readonly property real k: (lay.L.scale || 1) * (lay.L.kind === "orbit" && lay.behind > 0 ? 0.82 : 1)
-                        width: (lay.L.w || 100) * lay.S * k
-                        height: (lay.L.h || 50) * lay.S * k
-                        x: lay.px * lay.S - width / 2
-                        y: lay.py * lay.S - height / 2
+                        readonly property real k: (lay.ly.scale || 1) * (lay.ly.kind === "orbit" && lay.behind > 0 ? 0.82 : 1)
+                        width: (lay.ly.w || 100) * lay.sc * k
+                        height: (lay.ly.h || 50) * lay.sc * k
+                        x: lay.px * lay.sc - width / 2
+                        y: lay.py * lay.sc - height / 2
                         // nach links fliegend: spiegeln statt auf den Kopf drehen
                         readonly property bool left: Math.abs(lay.heading) > 90
                         mirror: left
                         rotation: left ? lay.heading - (lay.heading > 0 ? 180 : -180) : lay.heading
-                        source: wallAnim.scene && lay.sprite ? wallAnim.d.folder + lay.L.file : ""
-                        sourceSize: Qt.size((lay.L.w || 100) * 2, (lay.L.h || 50) * 2)
+                        source: wallAnim.scene && lay.sprite ? wallAnim.d.folder + lay.ly.file : ""
+                        sourceSize: Qt.size((lay.ly.w || 100) * 2, (lay.ly.h || 50) * 2)
                         smooth: true
                         asynchronous: true
                     }
