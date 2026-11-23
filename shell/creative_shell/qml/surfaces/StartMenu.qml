@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -85,6 +86,7 @@ Item {
         onHeightChanged: Qt.callLater(root.updateBlur)
 
         TextField {
+            GibeonT.ContextMenu.menu: CTextMenu {}
             id: search
             anchors {
                 top: parent.top

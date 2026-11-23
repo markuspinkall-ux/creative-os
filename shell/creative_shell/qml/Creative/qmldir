@@ -15,3 +15,8 @@ ImagePicker 1.0 ImagePicker.qml
 FilePicker 1.0 FilePicker.qml
 ConfirmDialog 1.0 ConfirmDialog.qml
 BatteryGlyph 1.0 BatteryGlyph.qml
+CMenu 1.0 CMenu.qml
+CMenuItem 1.0 CMenuItem.qml
+CMenuSeparator 1.0 CMenuSeparator.qml
+CTextMenu 1.0 CTextMenu.qml
+CWebMenu 1.0 CWebMenu.qml

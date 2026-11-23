@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -178,6 +179,7 @@ ApplicationWindow {
                                     bottomPadding: 8
                                     leftPadding: 46
                                     TextField {
+                                        GibeonT.ContextMenu.menu: CTextMenu {}
                                         id: pw
                                         width: 280; height: 38
                                         echoMode: TextInput.Password

@@ -1,5 +1,6 @@
 import QtCore
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Window
@@ -57,35 +58,33 @@ ApplicationWindow {
         sourceMenu.pos = pos
         sourceMenu.popup()
     }
-    Menu {
+    CMenu {
         id: sourceMenu
         property int pos: -1
         readonly property var it: pos >= 0 && pos < win.items.length ? win.items[pos] : null
-        MenuItem { text: sourceMenu.it && sourceMenu.it.hidden ? "Einblenden" : "Ausblenden"; onTriggered: studio.setItem(sourceMenu.pos, "hidden", !(sourceMenu.it && sourceMenu.it.hidden)) }
-        MenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
-        MenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
-        MenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
-        // Capture-Karte / Kamera pur auf einem anderen Monitor zeigen (ohne Overlays)
-        MenuSeparator { visible: projItems.count > 0 }
+        CMenuItem { text: sourceMenu.it && sourceMenu.it.hidden ? "Einblenden" : "Ausblenden"; onTriggered: studio.setItem(sourceMenu.pos, "hidden", !(sourceMenu.it && sourceMenu.it.hidden)) }
+        CMenuItem { text: "Bildfüllend"; onTriggered: studio.fillItem(sourceMenu.pos) }
+        CMenuItem { text: "Nach vorne"; enabled: sourceMenu.pos < win.items.length - 1; onTriggered: studio.orderItem(sourceMenu.pos, 1) }
+        CMenuItem { text: "Nach hinten"; enabled: sourceMenu.pos > 0; onTriggered: studio.orderItem(sourceMenu.pos, -1) }
+        // Nur Capture-Karten (z. B. Konsole): Bild pur auf einem anderen Monitor – bei Kameras sinnlos
         Instantiator {
-            id: projItems
-            model: sourceMenu.it && (sourceMenu.it.kind === "capture" || sourceMenu.it.kind === "camera") ? Qt.application.screens : []
-            delegate: MenuItem {
+            model: sourceMenu.it && sourceMenu.it.kind === "capture" && Qt.application.screens.length > 1 ? Qt.application.screens : []
+            delegate: CMenuItem {
                 required property var modelData
-                text: "Auf „" + modelData.name + "“ zeigen" + (modelData.model ? " (" + modelData.model + ")" : "")
+                required property int index
+                text: "Spiel auf Monitor " + (index + 1) + " zeigen" + (modelData.model ? " (" + modelData.model + ")" : "")
                 onTriggered: studio.projectItem(sourceMenu.pos, modelData.name)
             }
-            onObjectAdded: (i, o) => sourceMenu.insertItem(sourceMenu.count - 3, o)
+            onObjectAdded: (i, o) => sourceMenu.insertItem(4 + i, o)
             onObjectRemoved: (i, o) => sourceMenu.removeItem(o)
         }
-        MenuItem {
+        CMenuItem {
             text: "Monitor-Anzeige beenden"
             visible: !!(st.projector && st.projector.screen)
-            height: visible ? implicitHeight : 0
             onTriggered: studio.stopProjector()
         }
-        MenuSeparator {}
-        MenuItem { text: "Löschen"; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
+        CMenuSeparator {}
+        CMenuItem { text: "Löschen"; danger: true; onTriggered: { studio.removeItem(sourceMenu.pos); win.selected = "" } }
     }
 
     // Monitor-Anzeige: nur Bild (und Ton) der Capture-Karte, ganz ohne Studio-Overlays
@@ -281,6 +280,45 @@ ApplicationWindow {
                                     Text { text: "Für Greenscreen und die Gibeon Kamera"; color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 11 }
                                 }
                                 CSwitch { checked: !!(win.selItem && win.selItem.green); label: "Grünen Hintergrund entfernen"; onToggled: (v) => studio.setItem(win.selIndex, "green", v) }
+                            }
+                            // Grünschlüssel nachträglich verfeinern (live, ohne Neustart der Kamera)
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem && !!win.selItem.green && (win.selItem.kind === "camera" || win.selItem.kind === "capture")
+                                spacing: 2
+                                KeySlider {
+                                    title: "Toleranz"
+                                    hint: "Höher: mehr Grüntöne werden durchsichtig. Bleibt ein grüner Rand, etwas erhöhen."
+                                    from: 8; to: 70; stepSize: 1
+                                    value: win.selItem ? win.selItem.keyTol : 24
+                                    shown: Math.round(value)
+                                    onMoved: (v) => studio.setItem(win.selIndex, "keyTol", v)
+                                }
+                                KeySlider {
+                                    title: "Weiche Kanten"
+                                    hint: "Glättet die Kante um dich herum. Zu hoch: Haare und Finger werden durchscheinend."
+                                    from: 0; to: 32; stepSize: 1
+                                    value: win.selItem ? win.selItem.keySoft : 3
+                                    shown: Math.round(value)
+                                    onMoved: (v) => studio.setItem(win.selIndex, "keySoft", v)
+                                }
+                                Text {
+                                    text: "Standard wiederherstellen"
+                                    color: Theme.accent
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 12
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: studio.setItem(win.selIndex, "keyReset", true) }
+                                }
+                            }
+                            KeySlider {
+                                Layout.fillWidth: true
+                                visible: !!win.selItem
+                                title: "Deckkraft"
+                                hint: ""
+                                from: 5; to: 100; stepSize: 1
+                                value: win.selItem ? Math.round((win.selItem.opacity === undefined ? 1 : win.selItem.opacity) * 100) : 100
+                                shown: Math.round(value) + " %"
+                                onMoved: (v) => studio.setItem(win.selIndex, "opacity", v / 100)
                             }
                             // Browserquelle: Adresse und Seitengröße
                             ColumnLayout {
@@ -742,6 +780,7 @@ ApplicationWindow {
                             onDoubleClicked: win.renaming = chipScene.index
                         }
                         TextField {
+                            GibeonT.ContextMenu.menu: CTextMenu {}
                             visible: win.renaming === chipScene.index
                             anchors.fill: parent
                             anchors.margins: 3
@@ -754,11 +793,11 @@ ApplicationWindow {
                             onActiveFocusChanged: if (!activeFocus && visible) { studio.renameScene(chipScene.index, text); win.renaming = -1 }
                             Keys.onEscapePressed: win.renaming = -1
                         }
-                        Menu {
+                        CMenu {
                             id: sceneMenu
-                            MenuItem { text: "Umbenennen"; onTriggered: win.renaming = chipScene.index }
-                            MenuItem { text: "Duplizieren"; onTriggered: studio.duplicateScene(chipScene.index) }
-                            MenuItem { text: "Löschen"; enabled: (st.scenes || []).length > 1; onTriggered: studio.removeScene(chipScene.index) }
+                            CMenuItem { text: "Umbenennen"; onTriggered: win.renaming = chipScene.index }
+                            CMenuItem { text: "Duplizieren"; onTriggered: studio.duplicateScene(chipScene.index) }
+                            CMenuItem { text: "Löschen"; enabled: (st.scenes || []).length > 1; onTriggered: studio.removeScene(chipScene.index) }
                         }
                     }
                 }
@@ -831,8 +870,10 @@ ApplicationWindow {
                             radius: Theme.radiusRow
                             color: Theme.raised
                             clip: true
+                            CWebMenu { id: chatMenu; view: chatView }
                             WebEngineView {
                                 id: chatView
+                                onContextMenuRequested: (request) => chatMenu.show(request)
                                 anchors.fill: parent
                                 anchors.margins: 1
                                 visible: !!parent.parent.a.chat
@@ -1650,6 +1691,7 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.margins: 8
                             TextArea {
+                                GibeonT.ContextMenu.menu: CTextMenu {}
                                 id: cssEdit
                                 text: cfg.poll_css || ""
                                 color: Theme.text
@@ -1730,6 +1772,7 @@ ApplicationWindow {
     component Heading: Text { color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 14; font.bold: true }
 
     component Field: TextField {
+        GibeonT.ContextMenu.menu: CTextMenu {}
         implicitHeight: 38
         color: Theme.text
         placeholderTextColor: Theme.textMuted
@@ -1874,10 +1917,10 @@ ApplicationWindow {
             cursorShape: Qt.PointingHandCursor
             onClicked: chip.a.connected ? menu.popup() : studio.login(chip.service)
         }
-        Menu {
+        CMenu {
             id: menu
-            MenuItem { text: "Neu laden"; onTriggered: studio.reloadChannel(chip.service) }
-            MenuItem { text: "Abmelden"; onTriggered: studio.logout(chip.service) }
+            CMenuItem { text: "Neu laden"; onTriggered: studio.reloadChannel(chip.service) }
+            CMenuItem { text: "Abmelden"; onTriggered: studio.logout(chip.service) }
         }
     }
 
@@ -2095,5 +2138,40 @@ ApplicationWindow {
         color: bma.pressed ? Qt.darker(fill, 1.15) : (bma.containsMouse ? Qt.lighter(fill, 1.08) : fill)
         Text { anchors.centerIn: parent; text: bb.text; color: bb.textColor; font.family: Theme.fontFamily; font.pixelSize: 15; font.bold: true }
         MouseArea { id: bma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: bb.clicked() }
+    }
+
+    // Schieberegler mit Titel, Wert und Hinweis (Grünschlüssel, Deckkraft)
+    component KeySlider: ColumnLayout {
+        id: ks
+        property string title
+        property string hint
+        property alias from: sl.from
+        property alias to: sl.to
+        property alias stepSize: sl.stepSize
+        property real value: 0
+        property var shown: ""
+        signal moved(real v)
+        spacing: 0
+        RowLayout {
+            Layout.fillWidth: true
+            Text { text: ks.title; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: 13; Layout.fillWidth: true }
+            Text { text: String(ks.shown); color: Theme.textMuted; font.family: Theme.fontFamily; font.pixelSize: 12 }
+        }
+        CSlider {
+            id: sl
+            Layout.fillWidth: true
+            enabled: !win.locked
+            value: ks.value
+            onMoved: ks.moved(value)
+        }
+        Text {
+            visible: ks.hint !== ""
+            Layout.fillWidth: true
+            text: ks.hint
+            wrapMode: Text.WordWrap
+            color: Theme.textMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+        }
     }
 }

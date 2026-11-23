@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Creative
@@ -31,6 +32,7 @@ ApplicationWindow {
         wrapMode: Text.WordWrap
     }
     component Field: TextField {
+        GibeonT.ContextMenu.menu: CTextMenu {}
         id: f
         height: 36
         color: Theme.text
@@ -552,6 +554,7 @@ ApplicationWindow {
                         color: Theme.ground
                         border.color: textArea.activeFocus ? Theme.accent : Theme.hairline
                         TextArea {
+                            GibeonT.ContextMenu.menu: CTextMenu {}
                             id: textArea
                             anchors.fill: parent
                             anchors.margins: 4
@@ -664,18 +667,18 @@ ApplicationWindow {
     }
 
     // ---- Rechtsklick auf eine Taste -----------------------------------------------------
-    Menu {
+    CMenu {
         id: keyMenu
-        MenuItem { text: "Ausprobieren"; onTriggered: deck.testKey() }
-        MenuItem { text: "Kopieren"; onTriggered: deck.copyKey() }
-        MenuItem { text: "Einfügen"; onTriggered: deck.pasteKey() }
-        MenuItem { text: "Leeren"; onTriggered: deck.clearKey() }
-        MenuSeparator {}
-        MenuItem {
+        CMenuItem { text: "Ausprobieren"; onTriggered: deck.testKey() }
+        CMenuItem { text: "Kopieren"; onTriggered: deck.copyKey() }
+        CMenuItem { text: "Einfügen"; onTriggered: deck.pasteKey() }
+        CMenuItem { text: "Leeren"; onTriggered: deck.clearKey() }
+        CMenuSeparator {}
+        CMenuItem {
             text: "Seite umbenennen"
             onTriggered: { renameField.text = deck.pageNames[deck.page]; renamePopup.open() }
         }
-        MenuItem { text: "Seite löschen"; enabled: deck.pageNames.length > 1; onTriggered: removeDialog.open() }
+        CMenuItem { danger: true; text: "Seite löschen"; enabled: deck.pageNames.length > 1; onTriggered: removeDialog.open() }
     }
 
     Popup {

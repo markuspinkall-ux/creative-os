@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -130,6 +131,7 @@ Item {
                     visible: root.replyTo !== null
                     width: parent.width; height: 42; radius: 12; color: Theme.raised
                     TextField {
+                        GibeonT.ContextMenu.menu: CTextMenu {}
                         id: quick
                         x: 12; width: parent.width - 54; height: parent.height
                         placeholderTextColor: Theme.textMuted

@@ -1,5 +1,6 @@
 import QtCore
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Qt.labs.folderlistmodel
 import Creative
@@ -361,6 +362,7 @@ Popup {
                     font.pixelSize: 13
                 }
                 TextField {
+                    GibeonT.ContextMenu.menu: CTextMenu {}
                     id: nameField
                     width: foot.width - 140
                     height: 38

@@ -52,8 +52,19 @@ class Beschreibung(unittest.TestCase):
         d = engine.feeder_description({"type": "video", "device": "/dev/video42", "green": True}, 1920, 1080, 30)
         self.assertIn('v4l2src device="/dev/video42"', d)
         if engine.gst.has("alpha"):
-            self.assertIn("alpha method=green", d)
-        self.assertNotIn("alpha method", engine.feeder_description({"type": "video", "device": "/dev/video0"}, 1920, 1080, 30))
+            self.assertIn("alpha name=key method=green angle=24 noise-level=3", d)
+            d2 = engine.feeder_description({"type": "video", "device": "/dev/video42", "green": True,
+                                            "keyTol": 99, "keySoft": "5"}, 1920, 1080, 30)
+            self.assertIn("angle=70 noise-level=5", d2)          # auf erlaubten Bereich begrenzt
+        self.assertNotIn("alpha ", engine.feeder_description({"type": "video", "device": "/dev/video0"}, 1920, 1080, 30))
+        # Ohne feste Einstellung nur normales Bild oder MJPEG (kein DMABuf, das videoconvert nicht kann)
+        self.assertIn('capsfilter caps="video/x-raw;image/jpeg" ! decodebin',
+                      engine.video_source({"type": "video", "device": "/dev/video0"}))
+
+    def test_deckkraft(self):
+        self.assertEqual(engine._pp((10, 20, 300, 200, 3, 0.5))["alpha"], 0.5)
+        self.assertEqual(engine._pp((10, 20, 300, 200, 3))["alpha"], 1.0)
+        self.assertEqual(engine._pp(None), {"alpha": 0.0})
 
     def test_bildschirm(self):
         d = engine.video_source({"type": "screen", "fd": 7, "node": 42})

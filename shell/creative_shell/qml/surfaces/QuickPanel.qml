@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -225,6 +226,7 @@ Item {
 
                     BodyText { width: parent.width; text: "Passwort für „" + passwordBox.ssid + "“" }
                     TextField {
+                        GibeonT.ContextMenu.menu: CTextMenu {}
                         id: password
                         width: parent.width
                         height: 38

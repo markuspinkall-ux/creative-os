@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Window
 import QtQuick.Controls.Basic
 import Creative
@@ -165,6 +166,7 @@ ApplicationWindow {
 
                 SvgIcon { x: 12; anchors.verticalCenter: parent.verticalCenter; name: "search"; size: 14 }
                 TextField {
+                    GibeonT.ContextMenu.menu: CTextMenu {}
                     id: search
                     anchors.fill: parent
                     leftPadding: 34

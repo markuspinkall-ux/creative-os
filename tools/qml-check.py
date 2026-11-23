@@ -14,7 +14,9 @@ from PySide6.QtQuickControls2 import QQuickStyle
 ROOT = Path(__file__).resolve().parent.parent
 DIRS = ["shell/creative_shell/qml/Creative", "shell/creative_shell/qml/surfaces", "shell/creative_shell/qml",
         "files/creative_files/qml", "settings/creative_settings/qml", "settings/creative_settings/qml/pages",
-        "deck/creative_deck/qml", "android/gibeon_android/qml", "shots/creative_shots/qml"]
+        "deck/creative_deck/qml", "android/gibeon_android/qml", "shots/creative_shots/qml",
+        "calculator/creative_calculator/qml", "taskmanager/creative_taskmanager/qml", "welcome/creative_welcome/qml",
+        "pictures/creative_pictures/qml", "media/creative_media/qml", "magazin/creative_magazin/qml"]
 
 QQuickStyle.setStyle("Basic")
 app = QGuiApplication(sys.argv)

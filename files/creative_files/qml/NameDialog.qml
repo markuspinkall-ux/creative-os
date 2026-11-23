@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
 import Creative
 
@@ -50,6 +51,7 @@ Popup {
             font.bold: true
         }
         TextField {
+            GibeonT.ContextMenu.menu: CTextMenu {}
             id: field
             width: parent.width
             height: 40
