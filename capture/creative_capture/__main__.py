@@ -4,6 +4,7 @@ Startpunkt: `creative-capture`. Die Anzeige läuft über Qt Multimedia (V4L2 + P
 """
 
 import json
+import shutil
 import os
 import signal
 import subprocess
@@ -33,6 +34,9 @@ def user_dir(kind, fallback):
     return Path.home() / fallback
 
 
+from .audio_routing import MONITOR_TAG  # noqa: E402
+
+
 class Capture(QObject):
     changed = Signal()
     toast = Signal(str)
@@ -47,12 +51,43 @@ class Capture(QObject):
         self._monitor.errorOccurred.connect(self._monitor_error)
         self._monitor.finished.connect(self._monitor_finished)
         QGuiApplication.instance().aboutToQuit.connect(self.stopMonitor)
+        self._kill_stale_monitors()
         try:
             data = json.loads(CFG.read_text(encoding="utf-8"))
             if isinstance(data, dict):
                 self._cfg.update({k: v for k, v in data.items() if k in self._cfg})
         except (OSError, ValueError):
             pass
+
+    def _kill_stale_monitors(self):
+        """Nach einem Absturz kann eine alte Ton-Wiedergabe weiterlaufen – dann hört man alles doppelt."""
+        from .audio_routing import stale_monitors
+        try:
+            out = subprocess.run(["ps", "-eo", "pid=,args="], capture_output=True, text=True, timeout=3).stdout
+        except (OSError, subprocess.SubprocessError):
+            return
+        for pid in stale_monitors(out):
+            try:
+                os.kill(pid, 15)
+            except OSError:
+                pass
+
+    @Slot(str, str)
+    def checkEcho(self, source, video_id):
+        """Warnen, wenn der Ton der Capture-Karte schon woanders läuft oder ein Mikrofon gewählt ist."""
+        from .audio_routing import is_capture_audio, other_players
+        try:
+            out = subprocess.run(["pactl", "-f", "json", "list", "sink-inputs"], capture_output=True, text=True,
+                                 timeout=3).stdout
+            others = other_players(json.loads(out or "[]"), source)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            others = []
+        if others:
+            self.toast.emit(f"{others[0]} spielt den Ton der Capture-Karte schon ab – darum hörst du ihn doppelt "
+                            "(Echo). Dort das Mithören ausschalten.")
+        elif source and video_id and not is_capture_audio(source, video_id):
+            self.toast.emit("Als Tonquelle ist ein Mikrofon gewählt – das kann pfeifen (Rückkopplung). "
+                            "Unter „Tonquelle“ den HDMI-Ton der Capture-Karte wählen.")
 
     def _save(self):
         try:
@@ -156,17 +191,25 @@ class Capture(QObject):
     @Slot(str, int, int, float)
     def playChannel(self, source, channels, channel, volume):
         self.stopMonitor()
-        if not source or source.endswith(".monitor") or not 1 <= channel <= channels <= 32:
+        if not source or source.endswith(".monitor") or not 0 <= channel <= max(channels, 1) or channels > 32:
             return
-        selected = channel - 1
         gain = max(0.0, min(1.0, volume))
+        if channel == 0:
+            mix = f"volume={gain}"
+            channels = max(channels, 2)
+        else:
+            mix = f"pan=stereo|c0=c{channel - 1}|c1=c{channel - 1},volume={gain}"
         self._monitor_active = True
-        self._monitor.start("ffmpeg", [
-            "-nostdin", "-loglevel", "error", "-f", "pulse", "-channels", str(channels),
-            "-fragment_size", "4096", "-i", source,
-            "-af", f"pan=stereo|c0=c{selected}|c1=c{selected},volume={gain}",
-            "-f", "pulse", "-buffer_duration", "50", "Capture",
-        ])
+        # setpriv --pdeathsig: endet Capture (auch durch Absturz), endet die Wiedergabe mit –
+        # sonst läuft sie weiter und beim nächsten Start hört man den Ton doppelt
+        args = ["-nostdin", "-loglevel", "error", "-f", "pulse", "-channels", str(channels),
+                "-fragment_size", "4096", "-name", MONITOR_TAG, "-i", source,
+                "-af", mix, "-ac", "2",
+                "-f", "pulse", "-name", MONITOR_TAG, "-buffer_duration", "50", "Capture"]
+        if shutil.which("setpriv"):
+            self._monitor.start("setpriv", ["--pdeathsig", "KILL", "ffmpeg", *args])
+        else:
+            self._monitor.start("ffmpeg", args)
 
     @Slot(str, result=str)
     def savedAudio(self, video_id):
@@ -186,7 +229,14 @@ class Capture(QObject):
 
     @Slot(str, "QVariantList", result=str)
     def matchedAudio(self, video_id, candidates):
-        return matching_audio(video_id, candidates)
+        match = matching_audio(video_id, candidates)
+        return match if match in self.captureAudio(video_id) else ""
+
+    @Slot(str, result="QStringList")
+    def captureAudio(self, video_id):
+        """Nur Tonquellen von Capture-Karten – nie das Mikrofon einer Webcam oder ein Headset."""
+        from .audio_routing import capture_audio_ids
+        return capture_audio_ids(video_id)
 
 
 def _raise_running():

@@ -22,7 +22,9 @@
       "Android-Apps: Die erste App kommt jetzt auch dann direkt als eigenes Fenster, wenn Android schon im Hintergrund lief – die LineageOS-Oberfläche wird in jedem Fall geschlossen und die App neu geöffnet (außer du öffnest „Android“ bewusst).",
       "Taskleiste: Im Startknopf lag oben ein hellblauer Streifen (falsches Blau, ragte teils über den Rand) – entfernt, der Knopf ist jetzt einfarbig in der Akzentfarbe.",
       "Kalender: Geht beim Klick auf die Uhr jetzt direkt über der Taskleiste auf – mit demselben Abstand wie die anderen Menüs.",
-      "Rechtsklick-Menüs (Schreibtisch, Ablage, Dateien, Browser) gehen jetzt immer direkt am Mauszeiger auf – ist unten kein Platz, öffnen sie nach oben, statt weit über dem Zeiger zu landen."
+      "Rechtsklick-Menüs (Schreibtisch, Ablage, Dateien, Browser) gehen jetzt immer direkt am Mauszeiger auf – ist unten kein Platz, öffnen sie nach oben, statt weit über dem Zeiger zu landen.",
+      "Capture: Kein doppelter Ton (Echo/Pfeifen) mehr – eine nach einem Absturz übrig gebliebene Ton-Wiedergabe wird beim Start beendet und endet künftig immer mit Capture. Spielt Studio den Ton der Karte schon ab oder ist versehentlich ein Mikrofon als Tonquelle gewählt, sagt Capture Bescheid.",
+      "Capture: kein Echo mehr – der Ton wird jetzt wie bei Studio fest von der gewählten Konsole abgespielt; vorher griff die Wiedergabe teils trotzdem das Webcam-Mikrofon ab. Als Tonquelle steht nur noch der Ton der gewählten Konsole zur Wahl"
     ]
   },
   {

@@ -68,8 +68,17 @@ Window {
         return list.length ? 0 : -1
     }
 
+    // Tonquellen nur von Capture-Karten: Webcam-Mikrofone (z. B. Anker PowerConf) und Headsets nie –
+    // sonst hört man sich selbst als Echo
+    property var audioSources: []
+    function refreshAudioSources() {
+        const ok = capture.captureAudio(hasVideo && cam.cameraDevice ? capture.deviceKey(cam.cameraDevice.id) : "")
+        audioSources = devices.audioInputs.filter(d => ok.indexOf(capture.deviceKey(d.id)) >= 0)
+    }
+
     function pickAudio(dev) {
-        const list = devices.audioInputs
+        refreshAudioSources()
+        const list = win.audioSources
         const videoId = capture.deviceKey(dev.id)
         const saved = capture.savedAudio(videoId)
         if (saved === "none") return null
@@ -89,6 +98,13 @@ Window {
         audioOn = false
         if (a) { audioIn.device = a; audioOn = true }
         updateChannelSource()
+        if (audioOn && !selftest) echoCheck.restart()
+    }
+    // Echo/Pfeifen: läuft der Ton der Karte schon woanders, oder ist ein Mikrofon gewählt?
+    Timer {
+        id: echoCheck
+        interval: 2500
+        onTriggered: if (win.audioOn) capture.checkEcho(capture.deviceKey(audioIn.device.id), capture.deviceKey(cam.cameraDevice.id))
     }
 
     function applyDevice(dev) {
@@ -108,6 +124,7 @@ Window {
     property string monitorSource: ""
     property int channelCount: 0
     property int monitorChannel: 0
+    property bool recArmed: false
 
     function updateChannelSource() {
         monitorSource = audioOn ? capture.deviceKey(audioIn.device.id) : ""
@@ -118,7 +135,7 @@ Window {
     }
 
     function syncMonitor() {
-        if (!selftest && audioOn && monitorChannel > 0 && !audioOut.muted)
+        if (!selftest && audioOn && monitorSource && !audioOut.muted)
             capture.playChannel(monitorSource, channelCount, monitorChannel, audioOut.volume)
         else
             capture.stopMonitor()
@@ -133,7 +150,7 @@ Window {
     Component.onCompleted: { if (!selftest) applyDevice(pickVideo()) }
     Connections {
         target: devices
-        function onAudioInputsChanged() { win.applyAudio(win.hasVideo ? cam.cameraDevice : null) }
+        function onAudioInputsChanged() { win.refreshAudioSources(); win.applyAudio(win.hasVideo ? cam.cameraDevice : null) }
         function onVideoInputsChanged() {
             // neu eingesteckt oder abgezogen
             if (win.indexOfDev(win.cards, cam.cameraDevice) < 0) {
@@ -151,8 +168,11 @@ Window {
             id: cam
             active: false
         }
-        audioInput: win.audioOn ? audioIn : null
-        audioOutput: win.audioOn && win.monitorChannel === 0 ? audioOut : null
+        // Qt nimmt hier teils die Standardquelle (z. B. Webcam-Mikro) statt der gewählten → Echo.
+        // Deshalb hört man den Ton nie über Qt, sondern über playChannel mit fest gewählter Quelle
+        // (wie Studio). Qt bekommt den Ton nur während einer Aufnahme.
+        audioInput: win.audioOn && win.recArmed ? audioIn : null
+        audioOutput: null
         videoOutput: video
         imageCapture: ImageCapture {
             id: shot
@@ -316,11 +336,11 @@ Window {
             Dropdown {
                 id: audioBox
                 width: Math.min(200, barRow.selectorWidth)
-                model: ["Ton aus / Quelle wählen"].concat(devices.audioInputs.map(d => d.description))
-                currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(devices.audioInputs, audioIn.device) + 1) : 0
+                model: ["Ton aus / Quelle wählen"].concat(win.audioSources.map(d => d.description))
+                currentIndex: win.audioOn ? Math.max(0, win.indexOfDev(win.audioSources, audioIn.device) + 1) : 0
                 onActivated: (i) => {
                     if (i === 0) { win.audioOn = false; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), "none") }
-                    else { audioIn.device = devices.audioInputs[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(devices.audioInputs[i - 1].id)) }
+                    else { audioIn.device = win.audioSources[i - 1]; win.audioOn = true; capture.saveAudio(capture.deviceKey(cam.cameraDevice.id), capture.deviceKey(win.audioSources[i - 1].id)); echoCheck.restart() }
                     win.updateChannelSource()
                 }
                 Accessible.name: "Tonquelle"
@@ -351,7 +371,7 @@ Window {
                 from: 0; to: 1; stepSize: 0.05
                 value: audioOut.volume
                 enabled: win.audioOn
-                onMoved: { audioOut.volume = value; capture.set("volume", value); if (win.monitorChannel > 0) monitorVolume.restart() }
+                onMoved: { audioOut.volume = value; capture.set("volume", value); monitorVolume.restart() }
                 Accessible.name: "Lautstärke"
             }
 
@@ -387,10 +407,12 @@ Window {
                     onClicked: {
                         if (rec.recorderState === MediaRecorder.RecordingState) {
                             rec.stop()
+                            win.recArmed = false
                         } else {
                             const f = capture.newFile("video")
                             win.lastFile = f
                             rec.outputLocation = capture.fileUrl(f)
+                            win.recArmed = true
                             rec.record()
                         }
                     }
