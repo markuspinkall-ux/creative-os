@@ -473,7 +473,9 @@ class ShellController(QObject):
         """Tray-Symbol angeklickt: nur diesen Teil des Schnellzugriffs zeigen (volume/printer/network/calendar).
         Ist der Schnellzugriff schon mit einem anderen Teil offen, wird nur umgeschaltet."""
         section = section if section in ("volume", "printer", "network", "calendar") else "network"
-        side = "topright" if section == "calendar" else self._tray_home()
+        # Kalender gehört zur Uhr unten in der Taskleiste: über der Taskleiste rechts aufgehen,
+        # mit demselben Abstand wie die anderen Menüs (vorher oben rechts mit großem Abstand)
+        side = "right" if section == "calendar" else self._tray_home()
         if self._open.get("panel") == name and self._panel_focus != section and self._tray_side.get("panel") == side:
             self._panel_focus = section
             self.openChanged.emit()
