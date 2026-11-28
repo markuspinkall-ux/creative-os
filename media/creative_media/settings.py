@@ -19,7 +19,8 @@ class Settings(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._data = {"iptvSource": DEFAULT_IPTV, "volume": 0.7, "lastChannel": "", "navOpen": False}
+        self._data = {"iptvSource": DEFAULT_IPTV, "volume": 0.7, "lastChannel": "", "navOpen": False,
+                      "iptvLists": []}
         try:
             with _path().open(encoding="utf-8") as fh:
                 stored = json.load(fh)
@@ -52,4 +53,5 @@ class Settings(QObject):
     iptvSource = Property(str, lambda self: self._data["iptvSource"], _setter("iptvSource"), notify=changed)
     volume = Property(float, lambda self: float(self._data["volume"]), _setter("volume"), notify=changed)
     lastChannel = Property(str, lambda self: self._data["lastChannel"], _setter("lastChannel"), notify=changed)
+    iptvLists = Property("QVariantList", lambda self: list(self._data["iptvLists"]), _setter("iptvLists"), notify=changed)
     navOpen = Property(bool, lambda self: bool(self._data["navOpen"]), _setter("navOpen"), notify=changed)

@@ -8,4 +8,4 @@ Exec=creative-player %F
 Icon=creative-player
 Terminal=false
 Categories=AudioVideo;Audio;Video;Player;
-MimeType=audio/mpeg;audio/mp3;audio/flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/mp4;audio/x-m4a;audio/aac;audio/wav;audio/x-wav;audio/x-ms-wma;video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/x-m4v;video/x-ms-wmv;video/mp2t;video/mpeg;audio/x-mpegurl;
+MimeType=audio/mpeg;audio/mp3;audio/flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/mp4;audio/x-m4a;audio/aac;audio/wav;audio/x-wav;audio/x-ms-wma;video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/x-m4v;video/x-ms-wmv;video/mp2t;video/mpeg;audio/x-mpegurl;audio/mpegurl;application/x-mpegurl;application/vnd.apple.mpegurl;
