@@ -1,0 +1,30 @@
+name: Thumbnail Studio prüfen
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [thumbnail/**, tests/test_thumbnail.py, .github/workflows/thumbnail-pruefung.yml]
+  workflow_dispatch:
+jobs:
+  pruefen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libxkbcommon0 libegl1 libgl1 fonts-dejavu-core fonts-liberation
+          pip install -q PySide6 pytest
+      - name: Zeichnen und Vorlagen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python3 -m pytest -q tests/test_thumbnail.py
+      - name: Fenster (Selbsttest und Fotos)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python3 thumbnail/gibeon-thumbnail --selftest
+          mkdir -p fotos
+          for n in 0 1 3 4 5 6; do
+            timeout 60 python3 thumbnail/gibeon-thumbnail --beispiel --schritt=$n --screenshot=fotos/schritt-$n.png
+          done
+          for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done
