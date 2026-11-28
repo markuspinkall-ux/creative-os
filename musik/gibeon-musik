@@ -307,7 +307,7 @@ class Generator(QMainWindow):
         row.setSpacing(14)
 
         left = QFrame(objectName="panel")
-        left.setFixedWidth(430)
+        left.setFixedWidth(450)
         outer = QVBoxLayout(left)
         outer.setContentsMargins(0, 0, 0, 0)
         scroll = QScrollArea()
@@ -323,7 +323,7 @@ class Generator(QMainWindow):
         lay.addWidget(QLabel("WAS MÖCHTEST DU?", objectName="section"))
         kinds = QHBoxLayout()
         self.kind_buttons = {}
-        for key, label in ((mv.MUSIK, "Musik"), (mv.ATMO, "Geräusche & Atmosphäre")):
+        for key, label in ((mv.MUSIK, "Musik"), (mv.ATMO, "Geräusche && Atmosphäre")):
             b = QPushButton(label, objectName="choice")
             b.clicked.connect(lambda _=False, k=key: self.set_kind(k))
             kinds.addWidget(b)
@@ -378,7 +378,7 @@ class Generator(QMainWindow):
         al = QGridLayout(self.atmo_box)
         al.setContentsMargins(0, 0, 0, 0)
         al.addWidget(QLabel("GESAMTLÄNGE", objectName="section"), 0, 0)
-        al.addWidget(QLabel("PAUSEN ZWISCHEN DEN KLÄNGEN", objectName="section"), 0, 1)
+        al.addWidget(QLabel("PAUSEN", objectName="section"), 0, 1)
         self.atmo_len = QComboBox()
         for sec, label in ATMO_LENGTHS:
             self.atmo_len.addItem(label, sec)
@@ -390,15 +390,18 @@ class Generator(QMainWindow):
             self.pause.addItem(label, key)
         self.pause.setAccessibleName("Pausen")
         al.addWidget(self.pause, 1, 1)
-        self.with_pauses = QCheckBox("Einzelne Klänge mit Pausen (statt durchgehend)")
+        self.with_pauses = QCheckBox("Einzelne Klänge mit Pausen")
         al.addWidget(self.with_pauses, 2, 0, 1, 2)
-        self.with_bed = QCheckBox("Leiser Klangteppich darunter (z. B. Wind im Wald)")
+        self.with_bed = QCheckBox("Leiser Klangteppich darunter")
         al.addWidget(self.with_bed, 3, 0, 1, 2)
         lay.addWidget(self.atmo_box)
         self.with_pauses.toggled.connect(lambda _v: self.refresh())
+        self.with_pauses.setToolTip("Statt eines durchgehenden Geräuschs: einzelne Klänge (z. B. Vogelrufe) mit Pausen")
+        self.with_bed.setToolTip("Leise Grundatmosphäre in den Pausen, z. B. Wind im Wald")
 
-        self.loop = QCheckBox("Nahtlose Schleife (für Spiele – Ende geht weich in den Anfang über)")
+        self.loop = QCheckBox("Nahtlose Schleife (für Spiele)")
         self.loop.setChecked(True)
+        self.loop.setToolTip("Das Ende geht weich in den Anfang über – die Spur lässt sich endlos wiederholen")
         lay.addWidget(self.loop)
         lay.addWidget(QLabel("STARTWERT (OPTIONAL)", objectName="section"))
         self.seed = QLineEdit()
