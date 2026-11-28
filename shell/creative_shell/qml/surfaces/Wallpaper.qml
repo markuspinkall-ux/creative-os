@@ -2086,17 +2086,19 @@ Item {
     DesktopMenu {
         id: itemMenu
         entries: [
-            { label: "Öffnen", icon: "open", act: "open" },
+            { label: "Öffnen", icon: "open", act: "open" }
+        ].concat(desktop.selectedFilePaths().length > 0 ? [{ label: "Öffnen mit …", icon: "open", act: "openwith" }] : []).concat([
             { label: "In Dateien zeigen", icon: "files", act: "files" },
             { label: "Zur Ablage hinzufügen", icon: "plus", act: "shelf" },
             { sep: true },
             { label: "Kopieren", icon: "files", act: "copy" }
         ].concat(desktop.selectedCount === 1 ? [{ label: "Umbenennen  ·  F2", icon: "rename", act: "rename" }] : []).concat([
             { label: "Löschen (in den Papierkorb)  ·  Entf", icon: "trash", act: "trash" }
-        ]).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : [])
+        ]).concat(desktop.canPaste ? [{ label: "Einfügen", icon: "plus", act: "paste" }] : []))
         onTriggered: (act) => {
             if (act === "shelf") desktop.selectedPaths().forEach(p => shelf.addPath(p))
             else if (act === "open") desktop.openSelected()
+            else if (act === "openwith") desktop.openWith()
             else if (act === "files") desktop.openInFiles()
             else if (act === "trash") desktop.trashSelected()
             else if (act === "copy") desktop.copySelected()

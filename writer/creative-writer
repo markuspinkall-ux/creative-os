@@ -17,6 +17,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+# python-docx (Word-Dateien) bringt Writer selbst mit, weil Fedora es nicht mehr anbietet
+if (HERE / "vendor").is_dir() and str(HERE / "vendor") not in sys.path:
+    sys.path.append(str(HERE / "vendor"))
 
 from PySide6.QtCore import (
     QByteArray, QBuffer, QDate, QDateTime, QEvent, QIODevice, QLocale, QMarginsF, QPointF, QRectF, QSaveFile,
@@ -2871,6 +2874,8 @@ def selftest(window):
         assert window.open_document(tmp / "test.docx", ask=False)
         assert "Einleitung" in window.editor.toPlainText(), "docx-Rückweg"
     assert window.open_document(tmp / "test.html", ask=False)
+    if os.environ.get("WRITER_REQUIRE_DOCX") == "1":
+        assert writer_docx.AVAILABLE, "python-docx fehlt – Writer würde Dokumente nur als HTML speichern"
     print(f"Selbsttest ok ({'mit' if writer_docx.AVAILABLE else 'ohne'} Word, "
           f"Rechtschreibung {'ja' if window.speller.available else 'nein'})")
 

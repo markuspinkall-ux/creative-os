@@ -509,6 +509,18 @@ class DesktopModel(QAbstractListModel):
             QDesktopServices.openUrl(QUrl.fromLocalFile(target))
 
     @Slot(result="QVariantList")
+    def selectedFilePaths(self):
+        """Ausgewählte Dateien ohne Ordner – für „Öffnen mit“."""
+        return [r["path"] for r in self._selected() if not r["isDir"]]
+
+    @Slot()
+    def openWith(self):
+        """Fenster „Öffnen mit“ (aus Dateien) für die ausgewählten Dateien."""
+        files = self.selectedFilePaths()
+        if files:
+            spawn_detached(["creative-files", "--open-with", *files])
+
+    @Slot(result="QVariantList")
     def selectedPaths(self):
         return [r["path"] for r in self._selected()]
 
