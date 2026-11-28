@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KI-Bildgenerator
+GenericName=Bilder aus Text erzeugen
+Comment=Bilder aus einer Beschreibung erzeugen – lokal per KI, auch als Vorlage für 3D Studio
+Exec=gibeon-bildgenerator
+Icon=gibeon-bildgenerator
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=KI;AI;Bild;Bildgenerator;Prompt;FLUX;Text zu Bild;3D;Vorlage;
+StartupWMClass=gibeon-bildgenerator

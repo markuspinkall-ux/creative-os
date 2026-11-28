@@ -1,0 +1,565 @@
+#!/usr/bin/python3
+"""KI-Bildgenerator – Bilder aus einer Beschreibung, lokal auf der NVIDIA-Grafikkarte.
+
+Nutzt FLUX.1 [schnell] von Black Forest Labs (Apache 2.0). Wie bei 3D Studio läuft
+die KI in einem Container; Container (≈ 7 GB) und Modell richtet die App beim ersten
+Start einmalig ein, das System-Abbild bleibt klein.
+
+Modus „Für 3D Studio“: die Beschreibung wird automatisch um Vorgaben ergänzt
+(ein Motiv, ganz im Bild, von vorn, neutraler Hintergrund, weiches Licht), mit denen
+3D Studio die saubersten Figuren baut. Ein Klick öffnet das Bild dann in 3D Studio.
+
+  gibeon-bildgenerator              App starten
+  gibeon-bildgenerator --selftest   Prüfung beim Bauen (ohne Grafikkarte)
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from PySide6.QtCore import QProcess, QProcessEnvironment, QSize, QStandardPaths, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
+from PySide6.QtWidgets import (
+    QApplication, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
+)
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
+    from creative_dialogs import QFileDialog, QMessageBox  # noqa: F811
+except ImportError:
+    pass
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
+    from creative_look import install as _look_install
+    _look_install()
+except ImportError:
+    pass
+
+LIB = Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/gibeon-bildgenerator"
+if not (LIB / "bildgen_prompt.py").is_file():
+    LIB = Path(__file__).resolve().parent                      # aus dem Quellordner gestartet
+sys.path.insert(0, str(LIB))
+import bildgen_prompt as bp  # noqa: E402
+
+APP = "KI-Bildgenerator"
+DATA = Path(os.environ.get("BILDGEN_HOME") or Path.home() / ".local/share/gibeon-bildgenerator")
+SETUP = LIB / "gibeon-bildgenerator-setup"
+WORK = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "gibeon-bildgenerator"
+IMAGE = os.environ.get("BILDGEN_IMAGE", "ghcr.io/markuspinkall-ux/gibeon-bildgenerator:latest")
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QLabel#chip { background:#232836; border-radius:10px; padding:5px 10px; color:rgba(220,230,255,0.75); }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget { background:transparent; }
+    QComboBox, QLineEdit, QPlainTextEdit#prompt { background:#232836; border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px; padding:7px 9px; }
+    QPlainTextEdit#prompt { font-size:14px; }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QPlainTextEdit#log { background:#12151b; border:none; border-radius:10px; font-family:monospace; font-size:11px;
+        color:rgba(220,230,255,0.7); }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:9px 14px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QPushButton#primary:hover { background:#a3c1ff; }
+    QPushButton:disabled, QPushButton#primary:disabled { background:rgba(255,255,255,0.04); color:rgba(220,230,255,0.35); }
+    QProgressBar { background:#12151b; border:none; border-radius:5px; height:10px; }
+    QProgressBar::chunk { background:#8fb3ff; border-radius:5px; }
+    QLabel#thumb { background:#12151b; border:2px solid transparent; border-radius:12px; }
+    QLabel#thumb[picked="true"] { border:2px solid #8fb3ff; }
+    QScrollArea { border:none; background:transparent; }
+"""
+
+
+def ready():
+    return (DATA / "bereit").is_file() and (DATA / "modelle" / "bereit.json").is_file()
+
+
+def gpu_name():
+    if not shutil.which("nvidia-smi"):
+        return ""
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+                             capture_output=True, text=True, timeout=5).stdout.strip().splitlines()
+        return out[0] if out else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def pictures_dir():
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation) \
+        or str(Path.home() / "Bilder")
+    return Path(base) / "KI-Bildgenerator"
+
+
+def run_override():
+    """Neuere Fassung des Rechenteils aus dem System in den Container legen – Verbesserungen
+    kommen so mit dem System-Update, ohne den Container neu zu laden."""
+    newer = LIB / "bildgenerator-run.py"
+    return ["-v", f"{newer}:/opt/gibeon/run.py:ro"] if newer.is_file() else []
+
+
+class Thumb(QLabel):
+    clicked = Signal(object)
+    double = Signal(object)
+
+    def __init__(self, path):
+        super().__init__(objectName="thumb")
+        self.path = path
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setFixedSize(QSize(260, 260))
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        pix = QPixmap(str(path))
+        if not pix.isNull():
+            self.setPixmap(pix.scaled(QSize(250, 250), Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation))
+        self.setToolTip(Path(path).name)
+        self.setAccessibleName(f"Bild {Path(path).name}")
+
+    def set_picked(self, on):
+        self.setProperty("picked", "true" if on else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+    def mousePressEvent(self, event):
+        self.clicked.emit(self)
+
+    def mouseDoubleClickEvent(self, event):
+        self.double.emit(self)
+
+
+class Generator(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(APP)
+        self.resize(1240, 800)
+        self.setStyleSheet(STYLE)
+        self.mode = None                     # "setup" | "generate"
+        self.buffer = b""
+        self.error = ""
+        self.work = None
+        self.thumbs = []
+        self.picked = None
+        self.last_prompt = ""
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_output)
+        self.proc.finished.connect(self.finished)
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        box = QVBoxLayout(root)
+        box.setContentsMargins(18, 14, 18, 14)
+        box.setSpacing(12)
+        top = QHBoxLayout()
+        top.addWidget(QLabel(APP, objectName="title"))
+        top.addWidget(QLabel("Beschreibung → Bild · auch als Vorlage für 3D Studio", objectName="muted"))
+        top.addStretch()
+        self.chip = QLabel(objectName="chip")
+        top.addWidget(self.chip)
+        box.addLayout(top)
+
+        self.pages = QStackedWidget()
+        box.addWidget(self.pages, 1)
+        self.pages.addWidget(self.build_setup())
+        self.pages.addWidget(self.build_main())
+        self.refresh()
+
+    # ---- Aufbau -----------------------------------------------------------------
+    def build_setup(self):
+        page = QFrame(objectName="panel")
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(28, 24, 28, 24)
+        lay.setSpacing(12)
+        title = QLabel("KI einrichten")
+        title.setStyleSheet("font-size:20px; font-weight:700;")
+        lay.addWidget(title)
+        text = QLabel(
+            "Der Bildgenerator nutzt FLUX.1 [schnell] von Black Forest Labs (Apache-2.0-Lizenz) und läuft "
+            "komplett auf deinem PC – keine Bilder gehen ins Internet.\n\n"
+            "Einmalig werden der Container (≈ 7 GB) und das Modell (≈ 33 GB) geladen. Danach wird das Modell "
+            "für 12 GB Grafikspeicher verkleinert; am Ende bleiben ≈ 19 GB belegt. Während der Einrichtung "
+            "braucht es ≈ 55 GB freien Platz. Je nach Internet dauert das eine Weile.",
+            objectName="muted")
+        text.setWordWrap(True)
+        lay.addWidget(text)
+        row = QHBoxLayout()
+        self.setup_button = QPushButton("KI einrichten", objectName="primary")
+        self.setup_button.clicked.connect(self.start_setup)
+        row.addWidget(self.setup_button)
+        row.addStretch()
+        lay.addLayout(row)
+        self.setup_progress = QProgressBar()
+        self.setup_progress.setTextVisible(False)
+        self.setup_progress.hide()
+        lay.addWidget(self.setup_progress)
+        self.setup_status = QLabel("", objectName="muted")
+        self.setup_status.setWordWrap(True)
+        lay.addWidget(self.setup_status)
+        self.log = QPlainTextEdit(objectName="log")
+        self.log.setReadOnly(True)
+        self.log.hide()
+        lay.addWidget(self.log, 1)
+        lay.addStretch()
+        return page
+
+    def build_main(self):
+        page = QWidget()
+        row = QHBoxLayout(page)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(14)
+
+        left = QFrame(objectName="panel")
+        left.setFixedWidth(400)
+        lay = QVBoxLayout(left)
+        lay.setContentsMargins(18, 18, 18, 18)
+        lay.setSpacing(8)
+        lay.addWidget(QLabel("BESCHREIBUNG", objectName="section"))
+        self.prompt = QPlainTextEdit(objectName="prompt")
+        self.prompt.setPlaceholderText("z. B. ein Ritter mit rotem Umhang und Schwert")
+        self.prompt.setFixedHeight(120)
+        self.prompt.setAccessibleName("Beschreibung des Bildes")
+        lay.addWidget(self.prompt)
+        tip = QLabel("Tipp: Englische Beschreibungen setzt die KI am genauesten um.", objectName="muted")
+        tip.setWordWrap(True)
+        lay.addWidget(tip)
+
+        lay.addSpacing(6)
+        lay.addWidget(QLabel("WOFÜR", objectName="section"))
+        self.modus = QComboBox()
+        for key, label, hint in bp.MODES:
+            self.modus.addItem(label, key)
+            self.modus.setItemData(self.modus.count() - 1, hint, Qt.ItemDataRole.ToolTipRole)
+        self.modus.setAccessibleName("Wofür")
+        self.modus.currentIndexChanged.connect(self.refresh)
+        lay.addWidget(self.modus)
+        self.modus_hint = QLabel("", objectName="muted")
+        self.modus_hint.setWordWrap(True)
+        lay.addWidget(self.modus_hint)
+
+        lay.addSpacing(6)
+        lay.addWidget(QLabel("STIL", objectName="section"))
+        self.stil = QComboBox()
+        for key, label, _ in bp.STYLES:
+            self.stil.addItem(label, key)
+        self.stil.setAccessibleName("Stil")
+        lay.addWidget(self.stil)
+
+        lay.addSpacing(6)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.addWidget(QLabel("FORMAT", objectName="section"), 0, 0)
+        grid.addWidget(QLabel("ANZAHL", objectName="section"), 0, 1)
+        self.format = QComboBox()
+        for key, label, _, _ in bp.SIZES:
+            self.format.addItem(label, key)
+        self.format.setAccessibleName("Format")
+        grid.addWidget(self.format, 1, 0)
+        self.anzahl = QComboBox()
+        for n in (1, 2, 3, 4):
+            self.anzahl.addItem(f"{n} Bild" + ("er" if n > 1 else ""), n)
+        self.anzahl.setCurrentIndex(3)
+        self.anzahl.setAccessibleName("Anzahl der Bilder")
+        grid.addWidget(self.anzahl, 1, 1)
+        lay.addLayout(grid)
+
+        lay.addSpacing(6)
+        lay.addWidget(QLabel("STARTWERT (OPTIONAL)", objectName="section"))
+        self.seed = QLineEdit()
+        self.seed.setPlaceholderText("zufällig – gleiche Zahl ergibt das gleiche Bild")
+        self.seed.setAccessibleName("Startwert")
+        lay.addWidget(self.seed)
+
+        lay.addStretch()
+        self.go = QPushButton("Bilder erzeugen", objectName="primary")
+        self.go.clicked.connect(self.start_generate)
+        lay.addWidget(self.go)
+        self.progress = QProgressBar()
+        self.progress.setTextVisible(False)
+        self.progress.hide()
+        lay.addWidget(self.progress)
+        self.status = QLabel("", objectName="muted")
+        self.status.setWordWrap(True)
+        lay.addWidget(self.status)
+        row.addWidget(left)
+
+        right = QFrame(objectName="panel")
+        rlay = QVBoxLayout(right)
+        rlay.setContentsMargins(18, 18, 18, 18)
+        rlay.setSpacing(12)
+        head = QHBoxLayout()
+        head.addWidget(QLabel("ERGEBNISSE", objectName="section"))
+        head.addStretch()
+        self.info = QLabel("", objectName="muted")
+        head.addWidget(self.info)
+        rlay.addLayout(head)
+        self.empty = QLabel("Hier erscheinen deine Bilder.\nKlick wählt ein Bild aus, Doppelklick öffnet es groß.",
+                            objectName="muted")
+        self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        rlay.addWidget(self.empty, 1)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        holder = QWidget()
+        self.grid = QGridLayout(holder)
+        self.grid.setSpacing(12)
+        self.grid.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self.scroll.setWidget(holder)
+        self.scroll.hide()
+        rlay.addWidget(self.scroll, 1)
+        buttons = QHBoxLayout()
+        self.to3d = QPushButton("In 3D Studio öffnen", objectName="primary")
+        self.to3d.clicked.connect(self.open_in_3d)
+        self.save = QPushButton("Speichern unter …")
+        self.save.clicked.connect(self.save_as)
+        self.folder = QPushButton("Ordner öffnen")
+        self.folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.out_dir()))))
+        for b in (self.to3d, self.save, self.folder):
+            buttons.addWidget(b)
+        buttons.addStretch()
+        rlay.addLayout(buttons)
+        row.addWidget(right, 1)
+        return page
+
+    # ---- Zustand ----------------------------------------------------------------
+    def busy(self):
+        return self.proc.state() != QProcess.ProcessState.NotRunning
+
+    def out_dir(self):
+        path = pictures_dir()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def refresh(self):
+        gpu = gpu_name()
+        self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte gefunden")
+        self.pages.setCurrentIndex(1 if ready() and self.mode != "setup" else 0)
+        mode = self.modus.currentData()
+        hints = {k: h for k, _, h in bp.MODES}
+        self.modus_hint.setText(hints.get(mode, "") + (" · immer quadratisch, heller Hintergrund"
+                                                       if mode != "frei" else ""))
+        self.format.setEnabled(mode == "frei")
+        busy = self.busy()
+        self.setup_button.setEnabled(not busy)
+        self.go.setEnabled(not busy and ready())
+        for w in (self.prompt, self.modus, self.stil, self.anzahl, self.seed):
+            w.setEnabled(not busy)
+        self.format.setEnabled(not busy and mode == "frei")
+        has = self.picked is not None
+        self.to3d.setEnabled(has and shutil.which("creative-3d") is not None)
+        self.to3d.setToolTip("" if shutil.which("creative-3d") else "3D Studio ist nicht installiert.")
+        self.save.setEnabled(has)
+
+    # ---- KI einrichten ----------------------------------------------------------
+    def start_setup(self):
+        if self.busy():
+            return
+        self.mode, self.error, self.buffer = "setup", "", b""
+        self.log.clear()
+        self.log.show()
+        self.setup_progress.setValue(0)
+        self.setup_progress.show()
+        self.setup_status.setText("Starte …")
+        self.proc.start("sh", [str(SETUP)])
+        self.refresh()
+
+    def handle_setup_line(self, line):
+        self.log.appendPlainText(line)
+        if line.startswith("STEP "):
+            parts = line.split(" ", 3)
+            try:
+                n, total = int(parts[1]), int(parts[2])
+                self.setup_progress.setValue(int((n - 1) * 100 / total))
+            except (ValueError, IndexError):
+                pass
+            self.setup_status.setText(parts[3] if len(parts) > 3 else "")
+        elif line.startswith("P "):
+            _, _, rest = line.partition(" ")
+            pct, _, text = rest.partition(" ")
+            if pct.isdigit():
+                self.setup_progress.setValue(80 + int(pct) * 20 // 100)
+            self.setup_status.setText(text)
+        elif line.startswith("FEHLER:"):
+            self.setup_status.setText(line[7:].strip())
+
+    # ---- Bilder erzeugen --------------------------------------------------------
+    def start_generate(self):
+        text = self.prompt.toPlainText().strip()
+        if not text:
+            self.status.setText("Bitte beschreibe zuerst, was auf dem Bild sein soll.")
+            self.prompt.setFocus()
+            return
+        if not ready() or self.busy():
+            return
+        mode, style = self.modus.currentData(), self.stil.currentData()
+        prompt = bp.build_prompt(text, mode, style)
+        width, height = bp.size_for(mode, self.format.currentData())
+        seed = self.seed.text().strip()
+        seed = int(seed) if seed.isdigit() else -1
+        self.work = WORK / time.strftime("%Y%m%d-%H%M%S")
+        self.work.mkdir(parents=True, exist_ok=True)
+        self.prefix = time.strftime("%Y-%m-%d %H.%M ") + bp.safe_stem(text)
+        args = ["run", "--rm", "--security-opt", "label=disable", "--device", "nvidia.com/gpu=all",
+                "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
+                "-v", f"{DATA / 'modelle'}:/cache", "-v", f"{self.work}:/out", *run_override(), IMAGE,
+                "--prompt", prompt, "--count", str(self.anzahl.currentData()), "--seed", str(seed),
+                "--width", str(width), "--height", str(height), "--out", "/out", "--prefix", "bild"]
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONUNBUFFERED", "1")
+        self.proc.setProcessEnvironment(env)
+        self.mode, self.error, self.buffer, self.last_prompt = "generate", "", b"", prompt
+        self.clear_results()
+        self.progress.setValue(0)
+        self.progress.show()
+        self.status.setText("Starte die KI … (das erste Bild dauert am längsten)")
+        self.proc.start("podman", args)
+        self.refresh()
+
+    def clear_results(self):
+        for t in self.thumbs:
+            t.setParent(None)
+            t.deleteLater()
+        self.thumbs, self.picked = [], None
+        self.info.setText("")
+
+    def add_result(self, name, seed):
+        src = self.work / name
+        if not src.is_file():
+            return
+        n = len(self.thumbs) + 1
+        target = self.out_dir() / f"{self.prefix}-{n}.png"
+        try:
+            shutil.move(str(src), target)
+        except OSError:
+            target = src
+        try:
+            target.with_suffix(".txt").write_text(f"{self.last_prompt}\n\nStartwert: {seed}\n"
+                                                  "Modell: FLUX.1 [schnell] (Black Forest Labs, Apache-2.0)\n",
+                                                  encoding="utf-8")
+        except OSError:
+            pass
+        thumb = Thumb(target)
+        thumb.clicked.connect(self.pick)
+        thumb.double.connect(lambda t: QDesktopServices.openUrl(QUrl.fromLocalFile(str(t.path))))
+        self.grid.addWidget(thumb, (n - 1) // 2, (n - 1) % 2)
+        self.thumbs.append(thumb)
+        self.empty.hide()
+        self.scroll.show()
+        if self.picked is None:
+            self.pick(thumb)
+
+    def pick(self, thumb):
+        self.picked = thumb
+        for t in self.thumbs:
+            t.set_picked(t is thumb)
+        self.refresh()
+
+    def read_output(self):
+        self.buffer += bytes(self.proc.readAllStandardOutput())
+        *lines, self.buffer = self.buffer.split(b"\n")
+        for raw in lines:
+            line = raw.decode(errors="replace").rstrip()
+            if not line:
+                continue
+            if self.mode == "setup":
+                self.handle_setup_line(line)
+            else:
+                self.handle_worker_line(line)
+
+    def handle_worker_line(self, line):
+        kind, _, rest = line.partition(" ")
+        if kind == "P":
+            pct, _, text = rest.partition(" ")
+            if pct.isdigit():
+                self.progress.setValue(int(pct))
+            self.status.setText(text)
+        elif kind == "IMG":
+            name, _, seed = rest.partition(" ")
+            self.add_result(name, seed)
+        elif kind == "OK":
+            try:
+                info = json.loads(rest)
+                self.info.setText(f"{len(self.thumbs)} Bild{'er' if len(self.thumbs) != 1 else ''} · "
+                                  f"{info.get('seconds', 0)} s")
+            except ValueError:
+                pass
+        elif kind == "ERR":
+            self.error = rest
+
+    def finished(self, code, _status):
+        mode, self.mode = self.mode, None
+        self.buffer = b""
+        if mode == "setup":
+            ok = code == 0 and ready()
+            self.setup_progress.setValue(100 if ok else self.setup_progress.value())
+            if ok:
+                self.setup_status.setText("Fertig – der Bildgenerator ist bereit.")
+                self.status.setText("KI bereit. Beschreibe links dein Bild.")
+            elif not self.setup_status.text() or self.setup_status.text().startswith("Starte"):
+                self.setup_status.setText("Einrichtung fehlgeschlagen – Details siehe unten. Erneut versuchen?")
+        else:
+            self.progress.hide()
+            if self.error:
+                self.status.setText(self.error)
+            elif code != 0:
+                self.status.setText("Die KI wurde unerwartet beendet. Bitte erneut versuchen.")
+            else:
+                self.status.setText(f"Fertig – gespeichert unter Bilder › {pictures_dir().name}.")
+            if self.work:
+                shutil.rmtree(self.work, ignore_errors=True)
+        self.refresh()
+
+    # ---- Ergebnisse -------------------------------------------------------------
+    def open_in_3d(self):
+        if self.picked and not QProcess.startDetached("creative-3d", [str(self.picked.path)]):
+            self.status.setText("3D Studio ließ sich nicht starten.")
+
+    def save_as(self):
+        if not self.picked:
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Bild speichern unter",
+                                              str(Path.home() / Path(self.picked.path).name), "PNG-Bild (*.png)")
+        if path:
+            if not path.lower().endswith(".png"):
+                path += ".png"
+            try:
+                shutil.copyfile(self.picked.path, path)
+                self.status.setText(f"Gespeichert: {Path(path).name}")
+            except OSError as error:
+                self.status.setText(f"Speichern fehlgeschlagen: {error}")
+
+    def closeEvent(self, event):
+        if self.busy():
+            if QMessageBox.question(self, APP, "Es läuft noch etwas. Trotzdem beenden?") \
+                    != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            self.proc.kill()
+            self.proc.waitForFinished(2000)
+        super().closeEvent(event)
+
+
+def main():
+    selftest = "--selftest" in sys.argv
+    app = QApplication(sys.argv)
+    app.setApplicationName(APP)
+    app.setDesktopFileName("gibeon-bildgenerator")
+    app.setWindowIcon(QIcon.fromTheme("gibeon-bildgenerator"))
+    window = Generator()
+    if selftest:
+        assert SETUP.is_file(), "Einrichtungsskript fehlt"
+        assert bp.build_prompt("ritter", "figur").startswith("single character, ritter")
+        assert not window.save.isEnabled() and not window.to3d.isEnabled()
+        window.close()
+        print("Bildgenerator: Selbsttest ok")
+        return 0
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

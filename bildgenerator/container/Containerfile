@@ -1,0 +1,26 @@
+# KI-Bildgenerator – FLUX.1 [schnell] (Black Forest Labs, Apache 2.0) für NVIDIA-Grafikkarten.
+# Gebaut von GitHub (.github/workflows/bildgenerator.yml) → ghcr.io/<besitzer>/gibeon-bildgenerator
+# Die App startet es mit:  podman run --device nvidia.com/gpu=all …
+#
+# Das Modell liegt nicht im Abbild: „--prepare“ lädt es einmalig nach /cache
+# (~/.local/share/gibeon-bildgenerator/modelle) und speichert es verkleinert
+# (4-Bit-Transformer, 8-Bit-Textmodell), damit es auf 12 GB Grafikspeicher läuft.
+FROM docker.io/nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3.10 python3-pip ca-certificates \
+ && ln -sf /usr/bin/python3.10 /usr/bin/python \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip wheel setuptools \
+ && python3 -m pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124 \
+ && python3 -m pip install "diffusers==0.32.2" "transformers==4.47.1" "accelerate==1.2.1" \
+      "bitsandbytes==0.45.0" "huggingface-hub>=0.26,<0.30" safetensors sentencepiece protobuf "numpy<2" pillow
+
+COPY run.py /opt/gibeon/run.py
+ENV HF_HOME=/cache/hf \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ENTRYPOINT ["python3", "/opt/gibeon/run.py"]
