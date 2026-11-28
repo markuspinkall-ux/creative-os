@@ -114,6 +114,7 @@ Item {
             height: 1
             color: Theme.glassShine
         }
+        GlassSheen { radius: gb.target.radius }
     }
 
     // Eine Position auf dem Ersatzmonitor ändert die gespeicherte Zielposition nicht.

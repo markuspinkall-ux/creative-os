@@ -91,6 +91,7 @@ Item {
             height: 1
             color: Theme.glassShine
         }
+        GlassSheen { radius: parent.radius; streak: false }
     }
 
     // Klick auf freie Fläche schließt offene Menüs

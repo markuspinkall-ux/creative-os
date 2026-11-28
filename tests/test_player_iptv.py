@@ -14,9 +14,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "media"))
 
+_STUBBED = False
 try:
     import PySide6.QtCore  # noqa: F401
-except ImportError:  # nur die Logik testen – Qt-Klassen als Platzhalter
+except ImportError:
+    _STUBBED = True  # nur die Logik testen – Qt-Klassen als Platzhalter
     core = types.ModuleType("PySide6.QtCore")
 
     class _Qt:
@@ -38,6 +40,10 @@ except ImportError:  # nur die Logik testen – Qt-Klassen als Platzhalter
     sys.modules["PySide6.QtCore"] = core
 
 from creative_media import iptv  # noqa: E402
+
+if _STUBBED:  # Platzhalter wieder entfernen, damit andere Tests sauber „PySide6 fehlt“ erkennen
+    for _name in ("PySide6", "PySide6.QtCore"):
+        sys.modules.pop(_name, None)
 
 EXTENDED = """#EXTM3U
 #EXTINF:-1 tvg-name="Das Erste HD" tvg-logo="https://x/ard.png" group-title="Öffentlich-rechtlich",Das Erste HD

@@ -20,3 +20,4 @@ CMenuItem 1.0 CMenuItem.qml
 CMenuSeparator 1.0 CMenuSeparator.qml
 CTextMenu 1.0 CTextMenu.qml
 CWebMenu 1.0 CWebMenu.qml
+GlassSheen 1.0 GlassSheen.qml

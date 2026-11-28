@@ -20,6 +20,23 @@ Rectangle {
         ? (mouse.pressed ? Qt.darker(Theme.accent, 1.15) : Theme.accent)
         : (mouse.pressed ? Theme.pressed : (mouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06)))
 
+    // Kristall: weicher Glanz von oben und feine Lichtkante
+    Rectangle {
+        anchors.fill: parent
+        radius: btn.radius
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, btn.primary || btn.danger ? 0.20 : (Theme.light ? 0.35 : 0.05)) }
+            GradientStop { position: 0.6; color: Qt.rgba(1, 1, 1, 0) }
+        }
+    }
+    Rectangle {
+        x: btn.radius
+        y: 1
+        width: Math.max(0, btn.width - 2 * btn.radius)
+        height: 1
+        color: Qt.rgba(1, 1, 1, btn.primary || btn.danger ? 0.30 : (Theme.light ? 0.7 : 0.08))
+    }
+
     Text {
         id: label
         anchors.centerIn: parent
