@@ -223,6 +223,17 @@ COPY thumbnail/gibeon-thumbnail.svg /usr/share/icons/hicolor/scalable/apps/gibeo
 RUN ln -s /usr/lib/gibeon-thumbnail/gibeon-thumbnail /usr/bin/gibeon-thumbnail \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/thumb-home /usr/bin/gibeon-thumbnail --selftest \
  && rm -rf /tmp/thumb-home
+
+# KI-Musikgenerator – Hintergrundmusik (ACE-Step, Apache 2.0) und Geräusche (Stable Audio Open) per Beschreibung.
+# Die KI (Container ≈ 10 GB, Modelle) richtet die App beim ersten Start ein; zusammengesetzt wird hier mit numpy.
+COPY --chmod=755 musik/gibeon-musik musik/gibeon-musik-setup /usr/lib/gibeon-musik/
+COPY musik/klang_mix.py musik/musik_vorschlaege.py /usr/lib/gibeon-musik/
+COPY musik/container/run.py /usr/lib/gibeon-musik/musik-run.py
+COPY musik/gibeon-musik.desktop /usr/share/applications/gibeon-musik.desktop
+COPY musik/gibeon-musik.svg /usr/share/icons/hicolor/scalable/apps/gibeon-musik.svg
+RUN ln -s /usr/lib/gibeon-musik/gibeon-musik /usr/bin/gibeon-musik \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/musik-home /usr/bin/gibeon-musik --selftest \
+ && rm -rf /tmp/musik-home
 # 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus 3D Studio)
 COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
 COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop

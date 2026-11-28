@@ -1,0 +1,810 @@
+#!/usr/bin/python3
+"""KI-Musikgenerator – Hintergrundmusik und Geräusche per Beschreibung, lokal auf der Grafikkarte.
+
+  Musik:      ACE-Step (ACE Studio & StepFun, Apache 2.0) – z. B. Spielmusik, Menümusik, Lo-Fi
+  Geräusche:  Stable Audio Open (Stability AI Community License) – z. B. Vogelgezwitscher,
+              Regen, Lagerfeuer. Aus mehreren kurzen Varianten baut die App eine lange Spur
+              mit einstellbaren Pausen, auf Wunsch über einem leisen Klangteppich.
+
+Beim Eintippen schlägt die App passende Vorlagen vor. Ergebnisse lassen sich anhören,
+nahtlos wiederholen (für Spiele) und als WAV, OGG oder MP3 speichern.
+
+  gibeon-musik              App starten
+  gibeon-musik --selftest   Prüfung beim Bauen (ohne Grafikkarte)
+  gibeon-musik --screenshot=a.png [--seite=haupt|einrichten] [--art=musik|atmo]
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+from PySide6.QtCore import QProcess, QProcessEnvironment, QStandardPaths, Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices, QIcon
+from PySide6.QtWidgets import (
+    QApplication, QCheckBox, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
+)
+try:
+    from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+except ImportError:                                            # ohne Multimedia: Anhören über die Standard-App
+    QMediaPlayer = QAudioOutput = None
+try:  # Graphit-Dialoge von Gibeon OS
+    from creative_dialogs import QFileDialog, QMessageBox  # noqa: F811
+except ImportError:
+    pass
+try:  # Design (Graphit/Porzellan) und Akzentfarbe
+    from creative_look import install as _look_install
+    _look_install()
+except ImportError:
+    pass
+
+LIB = Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/gibeon-musik"
+if not (LIB / "klang_mix.py").is_file():
+    LIB = Path(__file__).resolve().parent
+sys.path.insert(0, str(LIB))
+import klang_mix as km  # noqa: E402
+import musik_vorschlaege as mv  # noqa: E402
+
+APP = "KI-Musikgenerator"
+DATA = Path(os.environ.get("MUSIK_HOME") or Path.home() / ".local/share/gibeon-musik")
+SETUP = LIB / "gibeon-musik-setup"
+WORK = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "gibeon-musik"
+IMAGE = os.environ.get("MUSIK_IMAGE", "ghcr.io/markuspinkall-ux/gibeon-musik:latest")
+SAO_URL = "https://huggingface.co/stabilityai/stable-audio-open-1.0"
+HF_TOKEN_URL = "https://huggingface.co/settings/tokens"
+MUSIC_LENGTHS = [(30, "30 Sekunden"), (60, "1 Minute"), (120, "2 Minuten"), (180, "3 Minuten"), (240, "4 Minuten")]
+ATMO_LENGTHS = [(60, "1 Minute"), (120, "2 Minuten"), (300, "5 Minuten"), (600, "10 Minuten")]
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#h2 { font-size:18px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QLabel#chip { background:#232836; border-radius:10px; padding:5px 10px; color:rgba(220,230,255,0.75); }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget { background:transparent; }
+    QComboBox, QLineEdit, QPlainTextEdit#prompt { background:#232836; border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px; padding:7px 9px; }
+    QPlainTextEdit#prompt { font-size:14px; }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QPlainTextEdit#log { background:#12151b; border:none; border-radius:10px; font-family:monospace; font-size:11px;
+        color:rgba(220,230,255,0.7); }
+    QListWidget { background:#12151b; border:none; border-radius:10px; padding:4px; outline:0; }
+    QListWidget::item { border-radius:8px; padding:8px; }
+    QListWidget::item:selected { background:rgba(143,179,255,0.22); color:#dce6ff; }
+    QFrame#panel QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:9px 14px;
+        font-weight:700; }
+    QFrame#panel QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QFrame#panel QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QFrame#panel QPushButton#primary:hover { background:#a3c1ff; }
+    QFrame#panel QPushButton:disabled, QFrame#panel QPushButton#primary:disabled {
+        background:rgba(255,255,255,0.04); color:rgba(220,230,255,0.35); }
+    QFrame#panel QPushButton#choice { padding:11px 6px; }
+    QFrame#panel QPushButton#choice[picked="true"] { background:rgba(143,179,255,0.22); border:1px solid #8fb3ff; }
+    QFrame#panel QPushButton#tag { background:#232836; border-radius:14px; padding:6px 12px; font-weight:400; }
+    QFrame#panel QPushButton#tag:hover { background:#2d3344; }
+    QProgressBar { background:#12151b; border:none; border-radius:5px; height:10px; }
+    QProgressBar::chunk { background:#8fb3ff; border-radius:5px; }
+    QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836; border:1px solid rgba(255,255,255,0.15); }
+    QCheckBox::indicator:checked { background:#8fb3ff; }
+    QScrollArea { border:none; background:transparent; }
+    QScrollBar:vertical { background:transparent; width:8px; margin:0; }
+    QScrollBar::handle:vertical { background:rgba(255,255,255,0.18); border-radius:4px; min-height:30px; }
+    QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page { height:0; background:none; }
+"""
+
+
+def ready(part):
+    sub = "ace-step" if part == mv.MUSIK else "stable-audio-open"
+    return (DATA / "modelle" / sub / "bereit").is_file()
+
+
+def gpu_name():
+    if not shutil.which("nvidia-smi"):
+        return ""
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+                             capture_output=True, text=True, timeout=5).stdout.strip().splitlines()
+        return out[0] if out else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def music_dir():
+    if os.environ.get("MUSIK_AUSGABE"):                       # für Selbsttest und Fotos
+        path = Path(os.environ["MUSIK_AUSGABE"])
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.MusicLocation) or str(Path.home() / "Musik")
+    path = Path(base) / "KI-Musik"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def run_override():
+    newer = LIB / "musik-run.py"
+    return ["-v", f"{newer}:/opt/gibeon/run.py:ro"] if newer.is_file() else []
+
+
+def stem_from(text):
+    s = "".join(c if c.isalnum() else "-" for c in (text or "").strip().lower())
+    s = "-".join(p for p in s.split("-") if p)[:40]
+    for a, b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
+        s = s.replace(a, b)
+    return "".join(c for c in s if c.isascii()) or "klang"
+
+
+def duration_text(seconds):
+    m, s = divmod(int(round(seconds)), 60)
+    return f"{m}:{s:02d}"
+
+
+class Generator(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(APP)
+        self.resize(1260, 820)
+        self.setStyleSheet(STYLE)
+        self.kind = mv.MUSIK
+        self.picked = None                 # gewählter Vorschlag (dict) oder None
+        self.mode = None                   # "setup" | "job"
+        self.buffer = b""
+        self.error = ""
+        self.jobs = []                     # Warteschlange: [{"role", "args"}]
+        self.job = None
+        self.work = None
+        self.collected = {"event": [], "bed": [], "musik": []}
+        self.plan = None
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_output)
+        self.proc.finished.connect(self.finished)
+        self.player = None
+        if QMediaPlayer is not None:
+            self.player = QMediaPlayer(self)
+            self.audio_out = QAudioOutput(self)
+            self.player.setAudioOutput(self.audio_out)
+            self.player.playbackStateChanged.connect(lambda _s: self.refresh())
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        box = QVBoxLayout(root)
+        box.setContentsMargins(18, 14, 18, 14)
+        box.setSpacing(12)
+        top = QHBoxLayout()
+        top.addWidget(QLabel(APP, objectName="title"))
+        top.addWidget(QLabel("Hintergrundmusik und Geräusche für Spiele und Videos", objectName="muted"))
+        top.addStretch()
+        self.chip = QLabel(objectName="chip")
+        top.addWidget(self.chip)
+        box.addLayout(top)
+        self.pages = QStackedWidget()
+        box.addWidget(self.pages, 1)
+        self.pages.addWidget(self.build_setup())
+        self.pages.addWidget(self.build_main())
+        self.set_kind(mv.MUSIK)
+        self.show_page()
+
+    # ---- Einrichten -------------------------------------------------------------
+    def build_setup(self):
+        page = QFrame(objectName="panel")
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(28, 24, 28, 24)
+        lay.setSpacing(10)
+        lay.addWidget(QLabel("KI einrichten", objectName="h2"))
+        text = QLabel(
+            "Alles läuft auf deinem PC, nichts geht ins Internet. Einmalig werden der Container (≈ 10 GB) und die "
+            "Modelle geladen. Während der Einrichtung braucht es ≈ 30 GB freien Platz.", objectName="muted")
+        text.setWordWrap(True)
+        lay.addWidget(text)
+        lay.addSpacing(6)
+        lay.addWidget(QLabel("MUSIK – ACE-STEP (APACHE 2.0, ≈ 8 GB)", objectName="section"))
+        m = QLabel("Instrumentale Musik in vielen Stilen – frei nutzbar, auch kommerziell.", objectName="muted")
+        m.setWordWrap(True)
+        lay.addWidget(m)
+        self.setup_music = QPushButton("Musik-KI einrichten", objectName="primary")
+        self.setup_music.clicked.connect(lambda: self.start_setup(None))
+        row = QHBoxLayout()
+        row.addWidget(self.setup_music)
+        row.addStretch()
+        lay.addLayout(row)
+        lay.addSpacing(10)
+        lay.addWidget(QLabel("GERÄUSCHE – STABLE AUDIO OPEN (OPTIONAL, ≈ 5 GB)", objectName="section"))
+        a = QLabel(
+            "Für Vogelgezwitscher, Regen, Feuer und andere Atmosphären. Kostenlos; kommerziell erlaubt für Personen "
+            "und Firmen unter 1 Mio. US-Dollar Jahresumsatz (Stability AI Community License). Stability AI verlangt "
+            "dafür ein kostenloses Hugging-Face-Konto: 1. auf der Modellseite „Agree“ klicken, 2. einen "
+            "Lese-Schlüssel anlegen und hier einfügen.", objectName="muted")
+        a.setWordWrap(True)
+        lay.addWidget(a)
+        links = QHBoxLayout()
+        for label, url in (("1. Modellseite öffnen", SAO_URL), ("2. Schlüssel anlegen", HF_TOKEN_URL)):
+            b = QPushButton(label)
+            b.clicked.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
+            links.addWidget(b)
+        links.addStretch()
+        lay.addLayout(links)
+        krow = QHBoxLayout()
+        self.token = QLineEdit()
+        self.token.setPlaceholderText("Hugging-Face-Schlüssel (beginnt mit hf_)")
+        self.token.setEchoMode(QLineEdit.EchoMode.Password)
+        self.token.setAccessibleName("Hugging-Face-Schlüssel")
+        krow.addWidget(self.token, 1)
+        self.setup_atmo = QPushButton("Geräusch-KI einrichten")
+        self.setup_atmo.clicked.connect(lambda: self.start_setup("atmo"))
+        krow.addWidget(self.setup_atmo)
+        lay.addLayout(krow)
+        self.setup_progress = QProgressBar()
+        self.setup_progress.setTextVisible(False)
+        self.setup_progress.hide()
+        lay.addWidget(self.setup_progress)
+        self.setup_status = QLabel("", objectName="muted")
+        self.setup_status.setWordWrap(True)
+        lay.addWidget(self.setup_status)
+        self.log = QPlainTextEdit(objectName="log")
+        self.log.setReadOnly(True)
+        self.log.hide()
+        lay.addWidget(self.log, 1)
+        back = QHBoxLayout()
+        self.to_main = QPushButton("‹  Zum Generator")
+        self.to_main.clicked.connect(lambda: self.pages.setCurrentIndex(1))
+        back.addWidget(self.to_main)
+        back.addStretch()
+        lay.addLayout(back)
+        lay.addStretch()
+        return page
+
+    def start_setup(self, part):
+        if self.busy():
+            return
+        args = [str(SETUP)]
+        key = self.token.text().strip()
+        if part == "atmo" or key:
+            if not key.startswith("hf_"):
+                self.setup_status.setText("Bitte zuerst deinen Hugging-Face-Schlüssel einfügen (beginnt mit hf_).")
+                return
+            DATA.mkdir(parents=True, exist_ok=True)
+            path = DATA / "hf-token"
+            path.touch(mode=0o600, exist_ok=True)
+            os.chmod(path, 0o600)
+            path.write_text(key + "\n")
+        if part == "atmo":
+            args += ["--teil", "atmo"]
+        self.mode, self.error, self.buffer = "setup", "", b""
+        self.log.clear()
+        self.log.show()
+        self.setup_progress.setValue(0)
+        self.setup_progress.show()
+        self.setup_status.setText("Starte …")
+        self.proc.start("sh", args)
+        self.refresh()
+
+    def handle_setup_line(self, line):
+        self.log.appendPlainText(line)
+        if line.startswith("STEP "):
+            parts = line.split(" ", 3)
+            try:
+                self.setup_progress.setValue(int((int(parts[1]) - 1) * 100 / int(parts[2])))
+            except (ValueError, IndexError):
+                pass
+            self.setup_status.setText(parts[3] if len(parts) > 3 else "")
+        elif line.startswith("P "):
+            self.setup_status.setText(line[2:].partition(" ")[2])
+        elif line.startswith("FEHLER:"):
+            self.setup_status.setText(line[7:].replace("ZUGANG_GESPERRT", "").strip())
+
+    # ---- Hauptseite -------------------------------------------------------------
+    def build_main(self):
+        page = QWidget()
+        row = QHBoxLayout(page)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(14)
+
+        left = QFrame(objectName="panel")
+        left.setFixedWidth(430)
+        outer = QVBoxLayout(left)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        holder = QWidget()
+        lay = QVBoxLayout(holder)
+        lay.setContentsMargins(18, 18, 18, 18)
+        lay.setSpacing(8)
+        scroll.setWidget(holder)
+        outer.addWidget(scroll, 1)
+
+        lay.addWidget(QLabel("WAS MÖCHTEST DU?", objectName="section"))
+        kinds = QHBoxLayout()
+        self.kind_buttons = {}
+        for key, label in ((mv.MUSIK, "Musik"), (mv.ATMO, "Geräusche & Atmosphäre")):
+            b = QPushButton(label, objectName="choice")
+            b.clicked.connect(lambda _=False, k=key: self.set_kind(k))
+            kinds.addWidget(b)
+            self.kind_buttons[key] = b
+        lay.addLayout(kinds)
+        self.atmo_missing = QLabel("", objectName="muted")
+        self.atmo_missing.setWordWrap(True)
+        lay.addWidget(self.atmo_missing)
+        self.atmo_setup_btn = QPushButton("Geräusch-KI einrichten …")
+        self.atmo_setup_btn.clicked.connect(lambda: self.pages.setCurrentIndex(0))
+        lay.addWidget(self.atmo_setup_btn)
+
+        lay.addSpacing(4)
+        lay.addWidget(QLabel("BESCHREIBUNG", objectName="section"))
+        self.prompt = QPlainTextEdit(objectName="prompt")
+        self.prompt.setFixedHeight(80)
+        self.prompt.setAccessibleName("Beschreibung")
+        self.prompt.textChanged.connect(self.update_suggestions)
+        lay.addWidget(self.prompt)
+        self.picked_label = QLabel("", objectName="muted")
+        self.picked_label.setWordWrap(True)
+        lay.addWidget(self.picked_label)
+
+        lay.addWidget(QLabel("VORSCHLÄGE", objectName="section"))
+        self.tags = QWidget()
+        self.tags_grid = QGridLayout(self.tags)
+        self.tags_grid.setContentsMargins(0, 0, 0, 0)
+        self.tags_grid.setSpacing(6)
+        lay.addWidget(self.tags)
+
+        lay.addSpacing(4)
+        self.music_box = QWidget()
+        ml = QGridLayout(self.music_box)
+        ml.setContentsMargins(0, 0, 0, 0)
+        ml.addWidget(QLabel("LÄNGE", objectName="section"), 0, 0)
+        ml.addWidget(QLabel("VARIANTEN", objectName="section"), 0, 1)
+        self.music_len = QComboBox()
+        for sec, label in MUSIC_LENGTHS:
+            self.music_len.addItem(label, sec)
+        self.music_len.setCurrentIndex(2)
+        self.music_len.setAccessibleName("Länge der Musik")
+        ml.addWidget(self.music_len, 1, 0)
+        self.music_count = QComboBox()
+        for n in (1, 2, 3):
+            self.music_count.addItem(f"{n} Stück" + ("e" if n > 1 else ""), n)
+        self.music_count.setCurrentIndex(1)
+        self.music_count.setAccessibleName("Anzahl der Varianten")
+        ml.addWidget(self.music_count, 1, 1)
+        lay.addWidget(self.music_box)
+
+        self.atmo_box = QWidget()
+        al = QGridLayout(self.atmo_box)
+        al.setContentsMargins(0, 0, 0, 0)
+        al.addWidget(QLabel("GESAMTLÄNGE", objectName="section"), 0, 0)
+        al.addWidget(QLabel("PAUSEN ZWISCHEN DEN KLÄNGEN", objectName="section"), 0, 1)
+        self.atmo_len = QComboBox()
+        for sec, label in ATMO_LENGTHS:
+            self.atmo_len.addItem(label, sec)
+        self.atmo_len.setCurrentIndex(2)
+        self.atmo_len.setAccessibleName("Gesamtlänge")
+        al.addWidget(self.atmo_len, 1, 0)
+        self.pause = QComboBox()
+        for key, label, _lo, _hi in km.PAUSES:
+            self.pause.addItem(label, key)
+        self.pause.setAccessibleName("Pausen")
+        al.addWidget(self.pause, 1, 1)
+        self.with_pauses = QCheckBox("Einzelne Klänge mit Pausen (statt durchgehend)")
+        al.addWidget(self.with_pauses, 2, 0, 1, 2)
+        self.with_bed = QCheckBox("Leiser Klangteppich darunter (z. B. Wind im Wald)")
+        al.addWidget(self.with_bed, 3, 0, 1, 2)
+        lay.addWidget(self.atmo_box)
+        self.with_pauses.toggled.connect(lambda _v: self.refresh())
+
+        self.loop = QCheckBox("Nahtlose Schleife (für Spiele – Ende geht weich in den Anfang über)")
+        self.loop.setChecked(True)
+        lay.addWidget(self.loop)
+        lay.addWidget(QLabel("STARTWERT (OPTIONAL)", objectName="section"))
+        self.seed = QLineEdit()
+        self.seed.setPlaceholderText("zufällig – gleiche Zahl ergibt das gleiche Ergebnis")
+        self.seed.setAccessibleName("Startwert")
+        lay.addWidget(self.seed)
+        lay.addStretch()
+
+        bottom = QVBoxLayout()
+        bottom.setContentsMargins(18, 0, 18, 18)
+        self.go = QPushButton("Erzeugen", objectName="primary")
+        self.go.clicked.connect(self.start_generate)
+        bottom.addWidget(self.go)
+        self.progress = QProgressBar()
+        self.progress.setTextVisible(False)
+        self.progress.hide()
+        bottom.addWidget(self.progress)
+        self.status = QLabel("", objectName="muted")
+        self.status.setWordWrap(True)
+        bottom.addWidget(self.status)
+        outer.addLayout(bottom)
+        row.addWidget(left)
+
+        right = QFrame(objectName="panel")
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(18, 18, 18, 18)
+        rl.setSpacing(10)
+        rl.addWidget(QLabel("ERGEBNISSE", objectName="section"))
+        self.results = QListWidget()
+        self.results.setAccessibleName("Ergebnisse")
+        self.results.itemDoubleClicked.connect(lambda _i: self.play())
+        self.results.currentRowChanged.connect(lambda _r: self.refresh())
+        rl.addWidget(self.results, 1)
+        btns = QHBoxLayout()
+        self.play_btn = QPushButton("▶  Anhören", objectName="primary")
+        self.play_btn.clicked.connect(self.play)
+        self.save_btn = QPushButton("Speichern unter … (WAV, OGG, MP3)")
+        self.save_btn.clicked.connect(self.save_as)
+        self.folder_btn = QPushButton("Ordner öffnen")
+        self.folder_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(music_dir()))))
+        for b in (self.play_btn, self.save_btn, self.folder_btn):
+            btns.addWidget(b)
+        btns.addStretch()
+        rl.addLayout(btns)
+        self.setup_more = QPushButton("KI einrichten / Geräusche freischalten …")
+        self.setup_more.clicked.connect(lambda: self.pages.setCurrentIndex(0))
+        rl.addWidget(self.setup_more)
+        row.addWidget(right, 1)
+        self.load_results()
+        return page
+
+    # ---- Zustand ----------------------------------------------------------------
+    def busy(self):
+        return self.proc.state() != QProcess.ProcessState.NotRunning
+
+    def show_page(self):
+        self.pages.setCurrentIndex(1 if ready(mv.MUSIK) or ready(mv.ATMO) else 0)
+
+    def set_kind(self, kind):
+        self.kind = kind
+        self.picked = None
+        for k, b in self.kind_buttons.items():
+            b.setProperty("picked", "true" if k == kind else "false")
+            b.style().unpolish(b)
+            b.style().polish(b)
+        self.prompt.setPlaceholderText("z. B. ruhige Musik für ein Fantasy-Dorf" if kind == mv.MUSIK
+                                       else "z. B. Vogelgezwitscher im Wald")
+        self.update_suggestions()
+        self.refresh()
+
+    def update_suggestions(self):
+        text = self.prompt.toPlainText()
+        if self.picked and text.strip() != self.picked["title"]:
+            self.picked = None
+        found = mv.suggest(text, self.kind, 8) if text.strip() else []
+        if not found:
+            found = [s for s in mv.SUGGESTIONS if s["kind"] == self.kind][:8]
+        while self.tags_grid.count():
+            w = self.tags_grid.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        for i, s in enumerate(found):
+            b = QPushButton(s["title"], objectName="tag")
+            b.setToolTip("Vorschlag übernehmen")
+            b.clicked.connect(lambda _=False, sug=s: self.pick(sug))
+            self.tags_grid.addWidget(b, i // 2, i % 2)
+        self.refresh()
+
+    def pick(self, sug):
+        self.picked = sug
+        self.prompt.blockSignals(True)
+        self.prompt.setPlainText(sug["title"])
+        self.prompt.blockSignals(False)
+        if sug["kind"] == mv.ATMO:
+            continuous = bool(sug.get("continuous"))
+            self.with_pauses.setChecked(not continuous)
+            self.with_bed.setChecked(bool(sug.get("bed")))
+            self.pause.setCurrentIndex(max(0, self.pause.findData(sug.get("pause", "mittel"))))
+        else:
+            sec = sug.get("seconds", 120)
+            self.music_len.setCurrentIndex(max(0, self.music_len.findData(sec)))
+        self.refresh()
+
+    def refresh(self):
+        gpu = gpu_name()
+        self.chip.setText(("Grafikkarte: " + gpu.split(",")[0]) if gpu else "Keine NVIDIA-Grafikkarte gefunden")
+        busy = self.busy()
+        music = self.kind == mv.MUSIK
+        self.music_box.setVisible(music)
+        self.atmo_box.setVisible(not music)
+        part_ready = ready(self.kind)
+        self.atmo_missing.setVisible(not music and not part_ready)
+        self.atmo_setup_btn.setVisible(not music and not part_ready)
+        self.atmo_missing.setText("Für Geräusche fehlt noch die Geräusch-KI (Stable Audio Open). Sie braucht einmalig "
+                                  "einen kostenlosen Hugging-Face-Schlüssel.")
+        self.pause.setEnabled(self.with_pauses.isChecked())
+        self.with_bed.setEnabled(self.with_pauses.isChecked())
+        if self.picked:
+            if self.picked["kind"] == mv.ATMO:
+                info = "Vorlage gewählt: Die KI erzeugt mehrere Varianten, die App setzt sie zu einer langen Spur zusammen."
+            else:
+                info = "Vorlage gewählt – du kannst die Beschreibung noch ergänzen."
+        else:
+            info = "Eigene Beschreibung – für Geräusche klappen englische Wörter am besten." if not music else ""
+        self.picked_label.setText(info)
+        self.picked_label.setVisible(bool(info))
+        self.go.setEnabled(not busy and part_ready)
+        self.setup_music.setEnabled(not busy)
+        self.setup_atmo.setEnabled(not busy)
+        has = self.results.currentItem() is not None
+        playing = self.player is not None and self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
+        self.play_btn.setText("■  Stopp" if playing else "▶  Anhören")
+        self.play_btn.setEnabled(has or playing)
+        self.save_btn.setEnabled(has)
+
+    # ---- Erzeugen ---------------------------------------------------------------
+    def start_generate(self):
+        text = self.prompt.toPlainText().strip()
+        if not text:
+            self.status.setText("Bitte beschreibe zuerst, was du hören möchtest – oder wähle einen Vorschlag.")
+            return
+        if self.busy() or not ready(self.kind):
+            return
+        seed = self.seed.text().strip()
+        seed = int(seed) if seed.isdigit() else -1
+        self.work = WORK / time.strftime("%Y%m%d-%H%M%S")
+        self.work.mkdir(parents=True, exist_ok=True)
+        self.collected = {"event": [], "bed": [], "musik": []}
+        self.title = text.split("\n")[0][:60]
+        if self.kind == mv.MUSIK:
+            prompt = mv.music_prompt(text if not self.picked else "", self.picked)
+            self.plan = {"kind": mv.MUSIK, "loop": self.loop.isChecked()}
+            self.jobs = [{"role": "musik", "args": ["--musik", "--prompt", prompt, "--seconds",
+                                                    str(self.music_len.currentData()),
+                                                    "--count", str(self.music_count.currentData()),
+                                                    "--seed", str(seed), "--prefix", "musik"]}]
+        else:
+            plan = mv.atmo_plan(text, self.picked)
+            continuous = not self.with_pauses.isChecked()
+            self.plan = {"kind": mv.ATMO, "continuous": continuous, "pause": self.pause.currentData(),
+                         "total": self.atmo_len.currentData(), "loop": self.loop.isChecked(), "seed": seed}
+            seconds = 30 if continuous else plan["event_seconds"]
+            count = 2 if continuous else plan["variants"]
+            self.jobs = [{"role": "event", "args": ["--atmo", "--prompt", plan["event"], "--seconds", str(seconds),
+                                                    "--count", str(count), "--seed", str(seed), "--prefix", "klang"]}]
+            bed = plan["bed"] or (f"{mv.to_english(text)} ambience, quiet background, field recording"
+                                  if not self.picked else "")
+            if not continuous and self.with_bed.isChecked() and bed:
+                self.jobs.append({"role": "bed", "args": ["--atmo", "--prompt", bed, "--seconds", "30", "--count", "1",
+                                                          "--seed", str(seed), "--prefix", "teppich"]})
+        self.progress.setValue(0)
+        self.progress.show()
+        self.status.setText("Starte die KI … (beim ersten Mal dauert das Laden am längsten)")
+        self.next_job()
+
+    def next_job(self):
+        if not self.jobs:
+            self.assemble()
+            return
+        self.job = self.jobs.pop(0)
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("PYTHONUNBUFFERED", "1")
+        self.proc.setProcessEnvironment(env)
+        args = ["run", "--rm", "--security-opt", "label=disable", "--device", "nvidia.com/gpu=all",
+                "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
+                "-v", f"{DATA / 'modelle'}:/cache", "-v", f"{self.work}:/out", *run_override(), IMAGE,
+                *self.job["args"], "--out", "/out"]
+        self.mode, self.error, self.buffer = "job", "", b""
+        self.proc.start("podman", args)
+        self.refresh()
+
+    def read_output(self):
+        self.buffer += bytes(self.proc.readAllStandardOutput())
+        *lines, self.buffer = self.buffer.split(b"\n")
+        for raw in lines:
+            line = raw.decode(errors="replace").rstrip()
+            if not line:
+                continue
+            if self.mode == "setup":
+                self.handle_setup_line(line)
+                continue
+            kind, _, rest = line.partition(" ")
+            if kind == "P":
+                pct, _, text = rest.partition(" ")
+                if pct.isdigit():
+                    share = 70 if self.job and self.job["role"] != "bed" else 20
+                    base = 0 if self.job and self.job["role"] != "bed" else 70
+                    self.progress.setValue(base + int(pct) * share // 100)
+                self.status.setText(text)
+            elif kind == "AUDIO":
+                name = rest.split(" ")[0]
+                self.collected[self.job["role"]].append(self.work / name)
+            elif kind == "ERR":
+                self.error = rest
+
+    def finished(self, code, _status):
+        mode, self.mode = self.mode, None
+        self.buffer = b""
+        if mode == "setup":
+            ok = code == 0 and ready(mv.MUSIK)
+            if ok or ready(mv.ATMO):
+                self.setup_progress.setValue(100)
+                self.setup_status.setText("Fertig – die KI ist bereit." + ("" if ready(mv.ATMO) else
+                                          " (Geräusche kannst du später mit einem Schlüssel freischalten.)"))
+                QTimer.singleShot(1200, self.show_page)
+            elif not self.setup_status.text() or self.setup_status.text().startswith("Starte"):
+                self.setup_status.setText("Einrichtung fehlgeschlagen – Details siehe unten.")
+            self.refresh()
+            return
+        if code != 0 or self.error:
+            self.jobs = []
+            self.progress.hide()
+            self.status.setText(self.error or "Die KI wurde unerwartet beendet. Bitte erneut versuchen.")
+            self.refresh()
+            return
+        self.next_job()
+
+    def assemble(self):
+        """Ergebnisse fertig machen: Musik kürzen/schließen, Geräusche zu einer langen Spur zusammensetzen."""
+        self.status.setText("Setze die Spur zusammen …")
+        QApplication.processEvents()
+        stamp = time.strftime("%Y-%m-%d %H.%M")
+        stem = stem_from(self.title)
+        made = []
+        try:
+            if self.plan["kind"] == mv.MUSIK:
+                for i, path in enumerate(self.collected["musik"], 1):
+                    audio, rate = km.read_wav(path)
+                    audio = km.finish_music(audio, self.plan["loop"], rate)
+                    target = music_dir() / f"{stamp} {stem}-{i}.wav"
+                    km.write_wav(target, audio, rate)
+                    made.append((target, len(audio) / rate))
+            else:
+                events = [km.resample(*km.read_wav(p)) for p in self.collected["event"]]
+                beds = [km.resample(*km.read_wav(p)) for p in self.collected["bed"]]
+                seed = None if self.plan["seed"] < 0 else self.plan["seed"]
+                if self.plan["continuous"]:
+                    audio, _n = km.chain(events, self.plan["total"], 2.0, seed, loop=self.plan["loop"])
+                else:
+                    audio, _n = km.build_ambience(events, self.plan["total"], self.plan["pause"],
+                                                  beds[0] if beds else None, seed=seed, loop=self.plan["loop"])
+                target = music_dir() / f"{stamp} {stem}.wav"
+                km.write_wav(target, audio)
+                made.append((target, len(audio) / km.RATE))
+                # Einzelklänge mit ablegen – praktisch, wenn ein Spiel sie selbst zufällig abspielen soll
+                parts = music_dir() / f"{stamp} {stem} – Einzelklänge"
+                parts.mkdir(exist_ok=True)
+                for i, ev in enumerate(events, 1):
+                    km.write_wav(parts / f"{stem}-{i}.wav", km.fade(km.trim_silence(ev), 0.05, 0.3))
+                for bed in beds:
+                    km.write_wav(parts / f"{stem}-teppich.wav", km.make_loop(bed))
+        except (OSError, ValueError, EOFError) as error:
+            self.status.setText(f"Zusammensetzen fehlgeschlagen: {error}")
+            self.progress.hide()
+            return
+        finally:
+            if self.work:
+                shutil.rmtree(self.work, ignore_errors=True)
+        self.progress.setValue(100)
+        self.progress.hide()
+        self.load_results()
+        self.results.setCurrentRow(0)
+        names = ", ".join(t.name for t, _ in made)
+        self.status.setText(f"Fertig – gespeichert unter Musik › KI-Musik: {names}")
+        self.refresh()
+
+    # ---- Ergebnisse -------------------------------------------------------------
+    def load_results(self):
+        self.results.clear()
+        files = sorted(music_dir().glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for f in files[:200]:
+            try:
+                import wave
+                with wave.open(str(f), "rb") as w:
+                    secs = w.getnframes() / w.getframerate()
+            except (OSError, EOFError, Exception):  # noqa: BLE001
+                secs = 0
+            it = QListWidgetItem(f"{f.stem}    ·    {duration_text(secs)}")
+            it.setData(Qt.ItemDataRole.UserRole, str(f))
+            self.results.addItem(it)
+
+    def current_file(self):
+        it = self.results.currentItem()
+        return Path(it.data(Qt.ItemDataRole.UserRole)) if it else None
+
+    def play(self):
+        if self.player is not None and self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.player.stop()
+            return
+        f = self.current_file()
+        if not f:
+            return
+        if self.player is None:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(f)))
+            return
+        self.player.setSource(QUrl.fromLocalFile(str(f)))
+        self.player.play()
+
+    def save_as(self):
+        f = self.current_file()
+        if not f:
+            return
+        path, chosen = QFileDialog.getSaveFileName(self, "Speichern unter", str(Path.home() / f.name),
+                                                   "WAV (*.wav);;OGG Vorbis – für Spiele (*.ogg);;MP3 (*.mp3)")
+        if not path:
+            return
+        suffix = Path(path).suffix.lower()
+        if suffix not in (".wav", ".ogg", ".mp3"):
+            suffix = ".ogg" if "ogg" in (chosen or "").lower() else ".mp3" if "mp3" in (chosen or "").lower() else ".wav"
+            path += suffix
+        try:
+            if suffix == ".wav":
+                shutil.copyfile(f, path)
+            else:
+                codec = ["-c:a", "libvorbis", "-q:a", "6"] if suffix == ".ogg" else ["-c:a", "libmp3lame", "-b:a", "256k"]
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(f), *codec, path],
+                               check=True, timeout=600)
+            self.status.setText(f"Gespeichert: {Path(path).name}")
+        except (OSError, subprocess.SubprocessError) as error:
+            self.status.setText(f"Speichern fehlgeschlagen: {error}")
+
+    def closeEvent(self, event):
+        if self.busy():
+            if QMessageBox.question(self, APP, "Es läuft noch etwas. Trotzdem beenden?") \
+                    != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            self.proc.kill()
+            self.proc.waitForFinished(2000)
+        super().closeEvent(event)
+
+
+def selftest(window):
+    """Ohne Grafikkarte: Vorschläge, Pläne und das Zusammensetzen mit künstlichen Klängen prüfen."""
+    import numpy as np
+    assert mv.suggest("Vogelgezwitscher")[0]["key"] == "voegel-wald"
+    window.set_kind(mv.ATMO)
+    window.pick(mv.by_key("voegel-wald"))
+    assert window.with_pauses.isChecked() and window.with_bed.isChecked()
+    work = Path(tempfile.mkdtemp(prefix="musik-test-"))
+    rate = km.RATE
+    for i, f in enumerate((2000, 3000, 4000), 1):
+        t = np.arange(int(1.2 * rate)) / rate
+        s = (np.sin(2 * np.pi * f * t) * np.exp(-3 * t) * 0.5).astype(np.float32)
+        km.write_wav(work / f"klang-{i}.wav", np.stack([s, s], 1))
+    km.write_wav(work / "teppich-1.wav", np.random.default_rng(0).normal(0, .05, (5 * rate, 2)).astype(np.float32))
+    window.work = work
+    window.title = "Vogelgezwitscher im Wald"
+    window.collected = {"event": sorted(work.glob("klang-*.wav")), "bed": [work / "teppich-1.wav"], "musik": []}
+    window.plan = {"kind": mv.ATMO, "continuous": False, "pause": "kurz", "total": 60, "loop": True, "seed": 1}
+    window.assemble()
+    made = sorted(music_dir().glob("*vogelgezwitscher*.wav"))
+    assert made, "keine Spur entstanden"
+    audio, r = km.read_wav(made[-1])
+    assert r == rate and 55 * rate < len(audio) <= 60 * rate
+    assert window.results.count() >= 1
+
+
+def main():
+    test = "--selftest" in sys.argv
+    shot = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--screenshot=")), None)
+    if test or shot:
+        os.environ["MUSIK_AUSGABE"] = tempfile.mkdtemp(prefix="musik-")
+    app = QApplication(sys.argv)
+    app.setApplicationName(APP)
+    app.setDesktopFileName("gibeon-musik")
+    app.setWindowIcon(QIcon.fromTheme("gibeon-musik"))
+    window = Generator()
+    if test:
+        selftest(window)
+        window.close()
+        print("Musikgenerator: Selbsttest ok")
+        return 0
+    if shot:
+        page = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seite=")), "haupt")
+        art = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--art=")), "musik")
+        window.show()
+        window.pages.setCurrentIndex(0 if page == "einrichten" else 1)
+        window.set_kind(mv.ATMO if art == "atmo" else mv.MUSIK)
+        if art == "atmo":
+            window.prompt.setPlainText("Vogel")
+        QTimer.singleShot(600, lambda: (window.grab().save(shot), app.quit()))
+        return app.exec()
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,62 @@
+# Baut den Container für den KI-Musikgenerator (ACE-Step, Stable Audio Open) und legt ihn
+# in die GitHub-Registry: ghcr.io/<besitzer>/gibeon-musik:latest
+# Der Musikgenerator lädt ihn beim „KI einrichten“ herunter. Nur nötig, wenn sich
+# musik/container/ ändert – das Gibeon-OS-Abbild selbst bleibt klein.
+name: Musikgenerator-Container bauen
+
+on:
+  push:
+    branches: [main, "claude/musikgenerator"]
+    paths:
+      - "musik/container/**"
+      - ".github/workflows/musikgenerator.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: gibeon-musik
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Platz schaffen (CUDA und PyTorch sind groß)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/lib/jvm
+          sudo docker system prune -af >/dev/null
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Namen festlegen
+        id: names
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/gibeon-musik" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Container bauen
+        run: |
+          docker build \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            --label org.opencontainers.image.description="ACE-Step (Apache-2.0) und Stable Audio Open für den KI-Musikgenerator von Gibeon OS" \
+            --label org.opencontainers.image.licenses=Apache-2.0 AND LicenseRef-Stability-AI-Community \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            -t "${{ steps.names.outputs.image }}:latest" \
+            -t "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}" \
+            -f musik/container/Containerfile \
+            musik/container
+          docker image ls "${{ steps.names.outputs.image }}"
+          df -h /
+
+      - name: In die GitHub-Registry hochladen
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "${{ steps.names.outputs.image }}:latest"
+          docker push "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}"

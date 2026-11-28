@@ -46,7 +46,7 @@ SUITE = {
     "creative-cut.desktop", "creative-ftp.desktop",
     "creative-iso.desktop", "creative-magazin.desktop", "creative-player.desktop",
     "creative-writer.desktop", "gibeon-studio.desktop", "gibeon-bildgenerator.desktop",
-    "gibeon-thumbnail.desktop",
+    "gibeon-thumbnail.desktop", "gibeon-musik.desktop",
 }
 # Broadcast, Deck, Shots, Widgets, Pictures, 3D-Ansicht und Taskmanager stehen nicht im Startmenü (NoDisplay):
 # der Taskmanager kommt wie bei Windows mit Strg+Umschalt+Esc oder Strg+Alt+Entf;

@@ -1,0 +1,29 @@
+# KI-Musikgenerator – ACE-Step (Apache 2.0) für Musik und Stable Audio Open (Stability AI
+# Community License) für Geräusche, auf NVIDIA-Grafikkarten.
+# Gebaut von GitHub (.github/workflows/musikgenerator.yml) → ghcr.io/<besitzer>/gibeon-musik
+# Die Modelle liegen nicht im Abbild: „--prepare musik/atmo“ lädt sie einmalig nach /cache.
+FROM docker.io/nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+ARG ACESTEP_COMMIT=1bee4c9f5b43e30995f8d4d33b3919197ce1bd68
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.10 python3-pip git libsndfile1 ffmpeg ca-certificates \
+ && ln -sf /usr/bin/python3.10 /usr/bin/python \
+ && rm -rf /var/lib/apt/lists/*
+
+# Erst PyTorch passend zu CUDA 12.4, dann ACE-Step (fester Stand) samt Abhängigkeiten
+RUN python3 -m pip install --upgrade pip wheel setuptools \
+ && python3 -m pip install torch==2.5.1 torchaudio==2.5.1 torchvision==0.20.1 \
+      --index-url https://download.pytorch.org/whl/cu124 \
+ && python3 -m pip install "git+https://github.com/ace-step/ACE-Step.git@${ACESTEP_COMMIT}" \
+      --extra-index-url https://download.pytorch.org/whl/cu124 \
+ && python3 -m pip install torchsde soundfile "huggingface-hub<1" \
+ && python3 -c "import acestep.pipeline_ace_step, diffusers; from diffusers import StableAudioPipeline; print('ok', diffusers.__version__)"
+
+COPY run.py /opt/gibeon/run.py
+ENV HF_HOME=/cache/hf \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ENTRYPOINT ["python3", "/opt/gibeon/run.py"]
