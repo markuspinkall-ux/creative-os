@@ -403,21 +403,31 @@ class Studio(QMainWindow):
         self.templates.setAccessibleName("Meine Vorlagen")
         self.templates.itemDoubleClicked.connect(lambda _it: self.use_template())
         self.templates.itemSelectionChanged.connect(self.update_template_buttons)
-        lay.addWidget(self.templates, 1)
+        self.templates.setFixedHeight(300)
+        lay.addWidget(self.templates)
         self.no_templates = QLabel("Noch keine Vorlagen. Gestalte ein Thumbnail und speichere es im letzten "
                                    "Schritt als Vorlage – dann erscheint es hier.", objectName="muted")
         self.no_templates.setWordWrap(True)
         lay.addWidget(self.no_templates)
         row = QHBoxLayout()
         self.t_use = QPushButton("Verwenden", objectName="primary")
+        self.t_use.setToolTip("Neues Thumbnail auf Basis dieser Vorlage – meist ändert man nur den Text")
         self.t_use.clicked.connect(self.use_template)
+        self.t_edit = QPushButton("Bearbeiten")
+        self.t_edit.setToolTip("Die Vorlage selbst ändern: Schrift, Größe, Position, Farben, Rahmen …")
+        self.t_edit.clicked.connect(lambda: self.use_template(edit=True))
+        row.addWidget(self.t_use)
+        row.addWidget(self.t_edit)
+        lay.addLayout(row)
+        row2 = QHBoxLayout()
         self.t_rename = QPushButton("Umbenennen")
         self.t_rename.clicked.connect(self.rename_template)
         self.t_delete = QPushButton("Löschen")
         self.t_delete.clicked.connect(self.delete_template)
-        for b in (self.t_use, self.t_rename, self.t_delete):
-            row.addWidget(b)
-        lay.addLayout(row)
+        row2.addWidget(self.t_rename)
+        row2.addWidget(self.t_delete)
+        lay.addLayout(row2)
+        lay.addStretch()
         return w
 
     def refresh_templates(self):
@@ -434,7 +444,7 @@ class Studio(QMainWindow):
 
     def update_template_buttons(self):
         has = self.templates.currentItem() is not None and bool(self.templates.selectedItems())
-        for b in (self.t_use, self.t_rename, self.t_delete):
+        for b in (self.t_use, self.t_edit, self.t_rename, self.t_delete):
             b.setEnabled(has)
 
     def current_template(self):
@@ -447,7 +457,7 @@ class Studio(QMainWindow):
         self.redraw()
         self.go(1)
 
-    def use_template(self):
+    def use_template(self, edit=False):
         tid = self.current_template()
         if not tid:
             return
@@ -459,7 +469,10 @@ class Studio(QMainWindow):
         self.template_id, self.template_name = tid, self.design.get("name", "")
         self.sel = {"images": -1, "texts": -1, "stickers": -1}
         self.redraw()
-        self.go(3 if self.design["texts"] else 1)          # meist will man nur den Text ändern
+        if edit:
+            self.go(1)                                     # Vorlage ändern: alle Schritte von vorn
+        else:
+            self.go(3 if self.design["texts"] else 1)      # meist will man nur den Text ändern
 
     def rename_template(self):
         tid = self.current_template()
@@ -479,7 +492,7 @@ class Studio(QMainWindow):
                 == QMessageBox.StandardButton.Yes:
             tr.delete_template(tid)
             if self.template_id == tid:
-                self.template_id = None
+                self.template_id, self.template_name = None, ""
             self.refresh_templates()
 
     # ---- Schritt 2: Hintergrund ---------------------------------------------------
@@ -852,12 +865,12 @@ class Studio(QMainWindow):
         self.tpl_name.setPlaceholderText("Name der Vorlage, z. B. Let's Play Serie")
         self.tpl_name.setAccessibleName("Name der Vorlage")
         lay.addWidget(self.tpl_name)
-        self.tpl_update = QPushButton("Vorlage aktualisieren")
+        self.tpl_update = QPushButton("Änderungen in Vorlage speichern", objectName="primary")
         self.tpl_update.clicked.connect(lambda: self.save_template(update=True))
-        self.tpl_new = QPushButton("Als neue Vorlage speichern", objectName="primary")
+        self.tpl_new = QPushButton("Als neue Vorlage speichern")
         self.tpl_new.clicked.connect(lambda: self.save_template(update=False))
-        lay.addWidget(self.tpl_new)
         lay.addWidget(self.tpl_update)
+        lay.addWidget(self.tpl_new)
         self.done_status = QLabel("", objectName="muted")
         self.done_status.setWordWrap(True)
         lay.addWidget(self.done_status)
@@ -961,6 +974,8 @@ class Studio(QMainWindow):
         self.bg_c2.set(bg.get("color2", ""))
         self.tpl_name.setText(self.template_name)
         self.tpl_update.setVisible(self.template_id is not None)
+        if self.template_id is not None:
+            self.tpl_update.setText(f"Änderungen in Vorlage „{self.template_name}“ speichern")
         self.loading = False
         self.load_layer_controls()
 
