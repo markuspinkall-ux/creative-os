@@ -40,3 +40,34 @@ def test_im_startmenue_und_beim_anmelden():
     assert "apps.setAutostart(appMenu.desktopId, !appMenu.autostart)" in sm
     sup = (ROOT / "shell/session/creative-shell-supervisor").read_text(encoding="utf-8")
     assert "python3 -m creative_shell.autostart" in sup
+
+
+def test_tray_schalter(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    d = tmp_path / "autostart"
+    d.mkdir()
+    (d / "steam.desktop").write_text("[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam %U\n", encoding="utf-8")
+    (d / "com.discordapp.Discord.desktop").write_text(
+        "[Desktop Entry]\nName=Discord\nExec=/usr/bin/flatpak run --branch=stable com.discordapp.Discord\n",
+        encoding="utf-8")
+    (d / "normal.desktop").write_text("[Desktop Entry]\nName=N\nExec=normal --x\nStartupWMClass=NormalApp\n",
+                                      encoding="utf-8")
+    (d / "offen.desktop").write_text(f"[Desktop Entry]\nName=O\nExec=steam\n{autostart.MINIMIZED}=false\n",
+                                     encoding="utf-8")
+    assert autostart.tray_command(d / "steam.desktop") == ["/usr/bin/steam", "-silent"]
+    assert autostart.tray_command(d / "com.discordapp.Discord.desktop")[-1] == "--start-minimized"
+    assert autostart.tray_command(d / "normal.desktop") is None
+    assert autostart.app_names(d / "normal.desktop") == {"normal", "normalapp"}
+    assert "com.discordapp.discord" in autostart.app_names(d / "com.discordapp.Discord.desktop")
+    calls = []
+    monkeypatch.setattr(autostart.subprocess, "Popen", lambda args, **kw: calls.append(args))
+    autostart.start_all()
+    assert ["/usr/bin/steam", "-silent"] in calls
+    assert ["gio", "launch", str(d / "normal.desktop")] in calls
+    assert ["gio", "launch", str(d / "offen.desktop")] in calls           # ausdrücklich nicht minimiert
+
+
+def test_minimier_skript():
+    js = autostart.minimizer_script({"steam", "normalapp"}, 90)
+    assert '["normalapp", "steam"]' in js and "90 * 1000" in js
+    assert "w.minimized = true" in js and "windowAdded.disconnect" in js
