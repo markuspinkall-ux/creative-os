@@ -21,7 +21,7 @@ ApplicationWindow {
     readonly property bool inTrash: fm.page === "trash"
     readonly property bool hasSel: fm.selectedCount > 0
     // Solange ein Dialog offen ist, gelten die Tastenkürzel nicht
-    readonly property bool free: !nameDialog.opened && !confirmDialog.opened && !propsDialog.opened
+    readonly property bool free: !nameDialog.opened && !confirmDialog.opened && !propsDialog.opened && !openWithDialog.opened
 
     // ---- Aktionen --------------------------------------------------------------
     function newFolder() {
@@ -35,6 +35,13 @@ ApplicationWindow {
     function rename() {
         if (inFolder && fm.selectedCount === 1)
             nameDialog.ask("Umbenennen", "Umbenennen", fm.selectedName, (n) => fm.renameSelected(n))
+    }
+    function openWith() {
+        const paths = fm.selectedFilePaths()
+        if (paths.length) {
+            openWithPanel.load(paths)
+            openWithDialog.open()
+        }
     }
     function properties() {
         if (hasSel) {
@@ -372,6 +379,7 @@ ApplicationWindow {
         const one = fm.selectedCount === 1
         return [
             { label: "Öffnen", icon: "open", key: "Enter", act: "fm.openSelection()" },
+            { label: "Öffnen mit …", icon: "open", enabled: fm.selectedFilePaths().length > 0, act: "win.openWith()" },
             { sep: true },
             { label: "Ausschneiden", icon: "cut", key: "Strg+X", act: "fm.cutSelection()" },
             { label: "Kopieren", icon: "copy", key: "Strg+C", act: "fm.copySelection()" },
@@ -423,6 +431,25 @@ ApplicationWindow {
     }
 
     NameDialog { id: nameDialog }
+
+    // „Öffnen mit“ – Auswahl einer installierten App
+    Popup {
+        id: openWithDialog
+        anchors.centerIn: Overlay.overlay
+        width: 480
+        height: Math.min(620, win.height - 60)
+        modal: true
+        focus: true
+        padding: 22
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.45) }
+        background: Rectangle { radius: 16; color: Theme.raised; border.color: Theme.hairline }
+        contentItem: OpenWithPanel {
+            id: openWithPanel
+            chooser: openWith
+            onFinished: openWithDialog.close()
+        }
+    }
     // Rückfrage aus dem Orbit-Modul (gleichnamige eigene Datei gab es früher – sie wurde
     // vom Modul überdeckt, deshalb tat „Papierkorb leeren“ nichts)
     ConfirmDialog {

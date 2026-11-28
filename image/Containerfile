@@ -250,14 +250,20 @@ COPY art/creative-art.svg /usr/share/icons/hicolor/scalable/apps/creative-art.sv
 RUN chmod 755 /usr/bin/creative-art
 
 # Writer – formatierte Dokumente, Druckvorschau und PDF.
-# Word-Dateien (python3-docx) und Rechtschreibprüfung (Enchant + deutsches Hunspell-Wörterbuch).
-RUN dnf install -y --skip-unavailable python3-docx python3-enchant hunspell-de && dnf clean all
+# Word-Dateien (python-docx) und Rechtschreibprüfung (Enchant + deutsches Hunspell-Wörterbuch).
+# Fedora bietet python3-docx nicht mehr an – dann bringt Writer python-docx (MIT) selbst mit.
+# Ohne Word-Unterstützung würde Writer nur HTML speichern, deshalb bricht der Bau dann ab.
+RUN dnf install -y --skip-unavailable python3-docx python3-lxml python3-typing-extensions python3-pip \
+        python3-enchant hunspell-de && dnf clean all \
+ && (python3 -c "import docx" 2>/dev/null \
+     || python3 -m pip install --no-cache-dir --no-deps --target /usr/lib/creative-writer/vendor "python-docx==1.1.2") \
+ && PYTHONPATH=/usr/lib/creative-writer/vendor python3 -c "import docx; print('Writer: Word-Unterstützung ok')"
 COPY writer/creative-writer writer/writer_docx.py writer/writer_icons.py /usr/lib/creative-writer/
 COPY writer/creative-writer.desktop /usr/share/applications/creative-writer.desktop
 COPY writer/creative-writer.svg /usr/share/icons/hicolor/scalable/apps/creative-writer.svg
 RUN chmod 755 /usr/lib/creative-writer/creative-writer \
  && ln -sf /usr/lib/creative-writer/creative-writer /usr/bin/creative-writer \
- && QT_QPA_PLATFORM=offscreen HOME=/tmp/writer-home XDG_RUNTIME_DIR=/tmp timeout 60 /usr/lib/creative-writer/creative-writer --selftest \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/writer-home XDG_RUNTIME_DIR=/tmp WRITER_REQUIRE_DOCX=1 timeout 60 /usr/lib/creative-writer/creative-writer --selftest \
  && rm -rf /tmp/writer-home
 
 # Podcast ist jetzt ein Reiter im Player. „creative-podcast“ öffnet für alte Verknüpfungen den Player dort.

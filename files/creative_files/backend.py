@@ -338,6 +338,13 @@ class FileManager(QObject):
                 if not item["isDir"]:
                     QDesktopServices.openUrl(QUrl.fromLocalFile(item["path"]))
 
+    @Slot(result="QVariantList")
+    def selectedFilePaths(self):
+        """Ausgewählte Dateien (ohne Ordner) – für „Öffnen mit“."""
+        if self._page == "trash":
+            return []
+        return [item["path"] for item in self.files.selected() if not item["isDir"]]
+
     @Slot()
     def openTerminalHere(self):
         folder = self._path if self._page == "folder" else str(fsops.HOME)

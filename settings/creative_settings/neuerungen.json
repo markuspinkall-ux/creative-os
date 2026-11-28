@@ -1,14 +1,18 @@
 [
   {
     "datum": "2026-11-28",
-    "titel": "Player: eigene M3U-Senderlisten für IPTV",
+    "titel": "Player: eigene M3U-Senderlisten, „Öffnen mit“ und Word-Dateien in Writer",
     "neu": [
       "Player › IPTV: „M3U-Datei laden …“ – Senderlisten (.m3u/.m3u8) direkt vom Rechner laden, nicht mehr nur Internetadressen. Die Datei wird in den Player übernommen und bleibt auch, wenn das Original verschoben oder gelöscht wird.",
       "Player › IPTV: „Meine Senderlisten“ – beliebig viele Listen (Dateien und Internetadressen) speichern und per Klick zwischen ihnen wechseln; × entfernt eine Liste wieder. Jede Liste wird einzeln zwischengespeichert und ist beim nächsten Start sofort da.",
-      "M3U-Dateien lassen sich auch in die IPTV-Ansicht ziehen oder im Dateimanager per Doppelklick öffnen – sie landen dann direkt unter „Meine Senderlisten“."
+      "M3U-Dateien lassen sich auch in die IPTV-Ansicht ziehen oder im Dateimanager per Doppelklick öffnen – sie landen dann direkt unter „Meine Senderlisten“.",
+      "Rechtsklick auf eine Datei – in Dateien und auf dem Schreibtisch: „Öffnen mit …“ zeigt die passenden Apps zuerst und auf Wunsch alle installierten Apps. Mit „Immer mit dieser App öffnen“ wird die gewählte App zur Standard-App für diesen Dateityp."
     ],
     "verbessert": [
       "Player › IPTV: Auch einfache M3U-Listen ohne #EXTINF-Angaben, Gruppen per #EXTGRP und Listen aus Windows-Programmen (Umlaute) werden richtig gelesen."
+    ],
+    "behoben": [
+      "Writer speichert neue Dokumente wieder als Word-Dokument (.docx) statt als Webseite (.html). Die nötige Word-Unterstützung fehlte im System; Writer bringt sie jetzt selbst mit. Ältere .html-Dokumente lassen sich weiter öffnen und über „Speichern unter“ als .docx sichern."
     ]
   },
   {
