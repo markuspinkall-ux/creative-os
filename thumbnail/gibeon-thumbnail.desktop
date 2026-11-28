@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Thumbnail Studio
+GenericName=YouTube-Thumbnails gestalten
+Comment=YouTube-Thumbnails Schritt für Schritt gestalten – mit eigenen Vorlagen
+Exec=gibeon-thumbnail
+Icon=gibeon-thumbnail
+Terminal=false
+Categories=Graphics;2DGraphics;
+Keywords=Thumbnail;YouTube;Vorschaubild;Titelbild;Vorlage;Text;Rahmen;Sticker;
+StartupWMClass=gibeon-thumbnail

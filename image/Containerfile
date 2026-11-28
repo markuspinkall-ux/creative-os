@@ -214,6 +214,15 @@ COPY bildgenerator/gibeon-bildgenerator.svg /usr/share/icons/hicolor/scalable/ap
 RUN ln -s /usr/lib/gibeon-bildgenerator/gibeon-bildgenerator /usr/bin/gibeon-bildgenerator \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/bildgen-home /usr/bin/gibeon-bildgenerator --selftest \
  && rm -rf /tmp/bildgen-home
+
+# Thumbnail Studio – YouTube-Thumbnails Schritt für Schritt gestalten, mit eigenen Vorlagen (ohne KI)
+COPY --chmod=755 thumbnail/gibeon-thumbnail /usr/lib/gibeon-thumbnail/gibeon-thumbnail
+COPY thumbnail/thumb_render.py /usr/lib/gibeon-thumbnail/
+COPY thumbnail/gibeon-thumbnail.desktop /usr/share/applications/gibeon-thumbnail.desktop
+COPY thumbnail/gibeon-thumbnail.svg /usr/share/icons/hicolor/scalable/apps/gibeon-thumbnail.svg
+RUN ln -s /usr/lib/gibeon-thumbnail/gibeon-thumbnail /usr/bin/gibeon-thumbnail \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/thumb-home /usr/bin/gibeon-thumbnail --selftest \
+ && rm -rf /tmp/thumb-home
 # 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus 3D Studio)
 COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
 COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop

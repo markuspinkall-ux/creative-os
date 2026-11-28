@@ -1,0 +1,1043 @@
+#!/usr/bin/python3
+"""Thumbnail Studio – YouTube-Thumbnails Schritt für Schritt gestalten (ohne KI).
+
+Schritte: Vorlage → Hintergrund → Bilder → Text → Rahmen → Extras → Fertig.
+Rechts ist immer die große Vorschau; Bilder, Texte und Sticker lassen sich darin mit
+der Maus verschieben und mit dem Mausrad vergrößern. Fertige Designs lassen sich als
+Vorlage in der App speichern und beim nächsten Mal direkt auf der Startseite wählen.
+
+  gibeon-thumbnail                         App starten
+  gibeon-thumbnail --selftest              Prüfung beim Bauen
+  gibeon-thumbnail --screenshot=a.png [--schritt=3] [--beispiel]   Foto der Oberfläche
+"""
+
+import os
+import sys
+from pathlib import Path
+
+from PySide6.QtCore import QPointF, QSize, QStandardPaths, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPixmap
+from PySide6.QtWidgets import (
+    QAbstractItemView, QApplication, QCheckBox, QColorDialog, QComboBox, QFileDialog, QFontComboBox, QFrame,
+    QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSlider, QStackedWidget, QVBoxLayout, QWidget,
+)
+try:  # Graphit-Dialoge von Gibeon OS statt der Qt-Standarddialoge
+    from creative_dialogs import QColorDialog, QFileDialog, QInputDialog, QMessageBox  # noqa: F811
+except ImportError:
+    pass
+try:  # Design (Graphit/Porzellan) und Akzentfarbe von Gibeon OS
+    from creative_look import install as _look_install
+    _look_install()
+except ImportError:
+    pass
+
+LIB = Path(os.environ.get("GIBEON_PREFIX") or "/usr") / "lib/gibeon-thumbnail"
+if not (LIB / "thumb_render.py").is_file():
+    LIB = Path(__file__).resolve().parent
+sys.path.insert(0, str(LIB))
+import thumb_render as tr  # noqa: E402
+
+APP = "Thumbnail Studio"
+STEPS = ["Vorlage", "Hintergrund", "Bilder", "Text", "Rahmen", "Extras", "Fertig"]
+IMAGE_TYPES = "Bilder (*.png *.jpg *.jpeg *.webp *.bmp)"
+
+STYLE = """
+    QWidget { background:#12151b; color:#dce6ff; font-family:Arial; font-size:13px; }
+    QLabel#title { font-size:22px; font-weight:700; }
+    QLabel#h2 { font-size:18px; font-weight:700; }
+    QLabel#section { color:rgba(220,230,255,0.6); font-size:11px; font-weight:700; letter-spacing:1px; }
+    QLabel#muted { color:rgba(220,230,255,0.6); }
+    QFrame#panel { background:#1c2029; border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
+    QFrame#panel QWidget { background:transparent; }
+    QComboBox, QLineEdit, QPlainTextEdit, QFontComboBox { background:#232836; border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px; padding:7px 9px; }
+    QComboBox QAbstractItemView { background:#232836; selection-background-color:#3a4252; }
+    QListWidget { background:#12151b; border:none; border-radius:10px; padding:4px; outline:0; }
+    QListWidget::item { border-radius:8px; padding:6px; }
+    QListWidget::item:selected { background:rgba(143,179,255,0.22); color:#dce6ff; }
+    QListWidget#templates::item { padding:8px; }
+    QPushButton { background:rgba(255,255,255,0.06); border:none; border-radius:10px; padding:9px 14px; font-weight:700; }
+    QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QPushButton#primary:hover { background:#a3c1ff; }
+    QPushButton:disabled, QPushButton#primary:disabled { background:rgba(255,255,255,0.04); color:rgba(220,230,255,0.35); }
+    QPushButton#step { text-align:left; background:transparent; padding:10px 12px; font-weight:400; }
+    QPushButton#step:hover { background:rgba(255,255,255,0.06); }
+    QPushButton#step[current="true"] { background:rgba(143,179,255,0.18); font-weight:700; }
+    QPushButton#swatch { border-radius:13px; padding:0; min-width:26px; max-width:26px; min-height:26px; max-height:26px; }
+    QPushButton#choice { padding:12px; }
+    QPushButton#choice[picked="true"] { background:rgba(143,179,255,0.22); border:1px solid #8fb3ff; }
+    QSlider::groove:horizontal { height:4px; background:#3a4252; border-radius:2px; }
+    QSlider::sub-page:horizontal { background:#8fb3ff; border-radius:2px; }
+    QSlider::handle:horizontal { background:#dce6ff; width:14px; margin:-6px 0; border-radius:7px; }
+    QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836; border:1px solid rgba(255,255,255,0.15); }
+    QCheckBox::indicator:checked { background:#8fb3ff; }
+    QScrollArea { border:none; background:transparent; }
+"""
+
+
+def pictures_dir():
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation) \
+        or str(Path.home() / "Bilder")
+    return Path(base)
+
+
+def repolish(widget):
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)
+
+
+# ---- Bausteine ----------------------------------------------------------------------
+class ColorRow(QWidget):
+    """Farbvorschläge als runde Knöpfe plus „Andere …“."""
+    changed = Signal(str)
+
+    def __init__(self, label=""):
+        super().__init__()
+        self.value = "#ffffff"
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(6)
+        for color in tr.SWATCHES:
+            b = QPushButton(objectName="swatch")
+            b.setStyleSheet(f"background:{color}; border:2px solid rgba(255,255,255,0.25);")
+            b.setToolTip(color)
+            b.setAccessibleName(f"{label} {color}")
+            b.clicked.connect(lambda _=False, c=color: self.pick(c))
+            lay.addWidget(b)
+        other = QPushButton("Andere …")
+        other.setAccessibleName(f"{label}: andere Farbe")
+        other.clicked.connect(self.custom)
+        lay.addWidget(other)
+        lay.addStretch()
+
+    def set(self, color):
+        self.value = color
+
+    def pick(self, color):
+        self.value = color
+        self.changed.emit(color)
+
+    def custom(self):
+        color = QColorDialog.getColor(QColor(self.value), self, "Farbe wählen")
+        if color.isValid():
+            self.pick(color.name())
+
+
+def slider(lo, hi, value=0):
+    s = QSlider(Qt.Orientation.Horizontal)
+    s.setRange(lo, hi)
+    s.setValue(value)
+    return s
+
+
+class Canvas(QWidget):
+    """Große Vorschau. Ebenen der aktuellen Seite lassen sich ziehen und per Mausrad skalieren."""
+    moved = Signal()
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.image = QImage()
+        self.drag = None
+        self.setMinimumSize(QSize(480, 270))
+        self.setMouseTracking(True)
+        self.setAccessibleName("Vorschau des Thumbnails")
+
+    def target(self):
+        w, h = self.width() - 8, self.height() - 8
+        scale = min(w / tr.W, h / tr.H)
+        dw, dh = tr.W * scale, tr.H * scale
+        return (self.width() - dw) / 2, (self.height() - dh) / 2, scale
+
+    def to_design(self, pos):
+        x0, y0, s = self.target()
+        return QPointF((pos.x() - x0) / s, (pos.y() - y0) / s)
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        x0, y0, s = self.target()
+        if not self.image.isNull():
+            p.drawImage(int(x0), int(y0), self.image.scaled(int(tr.W * s), int(tr.H * s),
+                                                            Qt.AspectRatioMode.IgnoreAspectRatio,
+                                                            Qt.TransformationMode.SmoothTransformation))
+        kind, item = self.app.selected_layer()
+        if item is not None:
+            r = tr.layer_rect(kind, item)
+            p.setPen(QColor(143, 179, 255, 200))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRect(int(x0 + r.x() * s), int(y0 + r.y() * s), int(r.width() * s), int(r.height() * s))
+        p.end()
+
+    def mousePressEvent(self, event):
+        pt = self.to_design(event.position())
+        kind = self.app.layer_kind()
+        if not kind:
+            return
+        items = self.app.design.get(kind, [])
+        for i in range(len(items) - 1, -1, -1):
+            if tr.layer_rect(kind, items[i]).contains(pt):
+                self.app.select_layer(i)
+                self.drag = (i, pt, items[i]["x"], items[i]["y"])
+                return
+
+    def mouseMoveEvent(self, event):
+        kind = self.app.layer_kind()
+        if kind:
+            pt = self.to_design(event.position())
+            hit = any(tr.layer_rect(kind, it).contains(pt) for it in self.app.design.get(kind, []))
+            self.setCursor(Qt.CursorShape.SizeAllCursor if hit or self.drag else Qt.CursorShape.ArrowCursor)
+        if not self.drag or not kind:
+            return
+        i, start, x, y = self.drag
+        pt = self.to_design(event.position())
+        item = self.app.design[kind][i]
+        item["x"] = max(0, min(tr.W, x + pt.x() - start.x()))
+        item["y"] = max(0, min(tr.H, y + pt.y() - start.y()))
+        self.moved.emit()
+
+    def mouseReleaseEvent(self, _event):
+        self.drag = None
+
+    def wheelEvent(self, event):
+        kind, item = self.app.selected_layer()
+        if item is None:
+            return
+        step = 1.06 if event.angleDelta().y() > 0 else 1 / 1.06
+        if kind == "texts":
+            item["size"] = int(max(20, min(400, item["size"] * step)))
+        else:
+            item["scale"] = max(0.1, min(5.0, item.get("scale", 1.0) * step))
+        self.app.load_layer_controls()
+        self.moved.emit()
+
+
+# ---- Hauptfenster -------------------------------------------------------------------
+class Studio(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(APP)
+        self.resize(1360, 820)
+        self.setStyleSheet(STYLE)
+        self.design = tr.new_design()
+        self.template_id = None          # geladen aus dieser Vorlage
+        self.template_name = ""
+        self.step = 0
+        self.loading = False
+        self.sel = {"images": -1, "texts": -1, "stickers": -1}
+        self.timer = QTimer(self, singleShot=True, interval=30)
+        self.timer.timeout.connect(self.redraw)
+
+        root = QWidget()
+        self.setCentralWidget(root)
+        box = QVBoxLayout(root)
+        box.setContentsMargins(18, 14, 18, 14)
+        box.setSpacing(12)
+        top = QHBoxLayout()
+        top.addWidget(QLabel(APP, objectName="title"))
+        top.addWidget(QLabel("YouTube-Thumbnails · 1280 × 720", objectName="muted"))
+        top.addStretch()
+        box.addLayout(top)
+
+        body = QHBoxLayout()
+        body.setSpacing(14)
+        box.addLayout(body, 1)
+
+        # Schritte
+        nav = QFrame(objectName="panel")
+        nav.setFixedWidth(190)
+        nlay = QVBoxLayout(nav)
+        nlay.setContentsMargins(10, 12, 10, 12)
+        nlay.setSpacing(2)
+        self.step_buttons = []
+        for i, name in enumerate(STEPS):
+            b = QPushButton(f"{i + 1}   {name}", objectName="step")
+            b.clicked.connect(lambda _=False, n=i: self.go(n))
+            nlay.addWidget(b)
+            self.step_buttons.append(b)
+        nlay.addStretch()
+        body.addWidget(nav)
+
+        # Einstellungen des Schritts
+        panel = QFrame(objectName="panel")
+        panel.setFixedWidth(400)
+        play = QVBoxLayout(panel)
+        play.setContentsMargins(18, 16, 18, 16)
+        play.setSpacing(10)
+        self.step_title = QLabel("", objectName="h2")
+        play.addWidget(self.step_title)
+        self.pages = QStackedWidget()
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(self.pages)
+        play.addWidget(scroll, 1)
+        nav_row = QHBoxLayout()
+        self.back = QPushButton("‹  Zurück")
+        self.back.clicked.connect(lambda: self.go(self.step - 1))
+        self.next = QPushButton("Weiter  ›", objectName="primary")
+        self.next.clicked.connect(lambda: self.go(self.step + 1))
+        nav_row.addWidget(self.back)
+        nav_row.addStretch()
+        nav_row.addWidget(self.next)
+        play.addLayout(nav_row)
+        body.addWidget(panel)
+
+        # Vorschau
+        right = QFrame(objectName="panel")
+        rlay = QVBoxLayout(right)
+        rlay.setContentsMargins(14, 14, 14, 14)
+        self.canvas = Canvas(self)
+        self.canvas.moved.connect(self.changed)
+        rlay.addWidget(self.canvas, 1)
+        self.hint = QLabel("", objectName="muted")
+        self.hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        rlay.addWidget(self.hint)
+        body.addWidget(right, 1)
+
+        for build in (self.page_start, self.page_background, self.page_images, self.page_texts,
+                      self.page_frame, self.page_extras, self.page_done):
+            self.pages.addWidget(build())
+        self.go(0)
+        self.redraw()
+
+    # ---- Ablauf -------------------------------------------------------------------
+    def go(self, n):
+        n = max(0, min(len(STEPS) - 1, n))
+        self.step = n
+        for i, b in enumerate(self.step_buttons):
+            b.setProperty("current", "true" if i == n else "false")
+            repolish(b)
+        self.pages.setCurrentIndex(n)
+        self.step_title.setText(f"Schritt {n + 1} von {len(STEPS)}: {STEPS[n]}")
+        self.back.setEnabled(n > 0)
+        self.next.setVisible(n < len(STEPS) - 1)
+        if n == 0:
+            self.refresh_templates()
+        if self.layer_kind() == "texts" and not self.design["texts"]:
+            self.add_text()
+        self.refresh_lists()
+        self.load_controls()
+        self.hint.setText({"Bilder": "Bild in der Vorschau ziehen · Mausrad = Größe",
+                           "Text": "Text in der Vorschau ziehen · Mausrad = Schriftgröße",
+                           "Extras": "Sticker in der Vorschau ziehen · Mausrad = Größe"}.get(STEPS[n], ""))
+        self.canvas.update()
+
+    def changed(self):
+        if not self.loading:
+            self.timer.start()
+
+    def redraw(self):
+        self.canvas.image = tr.render(self.design)
+        self.canvas.update()
+
+    def layer_kind(self):
+        return {2: "images", 3: "texts", 5: "stickers"}.get(self.step)
+
+    def selected_layer(self):
+        kind = self.layer_kind()
+        if not kind:
+            return None, None
+        i = self.sel[kind]
+        items = self.design.get(kind, [])
+        return (kind, items[i]) if 0 <= i < len(items) else (kind, None)
+
+    def select_layer(self, i):
+        kind = self.layer_kind()
+        if kind:
+            self.sel[kind] = i
+            lst = {"images": self.image_list, "texts": self.text_list, "stickers": self.sticker_list}[kind]
+            lst.setCurrentRow(i)
+            self.load_layer_controls()
+            self.canvas.update()
+
+    # ---- Schritt 1: Vorlage -------------------------------------------------------
+    def page_start(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(10)
+        new = QPushButton("Neues Thumbnail beginnen", objectName="primary")
+        new.clicked.connect(self.start_new)
+        lay.addWidget(new)
+        lay.addSpacing(6)
+        lay.addWidget(QLabel("MEINE VORLAGEN", objectName="section"))
+        self.templates = QListWidget(objectName="templates")
+        self.templates.setViewMode(QListWidget.ViewMode.IconMode)
+        self.templates.setIconSize(QSize(160, 90))
+        self.templates.setGridSize(QSize(176, 128))
+        self.templates.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.templates.setMovement(QListWidget.Movement.Static)
+        self.templates.setWordWrap(True)
+        self.templates.setAccessibleName("Meine Vorlagen")
+        self.templates.itemDoubleClicked.connect(lambda _it: self.use_template())
+        self.templates.itemSelectionChanged.connect(self.update_template_buttons)
+        lay.addWidget(self.templates, 1)
+        self.no_templates = QLabel("Noch keine Vorlagen. Gestalte ein Thumbnail und speichere es im letzten "
+                                   "Schritt als Vorlage – dann erscheint es hier.", objectName="muted")
+        self.no_templates.setWordWrap(True)
+        lay.addWidget(self.no_templates)
+        row = QHBoxLayout()
+        self.t_use = QPushButton("Verwenden", objectName="primary")
+        self.t_use.clicked.connect(self.use_template)
+        self.t_rename = QPushButton("Umbenennen")
+        self.t_rename.clicked.connect(self.rename_template)
+        self.t_delete = QPushButton("Löschen")
+        self.t_delete.clicked.connect(self.delete_template)
+        for b in (self.t_use, self.t_rename, self.t_delete):
+            row.addWidget(b)
+        lay.addLayout(row)
+        return w
+
+    def refresh_templates(self):
+        self.templates.clear()
+        items = tr.list_templates()
+        for t in items:
+            it = QListWidgetItem(QIcon(QPixmap(t["preview"])), t["name"])
+            it.setData(Qt.ItemDataRole.UserRole, t["id"])
+            it.setToolTip(t["name"])
+            self.templates.addItem(it)
+        self.no_templates.setVisible(not items)
+        self.templates.setVisible(bool(items))
+        self.update_template_buttons()
+
+    def update_template_buttons(self):
+        has = self.templates.currentItem() is not None and bool(self.templates.selectedItems())
+        for b in (self.t_use, self.t_rename, self.t_delete):
+            b.setEnabled(has)
+
+    def current_template(self):
+        it = self.templates.currentItem()
+        return it.data(Qt.ItemDataRole.UserRole) if it else None
+
+    def start_new(self):
+        self.design, self.template_id, self.template_name = tr.new_design(), None, ""
+        self.sel = {"images": -1, "texts": -1, "stickers": -1}
+        self.redraw()
+        self.go(1)
+
+    def use_template(self):
+        tid = self.current_template()
+        if not tid:
+            return
+        try:
+            self.design = tr.load_template(tid)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, APP, f"Die Vorlage ließ sich nicht öffnen:\n{error}")
+            return
+        self.template_id, self.template_name = tid, self.design.get("name", "")
+        self.sel = {"images": -1, "texts": -1, "stickers": -1}
+        self.redraw()
+        self.go(3 if self.design["texts"] else 1)          # meist will man nur den Text ändern
+
+    def rename_template(self):
+        tid = self.current_template()
+        if not tid:
+            return
+        name, ok = QInputDialog.getText(self, "Vorlage umbenennen", "Name:", text=self.templates.currentItem().text())
+        if ok and name.strip():
+            tr.rename_template(tid, name)
+            self.refresh_templates()
+
+    def delete_template(self):
+        tid = self.current_template()
+        if not tid:
+            return
+        name = self.templates.currentItem().text()
+        if QMessageBox.question(self, "Vorlage löschen", f"Die Vorlage „{name}“ wirklich löschen?") \
+                == QMessageBox.StandardButton.Yes:
+            tr.delete_template(tid)
+            if self.template_id == tid:
+                self.template_id = None
+            self.refresh_templates()
+
+    # ---- Schritt 2: Hintergrund ---------------------------------------------------
+    def page_background(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        lay.addWidget(QLabel("ART", objectName="section"))
+        row = QHBoxLayout()
+        self.bg_choice = {}
+        for key, label in tr.BACKGROUNDS:
+            b = QPushButton(label, objectName="choice")
+            b.clicked.connect(lambda _=False, k=key: self.set_bg("type", k))
+            row.addWidget(b)
+            self.bg_choice[key] = b
+        lay.addLayout(row)
+        self.bg_c1_label = QLabel("FARBE", objectName="section")
+        lay.addWidget(self.bg_c1_label)
+        self.bg_c1 = ColorRow("Hintergrundfarbe")
+        self.bg_c1.changed.connect(lambda c: self.set_bg("color1", c))
+        lay.addWidget(self.bg_c1)
+        self.bg_c2_label = QLabel("ZWEITE FARBE", objectName="section")
+        lay.addWidget(self.bg_c2_label)
+        self.bg_c2 = ColorRow("Zweite Farbe")
+        self.bg_c2.changed.connect(lambda c: self.set_bg("color2", c))
+        lay.addWidget(self.bg_c2)
+        self.bg_angle_label = QLabel("RICHTUNG", objectName="section")
+        lay.addWidget(self.bg_angle_label)
+        self.bg_angle = slider(0, 360, 135)
+        self.bg_angle.setAccessibleName("Richtung des Verlaufs")
+        self.bg_angle.valueChanged.connect(lambda v: self.set_bg("angle", v))
+        lay.addWidget(self.bg_angle)
+        self.bg_pick = QPushButton("Bild wählen …")
+        self.bg_pick.clicked.connect(self.pick_bg_image)
+        lay.addWidget(self.bg_pick)
+        self.bg_blur_label = QLabel("WEICHZEICHNEN", objectName="section")
+        lay.addWidget(self.bg_blur_label)
+        self.bg_blur = slider(0, 30, 0)
+        self.bg_blur.setAccessibleName("Weichzeichnen")
+        self.bg_blur.valueChanged.connect(lambda v: self.set_bg("blur", v))
+        lay.addWidget(self.bg_blur)
+        lay.addWidget(QLabel("ABDUNKELN (TEXT BESSER LESBAR)", objectName="section"))
+        self.bg_dim = slider(0, 80, 0)
+        self.bg_dim.setAccessibleName("Abdunkeln")
+        self.bg_dim.valueChanged.connect(lambda v: self.set_bg("dim", v))
+        lay.addWidget(self.bg_dim)
+        lay.addStretch()
+        return w
+
+    def set_bg(self, key, value):
+        if self.loading:
+            return
+        self.design["background"][key] = value
+        if key == "type":
+            self.load_controls()
+        self.changed()
+
+    def pick_bg_image(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Hintergrundbild wählen", str(pictures_dir()), IMAGE_TYPES)
+        if path:
+            self.design["background"]["image"] = path
+            self.design["background"]["type"] = "bild"
+            self.load_controls()
+            self.changed()
+
+    # ---- Schritt 3: Bilder --------------------------------------------------------
+    def layer_list(self, add_text, add_fn, remove_fn, kind):
+        lst = QListWidget()
+        lst.setFixedHeight(120)
+        lst.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        lst.currentRowChanged.connect(lambda r, k=kind: self.on_list_row(k, r))
+        row = QHBoxLayout()
+        add = QPushButton(add_text)
+        add.clicked.connect(add_fn)
+        rem = QPushButton("Entfernen")
+        rem.clicked.connect(remove_fn)
+        up = QPushButton("Nach vorn")
+        up.clicked.connect(lambda _=False, k=kind: self.raise_layer(k))
+        row.addWidget(add)
+        row.addWidget(up)
+        row.addWidget(rem)
+        return lst, row
+
+    def on_list_row(self, kind, row):
+        if self.loading:
+            return
+        self.sel[kind] = row
+        self.load_layer_controls()
+        self.canvas.update()
+
+    def raise_layer(self, kind):
+        i = self.sel[kind]
+        items = self.design[kind]
+        if 0 <= i < len(items) - 1:
+            items.append(items.pop(i))
+            self.sel[kind] = len(items) - 1
+            self.refresh_lists()
+            self.changed()
+
+    def page_images(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        info = QLabel("Füge Fotos von dir, Spielszenen oder Logos ein. Am besten wirken freigestellte "
+                      "PNG-Bilder (ohne Hintergrund) mit Umriss.", objectName="muted")
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        self.image_list, row = self.layer_list("Bild hinzufügen …", self.add_image, self.remove_image, "images")
+        lay.addWidget(self.image_list)
+        lay.addLayout(row)
+        self.img_box = QWidget()
+        il = QVBoxLayout(self.img_box)
+        il.setContentsMargins(0, 6, 0, 0)
+        il.setSpacing(8)
+        il.addWidget(QLabel("GRÖSSE", objectName="section"))
+        self.img_scale = slider(10, 400, 100)
+        self.img_scale.setAccessibleName("Bildgröße")
+        self.img_scale.valueChanged.connect(lambda v: self.set_layer("scale", v / 100))
+        il.addWidget(self.img_scale)
+        il.addWidget(QLabel("DREHUNG", objectName="section"))
+        self.img_rot = slider(-45, 45, 0)
+        self.img_rot.setAccessibleName("Drehung des Bildes")
+        self.img_rot.valueChanged.connect(lambda v: self.set_layer("rotation", v))
+        il.addWidget(self.img_rot)
+        self.img_mirror = QCheckBox("Spiegeln")
+        self.img_mirror.toggled.connect(lambda v: self.set_layer("mirror", v))
+        il.addWidget(self.img_mirror)
+        self.img_outline = QCheckBox("Umriss (für freigestellte Bilder)")
+        self.img_outline.toggled.connect(lambda v: self.set_layer("outline", v))
+        il.addWidget(self.img_outline)
+        self.img_outline_color = ColorRow("Umrissfarbe")
+        self.img_outline_color.changed.connect(lambda c: self.set_layer("outlineColor", c))
+        il.addWidget(self.img_outline_color)
+        il.addWidget(QLabel("UMRISS-STÄRKE", objectName="section"))
+        self.img_outline_w = slider(2, 30, 10)
+        self.img_outline_w.setAccessibleName("Umrissstärke")
+        self.img_outline_w.valueChanged.connect(lambda v: self.set_layer("outlineWidth", v))
+        il.addWidget(self.img_outline_w)
+        lay.addWidget(self.img_box)
+        lay.addStretch()
+        return w
+
+    def add_image(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Bild einfügen", str(pictures_dir()), IMAGE_TYPES)
+        for path in paths:
+            if tr.load_image(path).isNull():
+                continue
+            self.design["images"].append(tr.new_image(path))
+            self.sel["images"] = len(self.design["images"]) - 1
+        self.refresh_lists()
+        self.load_layer_controls()
+        self.changed()
+
+    def remove_image(self):
+        self.remove_layer("images")
+
+    def remove_layer(self, kind):
+        i = self.sel[kind]
+        if 0 <= i < len(self.design[kind]):
+            self.design[kind].pop(i)
+            self.sel[kind] = min(i, len(self.design[kind]) - 1)
+            self.refresh_lists()
+            self.load_layer_controls()
+            self.changed()
+
+    # ---- Schritt 4: Text ----------------------------------------------------------
+    def page_texts(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        self.text_list, row = self.layer_list("Text hinzufügen", self.add_text, lambda: self.remove_layer("texts"),
+                                              "texts")
+        self.text_list.setFixedHeight(90)
+        lay.addWidget(self.text_list)
+        lay.addLayout(row)
+        self.txt_box = QWidget()
+        tl = QVBoxLayout(self.txt_box)
+        tl.setContentsMargins(0, 6, 0, 0)
+        tl.setSpacing(8)
+        tl.addWidget(QLabel("TEXT", objectName="section"))
+        self.txt_edit = QPlainTextEdit()
+        self.txt_edit.setFixedHeight(70)
+        self.txt_edit.setAccessibleName("Text")
+        self.txt_edit.textChanged.connect(lambda: self.set_layer("text", self.txt_edit.toPlainText()))
+        tl.addWidget(self.txt_edit)
+        tl.addWidget(QLabel("SCHRIFT", objectName="section"))
+        self.txt_font = QFontComboBox()
+        self.txt_font.setAccessibleName("Schriftart")
+        self.txt_font.currentFontChanged.connect(lambda f: self.set_layer("font", f.family()))
+        tl.addWidget(self.txt_font)
+        fmt = QHBoxLayout()
+        self.txt_bold = QCheckBox("Fett")
+        self.txt_bold.toggled.connect(lambda v: self.set_layer("bold", v))
+        self.txt_italic = QCheckBox("Kursiv")
+        self.txt_italic.toggled.connect(lambda v: self.set_layer("italic", v))
+        self.txt_align = QComboBox()
+        for key, label in (("links", "Linksbündig"), ("mitte", "Zentriert"), ("rechts", "Rechtsbündig")):
+            self.txt_align.addItem(label, key)
+        self.txt_align.setAccessibleName("Ausrichtung")
+        self.txt_align.currentIndexChanged.connect(lambda _i: self.set_layer("align", self.txt_align.currentData()))
+        fmt.addWidget(self.txt_bold)
+        fmt.addWidget(self.txt_italic)
+        fmt.addWidget(self.txt_align, 1)
+        tl.addLayout(fmt)
+        tl.addWidget(QLabel("GRÖSSE", objectName="section"))
+        self.txt_size = slider(20, 300, 110)
+        self.txt_size.setAccessibleName("Schriftgröße")
+        self.txt_size.valueChanged.connect(lambda v: self.set_layer("size", v))
+        tl.addWidget(self.txt_size)
+        tl.addWidget(QLabel("DREHUNG", objectName="section"))
+        self.txt_rot = slider(-30, 30, 0)
+        self.txt_rot.setAccessibleName("Drehung des Textes")
+        self.txt_rot.valueChanged.connect(lambda v: self.set_layer("rotation", v))
+        tl.addWidget(self.txt_rot)
+        tl.addWidget(QLabel("TEXTFARBE", objectName="section"))
+        self.txt_color = ColorRow("Textfarbe")
+        self.txt_color.changed.connect(lambda c: self.set_layer("color", c))
+        tl.addWidget(self.txt_color)
+        tl.addWidget(QLabel("UMRISS", objectName="section"))
+        self.txt_outline = slider(0, 30, 10)
+        self.txt_outline.setAccessibleName("Umrissstärke des Textes")
+        self.txt_outline.valueChanged.connect(lambda v: self.set_layer("outline", v))
+        tl.addWidget(self.txt_outline)
+        self.txt_outline_color = ColorRow("Umrissfarbe")
+        self.txt_outline_color.changed.connect(lambda c: self.set_layer("outlineColor", c))
+        tl.addWidget(self.txt_outline_color)
+        effects = QHBoxLayout()
+        self.txt_shadow = QCheckBox("Schatten")
+        self.txt_shadow.toggled.connect(lambda v: self.set_layer("shadow", v))
+        self.txt_glow = QCheckBox("Leuchten")
+        self.txt_glow.toggled.connect(lambda v: self.set_layer("glow", v))
+        self.txt_boxed = QCheckBox("Farbbalken dahinter")
+        self.txt_boxed.toggled.connect(lambda v: self.set_layer("box", v))
+        effects.addWidget(self.txt_shadow)
+        effects.addWidget(self.txt_glow)
+        effects.addWidget(self.txt_boxed)
+        tl.addLayout(effects)
+        tl.addWidget(QLabel("FARBE FÜR LEUCHTEN / BALKEN", objectName="section"))
+        self.txt_extra_color = ColorRow("Leucht- und Balkenfarbe")
+        self.txt_extra_color.changed.connect(self.set_extra_color)
+        tl.addWidget(self.txt_extra_color)
+        lay.addWidget(self.txt_box)
+        lay.addStretch()
+        return w
+
+    def set_extra_color(self, color):
+        _kind, item = self.selected_layer()
+        if item is not None:
+            item["glowColor"] = color
+            item["boxColor"] = color
+            self.changed()
+
+    def add_text(self):
+        t = tr.new_text("DEIN TITEL" if not self.design["texts"] else "Neuer Text")
+        if self.design["texts"]:
+            t["size"], t["y"] = 70, tr.H * 0.78
+        self.design["texts"].append(t)
+        self.sel["texts"] = len(self.design["texts"]) - 1
+        self.refresh_lists()
+        self.load_layer_controls()
+        self.changed()
+
+    # ---- Schritt 5: Rahmen --------------------------------------------------------
+    def page_frame(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        lay.addWidget(QLabel("RAHMEN", objectName="section"))
+        grid = QGridLayout()
+        grid.setSpacing(8)
+        self.fr_choice = {}
+        for i, (key, label) in enumerate(tr.FRAMES):
+            b = QPushButton(label, objectName="choice")
+            b.clicked.connect(lambda _=False, k=key: self.set_frame("style", k))
+            grid.addWidget(b, i // 2, i % 2)
+            self.fr_choice[key] = b
+        lay.addLayout(grid)
+        lay.addWidget(QLabel("FARBE", objectName="section"))
+        self.fr_color = ColorRow("Rahmenfarbe")
+        self.fr_color.changed.connect(lambda c: self.set_frame("color", c))
+        lay.addWidget(self.fr_color)
+        lay.addWidget(QLabel("STÄRKE", objectName="section"))
+        self.fr_width = slider(4, 40, 14)
+        self.fr_width.setAccessibleName("Rahmenstärke")
+        self.fr_width.valueChanged.connect(lambda v: self.set_frame("width", v))
+        lay.addWidget(self.fr_width)
+        lay.addStretch()
+        return w
+
+    def set_frame(self, key, value):
+        if self.loading:
+            return
+        self.design["frame"][key] = value
+        if key == "style":
+            self.load_controls()
+        self.changed()
+
+    # ---- Schritt 6: Extras --------------------------------------------------------
+    def page_extras(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        lay.addWidget(QLabel("STICKER HINZUFÜGEN", objectName="section"))
+        grid = QGridLayout()
+        grid.setSpacing(8)
+        for i, (key, label, _c) in enumerate(tr.STICKERS):
+            b = QPushButton(label, objectName="choice")
+            b.clicked.connect(lambda _=False, k=key: self.add_sticker(k))
+            grid.addWidget(b, i // 3, i % 3)
+        lay.addLayout(grid)
+        lay.addWidget(QLabel("MEINE STICKER", objectName="section"))
+        self.sticker_list, row = self.layer_list("Ohne", lambda: None, lambda: self.remove_layer("stickers"),
+                                                 "stickers")
+        row.itemAt(0).widget().hide()                       # „Hinzufügen“ läuft über die Knöpfe oben
+        lay.addWidget(self.sticker_list)
+        lay.addLayout(row)
+        self.st_box = QWidget()
+        sl = QVBoxLayout(self.st_box)
+        sl.setContentsMargins(0, 6, 0, 0)
+        sl.addWidget(QLabel("GRÖSSE", objectName="section"))
+        self.st_scale = slider(30, 300, 100)
+        self.st_scale.setAccessibleName("Stickergröße")
+        self.st_scale.valueChanged.connect(lambda v: self.set_layer("scale", v / 100))
+        sl.addWidget(self.st_scale)
+        sl.addWidget(QLabel("DREHUNG", objectName="section"))
+        self.st_rot = slider(-180, 180, 0)
+        self.st_rot.setAccessibleName("Drehung des Stickers")
+        self.st_rot.valueChanged.connect(lambda v: self.set_layer("rotation", v))
+        sl.addWidget(self.st_rot)
+        sl.addWidget(QLabel("FARBE", objectName="section"))
+        self.st_color = ColorRow("Stickerfarbe")
+        self.st_color.changed.connect(lambda c: self.set_layer("color", c))
+        sl.addWidget(self.st_color)
+        lay.addWidget(self.st_box)
+        lay.addStretch()
+        return w
+
+    def add_sticker(self, kind):
+        self.design["stickers"].append(tr.new_sticker(kind))
+        self.sel["stickers"] = len(self.design["stickers"]) - 1
+        self.refresh_lists()
+        self.load_layer_controls()
+        self.changed()
+
+    # ---- Schritt 7: Fertig --------------------------------------------------------
+    def page_done(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(10)
+        lay.addWidget(QLabel("BILD SPEICHERN", objectName="section"))
+        self.save_pics = QPushButton("In „Bilder › Thumbnails“ speichern", objectName="primary")
+        self.save_pics.clicked.connect(self.save_to_pictures)
+        lay.addWidget(self.save_pics)
+        self.save_as = QPushButton("Speichern unter … (PNG oder JPG)")
+        self.save_as.clicked.connect(self.export_as)
+        lay.addWidget(self.save_as)
+        lay.addSpacing(10)
+        lay.addWidget(QLabel("ALS VORLAGE SPEICHERN", objectName="section"))
+        info = QLabel("Vorlagen bleiben in Thumbnail Studio und stehen beim nächsten Mal direkt im ersten Schritt "
+                      "zur Wahl – mit allen Bildern, Texten, Farben und Rahmen.", objectName="muted")
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        self.tpl_name = QLineEdit()
+        self.tpl_name.setPlaceholderText("Name der Vorlage, z. B. Let's Play Serie")
+        self.tpl_name.setAccessibleName("Name der Vorlage")
+        lay.addWidget(self.tpl_name)
+        self.tpl_update = QPushButton("Vorlage aktualisieren")
+        self.tpl_update.clicked.connect(lambda: self.save_template(update=True))
+        self.tpl_new = QPushButton("Als neue Vorlage speichern", objectName="primary")
+        self.tpl_new.clicked.connect(lambda: self.save_template(update=False))
+        lay.addWidget(self.tpl_new)
+        lay.addWidget(self.tpl_update)
+        self.done_status = QLabel("", objectName="muted")
+        self.done_status.setWordWrap(True)
+        lay.addWidget(self.done_status)
+        lay.addStretch()
+        return w
+
+    def file_stem(self):
+        texts = [t["text"] for t in self.design["texts"] if t.get("text", "").strip()]
+        base = (self.tpl_name.text().strip() or (texts[0] if texts else "") or "Thumbnail").replace("\n", " ")
+        safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in base).strip()[:60]
+        return safe or "Thumbnail"
+
+    def save_to_pictures(self):
+        folder = pictures_dir() / "Thumbnails"
+        folder.mkdir(parents=True, exist_ok=True)
+        target = folder / f"{self.file_stem()}.png"
+        n = 2
+        while target.exists():
+            target = folder / f"{self.file_stem()} ({n}).png"
+            n += 1
+        ok = tr.render(self.design).save(str(target))
+        self.done_status.setText(f"Gespeichert: Bilder › Thumbnails › {target.name}" if ok else "Speichern fehlgeschlagen.")
+
+    def export_as(self):
+        path, chosen = QFileDialog.getSaveFileName(self, "Thumbnail speichern unter",
+                                                   str(pictures_dir() / f"{self.file_stem()}.png"),
+                                                   "PNG-Bild (*.png);;JPG-Bild (*.jpg)")
+        if not path:
+            return
+        if not path.lower().endswith((".png", ".jpg", ".jpeg")):
+            path += ".jpg" if "jpg" in (chosen or "").lower() else ".png"
+        img = tr.render(self.design)
+        if path.lower().endswith((".jpg", ".jpeg")):
+            img = img.convertToFormat(QImage.Format.Format_RGB32)
+            ok = img.save(path, "JPG", 92)
+        else:
+            ok = img.save(path)
+        self.done_status.setText(f"Gespeichert: {Path(path).name}" if ok else "Speichern fehlgeschlagen.")
+
+    def save_template(self, update):
+        name = self.tpl_name.text().strip()
+        if not name:
+            self.done_status.setText("Bitte gib der Vorlage einen Namen.")
+            self.tpl_name.setFocus()
+            return
+        try:
+            tid = tr.save_template(self.design, name, self.template_id if update else None)
+        except OSError as error:
+            self.done_status.setText(f"Vorlage konnte nicht gespeichert werden: {error}")
+            return
+        self.template_id, self.template_name = tid, name
+        self.design = tr.load_template(tid)                 # Bilder zeigen jetzt auf die Kopien der Vorlage
+        self.load_controls()
+        self.done_status.setText(f"Vorlage „{name}“ gespeichert – sie steht ab jetzt im ersten Schritt zur Wahl.")
+
+    # ---- Bedienelemente mit dem Design abgleichen --------------------------------
+    def refresh_lists(self):
+        self.loading = True
+        for kind, lst in (("images", self.image_list), ("texts", self.text_list), ("stickers", self.sticker_list)):
+            lst.clear()
+            for i, item in enumerate(self.design[kind]):
+                if kind == "images":
+                    label = Path(item.get("path", "")).name or f"Bild {i + 1}"
+                elif kind == "texts":
+                    label = (item.get("text") or "").split("\n")[0][:30] or f"Text {i + 1}"
+                else:
+                    label = tr.sticker_info(item.get("kind"))[0]
+                lst.addItem(label)
+            if self.sel[kind] >= len(self.design[kind]):
+                self.sel[kind] = len(self.design[kind]) - 1
+            if self.sel[kind] < 0 and self.design[kind]:
+                self.sel[kind] = 0
+            lst.setCurrentRow(self.sel[kind])
+        self.loading = False
+
+    def load_controls(self):
+        self.loading = True
+        bg = self.design["background"]
+        kind = bg.get("type", "farbe")
+        for key, b in self.bg_choice.items():
+            b.setProperty("picked", "true" if key == kind else "false")
+            repolish(b)
+        self.bg_c1_label.setText("FARBE" if kind == "farbe" else "ERSTE FARBE")
+        for wdg in (self.bg_c1_label, self.bg_c1):
+            wdg.setVisible(kind in ("farbe", "verlauf"))
+        for wdg in (self.bg_c2_label, self.bg_c2, self.bg_angle_label, self.bg_angle):
+            wdg.setVisible(kind == "verlauf")
+        for wdg in (self.bg_pick, self.bg_blur_label, self.bg_blur):
+            wdg.setVisible(kind == "bild")
+        self.bg_pick.setText(f"Bild: {Path(bg['image']).name}  ·  ändern …" if bg.get("image") else "Bild wählen …")
+        self.bg_angle.setValue(int(bg.get("angle", 135)))
+        self.bg_blur.setValue(int(bg.get("blur", 0)))
+        self.bg_dim.setValue(int(bg.get("dim", 0)))
+        fr = self.design["frame"]
+        for key, b in self.fr_choice.items():
+            b.setProperty("picked", "true" if key == fr.get("style") else "false")
+            repolish(b)
+        self.fr_width.setValue(int(fr.get("width", 14)))
+        self.fr_color.set(fr.get("color", "#ffffff"))
+        self.tpl_name.setText(self.template_name)
+        self.tpl_update.setVisible(self.template_id is not None)
+        self.loading = False
+        self.load_layer_controls()
+
+    def load_layer_controls(self):
+        self.loading = True
+        for kind, box in (("images", self.img_box), ("texts", self.txt_box), ("stickers", self.st_box)):
+            i = self.sel[kind]
+            items = self.design[kind]
+            item = items[i] if 0 <= i < len(items) else None
+            box.setEnabled(item is not None)
+            if item is None:
+                continue
+            if kind == "images":
+                self.img_scale.setValue(int(item.get("scale", 1) * 100))
+                self.img_rot.setValue(int(item.get("rotation", 0)))
+                self.img_mirror.setChecked(bool(item.get("mirror")))
+                self.img_outline.setChecked(bool(item.get("outline")))
+                self.img_outline_w.setValue(int(item.get("outlineWidth", 10)))
+            elif kind == "texts":
+                if self.txt_edit.toPlainText() != item.get("text", ""):
+                    self.txt_edit.setPlainText(item.get("text", ""))
+                self.txt_font.setCurrentFont(QFont(item.get("font", "DejaVu Sans")))
+                self.txt_bold.setChecked(bool(item.get("bold")))
+                self.txt_italic.setChecked(bool(item.get("italic")))
+                self.txt_align.setCurrentIndex(max(0, self.txt_align.findData(item.get("align", "mitte"))))
+                self.txt_size.setValue(int(item.get("size", 110)))
+                self.txt_rot.setValue(int(item.get("rotation", 0)))
+                self.txt_outline.setValue(int(item.get("outline", 0)))
+                self.txt_shadow.setChecked(bool(item.get("shadow")))
+                self.txt_glow.setChecked(bool(item.get("glow")))
+                self.txt_boxed.setChecked(bool(item.get("box")))
+            else:
+                self.st_scale.setValue(int(item.get("scale", 1) * 100))
+                self.st_rot.setValue(int(item.get("rotation", 0)))
+        self.loading = False
+
+    def set_layer(self, key, value):
+        if self.loading:
+            return
+        kind, item = self.selected_layer()
+        if item is None:
+            return
+        item[key] = value
+        if kind == "texts" and key == "text":
+            row = self.sel["texts"]
+            if 0 <= row < self.text_list.count():
+                self.text_list.item(row).setText(value.split("\n")[0][:30] or f"Text {row + 1}")
+        self.changed()
+
+
+# ---- Start --------------------------------------------------------------------------
+def example(window):
+    """Beispiel-Design für Fotos und Selbsttest."""
+    d = tr.new_design()
+    d["background"].update({"type": "verlauf", "color1": "#0f2027", "color2": "#e5484d", "angle": 120, "dim": 10})
+    t = tr.new_text("MEIN ERSTES\nTHUMBNAIL")
+    t.update({"x": 470, "y": 330, "size": 120, "rotation": -4, "outline": 12, "glow": True})
+    d["texts"] = [t]
+    s = tr.new_sticker("neu")
+    s.update({"x": 1080, "y": 120})
+    d["stickers"] = [s, tr.new_sticker("pfeil") | {"x": 960, "y": 520, "rotation": 160}]
+    d["frame"] = {"style": "neon", "color": "#ffd400", "width": 14}
+    window.design = d
+    window.redraw()
+
+
+def main():
+    selftest = "--selftest" in sys.argv
+    shot = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--screenshot=")), None)
+    step = next((int(a.split("=", 1)[1]) for a in sys.argv if a.startswith("--schritt=")), 0)
+    app = QApplication(sys.argv)
+    app.setApplicationName(APP)
+    app.setDesktopFileName("gibeon-thumbnail")
+    app.setWindowIcon(QIcon.fromTheme("gibeon-thumbnail"))
+    window = Studio()
+    if selftest:
+        import tempfile
+        os.environ["XDG_DATA_HOME"] = tempfile.mkdtemp(prefix="thumb-test-")
+        example(window)
+        img = tr.render(window.design)
+        assert (img.width(), img.height()) == (tr.W, tr.H)
+        tid = tr.save_template(window.design, "Test")
+        assert [t["id"] for t in tr.list_templates()] == [tid]
+        assert tr.load_template(tid)["texts"][0]["text"].startswith("MEIN")
+        for n in range(len(STEPS)):
+            window.go(n)
+        tr.delete_template(tid)
+        assert not tr.list_templates()
+        window.close()
+        print("Thumbnail Studio: Selbsttest ok")
+        return 0
+    if shot:
+        if "--beispiel" in sys.argv:
+            example(window)
+        window.resize(1360, 820)
+        window.show()
+        window.go(step)
+        if window.layer_kind():
+            window.select_layer(0)
+
+        def grab():
+            window.grab().save(shot)
+            tr.render(window.design).save(shot.replace(".png", "-bild.png"))
+            app.quit()
+        QTimer.singleShot(600, grab)
+        return app.exec()
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
