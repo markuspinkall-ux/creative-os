@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KI-Musikgenerator
+GenericName=Hintergrundmusik und Geräusche erzeugen
+Comment=Hintergrundmusik und Geräusche für Spiele und Videos per Beschreibung erzeugen – lokal per KI
+Exec=gibeon-musik
+Icon=gibeon-musik
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+Keywords=KI;AI;Musik;Hintergrundmusik;Geräusche;Atmosphäre;Spiele;Soundtrack;Vogelgezwitscher;ACE-Step;Stable Audio;
+StartupWMClass=gibeon-musik

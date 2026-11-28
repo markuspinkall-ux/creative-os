@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Note und Klangwellen -->
+  <path d="M26 42V20l16-4v20" fill="none" stroke="#dce6ff" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="22" cy="42" r="4.4" fill="#dce6ff"/>
+  <circle cx="38" cy="38" r="4.4" fill="#dce6ff"/>
+  <path d="M47 24a8 8 0 0 1 0 12M51 20a14 14 0 0 1 0 20" fill="none" stroke="#8fb3ff" stroke-width="2.2" stroke-linecap="round"/>
+</svg>
