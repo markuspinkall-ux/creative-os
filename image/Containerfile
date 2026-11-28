@@ -234,6 +234,15 @@ COPY musik/gibeon-musik.svg /usr/share/icons/hicolor/scalable/apps/gibeon-musik.
 RUN ln -s /usr/lib/gibeon-musik/gibeon-musik /usr/bin/gibeon-musik \
  && QT_QPA_PLATFORM=offscreen HOME=/tmp/musik-home /usr/bin/gibeon-musik --selftest \
  && rm -rf /tmp/musik-home
+
+# KI-Liedstudio – Lieder mit Gesang aus Songtext und Stil (nutzt Container und ACE-Step des Musikgenerators)
+COPY --chmod=755 lieder/gibeon-lieder /usr/lib/gibeon-lieder/gibeon-lieder
+COPY lieder/lied_stil.py /usr/lib/gibeon-lieder/
+COPY lieder/gibeon-lieder.desktop /usr/share/applications/gibeon-lieder.desktop
+COPY lieder/gibeon-lieder.svg /usr/share/icons/hicolor/scalable/apps/gibeon-lieder.svg
+RUN ln -s /usr/lib/gibeon-lieder/gibeon-lieder /usr/bin/gibeon-lieder \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/lieder-home /usr/bin/gibeon-lieder --selftest \
+ && rm -rf /tmp/lieder-home
 # 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus 3D Studio)
 COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
 COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop
