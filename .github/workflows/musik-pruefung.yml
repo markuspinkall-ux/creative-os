@@ -1,8 +1,8 @@
-name: Musikgenerator prüfen
+name: Musik- und Bildgenerator prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [musik/**, tests/test_musik.py, .github/workflows/musik-pruefung.yml]
+    paths: [musik/**, bildgenerator/**, tests/test_musik.py, .github/workflows/musik-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:
@@ -22,6 +22,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python3 musik/gibeon-musik --selftest
+          HOME=$(mktemp -d) python3 bildgenerator/gibeon-bildgenerator --selftest
           mkdir -p fotos
           timeout 60 python3 musik/gibeon-musik --seite=haupt --art=musik --screenshot=fotos/musik.png
           timeout 60 python3 musik/gibeon-musik --seite=haupt --art=atmo --screenshot=fotos/atmo.png
