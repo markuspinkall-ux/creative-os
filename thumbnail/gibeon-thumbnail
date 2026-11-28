@@ -1071,7 +1071,9 @@ def main():
         assert not tr.list_templates()
         window.close()
         print("Thumbnail Studio: Selbsttest ok")
-        return 0
+        # Qt beim Aufräumen nicht mehr anfassen – das stürzte gelegentlich ab, nachdem alles geprüft war
+        sys.stdout.flush()
+        os._exit(0)
     if shot:
         if "--beispiel" in sys.argv:
             import tempfile
