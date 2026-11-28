@@ -46,7 +46,7 @@ jobs:
           docker build \
             --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
             --label org.opencontainers.image.description="ACE-Step (Apache-2.0) und Stable Audio Open für den KI-Musikgenerator von Gibeon OS" \
-            --label org.opencontainers.image.licenses=Apache-2.0 AND LicenseRef-Stability-AI-Community \
+            --label "org.opencontainers.image.licenses=Apache-2.0 AND LicenseRef-Stability-AI-Community" \
             --label org.opencontainers.image.revision=${{ github.sha }} \
             -t "${{ steps.names.outputs.image }}:latest" \
             -t "${{ steps.names.outputs.image }}:${{ steps.names.outputs.date }}" \
