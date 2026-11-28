@@ -65,7 +65,7 @@ STYLE = """
     QPushButton#step { text-align:left; background:transparent; padding:10px 12px; font-weight:400; }
     QPushButton#step:hover { background:rgba(255,255,255,0.06); }
     QPushButton#step[current="true"] { background:rgba(143,179,255,0.18); font-weight:700; }
-    QPushButton#swatch { border-radius:13px; padding:0; min-width:26px; max-width:26px; min-height:26px; max-height:26px; }
+    QPushButton#swatch { padding:0; min-width:24px; max-width:24px; min-height:24px; max-height:24px; }
     QPushButton#choice { padding:12px; }
     QPushButton#choice[picked="true"] { background:rgba(143,179,255,0.22); border:1px solid #8fb3ff; }
     QSlider::groove:horizontal { height:4px; background:#3a4252; border-radius:2px; }
@@ -74,6 +74,21 @@ STYLE = """
     QCheckBox::indicator { width:18px; height:18px; border-radius:5px; background:#232836; border:1px solid rgba(255,255,255,0.15); }
     QCheckBox::indicator:checked { background:#8fb3ff; }
     QScrollArea { border:none; background:transparent; }
+    QScrollBar:vertical { background:transparent; width:8px; margin:0; }
+    QScrollBar::handle:vertical { background:rgba(255,255,255,0.18); border-radius:4px; min-height:30px; }
+    QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page { height:0; background:none; }
+    /* Knöpfe im Feld: genauer als „QFrame#panel QWidget“, sonst wären sie durchsichtig */
+    QFrame#panel QPushButton { background:rgba(255,255,255,0.06); }
+    QFrame#panel QPushButton:hover { background:rgba(255,255,255,0.1); }
+    QFrame#panel QPushButton#primary { background:#8fb3ff; color:#12151b; }
+    QFrame#panel QPushButton#primary:hover { background:#a3c1ff; }
+    QFrame#panel QPushButton:disabled, QFrame#panel QPushButton#primary:disabled {
+        background:rgba(255,255,255,0.04); color:rgba(220,230,255,0.35); }
+    QFrame#panel QPushButton#step { background:transparent; }
+    QFrame#panel QPushButton#step:hover { background:rgba(255,255,255,0.06); }
+    QFrame#panel QPushButton#step[current="true"] { background:rgba(143,179,255,0.18); }
+    QFrame#panel QPushButton#choice { padding:10px 6px; }
+    QFrame#panel QPushButton#choice[picked="true"] { background:rgba(143,179,255,0.22); border:1px solid #8fb3ff; }
 """
 
 
@@ -90,37 +105,51 @@ def repolish(widget):
 
 # ---- Bausteine ----------------------------------------------------------------------
 class ColorRow(QWidget):
-    """Farbvorschläge als runde Knöpfe plus „Andere …“."""
+    """Farbvorschläge als runde Knöpfe plus „+“ für eine eigene Farbe; die gewählte Farbe hat einen Ring."""
     changed = Signal(str)
 
     def __init__(self, label=""):
         super().__init__()
-        self.value = "#ffffff"
+        self.value = ""
+        self.buttons = {}
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(6)
+        lay.setContentsMargins(0, 2, 0, 2)
+        lay.setSpacing(5)
         for color in tr.SWATCHES:
             b = QPushButton(objectName="swatch")
-            b.setStyleSheet(f"background:{color}; border:2px solid rgba(255,255,255,0.25);")
             b.setToolTip(color)
             b.setAccessibleName(f"{label} {color}")
             b.clicked.connect(lambda _=False, c=color: self.pick(c))
             lay.addWidget(b)
-        other = QPushButton("Andere …")
-        other.setAccessibleName(f"{label}: andere Farbe")
-        other.clicked.connect(self.custom)
-        lay.addWidget(other)
+            self.buttons[color] = b
+        self.other = QPushButton("+", objectName="swatch")
+        self.other.setToolTip("Andere Farbe …")
+        self.other.setAccessibleName(f"{label}: andere Farbe")
+        self.other.clicked.connect(self.custom)
+        lay.addWidget(self.other)
         lay.addStretch()
+        self.paint()
+
+    def paint(self):
+        for color, b in self.buttons.items():
+            ring = "#8fb3ff" if color == self.value else "rgba(255,255,255,0.25)"
+            width = 3 if color == self.value else 2
+            b.setStyleSheet(f"background:{color}; border:{width}px solid {ring}; border-radius:12px;")
+        custom = self.value and self.value not in self.buttons
+        self.other.setStyleSheet(
+            f"background:{self.value if custom else 'rgba(255,255,255,0.08)'}; border-radius:12px; font-weight:700;"
+            f"border:{3 if custom else 2}px solid {'#8fb3ff' if custom else 'rgba(255,255,255,0.25)'};")
 
     def set(self, color):
-        self.value = color
+        self.value = (color or "").lower()
+        self.paint()
 
     def pick(self, color):
-        self.value = color
+        self.set(color)
         self.changed.emit(color)
 
     def custom(self):
-        color = QColorDialog.getColor(QColor(self.value), self, "Farbe wählen")
+        color = QColorDialog.getColor(QColor(self.value or "#ffffff"), self, "Farbe wählen")
         if color.isValid():
             self.pick(color.name())
 
@@ -262,7 +291,7 @@ class Studio(QMainWindow):
 
         # Einstellungen des Schritts
         panel = QFrame(objectName="panel")
-        panel.setFixedWidth(400)
+        panel.setFixedWidth(410)
         play = QVBoxLayout(panel)
         play.setContentsMargins(18, 16, 18, 16)
         play.setSpacing(10)
@@ -271,6 +300,7 @@ class Studio(QMainWindow):
         self.pages = QStackedWidget()
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(self.pages)
         play.addWidget(scroll, 1)
         nav_row = QHBoxLayout()
@@ -684,7 +714,7 @@ class Studio(QMainWindow):
         self.txt_shadow.toggled.connect(lambda v: self.set_layer("shadow", v))
         self.txt_glow = QCheckBox("Leuchten")
         self.txt_glow.toggled.connect(lambda v: self.set_layer("glow", v))
-        self.txt_boxed = QCheckBox("Farbbalken dahinter")
+        self.txt_boxed = QCheckBox("Balken")
         self.txt_boxed.toggled.connect(lambda v: self.set_layer("box", v))
         effects.addWidget(self.txt_shadow)
         effects.addWidget(self.txt_glow)
@@ -927,6 +957,8 @@ class Studio(QMainWindow):
             repolish(b)
         self.fr_width.setValue(int(fr.get("width", 14)))
         self.fr_color.set(fr.get("color", "#ffffff"))
+        self.bg_c1.set(bg.get("color1", ""))
+        self.bg_c2.set(bg.get("color2", ""))
         self.tpl_name.setText(self.template_name)
         self.tpl_update.setVisible(self.template_id is not None)
         self.loading = False
@@ -947,6 +979,7 @@ class Studio(QMainWindow):
                 self.img_mirror.setChecked(bool(item.get("mirror")))
                 self.img_outline.setChecked(bool(item.get("outline")))
                 self.img_outline_w.setValue(int(item.get("outlineWidth", 10)))
+                self.img_outline_color.set(item.get("outlineColor", "#ffffff"))
             elif kind == "texts":
                 if self.txt_edit.toPlainText() != item.get("text", ""):
                     self.txt_edit.setPlainText(item.get("text", ""))
@@ -960,9 +993,13 @@ class Studio(QMainWindow):
                 self.txt_shadow.setChecked(bool(item.get("shadow")))
                 self.txt_glow.setChecked(bool(item.get("glow")))
                 self.txt_boxed.setChecked(bool(item.get("box")))
+                self.txt_color.set(item.get("color", "#ffffff"))
+                self.txt_outline_color.set(item.get("outlineColor", "#111111"))
+                self.txt_extra_color.set(item.get("glowColor", "#ffd400"))
             else:
                 self.st_scale.setValue(int(item.get("scale", 1) * 100))
                 self.st_rot.setValue(int(item.get("rotation", 0)))
+                self.st_color.set(item.get("color") or tr.sticker_info(item.get("kind"))[1])
         self.loading = False
 
     def set_layer(self, key, value):
@@ -1022,7 +1059,10 @@ def main():
         return 0
     if shot:
         if "--beispiel" in sys.argv:
+            import tempfile
+            os.environ["XDG_DATA_HOME"] = tempfile.mkdtemp(prefix="thumb-foto-")
             example(window)
+            tr.save_template(window.design, "Let's Play Serie")      # damit „Meine Vorlagen“ etwas zeigt
         window.resize(1360, 820)
         window.show()
         window.go(step)
