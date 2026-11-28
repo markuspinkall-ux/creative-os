@@ -363,6 +363,14 @@ class Win {
     this.win.contentView.addChildView(this.ui);
     this.ui.webContents.loadFile(path.join(APP_DIR, 'ui', 'index.html'), { query: { privat: isPrivate ? '1' : '0', app: appMode ? '1' : '0' } });
     this.ui.webContents.on('before-input-event', (e, input) => { if (this.shortcut(input, null)) e.preventDefault(); });
+    // Sobald die Leiste geladen ist, den vollen Stand schicken. Wichtig für herausgezogene Tabs:
+    // deren Seite ist schon fertig geladen, ohne diesen Anstoß kam der erste Stand (mit
+    // Lesezeichenleiste und Einstellungen) zu früh an und ging verloren.
+    this.ui.webContents.on('did-finish-load', () => {
+      clearTimeout(this.pushTimer);
+      this.pushTimer = null;
+      this.pushState();
+    });
     this.tabs = [];
     this.active = null;
     this.chromeH = appMode ? 0 : 84;
@@ -993,7 +1001,7 @@ class Win {
       case 'rename-bookmark': store.renameBookmark(arg1, arg2); broadcast(); break;
       case 'move-bookmark': store.moveBookmark(arg1, arg2); broadcast(); break;
       case 'toggle-bookmarks-bar': store.settings.bookmarksBar = !store.settings.bookmarksBar; store.save(); broadcast(); break;
-      case 'engine': if (ENGINES[arg1]) { store.settings.engine = arg1; store.save(); broadcast(); } break;
+      case 'engine': if (ENGINES[arg1]) { store.settings.engine = arg1; store.settings.engineChosen = true; store.save(); broadcast(); } break;
       case 'restore-session': store.settings.restoreSession = !!arg1; store.save(); broadcast(); break;
       case 'clear-history': store.clearHistory(); this.ses.clearCache(); break;
       case 'clear-all': store.clearHistory(); this.ses.clearCache(); this.ses.clearStorageData(); break;

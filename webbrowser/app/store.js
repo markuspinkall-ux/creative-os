@@ -15,7 +15,7 @@ const ENGINES = {
 
 const DEFAULTS = () => ({
   version: 1,
-  settings: { engine: 'brave', restoreSession: true, bookmarksBar: true, adblock: true, adblockAllow: [],
+  settings: { engine: 'google', engineChosen: false, restoreSession: true, bookmarksBar: true, adblock: true, adblockAllow: [],
     sleepTabs: true, sleepMinutes: 30, darkPages: false, darkSkip: [], sponsorblock: true, passwords: true,
     importDone: false },
   bookmarks: [
@@ -43,6 +43,9 @@ class Store {
         session: Array.isArray(raw.session) ? raw.session : [],
       };
     } catch (_) { /* erste Nutzung oder kaputte Datei */ }
+    // Suche per Adressleiste geht an Google, solange niemand selbst eine Suchmaschine gewählt hat
+    // (früher war Brave Search voreingestellt).
+    if (!this.data.settings.engineChosen && this.data.settings.engine === 'brave') this.data.settings.engine = 'google';
     this.timer = null;
   }
 
@@ -59,7 +62,7 @@ class Store {
   }
 
   get settings() { return this.data.settings; }
-  engine() { return ENGINES[this.data.settings.engine] || ENGINES.brave; }
+  engine() { return ENGINES[this.data.settings.engine] || ENGINES.google; }
 
   // ---- Lesezeichen ----
   isBookmarked(url) { return this.data.bookmarks.some((b) => b.url === url); }

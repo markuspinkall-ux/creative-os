@@ -203,6 +203,17 @@ RUN curl -fsSL -o /usr/lib/creative-3d/model-viewer.min.js \
  && test -s /usr/lib/creative-3d/model-viewer.min.js \
  && ln -s /usr/lib/creative-3d/creative-3d /usr/bin/creative-3d \
  && QT_QPA_PLATFORM=offscreen /usr/bin/creative-3d --selftest
+
+# KI-Bildgenerator – Bilder aus einer Beschreibung (FLUX.1 schnell, Apache 2.0), auch als Vorlage für 3D Studio.
+# Die KI selbst (Container ≈ 7 GB, Modell) richtet die App beim ersten Start ein.
+COPY --chmod=755 bildgenerator/gibeon-bildgenerator bildgenerator/gibeon-bildgenerator-setup /usr/lib/gibeon-bildgenerator/
+COPY bildgenerator/bildgen_prompt.py /usr/lib/gibeon-bildgenerator/
+COPY bildgenerator/container/run.py /usr/lib/gibeon-bildgenerator/bildgenerator-run.py
+COPY bildgenerator/gibeon-bildgenerator.desktop /usr/share/applications/gibeon-bildgenerator.desktop
+COPY bildgenerator/gibeon-bildgenerator.svg /usr/share/icons/hicolor/scalable/apps/gibeon-bildgenerator.svg
+RUN ln -s /usr/lib/gibeon-bildgenerator/gibeon-bildgenerator /usr/bin/gibeon-bildgenerator \
+ && QT_QPA_PLATFORM=offscreen HOME=/tmp/bildgen-home /usr/bin/gibeon-bildgenerator --selftest \
+ && rm -rf /tmp/bildgen-home
 # 3D-Ansicht: GLB/glTF per Doppelklick ansehen (nutzt model-viewer aus 3D Studio)
 COPY --chmod=755 viewer3d/creative-3dansicht /usr/lib/creative-3dansicht/creative-3dansicht
 COPY viewer3d/creative-3dansicht.desktop /usr/share/applications/creative-3dansicht.desktop

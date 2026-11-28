@@ -1,0 +1,86 @@
+#!/bin/sh
+# KI-Bildgenerator – KI (FLUX.1 [schnell]) einmalig einrichten, ohne sudo.
+#   Container:  ghcr.io/markuspinkall-ux/gibeon-bildgenerator:latest  (≈ 7 GB)
+#   Modell:     ~/.local/share/gibeon-bildgenerator/modelle  (≈ 33 GB Download, danach ≈ 12 GB)
+#   Markierung: ~/.local/share/gibeon-bildgenerator/bereit
+# Ausgabe: Zeilen „STEP <n> <gesamt> <text>“ für die Fortschrittsanzeige.
+#   gibeon-bildgenerator-setup               einrichten / reparieren
+#   gibeon-bildgenerator-setup --entfernen   alles wieder löschen
+set -eu
+DATA="${BILDGEN_HOME:-$HOME/.local/share/gibeon-bildgenerator}"
+IMAGE="${BILDGEN_IMAGE:-ghcr.io/markuspinkall-ux/gibeon-bildgenerator:latest}"
+MARK="$DATA/bereit"
+NEED_GB=55
+TOTAL=5
+step() { echo "STEP $1 $TOTAL $2"; }
+fail() { echo "FEHLER: $*"; exit 1; }
+
+if [ "${1:-}" = "--entfernen" ]; then
+    podman rmi -f "$IMAGE" >/dev/null 2>&1 || true
+    rm -rf "$DATA"
+    echo "KI des Bildgenerators entfernt."
+    exit 0
+fi
+# Solange geladen wird, geht der PC nicht von selbst in den Standby
+if [ -z "${GIBEON_WACH:-}" ] && command -v systemd-inhibit >/dev/null 2>&1 && systemd-inhibit --list >/dev/null 2>&1; then
+    export GIBEON_WACH=1
+    exec systemd-inhibit --what=idle --mode=block --who="KI-Bildgenerator" --why="KI wird eingerichtet" "$0" "$@"
+fi
+rm -f "$MARK"
+mkdir -p "$DATA/modelle"
+
+step 1 "Prüfe die Grafikkarte …"
+command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 \
+    || fail "Der KI-Bildgenerator braucht eine NVIDIA-Grafikkarte mit dem NVIDIA-Abbild von Gibeon OS."
+nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1 | sed 's/^/Grafikkarte: /'
+mem=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
+[ "${mem:-0}" -lt 11000 ] 2>/dev/null && echo "Hinweis: Unter 12 GB Grafikspeicher kann der Speicher knapp werden."
+
+step 2 "Prüfe den Container-Zugriff und den Speicherplatz …"
+command -v podman >/dev/null 2>&1 || fail "podman fehlt – bitte Gibeon OS aktualisieren."
+podman --version >/dev/null 2>&1 || fail "Das Container-Programm (podman) startet nicht. Bitte den PC neu starten und erneut versuchen."
+store="$HOME/.local/share/containers"
+mkdir -p "$store"
+free_gb=$(df -Pk "$DATA" | awk 'NR==2 {print int($4/1024/1024)}')
+if [ -f "$DATA/modelle/bereit.json" ]; then need=10; else need=${BILDGEN_MIN_GB:-$NEED_GB}; fi
+[ "${free_gb:-0}" -lt "$need" ] && fail "Zu wenig Speicherplatz: frei sind ${free_gb} GB, gebraucht werden während der Einrichtung etwa ${need} GB (danach bleiben ≈ 19 GB belegt). Bitte Platz schaffen und erneut versuchen."
+echo "Freier Speicher: ${free_gb} GB"
+if ! { [ -e /run/cdi/nvidia.yaml ] || [ -e /etc/cdi/nvidia.yaml ]; }; then
+    fail "Die Grafikkarte ist für Container noch nicht freigegeben. Bitte Gibeon OS aktualisieren und neu starten."
+fi
+
+step 3 "Lade den Bildgenerator-Container (≈ 7 GB) …"
+log="$DATA/laden.log"
+ok=0
+for try in 1 2 3; do
+    if [ "$try" -gt 1 ]; then
+        echo "Neuer Versuch ($try von 3) …"
+        podman system check --repair >/dev/null 2>&1 || true
+        sleep 5
+    fi
+    { podman pull "$IMAGE" 2>&1; echo "PULL-ENDE $?"; } | tee "$log" | grep -v '^Writing manifest\|^PULL-ENDE\|^ *[0-9a-f]\{16\}:\|^goroutine\|^\s' || true
+    if grep -q '^PULL-ENDE 0$' "$log"; then ok=1; break; fi
+    grep -qi 'no space left' "$log" && fail "Der Speicherplatz ist beim Entpacken ausgegangen. Bitte Platz schaffen und erneut versuchen."
+    grep -qi 'unauthorized\|denied' "$log" && fail "Der Container ist (noch) nicht öffentlich abrufbar. Bitte später erneut versuchen."
+done
+[ "$ok" = 1 ] || fail "Der Container ließ sich nicht laden (Details: $log)."
+
+step 4 "Teste die Grafikkarte im Container …"
+podman run --rm --security-opt label=disable --device nvidia.com/gpu=all --entrypoint python3 "$IMAGE" -c \
+    "import torch; assert torch.cuda.is_available(), 'keine Grafikkarte'; print('Grafikkarte im Container:', torch.cuda.get_device_name(0))" \
+    || fail "Der Container sieht die Grafikkarte nicht. Bitte neu starten und erneut versuchen."
+
+step 5 "Lade FLUX.1 [schnell] (≈ 33 GB, einmalig) und verkleinere es für die Grafikkarte …"
+HERE="$(dirname "$(readlink -f "$0")")"
+override=""
+[ -f "$HERE/bildgenerator-run.py" ] && override="-v $HERE/bildgenerator-run.py:/opt/gibeon/run.py:ro"
+out="$DATA/einrichten.log"
+set +e
+# shellcheck disable=SC2086
+podman run --rm --security-opt label=disable --device nvidia.com/gpu=all $override \
+    -v "$DATA/modelle:/cache" "$IMAGE" --prepare 2>&1 | tee "$out"
+set -e
+grep -q '^OK ' "$out" || fail "Das Modell ließ sich nicht einrichten (Details: $out)."
+
+date +%s > "$MARK"
+echo "FERTIG"

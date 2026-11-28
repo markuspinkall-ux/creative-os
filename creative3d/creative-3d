@@ -940,7 +940,12 @@ def main():
         assert not window.soft.pixmap().isNull()
         window.close()
         return 0
+    # Bild als Argument (z. B. aus dem KI-Bildgenerator: „In 3D Studio öffnen“)
     window.show()
+    for arg in sys.argv[1:]:
+        if not arg.startswith("-") and Path(arg).is_file():
+            QTimer.singleShot(0, lambda path=arg: window.set_image(path))   # erst nach dem Anzeigen: richtige Größe
+            break
     return app.exec()
 
 
