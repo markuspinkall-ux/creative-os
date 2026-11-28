@@ -15,6 +15,7 @@
       "3D Studio öffnet ein Bild jetzt auch direkt, z. B. aus dem KI-Bildgenerator oder per „Öffnen mit …“."
     ],
     "verbessert": [
+      "Autostart: Programme, die beim Anmelden starten, öffnen jetzt minimiert. Steam, Discord, Telegram, Signal, Element, Nextcloud und KeePassXC starten direkt unsichtbar im Tray; bei allen anderen werden die Startfenster gleich in die Taskleiste gelegt. Später selbst geöffnete Fenster bleiben ganz normal offen.",
       "Player › IPTV: Auch einfache M3U-Listen ohne #EXTINF-Angaben, Gruppen per #EXTGRP und Listen aus Windows-Programmen (Umlaute) werden richtig gelesen.",
       "Browser: Ein einzelnes Wort oder eine Frage in der Adressleiste wird jetzt mit Google gesucht (vorher Brave Search). Wer selbst eine andere Suchmaschine gewählt hat, behält sie."
     ],
