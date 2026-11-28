@@ -57,7 +57,8 @@ Item {
         Rectangle {
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 1 }
             height: 1
-            color: Theme.glassShine
+            // Kristall: die Taskleiste bleibt bewusst ruhig – Lichtkante nur halb so hell
+            color: Qt.rgba(Theme.glassShine.r, Theme.glassShine.g, Theme.glassShine.b, Theme.glassShine.a * 0.5)
         }
 
         // Klick auf freie Fläche schließt offene Menüs

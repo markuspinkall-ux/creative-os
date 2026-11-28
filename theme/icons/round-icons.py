@@ -16,7 +16,12 @@ CIRCLE_FILL = "#10131a"
 TEXT = "#dce6ff"
 # Kachel-Rechteck (64er-Symbol): fill="#232836", meist mit stroke="#8fb3ff"
 TILE_RECT = re.compile(r'<rect\b(?=[^>]*\bfill="#(?:232836|1c2029)")(?=[^>]*\bwidth="(?:5[4-8]|6[0-4])")[^>]*?/?>(?:\s*</rect>)?', re.I)
-CIRCLE = f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_FILL}"/>'
+# Kristall: feiner Lichtreflex oben links auf der runden Fläche (liegt unter dem Symbol)
+GLANZ = ('<defs><linearGradient id="gibeonGlanz" x1="0.15" y1="0" x2="0.55" y2="0.75">'
+         '<stop offset="0" stop-color="#ffffff" stop-opacity="0.13"/>'
+         '<stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>'
+         '<circle cx="32" cy="32" r="29" fill="url(#gibeonGlanz)"/>')
+CIRCLE = f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_FILL}"/>' + GLANZ
 # Akzente im Symbol → Schriftfarbe (Aussparungen #12151b/#232836 bleiben)
 ACCENTS = re.compile(r"#8fb3ff|#ffb07a|#6fdcc0|#e5484d|#9f7aea", re.I)
 

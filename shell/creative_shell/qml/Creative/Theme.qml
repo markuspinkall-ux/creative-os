@@ -30,6 +30,9 @@ QtObject {
     readonly property color glassSolid: light ? Qt.rgba(1, 1, 1, 0.82) : Qt.rgba(26 / 255, 30 / 255, 40 / 255, 0.86)
     readonly property color glassEdge: light ? Qt.rgba(1, 1, 1, 0.85) : Qt.rgba(1, 1, 1, 0.13)
     readonly property color glassShine: light ? Qt.rgba(1, 1, 1, 0.95) : Qt.rgba(1, 1, 1, 0.20)
+    // Kristall-Glanz (GlassSheen): dezent – Glanz an der Oberkante und feiner Lichtstreif
+    readonly property real sheenTop: light ? 0.30 : 0.06
+    readonly property real sheenStreak: light ? 0.16 : 0.035
 
     // Schrift: eine einheitliche Farbe (Graphit: weiß-blau, Porzellan: dunkles Blaugrau)
     readonly property color text: light ? "#1c2433" : "#dce6ff"

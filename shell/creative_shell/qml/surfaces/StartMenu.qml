@@ -82,6 +82,7 @@ Item {
             height: 1
             color: Theme.glassShine
         }
+        GlassSheen { radius: menu.radius }
         // Fluid-Glas: durchscheinend, KWin zeichnet den Hintergrund dahinter weich
         onHeightChanged: Qt.callLater(root.updateBlur)
 

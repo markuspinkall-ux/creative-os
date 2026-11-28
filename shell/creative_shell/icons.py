@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRectF, QSize, Qt, QUrl, Slot
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPixmap
 from PySide6.QtQuick import QQuickImageProvider
 
 FALLBACK = "application-x-executable"
@@ -64,11 +64,16 @@ _TILE_RECT = re.compile(
 _ACCENTS = re.compile(r"#8fb3ff|#ffb07a|#6fdcc0|#e5484d|#9f7aea", re.I)
 _PORZELLAN = {"#10131a": "#d6dce6", "#dce6ff": "#1c2433", "#12151b": "#e9eef6"}
 _LOCAL_CACHE = {}
+# Kristall: feiner Lichtreflex auf der runden Fläche (wie theme/icons/round-icons.py)
+_GLANZ = ('<defs><linearGradient id="gibeonGlanz" x1="0.15" y1="0" x2="0.55" y2="0.75">'
+          '<stop offset="0" stop-color="#ffffff" stop-opacity="0.13"/>'
+          '<stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>'
+          '<circle cx="32" cy="32" r="29" fill="url(#gibeonGlanz)"/>')
 
 
 def _roundify(text, light):
     """Wie theme/icons/round-icons.py (+ Porzellan): Kachel → runde Fläche, Symbol einfarbig."""
-    text = _TILE_RECT.sub(f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_DARK}"/>', text, count=1)
+    text = _TILE_RECT.sub(f'<circle cx="32" cy="32" r="29" fill="{CIRCLE_DARK}"/>' + _GLANZ, text, count=1)
     text = re.sub("#232836", CIRCLE_DARK, text, flags=re.I)
     text = _ACCENTS.sub("#dce6ff", text)
     if light:
@@ -183,6 +188,13 @@ def in_circle(pixmap, edge, light=None):
     p.setPen(Qt.PenStyle.NoPen)
     p.setBrush(QColor(CIRCLE_LIGHT if light else CIRCLE_DARK))
     p.drawEllipse(QRectF((edge - d) / 2, (edge - d) / 2, d, d))
+    # Kristall: feiner Lichtreflex oben links
+    top = (edge - d) / 2
+    shine = QLinearGradient(top + d * 0.15, top, top + d * 0.55, top + d * 0.75)
+    shine.setColorAt(0, QColor(255, 255, 255, 33 if not light else 90))
+    shine.setColorAt(1, QColor(255, 255, 255, 0))
+    p.setBrush(QBrush(shine))
+    p.drawEllipse(QRectF(top, top, d, d))
     logo = edge * LOGO_SCALE
     p.drawPixmap(QRectF((edge - logo) / 2, (edge - logo) / 2, logo, logo), pixmap,
                  QRectF(0, 0, pixmap.width(), pixmap.height()))
