@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KI-Liedstudio
+GenericName=Lieder mit Gesang erzeugen
+Comment=Eigene Lieder mit Gesang aus Songtext und Stil erzeugen – lokal per KI
+Exec=gibeon-lieder
+Icon=gibeon-lieder
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+Keywords=KI;AI;Lied;Song;Songtext;Gesang;Musik;Suno;ACE-Step;MP3;
+StartupWMClass=gibeon-lieder

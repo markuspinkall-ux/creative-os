@@ -34,6 +34,7 @@ VISIBLE = {
     "gibeon-bildgenerator.desktop": (None, None),
     "gibeon-thumbnail.desktop": (None, None),
     "gibeon-musik.desktop": (None, None),
+    "gibeon-lieder.desktop": (None, None),
     "creative-ftp.desktop": (None, None),
     "creative-widgets.desktop": (None, None),
     "creative-settings.desktop": ("Systemsteuerung", "creative-settings"),

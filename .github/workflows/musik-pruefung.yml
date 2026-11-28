@@ -1,8 +1,8 @@
-name: Musik- und Bildgenerator prüfen
+name: Musik, Lieder und Bildgenerator prüfen
 on:
   push:
     branches: ["claude/**"]
-    paths: [musik/**, bildgenerator/**, tests/test_musik.py, .github/workflows/musik-pruefung.yml]
+    paths: [musik/**, bildgenerator/**, lieder/**, tests/test_musik.py, .github/workflows/musik-pruefung.yml]
   workflow_dispatch:
 jobs:
   pruefen:
@@ -16,15 +16,17 @@ jobs:
             libgstreamer1.0-0 libgstreamer-plugins-base1.0-0
           pip install -q PySide6 numpy pytest
       - name: Mischer und Vorschläge
-        run: python3 -m pytest -q tests/test_musik.py
+        run: python3 -m pytest -q tests/test_musik.py tests/test_lieder.py
       - name: Fenster (Selbsttest und Fotos)
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
           python3 musik/gibeon-musik --selftest
           python3 bildgenerator/gibeon-bildgenerator --selftest
+          python3 lieder/gibeon-lieder --selftest
           mkdir -p fotos
           timeout 60 python3 musik/gibeon-musik --seite=haupt --art=musik --screenshot=fotos/musik.png
           timeout 60 python3 musik/gibeon-musik --seite=haupt --art=atmo --screenshot=fotos/atmo.png
           timeout 60 python3 musik/gibeon-musik --seite=einrichten --screenshot=fotos/einrichten.png
+          timeout 60 python3 lieder/gibeon-lieder --screenshot=fotos/lieder.png
           for f in fotos/*.png; do n=$(basename "$f" .png); base64 -w 0 "$f" | fold -w 3000 | sed "s/^/PNG64:$n:/"; echo; done

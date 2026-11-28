@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#232836" stroke="#8fb3ff" stroke-width="2"/>
+  <!-- Mikrofon mit Note -->
+  <rect x="17" y="14" width="14" height="22" rx="7" fill="none" stroke="#dce6ff" stroke-width="2.6"/>
+  <path d="M13 30a11 11 0 0 0 22 0M24 41v8M18 49h12" fill="none" stroke="#dce6ff" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M42 40V20l9-2v16" fill="none" stroke="#8fb3ff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="39" cy="40" r="3.4" fill="#8fb3ff"/>
+  <circle cx="48" cy="34" r="3.4" fill="#8fb3ff"/>
+</svg>

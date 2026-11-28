@@ -2,7 +2,7 @@
 
   run.py --prepare musik                   ACE-Step einmalig laden (Apache 2.0, ≈ 8 GB)
   run.py --prepare atmo                    Stable Audio Open laden (HF_TOKEN nötig, ≈ 5 GB)
-  run.py --musik --prompt … --seconds 120 --count 2 --out /out
+  run.py --musik --prompt … --seconds 120 --count 2 --out /out [--lyrics-file /out/text.txt]
   run.py --atmo  --prompt … --seconds 8   --count 5 --out /out [--prefix ereignis]
 
 Alle Dateien werden als 16-Bit-WAV gespeichert (Musik 48 kHz, Geräusche 44,1 kHz).
@@ -84,14 +84,19 @@ def gen_music(args, out):
                            cpu_offload=True, overlapped_decode=True)
     seed = args.seed if args.seed >= 0 else random.randrange(2 ** 31)
     seconds = max(10, min(240, args.seconds))
+    lyrics = "[instrumental]"
+    if args.lyrics_file:                                       # Lied mit Gesang (KI-Liedstudio)
+        text = Path(args.lyrics_file).read_text(encoding="utf-8").strip()
+        lyrics = text or "[instrumental]"
+    sung = lyrics != "[instrumental]"
     files = []
     for i in range(args.count):
-        say("P", f"{10 + int(85 * i / args.count)} Komponiere Stück {i + 1} von {args.count} …")
+        say("P", f"{10 + int(85 * i / args.count)} {'Singe Lied' if sung else 'Komponiere Stück'} {i + 1} von {args.count} …")
         target = out / f"{args.prefix}-{i + 1}.wav"
-        pipe(format="wav", audio_duration=seconds, prompt=args.prompt, lyrics="[instrumental]", infer_step=60,
+        pipe(format="wav", audio_duration=seconds, prompt=args.prompt, lyrics=lyrics, infer_step=60,
              guidance_scale=15.0, scheduler_type="euler", cfg_type="apg", omega_scale=10.0,
              manual_seeds=[seed + i], guidance_interval=0.5, guidance_interval_decay=0.0, min_guidance_scale=3.0,
-             use_erg_tag=True, use_erg_lyric=False, use_erg_diffusion=True, oss_steps=[],
+             use_erg_tag=True, use_erg_lyric=sung, use_erg_diffusion=True, oss_steps=[],
              guidance_scale_text=0.0, guidance_scale_lyric=0.0, save_path=str(target))
         for extra in out.glob(f"{target.stem}*.json"):        # ACE-Step legt eine Parameterdatei daneben
             extra.unlink(missing_ok=True)
@@ -141,6 +146,7 @@ def main():
     ap.add_argument("--seed", type=int, default=-1)
     ap.add_argument("--out", default="/out")
     ap.add_argument("--prefix", default="klang")
+    ap.add_argument("--lyrics-file", default="")
     args = ap.parse_args()
     args.count = max(1, min(8, args.count))
     try:
