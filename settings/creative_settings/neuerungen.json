@@ -1,5 +1,17 @@
 [
   {
+    "datum": "2026-11-28",
+    "titel": "Player: eigene M3U-Senderlisten für IPTV",
+    "neu": [
+      "Player › IPTV: „M3U-Datei laden …“ – Senderlisten (.m3u/.m3u8) direkt vom Rechner laden, nicht mehr nur Internetadressen. Die Datei wird in den Player übernommen und bleibt auch, wenn das Original verschoben oder gelöscht wird.",
+      "Player › IPTV: „Meine Senderlisten“ – beliebig viele Listen (Dateien und Internetadressen) speichern und per Klick zwischen ihnen wechseln; × entfernt eine Liste wieder. Jede Liste wird einzeln zwischengespeichert und ist beim nächsten Start sofort da.",
+      "M3U-Dateien lassen sich auch in die IPTV-Ansicht ziehen oder im Dateimanager per Doppelklick öffnen – sie landen dann direkt unter „Meine Senderlisten“."
+    ],
+    "verbessert": [
+      "Player › IPTV: Auch einfache M3U-Listen ohne #EXTINF-Angaben, Gruppen per #EXTGRP und Listen aus Windows-Programmen (Umlaute) werden richtig gelesen."
+    ]
+  },
+  {
     "datum": "2026-11-23",
     "titel": "Drei neue bewegte Hintergründe, Rechtsklick-Menüs im Gibeon-Look, Grünfilter in Studio",
     "neu": [

@@ -1,7 +1,8 @@
 """Startpunkt: `creative-media [Datei …]`.
 
 Mit Dateien als Argument (z. B. Doppelklick im Dateimanager) werden diese
-sofort abgespielt.
+sofort abgespielt. M3U-Senderlisten (.m3u/.m3u8) landen stattdessen unter
+IPTV in „Meine Senderlisten“.
 """
 
 import json
@@ -15,7 +16,7 @@ from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 
-from .iptv import IptvModel
+from .iptv import IptvModel, is_m3u_file
 from .library import LibraryModel
 from .settings import Settings
 from .ytmusic import YtMusicModel
@@ -55,6 +56,10 @@ def _cli_message(argv):
     if "--ytmusic" in argv:
         i = argv.index("--ytmusic")
         return {"cmd": "ytplay", "q": argv[i + 1] if i + 1 < len(argv) else ""}
+    lists = [str(Path(a).resolve()) for a in argv[1:]
+             if not a.startswith("-") and is_m3u_file(a) and Path(a).is_file()]
+    if lists:
+        return {"cmd": "iptvimport", "paths": lists}
     if "--podcast" in argv:
         return {"cmd": "section", "s": "podcast"}
     if "--ytmusic-cmd" in argv:
@@ -79,7 +84,8 @@ def main():
     app = QGuiApplication(sys.argv)
 
     msg = _cli_message(sys.argv)
-    files_given = [a for a in sys.argv[1:] if not a.startswith("-") and Path(a).exists()]
+    files_given = [a for a in sys.argv[1:]
+                   if not a.startswith("-") and Path(a).exists() and not is_m3u_file(a)]
     if "--selftest" not in sys.argv and (msg or not files_given):
         if _send_to_running(msg or {"cmd": "raise"}):
             return 0
@@ -106,8 +112,7 @@ def main():
     nowplaying = NowPlayingWriter()
     app.aboutToQuit.connect(nowplaying.clear)
 
-    files = [QUrl.fromLocalFile(str(Path(a).resolve())).toString()
-             for a in sys.argv[1:] if not a.startswith("-") and Path(a).exists()]
+    files = [QUrl.fromLocalFile(str(Path(a).resolve())).toString() for a in files_given]
 
     ctx = engine.rootContext()
     ctx.setContextProperty("settings", settings)
@@ -146,6 +151,13 @@ def main():
             ytmusic.send(cmd)
         elif cmd == "section":
             win.setProperty("section", m.get("s") or "music")
+            win.show()
+            win.raise_()
+            win.requestActivate()
+        elif cmd == "iptvimport":
+            for path in m.get("paths") or []:
+                iptv.importFile(path)
+            win.setProperty("section", "iptv")
             win.show()
             win.raise_()
             win.requestActivate()

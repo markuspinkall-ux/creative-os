@@ -1,3 +1,4 @@
+import QtCore
 import QtQuick
 import QtQuick.Templates as GibeonT
 import QtQuick.Controls.Basic
@@ -316,7 +317,7 @@ Item {
             }
         }
 
-        // Quelle der Senderliste
+        // Meine Senderlisten: Internetadressen und M3U-Dateien vom Rechner
         Rectangle {
             width: parent.width
             height: sourceCol.implicitHeight + 28
@@ -334,16 +335,21 @@ Item {
                     width: parent.width
                     height: 40
                     Column {
+                        anchors.left: parent.left
+                        anchors.right: sourceButtons.left
+                        anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 4
                         Text {
-                            text: "Senderliste (M3U)"
+                            text: "Meine Senderlisten (M3U)"
                             color: Theme.text
                             font.family: Theme.fontFamily
                             font.pixelSize: 13
                             font.bold: true
                         }
                         Text {
+                            width: parent.width
+                            elide: Text.ElideRight
                             text: iptv.sourceName + " · " + iptv.status
                             color: Theme.text
                             font.family: Theme.fontFamily
@@ -351,21 +357,132 @@ Item {
                         }
                     }
                     Row {
+                        id: sourceButtons
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 8
                         CButton { text: "Aktualisieren"; enabled: !iptv.loading; onClicked: iptv.reload() }
                         CButton {
-                            text: "Quelle ändern"
-                            primary: true
+                            text: "Adresse eintragen"
                             onClicked: {
                                 sourceEdit.visible = !sourceEdit.visible
-                                sourceField.text = settings.iptvSource
+                                sourceField.text = ""
                                 if (sourceEdit.visible)
                                     sourceField.forceActiveFocus()
                             }
                         }
+                        CButton {
+                            text: "M3U-Datei laden …"
+                            primary: true
+                            onClicked: m3uPicker.open()
+                        }
                     }
+                }
+
+                // Gespeicherte Listen – Klick wechselt, × entfernt
+                Flow {
+                    width: parent.width
+                    spacing: 6
+                    Repeater {
+                        model: iptv.lists
+                        delegate: Rectangle {
+                            id: listChip
+                            required property var modelData
+                            readonly property bool current: modelData.current
+                            width: listRow.implicitWidth + 22
+                            height: 32
+                            radius: 16
+                            color: current ? Theme.accent : (listMouse.containsMouse ? Theme.tint(0.1) : Theme.tint(0.06))
+                            MouseArea {
+                                id: listMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: iptv.selectList(listChip.modelData.source)
+                            }
+                            Row {
+                                id: listRow
+                                x: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 6
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: listChip.modelData.isFile ? "Datei" : "Internet"
+                                    color: listChip.current ? Theme.accentText : Theme.textMuted
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, 220)
+                                    elide: Text.ElideRight
+                                    text: listChip.modelData.name
+                                    color: listChip.current ? Theme.accentText : Theme.text
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                }
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    color: removeMouse.containsMouse ? Theme.tint(0.18) : "transparent"
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "×"
+                                        color: listChip.current ? Theme.accentText : Theme.text
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 15
+                                    }
+                                    MouseArea {
+                                        id: removeMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            removeConfirm.source = listChip.modelData.source
+                                            removeConfirm.name = listChip.modelData.name
+                                            removeConfirm.visible = true
+                                        }
+                                    }
+                                    Accessible.role: Accessible.Button
+                                    Accessible.name: "Senderliste " + listChip.modelData.name + " entfernen"
+                                }
+                            }
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Senderliste " + modelData.name
+                        }
+                    }
+                }
+
+                // Rückfrage vor dem Entfernen
+                Row {
+                    id: removeConfirm
+                    property string source: ""
+                    property string name: ""
+                    visible: false
+                    width: parent.width
+                    spacing: 8
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 230
+                        elide: Text.ElideRight
+                        text: "„" + removeConfirm.name + "“ aus „Meine Senderlisten“ entfernen?"
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                    }
+                    CButton {
+                        text: "Entfernen"
+                        danger: true
+                        onClicked: {
+                            iptv.removeList(removeConfirm.source)
+                            removeConfirm.visible = false
+                        }
+                    }
+                    CButton { text: "Abbrechen"; onClicked: removeConfirm.visible = false }
                 }
 
                 Row {
@@ -391,8 +508,9 @@ Item {
                     }
                     CButton {
                         id: applySource
-                        text: "Übernehmen"
+                        text: "Hinzufügen"
                         primary: true
+                        enabled: sourceField.text.trim().length > 0
                         onClicked: {
                             iptv.setSource(sourceField.text)
                             sourceEdit.visible = false
@@ -400,7 +518,62 @@ Item {
                     }
                     CButton { text: "Abbrechen"; onClicked: sourceEdit.visible = false }
                 }
+
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    text: "Tipp: M3U-Dateien (.m3u, .m3u8) kannst du auch einfach hierher ziehen."
+                    color: Theme.textMuted
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                }
             }
+        }
+    }
+
+    // ---- M3U-Datei laden ----------------------------------------------------------------
+    FilePicker {
+        id: m3uPicker
+        mode: "open"
+        title: "M3U-Senderliste laden"
+        acceptText: "Laden"
+        nameFilters: ["*.m3u", "*.m3u8", "*.M3U", "*.M3U8"]
+        startFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+        onAccepted: (url) => iptv.importFile(url.toString())
+    }
+
+    // Hineinziehen aus dem Dateimanager
+    DropArea {
+        id: drop
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        function m3uUrls(urls) {
+            return Array.from(urls).map(u => u.toString()).filter(u => /\.m3u8?$/i.test(u) && u.startsWith("file:"))
+        }
+        onEntered: (ev) => ev.accepted = m3uUrls(ev.urls).length > 0
+        onDropped: (ev) => {
+            const urls = m3uUrls(ev.urls)
+            for (const u of urls)
+                iptv.importFile(u)
+            if (urls.length)
+                ev.acceptProposedAction()
+        }
+    }
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 12
+        visible: drop.containsDrag
+        radius: 18
+        color: Qt.rgba(143 / 255, 179 / 255, 255 / 255, 0.12)
+        border.color: Theme.accent
+        border.width: 2
+        Text {
+            anchors.centerIn: parent
+            text: "M3U-Senderliste hier loslassen"
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: 18
+            font.bold: true
         }
     }
 }
